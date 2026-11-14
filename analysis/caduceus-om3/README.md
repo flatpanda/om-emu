@@ -413,6 +413,44 @@ or names every `write:`. The negative control is v0.29's block with section 6's 
 `--main`). The same flow then exits 1 at step 0: the start line lists 651 patched ranges past section 6's loaded end,
 and CA_MAIN stops at `0x60f4aa48` in that gap. With `--loaded off` the same block passes all 26 steps (X, both).
 
+**Every release, as a regression run.** `emu/test/test_caduceus.mjs` runs this recipe on each release folder of a
+local checkout of theirs, adapted to what the release ships, and compares what it sees with pins kept in
+`emu/test/fixtures/caduceus-releases.json` (digests and observations, no byte of theirs). With `C` the checkout (it
+reads `$C/releases` and never fetches):
+
+```sh
+OM_CADUCEUS=$C node emu/bin/test.mjs                                   # with everything else
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs       # alone; OM_CADUCEUS_JOBS=N at once (3)
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs --pin v0.30 [--flow JSON]   # a new release's row
+```
+
+Each folder's `patch.json` and the card files the flow puts must have their pinned sha256 (a change fails: upstream
+changed a published release), and the reader must give the pinned `main_sha256_before` and `_after`; a folder with no
+pin is reported as unpinned and the others still run. The flow: the release's card files on a card `bin/card.mjs` made
+(v0.29 on: `LOOKS.BIN` alone; v0.24.1, which ships none, gets v0.25's); the open under the loaded-ranges mode with the
+pinned patch audit; the copied mask; their state word 0 at 4.5 s and set after S1; the Picture Mode page; from v0.24.1
+the names of FILM 1, 2 and 20 as their string getter gives them for the list's title ids (`0x7f10` + j, their source),
+right five times to FILM 2 and OK; S2 and the picture's ImageDescription and photo code prefix (`FILM 2 Gold 200`,
+`Caduceus FILM 2 Gold 200 om3.1.` from v0.27; the films of v0.29 and v0.29.1 give `Portra 160`); the page's title by
+the same getter (id 203, which their code answers with the selected film's name); the card's `OM3MOD` files (v0.24.1 to
+v0.28 write `EDITS.BIN`, `BUNDLES.BIN` and `.NEW` copies, v0.29 on nothing); `power:off`, a restart (from v0.29 on a
+blank card), S1, S2 and the title again: the film kept. Frames are not pinned. Measured (X, 2026-11-13, on `ae63e25`):
+all 19 folders from v0.16 to v0.29.1 as pinned, 25 to 34 s each, 3 min 19 s with three at once. The pins' controls are
+in the test: v0.29 with section 6's end word put back to stock stops at the open naming section 6 (651 ranges in the
+audit's `unloaded`), and a pin with one digest character changed fails; with S-SECLOADED left out of the lab the flows
+of v0.16, v0.25, v0.29 and v0.29.1 fail (X, by hand). What it cannot show, pinned as such: v0.16 to v0.22 keep their
+looks on the colour wheel's page, whose plane the lab does not compose; v0.26.2's and v0.27's load at power-on never
+runs, as their worker (H-PATCHTASK) waits for boot-stage bits `0x2e9` at `0xa32de58c` of which S-BOOTSTAGE sets bit 0
+only (D, their source; X: the state word is still 0 after 4.5 s), so the half press loads the films.
+
+**v0.29.1's films with no card** (their #38, camera-tested). A session cannot start without a card, and after the card
+is taken out (`input({type: 'card', action: 'remove'})`) S-MEDIA leaves S-CARD's OK (`0xF000`) in the SD medium word
+`0x60369308`, which their gate tests (X): v0.29 and v0.29.1 then both load the films at S1, so the lab does not tell
+them apart. With that word set to NO_MOUNT by a poke (any value but OK takes the same branch of their gate, D), v0.29
+loads nothing at S1 (state word 0, the page lists COLOR 1 to 4) and v0.29.1 loads the films from the camera's memory
+(the title `Portra 160`, the film kept from the first session), as their camera test reports (X). The regression run
+pins both, with the poke listed.
+
 ### 4.3 Their driver's features in the session tool
 
 Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs`:
@@ -611,8 +649,10 @@ All four are made (2026-11-13).
 ## 7. Follow-ups, ranked
 
 1. **A local regression run of each Caduceus release**: the flow of 4.2 per release, pinned by the release's digests
-   in `BLOBS.md` and never fetched by the tests. Size: a day. Payoff: an om-emu change that breaks a camera-tested
-   downstream build is seen before it is published.
+   and never fetched by the tests. Size: a day. Payoff: an om-emu change that breaks a camera-tested downstream build
+   is seen before it is published. Done: `emu/test/test_caduceus.mjs` with `OM_CADUCEUS`, its pins in
+   `emu/test/fixtures/caduceus-releases.json` (4.2, "Every release, as a regression run"). Left: a boot without a
+   card and S-MEDIA's medium word after a removal, so that v0.29.1's fix needs no poke.
 2. **Row-crossing OSD runs**: om-emu's engine refuses a picture run that crosses a row end (`BMP_TOKEN`,
    `src/dev/engine.mjs`), while their `GUIDES.BIN` pictures do so and draw on the camera (their report). Size: a day
    to read the engine's decoder. Payoff: their pictures, and any firmware stream that does this, draw in the lab.

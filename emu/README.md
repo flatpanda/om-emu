@@ -822,8 +822,9 @@ release's own description (`name`, `version`, `description`, `stock_file`, `stoc
 2, a block the lab does not load) and `card_files` (files the release puts on the card, which are not in this file) are
 not applied and are said so, never dropped silently: the summary's `not_applied`, a `; not applied: ...` tail on the
 patched line, the page's red line; a field of neither kind is refused, so a later format's new content is never left
-out unnoticed. Every caduceus-om3 release from v0.16 to v0.29 is taken as published (X, 2026-11-13: 18 files, each
-patched block's sha256 its `main_sha256_after`).
+out unnoticed. Every caduceus-om3 release from v0.16 to v0.29.1 is taken as published (X, 2026-11-13: 19 files, each
+patched block's sha256 its `main_sha256_after`), and `test/test_caduceus.mjs` runs each against its pins when
+`OM_CADUCEUS` names a checkout of theirs (Tests).
 
 The overlay is refused, with the reason and exit 1 before any lab starts, unless every file can be read, every patch
 is well formed, every patch's `old` bytes are the stock block's at its offset, no two patches overlap (across files
@@ -863,7 +864,7 @@ name a 32-bit word: the section loader's end words, `sections.ends`):
   stops the session when reached; pass-through observers are left out), and `ported`, the model's ported addresses and
   facts (`src/fw/ports.mjs` `PORTS` and `FACTS`) on patched bytes, which the lab calls or reads as patched: reported,
   not refused. E143 has no such table (its addresses are `src/lab`'s literals), so its `ported` is null. caduceus-om3
-  v0.24.1 to v0.29 have two such entries on E147: `0x510d4686` (E143 GET_STRING `0x510bb079`, which the lab calls and
+  v0.24.1 to v0.29.1 have two such entries on E147: `0x510d4686` (E143 GET_STRING `0x510bb079`, which the lab calls and
   does not hook: their string hook runs, as on the camera), and `0x60045e9c` (fact `sections.ends[5]`, section 6's end
   word, which they raise on purpose and the lab reads from the patched image, below); v0.16 to v0.22 have none (X,
   2026-11-13: the audit's ported and facts rules on every release's overlay, and modelcheck `--patch` on v0.29 and
@@ -1282,6 +1283,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/test/test_trace.mjs [--units] [--session]` | also in both suites above: the scripted session's traces, breakpoints and watchpoints: the tokens, the machine's exec probes on a blank image and the live route's hit log; through `bin/session.mjs` on E143, and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 | `OM_EMU_MODEL=E147 OM_CADUCEUS=CHECKOUT node emu/test/test_looks.mjs [--units] [--session]` | a Caduceus film checked below the pixels (`analysis/caduceus-om3/README.md` 4.6): the LOOKS.BIN reader and its refusals and a film's expected values (pure, also in both suites above); with `--session` a caduceus-om3 release (`releases/$OM_CADUCEUS_RELEASE`, `v0.29` by default) as `--patch` on E147 through `host/session.mjs`, FILM 1, 2 and 3 picked in the Picture Mode list: COLOR 1's 18 settings by the settings getter and the hooked WB fine-tune and Sharpness reads (targets read from the patched image) against the film's LOOKS.BIN record, the film's name in S2's ImageDescription, no poke; controls: the values before each pick, a film with its WB shift off. `bin/test.mjs` runs the session only when `OM_CADUCEUS` is set (about 20 s) | the E147 firmware and a caduceus-om3 checkout for `--session` |
+| `OM_CADUCEUS=DIR node emu/test/test_caduceus.mjs` | every caduceus-om3 release folder of the checkout DIR (`DIR/releases`, read, never fetched) against its pins (`test/fixtures/caduceus-releases.json`: each file's sha256, the reader's `main_sha256` before and after, and what its flow observed): a file that differs from its pin fails (upstream changed a published release), a folder with no pin is reported as unpinned and the others still run; then each release's flow on E147 through `host/session.mjs` and `bin/card.mjs` (`OM_CADUCEUS_JOBS` at once, default 3): the session under the loaded-ranges mode with the pinned patch audit, their state word set by the half press, the Picture Mode page, the films' names and the selected film's title through the string getter, S2's photo code in the Exif (v0.27 on), the card's `OM3MOD` files, the selection after `power:off` and a restart (on a blank card from v0.29), and v0.29.1's films with no card (against v0.29); controls: v0.29 with section 6's end word put back to stock stops at the open naming section 6, and a pin with one digest character changed fails. All 19 releases from v0.16 to v0.29.1 take about 3.5 min with 3 at once (25 to 34 s each, X 2026-11-13). Without `OM_CADUCEUS` one SKIPPED line (also in both suites above: the pin units in `test-pure.mjs`, the releases in `test.mjs`). To pin a new release: `OM_CADUCEUS=DIR OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs --pin v0.30 [--flow JSON]` prints its row (flow defaults: every `.BIN` of the folder on the card under `OM3MOD`, films when it has `LOOKS.BIN`); read it against the release's NOTES before adding it | the E147 firmware blocks; a caduceus-om3 checkout |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification
 ([ARCHITECTURE.md](ARCHITECTURE.md), "Ground truth"): `golden.json` is recorded from emu by `bin/golden.mjs record`, the

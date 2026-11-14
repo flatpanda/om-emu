@@ -1409,7 +1409,15 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
     (`emu/src/lab/play.mjs` SWITCH_IDLE_POSITION). With E147's `0x1909` at its positions 0 and 1 setting 44 reads 1, at
     2 it reads 0 and S1 takes the sequence to READY (X).
 - **The lab's part.** MODELS switch_idle names a body's own idle position of a position switch. E147's `0x1909`, its
-  still / movie switch, starts at 2 (`emu/src/fw/models.mjs`). It is not an input of the players. The siblings: position
+  still / movie switch, starts at 2 (`emu/src/fw/models.mjs`). Since 2026-11-14 it is an input of the players
+  (control `still_movie`, `emu/test/test_smswitch.mjs`). UI_IN answers its level from the board's value table at the
+  decoded position (byte `0xa32d9d0d`; board 0's table `0x60240b40`: 3, 2, 1), and the mode reader gives the shooting
+  mode 10 for the levels 2 and 3 (`cmp 2` / `cmp 3` at `0x5042f63d`, D). Setting 44 reads 1 at positions 0 and 1 and 0
+  at 2 after a move (X); setting 2188 is written 2 at 0, 1 at 1 (X); what distinguishes 0 and 1 is not read (?). The
+  firmware names the code's event EV_CHANGE_ACTION_DIAL (its tables, X). The application sets 44 when the switch
+  moves, not at the start (X: a start on a blank store reads 0 at position 1; a power-on on the kept state reads the 44
+  the off saved, also after a restart that put the switch back at 2). The Fn lever `0x1223` (EV_CHANGE_LEVER_SW) is
+  another control: toggled at position 2 it leaves 44 at 0 and 534 at 4 (X). The siblings: position
   switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not read. E147's
   other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections, link,
   patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
@@ -1448,7 +1456,8 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   and P; at the old position that cell is empty; the other cells are the same); the `call` step's result is the same,
   its a1 at return (a heap address) not. Their hook sites hit as before in one S1 and S2 under camapp 1 and camapp 3
   (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the others 0).
-- **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; setting 44's name.
+- **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; setting 44's name; what tells the
+  switch's positions 0 and 1 apart; whether the camera's start sets 44 from the switch, which the lab's does not.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

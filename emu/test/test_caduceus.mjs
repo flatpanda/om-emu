@@ -1,9 +1,11 @@
 // A local regression run of every published caduceus-om3 release (androidfanman/caduceus-om3: film-look patches for
-// the OM-3, E147; analysis/caduceus-om3/README.md 4.2 and 7.1): an om-emu change that breaks a camera-tested
-// downstream build is seen here before it is published. Gated on OM_CADUCEUS, a caduceus-om3 checkout (its releases/
-// folder is read, nothing else; nothing is fetched): without it the run prints one SKIPPED line and passes. It drives
-// the supported surface only: the patch reader (src/fw/patch.mjs), the scripted session (host/session.mjs
-// openSession) and bin/card.mjs.
+// the OM-3, E147; analysis/caduceus-om3/README.md 4.2 and section 7's intro): an om-emu change that breaks a
+// camera-tested downstream build is seen here before it is published. Gated on OM_CADUCEUS, a caduceus-om3 checkout
+// (its releases/ folder is read, nothing else; nothing is fetched): without it the run prints one SKIPPED line and
+// passes; a checkout with none of the pinned release folders fails (a wrong checkout or a changed layout). It drives
+// the patch reader (src/fw/patch.mjs), the scripted session (host/session.mjs openSession) and bin/card.mjs, and reads
+// the port map (src/fw/model.mjs A, fact) for the string getter, the SD medium word and section 6's end, and the stock
+// block (checks/lib/env.mjs) for the reader and the broken-sec6 control.
 //   caduceusUnits   (firmware-free) the pin checks on made-up folders: a file whose digest differs from its pin, a
 //                   pinned file missing, a release folder with no pin (reported, not failed), an observation that
 //                   differs from its pin in one field
@@ -13,7 +15,8 @@
 //                   in a process of its own (OM_CADUCEUS_JOBS at once, default 3), whose observations must equal the
 //                   pinned ones (the flow below). Controls: v0.29's block with section 6's end word put back to stock
 //                   (made here from the release and the stock block, --main) stops at the open naming section 6; a pin
-//                   with one digest character changed fails.
+//                   with one digest character changed fails. A run that cannot make the section-6 control (v0.29
+//                   absent or failing its pins) says so in a note.
 // The flow (flowRun): a card bin/card.mjs made, with the pinned card files put; the session under the loaded-ranges
 // mode (the patch audit pinned); 4.5 s of lab time, the copied mask and their state word (0 before the half press);
 // S1 (the state word set: their card load ran); OK OK to the Picture Mode page; with films: the string getter's names
@@ -241,6 +244,7 @@ export async function caduceusSession() {
   const plan = folderPlan(fs.readdirSync(dir), pins);
   for (const v of plan.unpinned) notes.push(`${v}: unpinned (a new upstream release: pin it with --pin ${v})`);
   for (const v of plan.absent) notes.push(`${v}: pinned, but not in ${dir} (an older checkout?)`);
+  ok(plan.pinned.length > 0, `no pinned release folder in ${dir}: ${plan.absent.length} pinned, all absent (a wrong checkout or a changed layout)`);
   const tmp = path.join(process.env.HOME, '.cache/om-emu-tmp/test-caduceus-' + process.pid);
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(tmp, { recursive: true });
@@ -293,7 +297,7 @@ export async function caduceusSession() {
       ok(b.first.ok === false && /runs code the boot does not load: 0x60f49800\.\.0x6103f000 lies past section 6's loaded end/.test(b.first.error ?? ''),
         `broken-sec6: the open ${JSON.stringify(b.first).slice(0, 400)}`);
       ok(Array.isArray(b.unloaded) && b.unloaded.length === 651 && b.unloaded.every((u) => u.n === 6), `broken-sec6: the audit's unloaded ${JSON.stringify(b.unloaded?.length)}`);
-    }
+    } else notes.push('broken-sec6 control not run: v0.29 absent or not runnable');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

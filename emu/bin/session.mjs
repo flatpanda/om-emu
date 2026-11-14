@@ -3,13 +3,16 @@
 // play runtime's Player in this process (no HTTP server), each step's record one JSON line on stdout and a summary
 // line at the end; the human lines on stderr. The module is host/session.mjs openSession, the supported scripting API
 // (emu/README.md "Scripted sessions").
-//   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--card-put DOS/PATH=LOCAL]...
-//                            [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE] [--loaded auto|on|off] [--creative-dial K]
-//                            [--a15 auto|off|on] [--device tft|evf] [--osd-errors fail|report]
-//                            [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
+//   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--no-card]
+//                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
+//                            [--loaded auto|on|off] [--creative-dial K] [--a15 auto|off|on] [--device tft|evf]
+//                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
 // --osd-errors fail (the default) fails a step in which the OSD engine refused a picture; report only lists them.
 // --nvram is off by default (a blank camera at each start), unlike play's: a scripted verification starts from a known
 // camera unless told otherwise. --card FILE is written back in place at each session's end, as play's OM_EMU_CARD.
+// --no-card starts with the first slot empty (the card, --card's or a blank one, out of it until card:in); card:out
+// and card:in (card:out:2, card:in:2 the second slot's) take the card out and put it back while the camera runs, and
+// a restart keeps the slot as the last session left it.
 // Each argument and each --script line is split into tokens at white space ("..." keeps spaces; # starts a comment).
 // The tokens: KEY (a press: down, 150 ms, up, then --settle of lab time), KEY:down, KEY:up, hold:KEY[:MS],
 // main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...), switch:ID=V or
@@ -40,6 +43,7 @@ const SPEC = [
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
   { opt: '--main', type: 'path', metavar: 'FILE' },
   { opt: '--card', type: 'path', metavar: 'FILE' },
+  { opt: '--no-card', type: 'flag', default: false },
   { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' },
   { opt: '--card-get', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' },
   { opt: '--nvram', type: 'str', default: 'off', metavar: 'off|FILE' },
@@ -73,7 +77,7 @@ async function main(argv) {
   if (await provision(PROG, { make: false })) return 1;       // no download here: a model without its blocks is refused
   let s;
   try {
-    s = await openSession({ patch: a.patch, main: a.main, card: a.card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded,
+    s = await openSession({ patch: a.patch, main: a.main, card: a.card, noCard: a.no_card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded,
       creativeDial: a.creative_dial, a15: a.a15, device: a.device, osdErrors: a.osd_errors, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
   } catch (e) {
     if (!(e instanceof SessionRefused)) throw e;

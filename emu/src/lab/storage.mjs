@@ -78,7 +78,9 @@
 //               The same at a runtime insertion
 //               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
 //               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL; on the bodies
-//               whose application runs the media control itself S-MDAEND)
+//               whose application runs the media control itself S-MDAEND). With the first slot empty at the start
+//               (the card holder's out) none: the media manager sends an empty slot's port nothing (X, the second
+//               slot under control camapp 3)
 import { FirmwareError, where, disasm, runtime } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
@@ -173,12 +175,16 @@ const fatStamp = ([y, mo, d, h, mi, s]) => ((y - 1980) << 25 | mo << 21 | d << 1
 const CLOCK_RECORD = 10, CLOCK_STATUS = 8;
 
 export class Storage {
-  // session: the PlaySession; f: STORAGE. The card: the host's (env.card: {open() -> SdCard, save(card)},
-  // node's OM_EMU_CARD, host/card.mjs), else a blank one for the session
+  // session: the PlaySession; f: STORAGE. The card: the host's (env.card: {open() -> SdCard, save(card), out}, node's
+  // OM_EMU_CARD, host/card.mjs), else a blank one for the session. The holder's out (true: the first slot is empty) is
+  // the slot's state between sessions, as the last session left it (close()) or as the host starts it (a session
+  // with no card: host/session.mjs --no-card): the card stays out of the slot at the next start, as a camera powered
+  // on without its card
   constructor(session, f) {
     this.s = session; this.lab = session.lab; this.f = f;
     this.host = this.lab.env.card ?? null;
     this.card = this.host ? this.host.open() : new SdCard();
+    if (this.host?.out) this.card.remove(); else this.card.insert();
     // the second slot (f.slots: a body with its facts), empty unless the host gives its card (env.card2: {open() ->
     // SdCard or null, save(card)}) or the Player's card input puts one in (put_card); its own state, as the first
     // slot's below (inserted: held(), its mount request sent and no removal since)
@@ -261,7 +267,14 @@ export class Storage {
     this.fileclbk = tid;
     this.s.settle('H-FILECLBK');
     if (!this.idle()) throw new StorageError(`H-FILECLBK: FILECLBK (task ${tid}) is not waiting on its queue after its start`);
-    this.insert();
+    // an empty first slot: no insertion's requests (the firmware's media manager sends an empty slot's port nothing at
+    // its start, X: the second slot under control camapp 3, docs/hle-gaps.md 4.8.12), the drive left as the bring-up
+    // left it
+    if (this.card.present) this.insert();
+    else {
+      this.drive_status = this.status_word();
+      this.log.push(['drive', `the first slot is empty: no insertion; status ${h8(this.drive_status)}`]);
+    }
     // the second slot's card where no media manager runs: control camapp 3's mounts it itself at its start (X)
     if (this.second?.card?.present && !this.s.opts?.camapp_native_tra) this.insert_second();
   }
@@ -642,9 +655,10 @@ export class Storage {
     this.log.push(['nand', `${op === read ? 'read' : 'write'} ${n} bytes at +0x${off.toString(16)} from ${where(r.mdr)}`]);
     h.finish(r, { d0: 0 });
   }
-  // the host keeps the card when the session ends, if the firmware wrote to it
+  // the host keeps the card when the session ends, if the firmware wrote to it, and the first slot's state (out)
   close() {
     if (this.host && this.card.take_dirty()) this.host.save(this.card);
+    if (this.host) this.host.out = !this.card.present;
     const c2 = this.second?.card ?? null;
     if (c2 && this.second.host && c2.take_dirty()) this.second.host.save(c2);
   }

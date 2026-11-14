@@ -24,8 +24,9 @@
 // photo code where the release writes one); the page again and its title through the string getter (the selected
 // film's name); the card's OM3MOD listing; power:off, restart (on a blank card where the films live in the camera),
 // S1, S2's Exif and the title again (the selection kept); for the no-card fix (v0.29.1; v0.29 and v0.29-beta as its
-// contrast) power:off, restart, the card taken out, the SD medium word set to NO_MOUNT (a poke: the lab leaves S-CARD's
-// OK there after a removal), S1 and the title. No frame hash is pinned.
+// contrast) power:off, restart, the card taken out (card:out), the SD medium word (S-MEDIA's NOT_PRESENT), S1 and the
+// title; then power:off and restart with the slot still empty (a power-on without a card), the word, S1 and the
+// title. No poke. No frame hash is pinned.
 //   OM_CADUCEUS=DIR node emu/test/test_caduceus.mjs [--units] [--session]   (OM_EMU_MODEL=E147 for --session)
 //   OM_CADUCEUS=DIR OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs --pin VERSION [--flow JSON]
 //     prints the release's row for the pins file: its digests, the reader's result, the flow (defaults from the
@@ -195,13 +196,21 @@ async function flowRun(dir, version, flow, tmp) {
     o.restart.title = string(TITLE);
     run('ok');
     if (flow.nocard) {
-      run('power:off', 'restart', 'wait:1500');
-      const r = s.input({ type: 'card', action: 'remove' });
-      if (r.error) throw new Error(`card remove: ${r.error}`);
-      run(`write:0x${MEDIA_SD.toString(16)}=00000000`, 's1', 'wait:1200');
-      o.nocard = { state_after_s1: set(hex('read:0x62b4dd16:2')) };
+      // the card taken out while the camera runs, then a power-on with the slot still empty (no poke: S-MEDIA and
+      // S-CARD leave the SD medium word NOT_PRESENT)
+      const sd = `read:0x${MEDIA_SD.toString(16)}:4`;
+      run('power:off', 'restart', 'wait:1500', 'card:out');
+      o.nocard = { word: hex(sd) };
+      run('s1', 'wait:1200');
+      o.nocard.state_after_s1 = set(hex('read:0x62b4dd16:2'));
       run('ok', 'ok');
       o.nocard.title = string(TITLE);
+      run('ok', 'power:off', 'restart', 'wait:1500');
+      o.nocard.start = { word: hex(sd) };
+      run('s1', 'wait:1200');
+      o.nocard.start.state_after_s1 = set(hex('read:0x62b4dd16:2'));
+      run('ok', 'ok');
+      o.nocard.start.title = string(TITLE);
     }
   } catch (e) {
     if (e instanceof TypeError || e instanceof ReferenceError || e instanceof SyntaxError) throw e;     // a bug here

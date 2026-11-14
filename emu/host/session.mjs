@@ -14,7 +14,9 @@
 // else E143; a model other than the one already imported is refused). options:
 //   model, patch [FILE...] | main FILE, card FILE (the card in the slot, written back in place at each session's end as
 //   play's OM_EMU_CARD; absent: a blank card in memory that the firmware formats), cardPut ['DOS/PATH=LOCAL'...] (on
-//   the card FILE before the first session mounts it), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
+//   the card FILE before the first session mounts it), noCard (the first slot empty at the start, the card out of it
+//   until a card:in token; a restart keeps the slot as the last session left it, card:out included, and restart:card=
+//   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
 //   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
 //   and --device), osdErrors 'fail' (the default: a step with an OSD engine refusal fails) | 'report', out DIR (session-N.json logs; relative paths of the tokens
@@ -179,6 +181,8 @@ export function parseToken(t) {
   }
   if ((m = /^dump(?::|$)/.exec(t))) throw new TokenError(`${t}: dump:ADDR:LEN:FILE (LEN 1..${DUMP_MAX} bytes)`);
   if (t === 'resume') return step('resume');
+  if ((m = /^card:(out|in)(?::([12]))?$/.exec(t))) return step('card', { action: m[1] === 'out' ? 'remove' : 'insert', slot: Number(m[2] ?? 1) });
+  if (/^card:/.test(t)) throw new TokenError(`${t}: card:out or card:in, :2 for the second slot`);
   if (t === 'card-ls') return step('card-ls');
   if ((m = /^card-get:([^=]+)=(.+)$/.exec(t))) return step('card-get', { path: dosPath(t, m[1]), local: m[2] });
   if ((m = /^exif:(.+)$/.exec(t))) return step('exif', { path: dosPath(t, m[1]) });
@@ -192,7 +196,7 @@ export function parseToken(t) {
     return step('dial', { id: m[1], detents: n });
   }
   if (new RegExp(`^${ID}$`).test(t)) return step('press', { id: t });
-  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
+  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], card:out|in[:2], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
 }
 // A call:@FILE token's request: the file's text (name: the file, for the refusals) as a JSON object of the call op's
 // fields (CALL_FILE_KEYS; src/debug/call.mjs checks their values), else TokenError
@@ -217,13 +221,14 @@ function parseExpect(t) {
   throw new TokenError(`${t}: expect:gui=NAME|~TEXT, expect:mem:ADDR=HEX|!=HEX, expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT|~TEXT`);
 }
 
-// A step's Player inputs (play's POST /api/input documents) for the kinds that are inputs; settle: the lab time after
-// a press, a dial or a switch. Each wait of a step (wait:MS, a press's, a hold's, the settle) goes as 'WAIT:ms' tokens
-// of at most WAIT_SLICE_MS, the idle player's slice (src/lab/player.mjs SLICE_NS): the camera application's
-// stand-ins deliver at the end of each Player input (src/lab/play.mjs PlaySession end: camapp.tick, the DISPLAY and
-// module replies, S-BOOTDONE, the timed callbacks), so one long WAIT held them to its end, and when the application's
-// start-up finished depended on how a script divided its waits (X, 2026-11-14: 'wait:2000' and 'wait:1500 wait:500'
-// before S1 gave Caduceus v0.29.1 two different Picture Mode pages). A play token 'WAIT:ms' is sent as written.
+// A step's Player inputs (play's POST /api/input documents) for the kinds that are inputs; settle: the lab time after a
+// press, a dial or a switch (card:out / card:in: the Player's card input, which waits its own lab time). Each wait of a
+// step (wait:MS, a press's, a hold's, the settle) goes as 'WAIT:ms' tokens of at most WAIT_SLICE_MS, the idle player's
+// slice (src/lab/player.mjs SLICE_NS): the camera application's stand-ins deliver at the end of each Player input
+// (src/lab/play.mjs PlaySession end: camapp.tick, the DISPLAY and module replies, S-BOOTDONE, the timed callbacks), so
+// one long WAIT held them to its end, and when the application's start-up finished depended on how a script divided its
+// waits (X, 2026-11-14: 'wait:2000' and 'wait:1500 wait:500' before S1 gave Caduceus v0.29.1 two different Picture Mode
+// pages). A play token 'WAIT:ms' is sent as written.
 export const WAIT_SLICE_MS = 50;
 export function stepInputs(st, settle = SETTLE_MS) {
   const wait = (ms) => {
@@ -240,6 +245,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'token': return [{ type: 'token', token: st.token }];
     case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, ...wait(settle)];
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
+    case 'card': return [{ type: 'card', action: st.action, ...(st.slot !== 1 ? { slot: st.slot } : {}) }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
     case 'write': return [{ type: 'debug', op: 'write', addr: st.addr, hex: st.hex }];
     case 'call':
@@ -334,6 +340,7 @@ export async function openSession(o = {}) {
     if (['card-ls', 'card-get', 'exif'].includes(st.kind) || st.expect?.what === 'card' || st.expect?.what === 'exif') {
       if (!STORAGE) throw new TokenError(`${st.text}: ${MODEL} has no card with a file system in the lab (S-CARD)`);
     }
+    if (st.kind === 'card' && !STORAGE?.hls) throw new TokenError(`${st.text}: ${MODEL} has no card with its HLS media side in the lab (src/fw/models.mjs card_fs.hls)`);
     if (st.kind === 'call' && st.file !== undefined) {           // call:@FILE: the request read and checked now
       const file = local(st.file);
       let text;
@@ -401,7 +408,12 @@ export async function openSession(o = {}) {
     try { return { path: p, bytes: new Uint8Array(fs.readFileSync(l)) }; } catch (e) { throw new SessionRefused(`--card-put ${p}=${l}: cannot read it (${e.code ?? e.message})`); }
   });
   let cardFile = o.card ? path.resolve(o.card) : null, card = cardOf(o.card, putFiles);
-  if (STORAGE) say(cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)');
+  // --no-card: the first slot empty at the start (src/lab/storage.mjs, the holder's out); the card is put in by card:in
+  if (o.noCard) {
+    if (!STORAGE?.hls) throw new SessionRefused(`--no-card: ${MODEL} has no card with its HLS media side in the lab (src/fw/models.mjs card_fs.hls)`);
+    card.out = true;
+  }
+  if (STORAGE) say(`${cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)'}${o.noCard ? '; the slot empty at the start (--no-card; card:in puts it in)' : ''}`);
   if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off

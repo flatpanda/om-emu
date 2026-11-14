@@ -301,8 +301,9 @@ export function replayCarried(file, text, read) {
 export class Player {
   constructor(a, env) {
     this.a = a;
-    // the card in the first slot (storage.mjs) stays in the slot across the player's sessions (a power cycle): the
-    // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
+    // the card in the first slot (storage.mjs) stays in or out of the slot across the player's sessions (a power
+    // cycle) as the last session left it (the holder's out): the host's (env.card, OM_EMU_CARD), else one in memory
+    // for the player's life
     this.env = STORAGE && !env.card ? { ...env, card: memoryCard() } : env;
     // the second slot (a body whose second slot the lab models): the host's card (env.card2, OM_EMU_CARD2), else
     // empty until a card input puts a card in, which then stays for the player's life; a host's second card on a

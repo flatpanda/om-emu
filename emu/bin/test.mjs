@@ -30,7 +30,8 @@
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
 // file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
-// firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), INFO's still information
+// firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), a power-on with no card and the media status
+// around a removal on E143 and E147 (test_nocard.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
@@ -528,6 +529,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`card writer: units ${cu.checks - cu.bad.length}/${cu.checks}; bin/card.mjs ${cc.checks - cc.bad.length}/${cc.checks}; in play (E143) ${cs.checks - cs.bad.length}/${cs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...cu.bad, ...cc.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += cu.bad.length + cc.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// a power-on with the first card slot empty and the media status around a removal (test_nocard.mjs): its units, E143
+// here, E147 in a process of its own
+{
+  const { nocardUnits, nocardSession } = await import('../test/test_nocard.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const nu = nocardUnits(), ns = await nocardSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_nocard.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`no card at the start, the media status: units ${nu.checks - nu.bad.length}/${nu.checks}; E143 ${ns.checks - ns.bad.length}/${ns.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...nu.bad, ...ns.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += nu.bad.length + ns.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the second card slot (test_storage.mjs --slot2: E143's and E146's two card slots, one card and two, the save slot,
 // the cards out and in, on E143 also under control camapp 3; docs/hle-gaps.md 4.8.12), each body in a process of

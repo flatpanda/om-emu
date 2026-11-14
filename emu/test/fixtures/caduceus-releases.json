@@ -1209,8 +1209,14 @@
      "title": "Gold 200"
     },
     "nocard": {
+     "word": "01100000",
      "state_after_s1": "0000",
-     "title": "Color Profile 1"
+     "title": "Color Profile 1",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "0000",
+      "title": "Color Profile 1"
+     }
     },
     "audit": {
      "hooks": [],
@@ -1221,13 +1227,11 @@
      "unloaded": 0,
      "tasks": []
     },
-    "pokes": [
-     "0x60369308"
-    ]
+    "pokes": []
    },
    "notes": [
     "the second session on a blank card: the films from the camera's memory",
-    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; the same firmware as v0.29: no film"
+    "no card (v0.29.1, #38): the card taken out while the camera runs (card:out), then a power-on with the slot still empty; S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times, where their gate looks for OK, so the flow needs no poke; the same firmware as v0.29: no film"
    ]
   },
   "v0.29": {
@@ -1285,8 +1289,14 @@
      "title": "Portra 160"
     },
     "nocard": {
+     "word": "01100000",
      "state_after_s1": "0000",
-     "title": "Color Profile 1"
+     "title": "Color Profile 1",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "0000",
+      "title": "Color Profile 1"
+     }
     },
     "audit": {
      "hooks": [],
@@ -1297,13 +1307,11 @@
      "unloaded": 0,
      "tasks": []
     },
-    "pokes": [
-     "0x60369308"
-    ]
+    "pokes": []
    },
    "notes": [
     "the second session on a blank card: the films from the camera's memory",
-    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; v0.29 loads no film (#38)"
+    "no card (v0.29.1, #38): the card taken out while the camera runs (card:out), then a power-on with the slot still empty; S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times, where their gate looks for OK, so the flow needs no poke; v0.29 loads no film (#38)"
    ]
   },
   "v0.29.1": {
@@ -1361,8 +1369,14 @@
      "title": "Portra 160"
     },
     "nocard": {
+     "word": "01100000",
      "state_after_s1": "set",
-     "title": "Portra 160"
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
     },
     "audit": {
      "hooks": [],
@@ -1373,13 +1387,11 @@
      "unloaded": 0,
      "tasks": []
     },
-    "pokes": [
-     "0x60369308"
-    ]
+    "pokes": []
    },
    "notes": [
     "the second session on a blank card: the films from the camera's memory",
-    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; v0.29.1 loads them from the camera's memory (their camera test)"
+    "no card (v0.29.1, #38): the card taken out while the camera runs (card:out), then a power-on with the slot still empty; S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times, where their gate looks for OK, so the flow needs no poke; v0.29.1 loads them from the camera's memory both times (their camera test)"
    ]
   }
  }

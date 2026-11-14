@@ -1166,6 +1166,12 @@ export class PlaySession extends N.NavSession {
       this.card2 = env.card2?.open() ?? null;
       if (!this.card2?.present) this.card_switch(STORAGE.slots.detect.switches[SECOND], false);
     }
+    // the first slot empty at the start (the card holder's out: storage.mjs): its card switch at the no-card level too,
+    // as a runtime removal leaves it (card_input); a body with no HLS side has no switch for it here, and refuses
+    if (env.card?.out && this.storage_runs()) {
+      if (!STORAGE.hls) throw new ValueError(`a start with no card: ${MODEL} runs no HLS media side in the lab (src/fw/models.mjs card_fs.hls), so its card switch is not modelled`);
+      this.card_switch(STORAGE.hls.slots[0].switch, false);
+    }
     // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
     // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts
     // each to the GUI as index 109 with its kind (0x5108ba30), then waits for the GUI's answer 0x0400001f, the GUI's

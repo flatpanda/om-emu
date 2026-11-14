@@ -57,7 +57,8 @@
 // the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), its stack
 // captures, dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN
 // reader with a film's values (test_looks.mjs looksUnits), and the caduceus-om3 release pins' checks on made-up
-// folders (test_caduceus.mjs caduceusUnits).
+// folders (test_caduceus.mjs caduceusUnits), and the session's card:out / card:in tokens (test_nocard.mjs
+// nocardUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -110,6 +111,7 @@ import { traceUnits } from '../test/test_trace.mjs';
 import { toolsUnits } from '../test/test_tools.mjs';
 import { looksUnits } from '../test/test_looks.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
+import { nocardUnits } from '../test/test_nocard.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -149,6 +151,7 @@ report('the scripted session\'s traces and stops: tokens, the machine\'s exec pr
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());
 report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals, a film\'s settings and hooked reads (test_looks.mjs)', looksUnits());
 report('caduceus-om3 release pins: a changed or missing file, an unpinned folder, an observation that differs (test_caduceus.mjs)', caduceusUnits());
+report('the session\'s card tokens: card:out, card:in and the second slot\'s, the Player input each sends (test_nocard.mjs)', nocardUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());

@@ -3965,7 +3965,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `0x504f87b7`, the work list at `0x50497d71` (reached from rec_jpeg_make_image through the create `0x5049272b` in a
   static call scan, D), the combiner set-up at `0x504e3b3d` and `0x504e43ac`, and the Art Effect converter `0x50534e27`,
   which is CreateParam's flags helper above (E143 `0x50547e3b`) and runs once per still (X). The EXIF set's WB fine-tune
-  reads (keys 34041 and 38521, `0x50436962`) store at the shot's +37734 and +37736 (D).
+  reads store at the shot's +37734 and +37736 from two branches (D): keys 7401 and 7417 (`0x50436d3f`, `0x50436d72`),
+  the one the lab's S2 runs (X, a trace), and keys 34041 and 38521 (`0x50436962`, `0x5043697c`).
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
 - **Open.** MM's allocation for E147's extension; the stub's option objects (`0x504970dd`) and its 40655; the
   constructor `0x504953a9`'s stages (not read); the run (4.3.9).

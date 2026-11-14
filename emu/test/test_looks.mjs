@@ -11,10 +11,12 @@
 //                 releases/$OM_CADUCEUS_RELEASE (v0.29 by default) as --patch with its LOOKS.BIN put on a card the
 //                 firmware formatted, a blank camera: FILM 1, 2 and 3 selected in the Picture Mode list as a user does
 //                 (S1, OK, OK, RIGHT x4, OK; then OK, OK, RIGHT, OK twice); after each, the 18 settings of COLOR 1
-//                 read by the camera's settings getter equal the film's record; the capture's WB fine-tune reads
-//                 (the EXIF set's call site, keys 34041 and 38521) and Sharpness read (key 33049), whose call targets
-//                 are read from the patched image, answer the camera's own getter plus the film's shift, or the film's
-//                 Sharp; S2 on FILM 3 writes 'FILM 3 <its name>' into the picture's ImageDescription; no poke and no
+//                 read by the camera's settings getter equal the film's record; the EXIF set's two WB fine-tune read
+//                 pairs (keys 7401 and 7417 at 0x50436d3f / 0x50436d72, the pair the lab's S2 reads, which a trace over
+//                 the S2 press shows: once each, the other pair not at all; keys 34041 and 38521 at 0x50436962 /
+//                 0x5043697c, the other branch) and the Sharpness read (key 33049), whose call targets are read from
+//                 the patched image, answer the camera's own getter plus the film's shift, or the film's Sharp; S2 on
+//                 FILM 3 writes 'FILM 3 <its name>' into the picture's ImageDescription; no poke and no
 //                 harness input. Controls: each film's values against the previous film's record (they must differ:
 //                 a selection that changed nothing fails), the WB reads equal the camera's own getter on a film whose
 //                 WB shift is off and differ on one whose shift is on, the call sites are hooked (their targets are not
@@ -22,14 +24,15 @@
 //   node emu/test/test_looks.mjs [--units] [--session]     (OM_EMU_MODEL=E147 OM_CADUCEUS=CHECKOUT for the session)
 //
 // E147 facts used (D, the stock block; run-time = notation + 0x10021020): the settings getter 0x503cf0f1 (d0 id ->
-// value), the capture-safe getter 0x50042360 (d0 key -> value), the EXIF set's WB fine-tune read `call 0x50042360,[d2,d3],12`
-// at 0x50436962 (key 34041 A-B, stored at the shot's +37734; its G-M twin at 0x5043697c), the stills Sharpness read at
-// 0x503c665f (key 33049). The 18 settings a film writes for COLOR k (their firmware/src/editor.s pf_put / pf_ids, D):
-// Saturation 928 + 12k + s <- record +24 + s (s = 0..11), Contrast 908 + k <- +41, Sharpness 904 + k <- +42, Shading
-// 912 + k <- +43, Shadows 978 + 3k <- +44, Midtones 977 + 3k <- +45, Highlights 976 + 3k <- +46. Their WB read hook
-// (wb_get, D) adds the record's A-B (+37) or G-M (+38) to the camera's value, clamped to -7..7, when the record's WB
-// shift is on (+36 = 1); their Sharpness hook (xb_nr, D) answers the record's Sharp (+52), above 2 as 2 and -5 or below
-// as -7. Film j (0..19) is COLOR j / 5's look j % 5 + 1.
+// value), the capture-safe getter 0x50042360 (d0 key -> value), the EXIF set's WB fine-tune reads `call
+// 0x50042360,[d2,d3],12`, two branches that both store at the shot's +37734 (A-B) and +37736 (G-M): keys 7401 and 7417
+// at 0x50436d3f and 0x50436d72, the branch the lab's S2 takes (X, a trace), and keys 34041 and 38521 at 0x50436962 and
+// 0x5043697c; the stills Sharpness read at 0x503c665f (key 33049). The 18 settings a film writes for COLOR k (their
+// firmware/src/editor.s pf_put / pf_ids, D): Saturation 928 + 12k + s <- record +24 + s (s = 0..11), Contrast 908 + k
+// <- +41, Sharpness 904 + k <- +42, Shading 912 + k <- +43, Shadows 978 + 3k <- +44, Midtones 977 + 3k <- +45,
+// Highlights 976 + 3k <- +46. Their WB read hook (wb_get, D) adds the record's A-B (+37) or G-M (+38) to the camera's
+// value, clamped to -7..7, when the record's WB shift is on (+36 = 1); their Sharpness hook (xb_nr, D) answers the
+// record's Sharp (+52), above 2 as 2 and -5 or below as -7. Film j (0..19) is COLOR j / 5's look j % 5 + 1.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -125,8 +128,9 @@ export function looksUnits() {
 
 // ---- E147 with a caduceus-om3 release --------------------------------------------------------------------------
 const GETTER = 0x503cf0f1, CGET = 0x50042360, RT = 0x10021020;
-const WB_SITE = 0x50436962, SHARP_SITE = 0x503c665f;
-const KEY_AB = 34041, KEY_GM = 38521, KEY_SHARP = 33049;
+const WB_SITE = 0x50436962, WB_GM_SITE = 0x5043697c, SHARP_SITE = 0x503c665f;
+const WB2_SITE = 0x50436d3f, WB2_GM_SITE = 0x50436d72;       // the EXIF set's other pair: the reads the lab's S2 makes
+const KEY_AB = 34041, KEY_GM = 38521, KEY_SHARP = 33049, KEY_AB2 = 7401, KEY_GM2 = 7417;
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
 
 export async function looksSession() {
@@ -160,13 +164,15 @@ export async function looksSession() {
     // the two call sites' targets in the patched image (`call rel32,[d2,d3],12`: dd, rel32, c0 0c)
     const target = (site) => { const r = st(`read:${h8(site + RT)}:7`); const b = r.hex ?? ''; return b.startsWith('dd') && b.endsWith('c00c') ? ((site + word(b.slice(2, 10))) >>> 0) : NaN; };
     run('wait:1500');
-    const wbT = target(WB_SITE), shT = target(SHARP_SITE);
+    const wbT = target(WB_SITE), shT = target(SHARP_SITE), wb2 = [target(WB2_SITE), target(WB2_GM_SITE)];
     ok(wbT === wbT && wbT !== CGET && shT === shT && shT !== CGET, `the WB and Sharpness reads are hooked: targets ${h8(wbT)} ${h8(shT)} (the camera's getter ${h8(CGET)})`);
+    ok(wb2.every((x) => x === wbT), `the S2 pair's WB reads (${h8(WB2_SITE)}, ${h8(WB2_GM_SITE)}) are hooked to the same WB read: ${wb2.map(h8)}, want ${h8(wbT)}`);
     run('s1 wait:1200');
     const k = 0;                                       // FILM 1..3 are COLOR 1's looks 1..3
     const ids = filmSettings(looks.films[0].record, k).map(([id]) => id);
     const read = () => Object.fromEntries(ids.map((id) => [id, call(GETTER, id)]));
-    const hooks = () => ({ stock: { ab: call(CGET, KEY_AB), gm: call(CGET, KEY_GM) }, ab: call(wbT, KEY_AB), gm: call(wbT, KEY_GM), sharp: call(shT, KEY_SHARP) });
+    const hooks = () => ({ stock: { ab: call(CGET, KEY_AB), gm: call(CGET, KEY_GM) }, ab: call(wbT, KEY_AB), gm: call(wbT, KEY_GM), sharp: call(shT, KEY_SHARP),
+      stock2: { ab: call(CGET, KEY_AB2), gm: call(CGET, KEY_GM2) }, ab2: call(wbT, KEY_AB2), gm2: call(wbT, KEY_GM2) });
     let prev = read();
     const seen = [];
     for (const [j, keys] of [[0, 'ok ok right right right right'], [1, 'ok ok right'], [2, 'ok ok right']]) {
@@ -183,11 +189,20 @@ export async function looksSession() {
       prev = got;
       const h = hooks(), w = filmHooks(record, h.stock);
       ok(h.ab === w.ab && h.gm === w.gm && h.sharp === w.sharp, `FILM ${j + 1} (${name}): the hooked reads [A-B, G-M, Sharp] ${[h.ab, h.gm, h.sharp]}, LOOKS.BIN gives ${[w.ab, w.gm, w.sharp]} (the camera's getter ${[h.stock.ab, h.stock.gm]})`);
-      seen.push({ j, on: record[36] === 1 && (record[37] !== 0 || record[38] !== 0), same: h.ab === h.stock.ab && h.gm === h.stock.gm });
+      const w2 = filmHooks(record, h.stock2);
+      ok(h.ab2 === w2.ab && h.gm2 === w2.gm, `FILM ${j + 1} (${name}): the hooked S2 reads (keys ${KEY_AB2}, ${KEY_GM2}) [A-B, G-M] ${[h.ab2, h.gm2]}, LOOKS.BIN gives ${[w2.ab, w2.gm]} (the camera's getter ${[h.stock2.ab, h.stock2.gm]})`);
+      seen.push({ j, on: record[36] === 1 && (record[37] !== 0 || record[38] !== 0), same: h.ab === h.stock.ab && h.gm === h.stock.gm, same2: h.ab2 === h.stock2.ab && h.gm2 === h.stock2.gm });
     }
-    ok(seen.some((x) => x.on && !x.same) && seen.some((x) => !x.on && x.same),
+    ok(seen.some((x) => x.on && !x.same && !x.same2) && seen.some((x) => !x.on && x.same && x.same2),
       `control: among FILM 1..3 a film with its WB shift on moves the WB reads and one with it off leaves the camera's values: ${JSON.stringify(seen)}`);
-    run('s1:down s2:down wait:300 s2:up s1:up wait:5000');
+    // which pair the lab's S2 reads: a logging trace at the four sites over the S2 press
+    const sites = [WB_SITE, WB_GM_SITE, WB2_SITE, WB2_GM_SITE].map(h8);
+    st(`trace:${sites.join(',')}`);
+    const counts = {};
+    for (const tok of 's1:down s2:down wait:300 s2:up s1:up wait:5000'.split(' ')) for (const [pc, n] of Object.entries(st(tok).hit_counts ?? {})) counts[pc] = (counts[pc] ?? 0) + n;
+    st('trace:off');
+    ok(counts[sites[2]] === 1 && counts[sites[3]] === 1 && !counts[sites[0]] && !counts[sites[1]],
+      `S2 reads the WB pair at ${sites[2]}, ${sites[3]} once each, not the one at ${sites[0]}, ${sites[1]}: ${JSON.stringify(counts)}`);
     const want3 = `FILM 3 ${looks.films[2].name}`;
     const ex = st('exif:DCIM/100OMSYS/*.JPG').exif?.ImageDescription ?? '';
     ok(ex.includes(want3), `S2 on FILM 3: ImageDescription ${JSON.stringify(ex)}, want ${JSON.stringify(want3)}`);

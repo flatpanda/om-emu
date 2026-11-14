@@ -609,18 +609,22 @@ callers' chains end in indirect calls, D), and the stages sit in the image libra
 **The check (X).** `emu/test/test_looks.mjs` (with `OM_CADUCEUS` set to a caduceus-om3 checkout; `bin/test.mjs` runs it
 then, about 20 s) takes a release's `patch.json` as `--patch` and its `LOOKS.BIN` onto a card `bin/card.mjs` made, on a
 blank camera, and picks FILM 1, 2 and 3 in the Picture Mode list as in 4.2. After each pick it reads COLOR 1's 18
-settings with the settings getter (`0x503cf0f1`) and calls the hooked capture reads, their targets read from the
-patched image at the EXIF set's A-B read `0x50436962` and at the Sharpness read `0x503c665f`, with the keys 34041,
-38521 and 33049; it expects the settings to equal the film's record, the WB reads the capture-safe getter's value plus
-the film's shift (or the getter's value where the shift is off) and the Sharpness read the film's Sharp. S2 on FILM 3
-must write `FILM 3` and the film's name into ImageDescription, so the films checked are the ones the camera names; no
-poke and no harness input. On v0.29 and on v0.29.1 all 18 checks pass. FILM 1 (Portra 400): Saturation `-1 0 0 0 0 0
--2 0 -1 1 1 -1`, Shadows 2, Midtones 1, Highlights 0, the WB reads 1 and 1 (the getter's 0 and 0), Sharp -1; FILM 2
-(its shift off): the WB reads 0 and 0; FILM 3: 1 and -1. Controls: each film's record must differ from the values read
-before its pick (a pick that changed nothing would pass otherwise), and among the three a film with its shift on must
-move the WB reads and one with it off must not. Mutants (X): the Shadows and Highlights ids swapped in the expectation
-fail all three films (15 of 18); the WB read's target replaced by the camera's getter fails FILM 1, FILM 3, the hook
-check and the control (14 of 18).
+settings with the settings getter (`0x503cf0f1`) and calls the hooked capture reads, their targets read from the patched
+image at the EXIF set's two WB fine-tune pairs and at the Sharpness read `0x503c665f`: keys 7401 and 7417 (`0x50436d3f`,
+`0x50436d72`), the pair the lab's S2 reads, and keys 34041 and 38521 (`0x50436962`, `0x5043697c`), the EXIF set's other
+branch, which the lab's S2 does not run (X: a trace over the S2 press hits the first pair once each and the second not
+at all, and `wb_get` is entered twice, D: both branches store at the shot's +37734 and +37736), and key 33049; it
+expects the settings to equal the film's record, the WB reads the capture-safe getter's value plus the film's shift (or
+the getter's value where the shift is off) and the Sharpness read the film's Sharp. S2 on FILM 3 must write `FILM 3` and
+the film's name into ImageDescription, so the films checked are the ones the camera names; no poke and no harness input.
+On v0.29 and on v0.29.1 all 23 checks pass. FILM 1 (Portra 400): Saturation `-1 0 0 0 0 0 -2 0 -1 1 1 -1`, Shadows 2,
+Midtones 1, Highlights 0, the WB reads 1 and 1 on both pairs (the getter's 0 and 0), Sharp -1; FILM 2 (its shift off):
+the WB reads 0 and 0; FILM 3: 1 and -1. Controls: each film's record must differ from the values read before its pick (a
+pick that changed nothing would pass otherwise), and among the three a film with its shift on must move the WB reads and
+one with it off must not. Mutants (X): the Shadows and Highlights ids swapped in the expectation fail all three films
+(15 of 18); the WB read's target replaced by the camera's getter fails FILM 1, FILM 3, the hook check and the control
+(14 of 18, before the S2 pair was added); the S2 pair's reads sent to the camera's getter fail FILM 1, FILM 3 and the
+control (20 of 23).
 
 It shows that a film's values reach the settings the development reads and that their hooks answer the capture's
 reads with the film's values. It does not show what the development does with them, nor anything of the hue and

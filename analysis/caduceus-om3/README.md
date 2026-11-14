@@ -435,9 +435,11 @@ The third round (base `a68dca3`, 2026-11-14) adds:
 - **Waits in the idle player's slices.** The camera application's stand-ins (the DISPLAY and module replies, the timed
   callbacks) deliver at the end of each Player input, so a session's single long `WAIT` held back what the firmware did
   after a reply until the wait ended, and a result could depend on how a script split its waits. Every wait of a step
-  now goes as inputs of at most 50 ms, as the interactive player's idle runs (`host/session.mjs` WAIT_SLICE_MS; X:
-  `wait:2000` and `wait:1500 wait:500` end alike). The 2026-11-13 runs of this note used one-input waits; the recipe
-  and every release's pins pass on the sliced waits (4.2).
+  now goes as inputs of at most 50 ms toward the wait's end, as the interactive player's idle runs (`host/session.mjs`
+  WAIT_SLICE_MS; X: `wait:2000` and `wait:1500 wait:500` end on the same screen, and a wait ends within one input's
+  overrun of its lab time, where fixed 50 ms slices first added the overruns up: E143's `wait:1500` 1634.8 ms then,
+  1534.8 ms now). The 2026-11-13 runs of this note used one-input waits; the recipe and every release's pins pass on the
+  sliced waits (4.2).
 - **The still / movie switch** (`still_movie`, the page's key U, `switch:still_movie=K` with K 0..2; `docs/hle-gaps.md`
   4.1.13): positions 0 and 1 give the application's movie mode (setting 44 = 1) once moved, 2 the stills mode
   sessions start in; a power cycle on the kept state carries it (X, `emu/test/test_smswitch.mjs`).

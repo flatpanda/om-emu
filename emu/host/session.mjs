@@ -229,18 +229,19 @@ function parseExpect(t) {
 
 // A step's Player inputs (play's POST /api/input documents) for the kinds that are inputs; settle: the lab time after a
 // press, a dial or a switch (card:out / card:in: the Player's card input, which waits its own lab time). Each wait of a
-// step (wait:MS, a press's, a hold's, the settle) goes as 'WAIT:ms' tokens of at most WAIT_SLICE_MS, the idle player's
-// slice (src/lab/player.mjs SLICE_NS): the camera application's stand-ins deliver at the end of each Player input
+// step (wait:MS, a press's, a hold's, the settle) is a {type: 'wait', ms} of the session's, which openSession sends as
+// 'WAIT:ms' tokens of at most WAIT_SLICE_MS toward the wait's end, as the idle player runs lab time (src/lab/player.mjs
+// SLICE_NS, idle_slice toward its target): the camera application's stand-ins deliver at the end of each Player input
 // (src/lab/play.mjs PlaySession end: camapp.tick, the DISPLAY and module replies, S-BOOTDONE, the timed callbacks), so
 // one long WAIT held them to its end, and when the application's start-up finished depended on how a script divided its
 // waits (X, 2026-11-14: 'wait:2000' and 'wait:1500 wait:500' before S1 gave Caduceus v0.29.1 two different Picture Mode
-// pages). A play token 'WAIT:ms' is sent as written.
+// pages). Each slice is what is left to the end, at most WAIT_SLICE_MS, measured from where the last one ended: an
+// input can end past its lab time (the frame it publishes at the shown device's boundary), and slices of a fixed 50 ms
+// added those overruns up (X, 2026-11-14, E143's shooting screen: wait:1500 took 1634.8 ms, wait:3000 3203.1 ms; one
+// WAIT:1500 1534.8 ms). A play token 'WAIT:ms' is sent as written.
 export const WAIT_SLICE_MS = 50;
 export function stepInputs(st, settle = SETTLE_MS) {
-  const wait = (ms) => {
-    const n = Math.max(1, Math.ceil(ms / WAIT_SLICE_MS));
-    return Array.from({ length: n }, (_, i) => ({ type: 'token', token: `WAIT:${i < n - 1 ? WAIT_SLICE_MS : ms - WAIT_SLICE_MS * (n - 1)}` }));
-  };
+  const wait = (ms) => [{ type: 'wait', ms }];
   const key = (id, action) => ({ type: 'key', id, action });
   switch (st.kind) {
     case 'press': return [key(st.id, 'down'), ...wait(PRESS_MS), key(st.id, 'up'), ...wait(settle)];
@@ -486,6 +487,19 @@ export async function openSession(o = {}) {
     note();
     try { pl.close_session(); } finally { pl.write_log(); }
   };
+  // stepInputs' list as the Player's inputs: each {type: 'wait', ms} as WAIT tokens toward the wait's end (stepInputs),
+  // the next slice taken after the last one ran (a generator); with no session (after power:off) one WAIT:ms, which
+  // the Player answers as before
+  function* playerInputs(list) {
+    const now = () => pl?.session?.lab?.lab_time() ?? null;
+    for (const inp of list) {
+      if (inp.type !== 'wait') { yield inp; continue; }
+      const t0 = now();
+      if (t0 === null) { yield { type: 'token', token: `WAIT:${inp.ms}` }; continue; }
+      const end = t0 + inp.ms * 1e6;
+      for (let t = t0; t !== null && t < end; t = now()) yield { type: 'token', token: `WAIT:${Math.min(WAIT_SLICE_MS, Math.ceil((end - t) / 1e6))}` };
+    }
+  }
   // one input through the Player's own loop (submit, then the tick that takes it): its result; at a debug stop (held,
   // inside a tick) a debug input is taken as the live route takes one there (live.mjs stopped)
   const apply = (inp) => {
@@ -615,7 +629,7 @@ export async function openSession(o = {}) {
         rec.expect = e.what;
         if (why !== null) fail(rec, `expect failed: ${why}`);
       } else {
-        for (const inp of stepInputs(st, settle)) {
+        for (const inp of playerInputs(stepInputs(st, settle))) {
           const before = pl.dropped.toObject(), res = apply(inp);
           const r = running;                       // after a debug stop and resume, resume's record carries the rest
           if (pl.phase === 'error') { fail(r, labMessage()); if (pl.error?.stderr_tail) r.stderr_tail = pl.error.stderr_tail; break; }

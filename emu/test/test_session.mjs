@@ -1,7 +1,7 @@
 // The scripted session (host/session.mjs openSession, bin/session.mjs):
 //   sessionUnits    (firmware-free) the script splitter (quotes, comments), every token form and its refusals, each
-//                   step's Player inputs (a press: down, 150 ms, up, the settle; each wait in WAIT_SLICE_MS
-//                   slices, a play WAIT token as written), every expect on fakes with its
+//                   step's Player inputs (a press: down, 150 ms, up, the settle; each wait the session's, sent in
+//                   WAIT_SLICE_MS slices toward its end; a play WAIT token as written), every expect on fakes with its
 //                   negative control (gui = and ~, mem = and !=, card, standin, exif = and ~), the Exif fields by
 //                   name (UserComment after its character code), the parser's rest positional, and bin/session.mjs's
 //                   usage errors (exit 2 before any lab: an unknown option or token, a bad --loaded, --settle -1, a
@@ -90,18 +90,17 @@ export function sessionUnits() {
   for (const x of refusals) ok(thrown(() => parseToken(x)) instanceof TokenError, `refused: ${JSON.stringify(x)} -> ${thrown(() => parseToken(x))?.message ?? 'taken'}`);
   // the Player inputs
   const inp = (x, settle) => JSON.stringify(stepInputs(parseToken(x), settle));
-  // the waits in WAIT_SLICE_MS slices, the last one the rest
-  const W = (...ms) => ms.map((x) => ({ type: 'token', token: `WAIT:${x}` }));
-  const S = (ms) => W(...Array(Math.ceil(ms / WAIT_SLICE_MS) - 1).fill(WAIT_SLICE_MS), ms - WAIT_SLICE_MS * (Math.ceil(ms / WAIT_SLICE_MS) - 1));
-  ok(WAIT_SLICE_MS === 50 && PRESS_MS % WAIT_SLICE_MS === 0 && SETTLE_MS % WAIT_SLICE_MS === 0, `the slice: ${WAIT_SLICE_MS} ms`);
-  ok(inp('ok') === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, ...S(PRESS_MS), { type: 'key', id: 'ok', action: 'up' }, ...S(SETTLE_MS)]), `a press: ${inp('ok')}`);
-  ok(inp('hold:ok:920', 50) === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, ...W(...Array(18).fill(50), 20), { type: 'key', id: 'ok', action: 'up' }, ...W(50)]), `a hold: ${inp('hold:ok:920', 50)}`);
-  ok(inp('s2:down') === '[{"type":"key","id":"s2","action":"down"}]' && inp('wait:7') === '[{"type":"token","token":"WAIT:7"}]', 'an edge, a wait');
-  ok(inp('wait:120') === JSON.stringify(W(50, 50, 20)) && inp('wait:100') === JSON.stringify(W(50, 50)) && inp('WAIT:2000') === '[{"type":"token","token":"WAIT:2000"}]',
-    `a wait in slices, a play token as written: ${inp('wait:120')} ${inp('wait:100')} ${inp('WAIT:2000')}`);
-  ok(inp('main_dial:-2', 10) === '[{"type":"dial","id":"main","detents":-2},{"type":"token","token":"WAIT:10"}]' && inp('sub_dial:+1', 0).startsWith('[{"type":"dial","id":"sub",'),
+  // each wait the session's {type: 'wait', ms}, which openSession sends in WAIT_SLICE_MS slices toward its end
+  const W = (ms) => ({ type: 'wait', ms });
+  ok(WAIT_SLICE_MS === 50, `the slice: ${WAIT_SLICE_MS} ms`);
+  ok(inp('ok') === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, W(PRESS_MS), { type: 'key', id: 'ok', action: 'up' }, W(SETTLE_MS)]), `a press: ${inp('ok')}`);
+  ok(inp('hold:ok:920', 50) === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, W(920), { type: 'key', id: 'ok', action: 'up' }, W(50)]), `a hold: ${inp('hold:ok:920', 50)}`);
+  ok(inp('s2:down') === '[{"type":"key","id":"s2","action":"down"}]' && inp('wait:7') === '[{"type":"wait","ms":7}]', 'an edge, a wait');
+  ok(inp('wait:120') === JSON.stringify([W(120)]) && inp('WAIT:2000') === '[{"type":"token","token":"WAIT:2000"}]',
+    `a wait the session slices, a play token as written: ${inp('wait:120')} ${inp('WAIT:2000')}`);
+  ok(inp('main_dial:-2', 10) === '[{"type":"dial","id":"main","detents":-2},{"type":"wait","ms":10}]' && inp('sub_dial:+1', 0).startsWith('[{"type":"dial","id":"sub",'),
     `a dial (the Player's ids main, sub): ${inp('main_dial:-2', 10)} ${inp('sub_dial:+1', 0)}`);
-  ok(inp('switch:creative_dial=4', 0) === '[{"type":"switch","id":"creative_dial","value":4},{"type":"token","token":"WAIT:0"}]' && inp('switch:mode_dial+2', 0).includes('"step":2'), 'a switch by value and by step');
+  ok(inp('switch:creative_dial=4', 0) === '[{"type":"switch","id":"creative_dial","value":4},{"type":"wait","ms":0}]' && inp('switch:mode_dial+2', 0).includes('"step":2'), 'a switch by value and by step');
   ok(inp('power:off') === '[{"type":"switch","id":"power","value":0}]', 'power:off is the lever off');
   ok(inp('read:16:4') === '[{"type":"debug","op":"read","addr":16,"size":4}]' && inp('write:16=ab') === '[{"type":"debug","op":"write","addr":16,"hex":"ab"}]', 'read and write');
   ok(inp('call:0x50000010:d1=2,limit=9') === '[{"type":"debug","op":"call","fn":1342177296,"regs":{"d1":2},"limit":9}]', `a call: ${inp('call:0x50000010:d1=2,limit=9')}`);
@@ -295,11 +294,18 @@ async function e147({ ok }, { T, newCard, step, sameFile, hello }) {
   // the same lab time divided into other waits ends in the same state: the waits go in the idle player's slices
   // (WAIT_SLICE_MS), so the application's start-up does not wait for a step's end (control, one WAIT input per wait:
   // 'wait:2000' ended at 4.755 s on the power-on screen with no frame, 'wait:1500 wait:500' at 4.757 s on the shooting
-  // screen, X 2026-11-14)
-  const end = (r) => { const x = r.steps.at(-1) ?? {}; return JSON.stringify([x.lab_ns, x.gui, x.frame]); };
+  // screen, X 2026-11-14); and each wait ends within one slice of its lab time, the slices running toward its end
+  // (control, slices of a fixed 50 ms: E147's wait:1500 on the shooting screen after S1 took 1500 ms plus the slices'
+  // overruns, E143's 1634.8 ms, X 2026-11-14)
+  const end = (r) => { const x = r.steps.at(-1) ?? {}; return JSON.stringify([x.gui, x.frame !== null]); };
+  const took = (r, i) => (r.steps[i].lab_ns - r.steps[i - 1].lab_ns) / 1e6;
+  const within = (r, i, ms) => took(r, i) >= ms && took(r, i) < ms + WAIT_SLICE_MS;
   const w1 = cli(['--model', 'E147', 'wait:2000']), w2 = cli(['--model', 'E147', 'wait:1500', 'wait:500']);
-  ok(w1.rc === 0 && w2.rc === 0 && end(w1) === end(w2) && w1.steps.at(-1)?.frame !== null && w1.steps.at(-1)?.gui !== 'SS_COMMON/ID_ST_POWER_ON',
-    `E147 a wait divided otherwise: ${end(w1)} and ${end(w2)} | ${w1.last} | ${w2.last}`);
+  ok(w1.rc === 0 && w2.rc === 0 && end(w1) === end(w2) && w1.steps.at(-1)?.frame !== null && w1.steps.at(-1)?.gui !== 'SS_COMMON/ID_ST_POWER_ON'
+    && within(w1, 1, 2000) && within(w2, 1, 1500) && within(w2, 2, 500),
+    `E147 a wait divided otherwise: ${end(w1)} and ${end(w2)}, ${took(w1, 1)} ms; ${took(w2, 1)} + ${took(w2, 2)} ms | ${w1.last} | ${w2.last}`);
+  const w3 = cli(['--model', 'E147', 'wait:1500', 's1', 'wait:1500']);
+  ok(w3.rc === 0 && w3.steps[3]?.gui === 'SS_COMMON/ID_ST_CA_REQ_DISP' && within(w3, 3, 1500), `E147 wait:1500 on the shooting screen within one slice of 1500 ms: ${took(w3, 3)} ms | ${w3.last}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

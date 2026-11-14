@@ -4011,6 +4011,20 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   reads store at the shot's +37734 and +37736 from two branches (D): keys 7401 and 7417 (`0x50436d3f`, `0x50436d72`),
   the one the lab's S2 runs (X, a trace), and keys 34041 and 38521 (`0x50436962`, `0x5043697c`).
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
+- **E147's stage list and its job (D, 2026-11-14; X where tagged).** The stage list `0x504f8694` (`ret
+  [d2,d3,a2,a3],48`) takes the job context C in a0: C+4 is the request R, C+12 the output O, C+48 the RGB gamma
+  stage's key, C+60 flags. It first calls the RGB gamma stage `0x504f5ab9` (at `0x504f86dd`, frame 16), which copies
+  one picture-mode curve to O+1252, O+1892 and O+2532 (256 u16 of 12 bits and 64 fine entries each) and points
+  O+3172..O+3180 at them (X: a COLOR request gives three equal tables). On the still path it then calls the COLOR stage
+  `0x504f7553` (frame 28), the luminance-LUT builder `0x504f7d92` at `0x504f87b0` and the tone step `0x504f7f84` at
+  `0x504f87b7` (`mov d3,a0` and the call). The COLOR stage reaches the HSL builder when R+1568 = 0, R+12 != 61453
+  and R's key (R+8 << 24 | R+9 << 16 | R+10 u16) is 11, with d1 = O and a1 = R + 1739. The builder writes 12
+  records of 24 bytes from O+836, each u16 at +18 and +22 from its own table (0 in all 12, X). The LUT builder
+  acts only when R+1568 is set (an art override's LUT) or C+60 has a bit of `0x4134063e`. It then writes the LUT's
+  address to O+3828: its own build at O+3832, or the default LUT `0x6068cd08` (run-time) when the build gives none
+  (X, on a job with no other inputs). Which bits of C+60 the camera sets is not read (?). With this job in a call's scratch,
+  `emu/test/test_lookhooks.mjs` runs those stages through `host/session.mjs` and checks Caduceus' hooks on their
+  outputs (`analysis/caduceus-om3/README.md` 4.6).
 - **Open.** What the set-up and the constructor `0x504966f7` build (stages, not read); the run (4.3.9); TAKE's other
   fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
   written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still

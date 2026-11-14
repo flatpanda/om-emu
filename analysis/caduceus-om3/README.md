@@ -627,12 +627,47 @@ one with it off must not. Mutants (X): the Shadows and Highlights ids swapped in
 control (20 of 23).
 
 It shows that a film's values reach the settings the development reads and that their hooks answer the capture's
-reads with the film's values. It does not show what the development does with them, nor anything of the hue and
-lightness, tone, split-toning, grain, glow or halation hooks. Those could be checked on their outputs without pixels
-by a call into the COLOR stage with a stop after `hl_pp`'s jump back (it is entered by a jump inside the stage and
-leaves by one) and by a call of the tone hook on a job context written into the call's scratch, stopped where it
-jumps on to the stock `0x504f7f84`. The call op takes such an entry and stops since the second round (4.1; their
-`tonecall` runs so on v0.29, X); what is missing is a job layout read from the stages: days (I, follow-up 3).
+reads with the film's values. It does not show what the development does with them.
+
+**The hooks on their outputs (X, 2026-11-14).** `emu/test/test_lookhooks.mjs` (with `OM_CADUCEUS`; about 30 s)
+checks hue and lightness (`hl_pp`), Blacks and Whites (`tone`) and split toning with Tone Balance (`st_run`) on what
+they write, without pixels. The job layout is read from the stages (`docs/hle-gaps.md` 4.3.12, D) and agrees with
+their notes: C+4 the request R, C+12 the output O, C+48 the gamma stage's key, C+60 the LUT builder's flags. The test
+writes a minimal still job into a call's scratch: R's key 11 (COLOR), R+14 `0x1000`, an image size at R+1660 (their
+stage test's; the gamma stage divides by it) and C+60 = `0x4134063e`, the LUT builder's test mask (their `tonecall`'s;
+which bits the camera sets is ?). It runs, through `host/session.mjs` `input()` only:
+
+- the COLOR stage `0x504f7553` from its entry, stopped where `hl_pp` jumps back (`0x504f75fa`). The 12 records are
+  compared with the HSL builder `0x504f7361` called alone, with the registers the stage hands it;
+- the RGB gamma stage `0x504f5ab9` alone, whose three equal tables are st_run's input;
+- the stage list `0x504f8694`, entered at the LUT builder's call `0x504f87b0` with those tables in the job. It is
+  stopped before the tone call `0x504f87b7` (the stock LUT) and at the stock tone step `0x504f7f84`, where `st_run`
+  jumps on.
+
+It does this on the blank camera and after FILM 20, 1, 2 and 3 are picked in the Picture Mode list. FILM 20 is
+COLOR 4's, so the slot index is exercised. The expectations come from the film's LOOKS.BIN record (pf_put's and
+pf_bt's mapping into the slot). The formulas are their source's, read from `firmware/src/editor.s` at the release's
+tag at run time: `hl_lut` (hue 7000 - 1000 i, a lightness table and the record order), the tone remap, and `st_run`
+with `st_k`. So for tone and split toning the check is their code against their own definition: what a release
+regression needs. On v0.29 and v0.29.1 all 69 checks pass.
+
+The blank camera gives every stock output. Every film moves the records and the LUT. FILM 20 and FILM 3 move the
+tables; FILM 1 and 2 (no split tone) leave them. FILM 1 (Portra 400, Blacks 1, Whites 0) gives these records'
+(hue +18, lightness +22): 0/0, 0/25, 0/0, 1000/0, 1000/25, 1000/-25, -1000/0, 0/0, -1000/-25, -1000/0, -1000/0,
+0/0. Its LUT runs from the default `0x6068cd08`'s 0, 64, 256, 512, 1023 (indexes 0, 16, 64, 128, 255) to 8, 72, 262,
+516, 1023. FILM 3 (shadows colour 7 at code 1, highlights colour 0 at code 1) moves the curve's 3308 at index 128 to R
+3306, G 3326, B 3212.
+
+The test also checks the expectation with hue and lightness, Blacks and Whites, or the shadow and highlight colours
+swapped: it must not match. Mutants of the test (X, by hand): those three swaps fail 4, 4 and 2 films; record r's
+colour taken as r instead of their order fails all 4. A wrong look in a future release shows as a named record,
+LUT index or channel entry with the lab's value and LOOKS.BIN's. A hook that is not reached shows as a stock output
+where the film has values.
+
+Not checked: halation (`hl_run`). No film of v0.29 or v0.29.1 sets it (record +57 is 0 in all 20, X). It also runs
+on an image buffer through the bus window (`WINMAP`, the lock, `FLUSH`), which the lab has not been shown to serve.
+Grain and glow are also not checked: their data goes to the combiner and the Art Effect job, not a stage output read
+here.
 
 **What stands between the hook sites and the JPEG**, in the camera's order (I for the order):
 

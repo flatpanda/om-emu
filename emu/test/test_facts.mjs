@@ -47,7 +47,7 @@ import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
-  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143 } from '../src/fw/facts.mjs';
+  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -545,6 +545,20 @@ const TAKE_REQUESTS_FOUND = {
   E143: TAKE_REQUESTS_E143,
   E146: { api_post: 0x503E8063, take_send: 0x502E636F, control_post: 5, func29: { command: 29, param: 0x62A6A23A }, kind_at: 8, queue_at: 4, event: 0x04080032 },
   E147: { api_post: 0x503F5D69, take_send: 0x502F7C35, control_post: 5, func29: { command: 29, param: 0x62A67F9A }, kind_at: 8, queue_at: 4, event: 0x04080032 },
+};
+// TAKE's exposure for a still's record (take_exposure; src/fw/facts.mjs takeExposure) where recFile reads: E143's as
+// S-EXIFPRM gives it, E146's and E147's as read in their code by hand (D, 2026-11-14: StlRdy1's call of the ring's
+// getter E146 0x503bb6f1 / E147 0x503c597f, `udfu01 96,d0`, and of the fill with the record alone, E146 0x503bfe9c /
+// E147 0x503c9db8, which read 41002, 41034, 41018 and 41082 into +6..+12 as E143's; the shot-record fill's range copy
+// E146 0x503bc8a2 / E147 0x503c6b30 with 37818 and 37820 to E146 0x5057a795 / E147 0x5058abd3; takepic's copy E146
+// 0x503bd706 / E147 0x503c7996 and its second E146 0x503bd76f / E147 0x503c79ff, each record offset to E143's block
+// offset less 348)
+const EXP_READS = [[41002, 6], [41034, 8], [41018, 10], [41082, 12]];
+const EXP_COPY_E14X = [[6, 37816], [8, 37824], [10, 37830], [56, 37822], [60, 37832], [58, 37828]];
+const TAKE_EXPOSURE_FOUND = {
+  E143: TAKE_EXPOSURE_E143,
+  E146: { record: { size: 96, fill: 0x503BFE9C, flags: null, reads: EXP_READS }, range: { fn: 0x5057A795, low: 37818, high: 37820 }, copy: EXP_COPY_E14X },
+  E147: { record: { size: 96, fill: 0x503C9DB8, flags: null, reads: EXP_READS }, range: { fn: 0x5058ABD3, low: 37818, high: 37820 }, copy: EXP_COPY_E14X },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1204,6 +1218,23 @@ export function factsTests() {
       const event = refused(0x503c325b - 0x50000000, 0xcc, /TAKE_MAIN's event post at 0x503c3254 is not E143's form/);
       const row = refused(row11, 13, /TAKE_MAIN's RdyTrig2Wait takes the commands .* not 7, 11/);
       ok(event === true && row === true, `takeRequests: the event's load into another register and RdyTrig2Wait without command 11 refused: ${event}, ${row}`);
+    }
+    // TAKE's exposure for a still's record (take_exposure, src/fw/facts.mjs takeExposure) where recFile reads: E143's
+    // equals the values S-EXIFPRM uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.take_exposure, TAKE_EXPOSURE_FOUND[code]), `${code}: take_exposure ${hx(placed?.take_exposure ?? placed)}, found ${hx(TAKE_EXPOSURE_FOUND[code] ?? 'none')}`);
+    // and refuses a form it does not know: E143's image with the fill's shutter read made another setting
+    // (0x503bf6bf: 41002 -> 41003), with takepic's copy storing Tv through a3 (0x503bcdb7: movhu d0,(a0) -> (a3)) and
+    // with the shot-record fill's range copied through a2 (0x503bbf75: mov (4,sp),a0 -> a2)
+    if (code === 'E143' && placed?.take_exposure) {
+      const refused = (o, v, re) => {
+        const m = run.slice();
+        m[o - 0x50000000] = v;
+        try { takeExposure(m, at); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const tv = refused(0x503bf6bf, 0x2b, /reads the shutter's setting 41002 0 times/);
+      const copy = refused(0x503bcdb7, 0x73, /takepic's copy at 0x503bcdac is not E143's form/);
+      const range = refused(0x503bbf75, 0x5e, /no shutter range copy/);
+      ok(tv === true && copy === true && range === true, `takeExposure: the fill without the shutter's read, takepic's copy through another register and the range copied through another register refused: ${tv}, ${copy}, ${range}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

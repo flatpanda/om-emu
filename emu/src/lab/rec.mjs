@@ -86,9 +86,20 @@
 //               notes' white-balance gains from H-RECPRECON's table (TAKE's arithmetic block 0x5039821c, 18 calls,
 //               X; with the table's zeros it divides by zero at 0x50398ca5, X) and the shooting values from takepic's
 //               fields (0x503bcdac..0x503bcee1: Tv +38164 and Av +38178 from its exposure record, Sv +38174 from
-//               TAKE's state), which stay the template's 0: their source is TAKE_MAIN's request, not run in the lab
-//               (D), so ExposureTime is the set's 1 s of Tv 0 (0x50573517 from 0x5042c41f), FNumber 0/10 (the lens
-//               flag +37982 bit 12 clear, 0x5042c460) and focal length, the lens and the image size the template's.
+//               TAKE's state); before it, where the rule reads them (fact 'take_exposure', src/fw/facts.mjs
+//               takeExposure: E143, E146, E147; docs/hle-gaps.md 4.3.13), TAKE's exposure as its still states make
+//               it: StlRdy1's exposure record (96 bytes, a slot of TAKE's ring on the camera, here a record of the
+//               lab's) filled natively by its fill (with the still's flags on E143; E146 and E147 a fill of the
+//               record alone) from the settings store (Tv 41002, 41034, Av 41018, 41082), where the exposure plan
+//               publishes them (S-EXPOSE's take_expose_calculate; X: the plan's Tv and Av), the shot-record fill's
+//               copy of TAKE_EXPOSE's shutter range (into +38166 and +38168, to which the set clamps Tv) natively,
+//               and takepic's copy of the record's +6, +8, +10, +56, +58 and +60 into +38164, +38172, +38178,
+//               +38170, +38176 and +38180 (the copy alone, not takepic). So on E143 ExposureTime is the plan's
+//               shutter as the set gives it (1/250 s for S-SCENE's default scene, X); E146 and E147 start at a GUI
+//               state where S-EXPOSE does not plan, so a shot before S1 has left it finds the settings 0 (1 s), a
+//               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's), and FNumber
+//               0/10 (the lens flag +37982 bit 12 is takepic's lens step's, not run; 0x5042c460); focal length, the
+//               lens and the image size the template's.
 //               Where the rule reads no EXIF set (the E144 family, recFileInline's and the E118 family's versions) it
 //               does not run, and S-EXIFPRM formats the dates natively as it does and sets the zoom ratio 1/1 (I: no
 //               digital zoom), the shooting values the template's 0. Also the record's fields REC_IMAGE
@@ -199,7 +210,7 @@ import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
-import { REC_FILE_E143, REC_IMAGE_E143 } from '../fw/facts.mjs';
+import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143 } from '../fw/facts.mjs';
 
 export class RecError extends FirmwareError {}
 
@@ -308,6 +319,9 @@ export class RecFile {
     this.imgpro_init = false;      // H-RECIMGPRO run (the application's start had not run the image library's init)
     this.precon_init = false;      // H-RECPRECON run (H-EXPINIT had not run IMG_PRECON's init)
     this.exif_sets = 0;            // the EXIF set's native runs (S-EXIFPRM, where the rule reads it)
+    // TAKE's exposure for the shot's record (S-EXIFPRM, where the EXIF set runs natively: fact 'take_exposure',
+    // src/fw/facts.mjs takeExposure)
+    this.exposure = this.image && this.exif_set() ? fact('take_exposure', TAKE_EXPOSURE_E143) : null;
     this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
@@ -391,6 +405,21 @@ export class RecFile {
       if (other !== undefined && v === when) take[other] = v = read(other, n);
       sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
     }
+    // TAKE's exposure, in the order of TAKE's still states: StlRdy1's exposure record (a record of the lab's in place
+    // of a slot of TAKE's ring) filled natively from the settings store, where the exposure plan published it; the
+    // shot-record fill's copy of TAKE_EXPOSE's shutter range; takepic's copy of the record into the block (the rule's
+    // offsets). The record's values are kept for the picture's record
+    const exposure = {};
+    if (this.exposure) {
+      const T = this.exposure, r = lab.alloc(new Uint8Array(T.record.size), 4);
+      lab.call(T.record.fill, { a0: r, ...(T.record.flags !== null && { d0: T.record.flags }) }, null, null, 2000000);
+      lab.call(T.range.fn, { a0: x + T.range.low, a1: x + T.range.high }, null, null, 2000000);
+      for (const [from, to] of T.copy) {
+        const v = sim.read(r + from, 2);
+        sim.write(x + to, v);
+        exposure[from] = ((v[0] | v[1] << 8) << 16) >> 16;
+      }
+    }
     if (this.exif_set()) {
       // the EXIF set natively, as takepic calls it once its fill is made: the dates, the zoom ratio, the gains
       lab.call(X.set, { a0: x }, null, null, 2000000);
@@ -401,7 +430,7 @@ export class RecFile {
       if (X.tags.zoom !== null) sim.write(x + X.tags.zoom, pack('<II', 1, 1));
     }
     const t = sim.read(x + X.time, 10);
-    return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take };
+    return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take, exposure };
   }
   // The picture's file from the lab's JPEG (a JFIF file, src/lab/jpeg.mjs): S-EXIFPRM, then S-RECREQ and REC_IMAGE
   // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. media: the packet's Media, the
@@ -414,7 +443,7 @@ export class RecFile {
     if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its input`);
     if (this.image && !this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
     const stream = encoderStream(jpeg);
-    const { x, clock, date, take } = this.exif_param();
+    const { x, clock, date, take, exposure } = this.exif_param();
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
@@ -428,7 +457,7 @@ export class RecFile {
       if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
       put('FileType', '<B', JPEG);
     }
-    const { header, size } = this.image ? this.image_native(pk, stream, take) : this.image_lab(pk, stream);
+    const { header, size } = this.image ? this.image_native(pk, stream, take, exposure) : this.image_lab(pk, stream);
     // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
     // for 1: 0x5053ff29..0x5053ff37, D; its fnode and DCF block, storage.mjs REC's layouts); where rec_make_file keeps
     // the context on its stack (recFileInline: contexts null), from the fnode and the stamp it held at the
@@ -496,7 +525,7 @@ export class RecFile {
   // REC_IMAGE's task natively with S-JPEGENC's encode (the lab's stream), REC_FILE natively, S-RECREQ's reply taken;
   // lab time runs until the reply and both tasks wait again. Returns {header, size} as REC_FILE's packet has them at
   // its reply
-  image_native(pk, stream, take) {
+  image_native(pk, stream, take, exposure) {
     const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, P = R.packet.fields, I = this.image, who = 'S-RECREQ';
     const imgpro = lab.sim.m.devices.imgpro, runs0 = imgpro?.runs ?? 0;
     const alive = lab.alloc(new Uint8Array(4), 4);
@@ -557,7 +586,7 @@ export class RecFile {
     const y = run.reply, fills = (imgpro?.log ?? []).filter((f) => f.n > runs0);
     // S-JPEGENC's steps
     const steps = { set: run.set, run: run.run, result: run.encoded, id: run.id, handle: run.handle, released: run.released };
-    const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
+    const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take, exposure };
     this.images.push(record);
     if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.id !== run.handle || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
       throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);

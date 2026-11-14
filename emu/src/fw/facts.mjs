@@ -3974,6 +3974,90 @@ export function takeRequests(img, at, qewr) {
     kind_at: img[kind + 5], queue_at: img[keep + 2], event: u32(img, ev + 8) };
 }
 
+// TAKE's exposure for a still's record as S-EXIFPRM gives it (fact 'take_exposure', src/lab/rec.mjs; docs/hle-gaps.md
+// 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the single still's TAKE_MAIN
+// states in order are StlRdy1, StlRdy2 and StlTake (the state table as takeRequests reads it, by name):
+// - record {size, fill, flags, reads}: StlRdy1's entry takes an exposure record from TAKE's ring and fills it, `call G;
+//   mov (P),a1; [mov F,d0;] mov a0,(60,a1); mov (P),a1; mov (60,a1),a0; call FILL` (0x503b12d5..0x503b12f4; P the word
+//   that holds the take-picture request's packet, whose +60 keeps the record): size the ring's slot, G's `udfu01
+//   N,d0` (96, 0x503baec2); fill FILL (0x503bf619) and flags F, the still's (0x40000000), or null where the call
+//   passes none (E146, E147: their fill takes the record alone, X); reads, FILL's reads of the settings store into the
+//   record, [id, offset] of each `mov ID,d0; mov 0,a0; clr d1; call S; movhu d0,(OFF,a2)` in its first
+//   TAKE_EXP_FILL_SPAN bytes, which must hold the shutter's and the aperture's (41002 at +6, 41018 at +10)
+// - range {fn, low, high}: StlRdy2's shot-record fill (0x503bba51) copies TAKE_EXPOSE's shutter range into the
+//   record, `mov (4,sp),a0; mov (4,sp),a1; add LOW,a0; add HIGH,a1; call R` (0x503bbf75: 38166, 38168, R 0x50599812,
+//   two halfword copies `movhu (W),d0; movhu d0,(a0); movhu (W2),d0; movhu d0,(a1); retf`), in the TAKE_RANGE_SPAN
+//   bytes after its bracket's settings read (TAKE_FILL_E143, recImage's take); the EXIF set clamps Tv to it
+//   (0x505735d4 from 0x50573517, I for the names)
+// - copy [[from, to]]: StlTake's takepic copies the record into the shot's record (TAKE_COPY_E143, 0x503bcdac):
+//   `movhu (6,a3),d0; mov TV,a0; add d2,a0; mov a0,(16,sp); movhu d0,(a0); movhu (8,a3),d0; mov d2,a0; movhu
+//   d0,(B,a0); movhu (10,a3),d0; clr d1; movhu d0,(AV,a0)` (+6 to 38164, +8 to 38172, +10 to 38178), then `mov
+//   (12,sp),d0; add N,a3` and `mov a3,(8,sp); mov a3,a0; movhu (a0),d3; movhu (D1,a0),d0; mov d0,a3; movhu (D2,a0),d0;
+//   mov d2,a0; movhu d0,(28,sp); movhu d3,(X,a0); mov a3,d0; movhu d0,(Y,a0); movhu (28,sp),d0; movhu d0,(Z,a0)`
+//   (0x503bce15: N 56, +56 to 38170, +60 to 38180, +58 to 38176)
+// The offsets read are the instructions' displacements (none is assumed). Throws where a form is missing or found twice
+export const TAKE_EXPOSURE_E143 = { record: { size: 96, fill: 0x503BF619, flags: 0x40000000, reads: [[41002, 6], [41034, 8], [41018, 10], [41082, 12]] },
+  range: { fn: 0x50599812, low: 38166, high: 38168 }, copy: [[6, 38164], [8, 38172], [10, 38178], [56, 38170], [60, 38180], [58, 38176]] };
+export const TAKE_COPY_E143 = 0x503BCDAC, TAKE_FILL_E143 = 0x503BBD26;
+const TAKE_EXP_SPAN = 0x600, TAKE_EXP_FILL_SPAN = 0x140, TAKE_RANGE_SPAN = 0x400, TAKE_COPY_SPAN = 0x80, TAKE_RING_SPAN = 0x20;
+const TAKE_EXP_STATE = 'StlRdy1', TAKE_EXP_TV = 41002, TAKE_EXP_AV = 41018;
+const EXP_COPY_FORM = [0xf8, 0x63, null, 0x24, null, null, 0xf1, 0x68, 0x43, 0x10, 0xf0, 0x70, 0xf8, 0x63, null, 0xf1, 0xe8, 0xfc, 0x70,
+  null, null, null, null, 0xf8, 0x63, null, 0x04, 0xfc, 0x70, null, null, null, null];
+const EXP_COPY_TAIL = [0x4f, 0x08, 0x9c, 0xf0, 0x6c, 0xf8, 0x60, null, 0xf1, 0xe3, 0xf8, 0x60, null, 0xf1, 0xe8, 0xf8, 0x93, 0x1c,
+  0xfc, 0x7c, null, null, null, null, 0xf1, 0xdc, 0xfc, 0x70, null, null, null, null, 0xf8, 0xbc, 0x1c, 0xfc, 0x70, null, null, null, null];
+const EXP_RANGE_FORM = [0x5c, 0x04, 0x5d, 0x04, 0xfc, 0xd0, null, null, null, null, 0xfc, 0xd1, null, null, null, null, 0xdd];
+const EXP_RANGE_COPY = [0xfc, 0xac, null, null, null, null, 0xf0, 0x70, 0xfc, 0xac, null, null, null, null, 0xf0, 0x71, 0xde, 0x00, 0x00];
+export function takeExposure(img, at) {
+  const rule = 'takeExposure', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), u16 = (o) => img[o] | img[o + 1] << 8;
+  const place = (e143, what) => { const p = at(e143); if (p === null) throw new Error(`${rule}: ${what} (E143 ${h8(e143)}) is not placed`); return p - 0x50000000; };
+  // StlRdy1's entry, from TAKE_MAIN's state table
+  const main = place(TAKE_MAIN_E143, 'TAKE_MAIN\'s loop');
+  if (!bytesAt(img, main, MAIN_FORM)) throw new Error(`${rule}: TAKE_MAIN's loop at ${D(main)} is not E143's form`);
+  const table = u32(img, main + 17) - base;
+  const str = (a) => { let s = ''; for (let k = a - base; k >= 0 && k < img.length && img[k] && s.length < 32; k++) s += String.fromCharCode(img[k]); return s; };
+  const n = [...Array(TAKE_STATES).keys()].filter((k) => str(u32(img, table + TAKE_STATE_BYTES * k + 4)) === TAKE_EXP_STATE);
+  if (n.length !== 1) throw new Error(`${rule}: ${n.length} states named ${TAKE_EXP_STATE} in TAKE_MAIN's table ${h8(table + base)}, want one`);
+  const entry = u32(img, table + TAKE_STATE_BYTES * n[0] + 8) - base;
+  // its record: the ring's getter, the packet word's keep of the record at +60 and the fill's call, with or without
+  // the flags' `mov imm32,d0`
+  const sites = [];
+  for (let o = img.indexOf(0xdd, entry); o >= 0 && o < entry + TAKE_EXP_SPAN; o = img.indexOf(0xdd, o + 1)) {
+    if (!bytesAt(img, o + 7, [0xfc, 0xa1])) continue;
+    const P = u32(img, o + 9), flagged = bytesAt(img, o + 13, [0xfc, 0xcc]), k = o + 13 + (flagged ? 6 : 0);
+    if (bytesAt(img, k, [0xf8, 0x31, 0x3c, 0xfc, 0xa1, ...le32(P), 0xf8, 0x21, 0x3c, 0xdd])) sites.push({ o, getter: callAt(img, o).to, flags: flagged ? u32(img, o + 15) : null, fill: callAt(img, k + 12).to });
+  }
+  if (sites.length !== 1) throw new Error(`${rule}: ${sites.length} exposure-record fills in ${TAKE_EXP_STATE}'s entry ${D(entry)}, want one`);
+  const [{ getter, flags, fill }] = sites;
+  const ring = oneAt(img, [0xf9, 0x14], rule, 'slot strides in the ring\'s getter', getter, getter + TAKE_RING_SPAN);
+  if (ring === null) throw new Error(`${rule}: the exposure ring's getter ${D(getter)} has no slot stride`);
+  const reads = [];
+  for (let o = img.indexOf(0xfc, fill); o >= 0 && o < fill + TAKE_EXP_FILL_SPAN; o = img.indexOf(0xfc, o + 1)) {
+    if (img[o + 1] === 0xcc && bytesAt(img, o + 6, [0x90, 0x00, 0x04, 0xdd]) && bytesAt(img, o + 16, [0xf8, 0x72])) reads.push([u32(img, o + 2), img[o + 18]]);
+  }
+  for (const [id, what] of [[TAKE_EXP_TV, 'shutter'], [TAKE_EXP_AV, 'aperture']]) {
+    if (reads.filter(([r]) => r === id).length !== 1) throw new Error(`${rule}: the exposure record's fill ${D(fill)} reads the ${what}'s setting ${id} ${reads.filter(([r]) => r === id).length} times, want once`);
+  }
+  // the shot-record fill's copy of TAKE_EXPOSE's shutter range
+  const fillAt = place(TAKE_FILL_E143, 'the shot-record fill\'s bracket read');
+  const rg = oneAt(img, EXP_RANGE_FORM, rule, 'shutter range copies', fillAt, fillAt + TAKE_RANGE_SPAN);
+  if (rg === null) throw new Error(`${rule}: no shutter range copy in the ${TAKE_RANGE_SPAN} bytes after the shot-record fill's ${D(fillAt)}`);
+  const rangeFn = callAt(img, rg + 16).to;
+  if (!bytesAt(img, rangeFn, EXP_RANGE_COPY)) throw new Error(`${rule}: the shutter range's copy ${D(rangeFn)} is not two halfword copies`);
+  // takepic's copy
+  const cp = place(TAKE_COPY_E143, 'takepic\'s copy');
+  if (!bytesAt(img, cp, EXP_COPY_FORM)) throw new Error(`${rule}: takepic's copy at ${D(cp)} is not E143's form`);
+  const add = oneAt(img, [0x58, 0x0c, 0x23], rule, 'record steps after takepic\'s copy', cp + EXP_COPY_FORM.length, cp + EXP_COPY_FORM.length + TAKE_RING_SPAN);
+  const tail = oneAt(img, EXP_COPY_TAIL, rule, 'second copies in takepic', cp, cp + TAKE_COPY_SPAN + EXP_COPY_TAIL.length);
+  if (add === null || tail === null) throw new Error(`${rule}: takepic's copy at ${D(cp)} has no ${add === null ? 'record step' : 'second copy'}`);
+  const N = img[add + 3];
+  return {
+    record: { size: img[ring + 2], fill: 0x50000000 + fill, flags, reads },
+    range: { fn: 0x50000000 + rangeFn, low: u32(img, rg + 6), high: u32(img, rg + 12) },
+    copy: [[img[cp + 2], u16(cp + 4)], [img[cp + 14], u32(img, cp + 19)], [img[cp + 25], u32(img, cp + 29)],
+      [N, u32(img, tail + 20)], [N + img[tail + 7], u32(img, tail + 28)], [N + img[tail + 12], u32(img, tail + 37)]],
+  };
+}
+
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
 // reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
@@ -5654,6 +5738,8 @@ export function readPlacedFacts({ img, at }) {
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
   // TAKE's requests as S-MODPOST and S-TAKERDY take them, on the same bodies (E143, E146, E147)
   if (recF !== undefined) facts.take_requests = takeRequests(img, at, qewr);
+  // TAKE's exposure for a still's record as S-EXIFPRM gives it, on the same bodies
+  if (recF !== undefined) facts.take_exposure = takeExposure(img, at);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

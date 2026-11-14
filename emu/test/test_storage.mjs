@@ -127,12 +127,13 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
 // after E147's extension test passed for the picture mode 11 or 12 and its apply allocated the request's two buffers
 // (with S-RECREQ's Command 16). Never run: the extension's apply on E143 and E146 (byte +8 is 0), the other
 // constructors, the second step's call for the kind byte, the library's run and its generic kind handler (S-JPEGENC),
-// TAKE's shot-record fill and takepic (TAKE does not run). The per-shot EXIF fill inside the EXIF set is the
+// TAKE's shot-record fill and takepic (TAKE does not run). TAKE's exposure-record fill (StlRdy1's) runs once, in
+// S-EXIFPRM (src/fw/facts.mjs takeExposure, docs/hle-gaps.md 4.3.13). The per-shot EXIF fill inside the EXIF set is the
 // observers' control: it runs once. select: the stage-table fill, whose a0 is the create's handle with the request's
 // copy at +4 (size bytes; kind and option its bytes the fill tests first and second); request: the copy's format word
 // (+8) and flags (+12) there. dial (E147): per creative-dial position [position, label, format word, flags, the
-// constructor taken], X 2026-11-14 (test/test_stillsetup.mjs shoots at each): MONO 12 (bits 19 and 23) and COLOR 11 with bit 19, ART
-// {1, 1, 100} (byte +8 1), the constructor for them; position 2's 2 and CRT's 9 the still constructor
+// constructor taken], X 2026-11-14 (test/test_stillsetup.mjs shoots at each): MONO 12 (bits 19 and 23) and COLOR 11
+// with bit 19, ART {1, 1, 100} (byte +8 1), the constructor for them; position 2's 2 and CRT's 9 the still constructor
 export const STILL_PATH = {
   E143: { select: 0x504934A6, size: 48, kind: 37, option: 42, request: { format: 0x20000, flags: 0 }, at: [
     ['CreateParam', 0x50542363, 1], ['its call of the format word', 0x50542394, 1], ['its call of the flags', 0x5054239E, 1],
@@ -142,7 +143,7 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5049CB5C, 0], ['the constructor for the option byte', 0x504953B9, 0],
     ['the constructor for byte +8 1 or bit 19', 0x504953A9, 0], ["the second step's stub for byte +8 1 or bit 19", 0x504953C2, 0],
     ["the second step's call for the kind byte", 0x5049CD1A, 0], ["the library's run", 0x50492758, 0], ['the generic kind handler', 0x5046D994, 0],
-    ["TAKE's shot-record fill", 0x503BBA51, 0], ['takepic', 0x503BCD51, 0], ['the per-shot EXIF fill (control)', 0x5042C2D5, 1]] },
+    ["TAKE's shot-record fill", 0x503BBA51, 0], ['takepic', 0x503BCD51, 0], ['the per-shot EXIF fill (control)', 0x5042C2D5, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BF619, 1]] },
   E146: { select: 0x50485F48, size: 56, kind: 45, option: 50, request: { format: 0x20000, flags: 0 }, at: [
     ['CreateParam', 0x5051F5AF, 1], ['its call of the format word', 0x5051F5E0, 1], ['its call of the flags', 0x5051F5EA, 1],
     ['its call of the kind byte', 0x5051F60D, 1], ['its call of the extensions', 0x5051F64A, 1], ["the extension's test", 0x505216CF, 2],
@@ -151,7 +152,7 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5048F852, 0], ['the constructor for the option byte', 0x50487EA9, 0],
     ['the constructor for byte +8 1 or bit 19', 0x50487E99, 0], ["the second step's stub for byte +8 1 or bit 19", 0x50487EB2, 0],
     ["the second step's call for the kind byte", 0x5048FA10, 0], ["the library's run", 0x50485182, 0], ['the generic kind handler', 0x5045F338, 0],
-    ["TAKE's shot-record fill", 0x503BC37E, 0], ['takepic', 0x503BD6AB, 0], ['the per-shot EXIF fill (control)', 0x50428252, 1]] },
+    ["TAKE's shot-record fill", 0x503BC37E, 0], ['takepic', 0x503BD6AB, 0], ['the per-shot EXIF fill (control)', 0x50428252, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BFE9C, 1]] },
   E147: { select: 0x504947A6, size: 60, kind: 45, option: 50, request: { format: 0xB0000, flags: 0x80000 }, at: [
     ['CreateParam', 0x5052E69F, 1], ['its call of the format word', 0x5052E6D0, 1], ['its call of the flags', 0x5052E6DA, 1],
     ['its call of the kind byte', 0x5052E6FD, 1], ['its call of the extensions', 0x5052E73A, 1], ["the extension's test", 0x505307C8, 2],
@@ -160,7 +161,7 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5049E129, 0], ['the constructor for the option byte', 0x50496707, 0],
     ['the constructor for byte +8 1 or bit 19', 0x504966F7, 1], ["the second step's stub for byte +8 1 or bit 19", 0x50496710, 1],
     ["the second step's call for the kind byte", 0x5049E2E7, 0], ["the library's run", 0x504939E0, 0], ['the generic kind handler', 0x5046DBA4, 0],
-    ["TAKE's shot-record fill", 0x503C660C, 0], ['takepic', 0x503C793B, 0], ['the per-shot EXIF fill (control)', 0x50436558, 1]],
+    ["TAKE's shot-record fill", 0x503C660C, 0], ['takepic', 0x503C793B, 0], ['the per-shot EXIF fill (control)', 0x50436558, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503C9DB8, 1]],
     dial: [[0, 'MONO', 0xC0000, 0x880000, 'the constructor for byte +8 1 or bit 19'], [1, 'COLOR', 0xB0000, 0x80000, 'the constructor for byte +8 1 or bit 19'],
       [2, 'position 2', 0x20000, 0, 'the still constructor'], [3, 'ART', 0x640101, 0, 'the constructor for byte +8 1 or bit 19'],
       [4, 'CRT', 0x90000, 0, 'the still constructor']] },
@@ -742,14 +743,26 @@ export async function storageSession() {
         // docs/hle-gaps.md 4.3.11): run once for the shot, on the packet's block, seen at its entry; in the file
         // (refs/exif.mjs) what it writes over the template's: X and Y resolution 350/1 (the template's 0/0), the
         // digital zoom ratio 0/100 (S-EXIFPRM's 1/1 before), the time offsets; and its conversions of takepic's
-        // shooting values, which stay the template's 0 in the lab (their source, TAKE_MAIN's request, does not run):
-        // ExposureTime 1 s (Tv 0), FNumber 0/10 (the lens flag clear). A change that gives them a source updates this
+        // shooting values. Tv and Av come from TAKE's exposure record, which S-EXIFPRM fills with TAKE's own fill from
+        // the settings store and copies as takepic does, with TAKE_EXPOSE's shutter range (src/fw/facts.mjs
+        // takeExposure, docs/hle-gaps.md 4.3.13): on E143 S-EXPOSE's plan published them, Tv 2052 for the default
+        // scene, which the set gives as 1/250 s (X); E146 and E147 start at a GUI state where S-EXPOSE does not plan,
+        // and this shot (S1 and S2 from the start) finds them 0, so ExposureTime is the set's 1 s of Tv 0 there. FNumber stays
+        // 0/10 (the lens flag +37982 bit 12 is takepic's lens step's, not run)
         if (rec.exif_set()) {
           const used = pl.stand_ins_in_use();
+          const EXPOSURE_TIME = { E143: '[1,250]', E146: '[10,10]', E147: '[10,10]' }[MODEL];
+          const want = `[350,1] [350,1] [0,100] ${EXPOSURE_TIME} [0,10]`;
           const tags = [[0x011A, 'ifd0'], [0x011B, 'ifd0'], [0xA404, 'exif'], [0x829A, 'exif'], [0x829D, 'exif']].map(([k, d]) => JSON.stringify(x?.[d]?.get(k)));
           ok(used.includes('H-RECPRECON') && rec.precon_init && rec.exif_sets === 1 && setRuns.length === 1, `the EXIF set ran natively once, after H-RECPRECON (${used.filter((n) => /PRECON|EXIF/.test(n)).join(' ')}): ${rec.exif_sets} by the lab's count, ${setRuns.length} seen at its entry 0x${rec.R.exif.set.toString(16)}`);
-          ok(tags.join(' ') === '[350,1] [350,1] [0,100] [10,10] [0,10]' && x?.exif?.get(0x9010) === x?.exif?.get(0x9011) && /^[+-]\d\d:\d\d$/.test(x?.exif?.get(0x9010) ?? ''),
-            `the EXIF set's values: X and Y resolution, DigitalZoomRatio, ExposureTime and FNumber ${tags.join(' ')} (want [350,1] [350,1] [0,100] [10,10] [0,10]), OffsetTime ${x?.exif?.get(0x9010)}`);
+          ok(tags.join(' ') === want && x?.exif?.get(0x9010) === x?.exif?.get(0x9011) && /^[+-]\d\d:\d\d$/.test(x?.exif?.get(0x9010) ?? ''),
+            `the EXIF set's values: X and Y resolution, DigitalZoomRatio, ExposureTime and FNumber ${tags.join(' ')} (want ${want}), OffsetTime ${x?.exif?.get(0x9010)}`);
+          // TAKE's exposure record as S-EXIFPRM copied it: its Tv (+6) and Av (+10) the settings 41002 and 41018 as
+          // the fill reads them (the rule's settings read), on E143 S-EXPOSE's plan's (camapp.mjs AE_PLAN +6, +14)
+          const ex = rec.images[0]?.exposure ?? {}, setting = (id) => (s2.lab.call(rec.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 << 16) >> 16;
+          const plan = s2.camapp.plan, tv = setting(41002), av = setting(41018);
+          ok(rec.exposure && ex[6] === tv && ex[10] === av && (MODEL !== 'E143' || (tv === plan?.tv && av === plan?.av && tv === 2052)),
+            `TAKE's exposure record copied into the shot's: Tv ${ex[6]}, Av ${ex[10]} (settings 41002 ${tv}, 41018 ${av}; S-EXPOSE's plan ${JSON.stringify(plan && { tv: plan.tv, av: plan.av })})`);
           // the control: the dates are the EXIF set's, from its block's time record; a fresh copy of the template with
           // the clock read after the clock is set to another date gets that date from the set, and keeps the
           // template's empty DateTimeOriginal without it

@@ -307,6 +307,16 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** high
 
+### 5.7 A format-0x0B bitmap run across a row end goes on in the next row (A-BMPWRAP)
+
+**Where:** `emu/src/dev/engine.mjs` (`cmdBitmap`, the run check), `emu/src/lab/player.mjs` (`stand_ins_in_use`), `emu/host/session.mjs` (`osd_errors`)
+
+**Emulator:** A bitmap of format 0x0B (12-bit tokens, an 8-bit index over a 4-bit run, five to a 64-bit word) is one stream of width x lines pixels: a run that crosses a row end goes on at the start of the next row, and the engine counts such runs; once one is drawn the session lists the named assumption A-BMPWRAP. A run that would leave the picture's last row is refused (BMP_TOKEN), as are a run that crosses a row end in any other format and set bits past a full word's fifth token. Until 2026-11-13 every crossing run was refused, and a scripted session went on without saying so: the firmware takes the refusal and the picture is not drawn. A session's step record now carries `osd_errors` (the engine's refusals in that step) and the summary A-BMPWRAP when it is in use.
+
+**Expected / concern:** The engine's own definition of a run at a row end is not read (?). Stock gives no case: none of the format-14 pictures in the resource blocks of the 33 bodies in `unpacked/` (136,474 in all, from 899 to 7,180 a body) has a run that crosses a row end (X, a scan that decodes each descriptor's stream both ways). The evidence is Caduceus for OM-3's: their encoder (`card/mkguides.py` `encode11`) makes runs over the whole picture with no break at row ends, and their v0.29 guide pictures (175 x 50: "Hue", "Luminance", "Shadows", "Highlights", each with an INFO key), drawn by the firmware on the HSL wheel's pages, have 48, 13, 48 and 49 runs that cross a row end. Read as one stream each decodes to exactly the lengths their notes give (3964 and 4396 bytes for the last two) in their six colours and shows the word and the key (X); runs cut at the row end instead read past each stream into other indices and skew the rows (X). Their notes say the pictures are camera-tested and work (`research/NOTES.md`, test 11: "The GUIDES picture shows BMP_TOKEN in the emulator too (its runs cross rows), but it is camera-tested as working"; I, their report). What the engine does with a crossing run of another format, or with a run that overruns the last row, is not known; both stay refused. The reference decoder (`refs/osdfmt.mjs` `decode_bitmap`) still refuses any crossing run: it validates stock pictures, which never have one.
+
+**Confidence:** medium
+
 ## 6. Other CPUs and the sub-CPU
 
 ### 6.1 Only CPU 0 runs; the other cores are faked or rejected

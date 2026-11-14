@@ -672,6 +672,27 @@ which needs a blocking input queue: the node server's has one, the browser playe
 log watchpoints work, and trace files and `disasm` are not offered. Stepping and setting registers inside a tick can
 leave the harness in a state it did not expect; that is the user's to judge.
 
+**Logging probes (`probe`, `hits`).** `probe {pcs?, mem?}` sets the route's logging probes, the whole set replaced
+(empty lists: off): `pcs`, code addresses whose instructions are recorded as they are about to run (an address in the
+image's notation range is taken as notation, as `call`'s `fn` is, and probed at run time; any other as the CPU runs
+it), and `mem: [{addr, len, kind: r|w|rw}]`, ranges whose CPU accesses are recorded. Nothing of the run changes: an
+exec probe joins the filter the interpreter already tests before every instruction (`src/core/interp.mjs`
+`setProbes`), with no stop, no block end, no interrupt look and no decode kind of its own, so it costs nothing while
+none is set; a memory range is a log watchpoint (its 64 KiB pages take the watched path, slower, the run the same).
+An exec hit is taken at the arrival, before the fetch: an arrival at a breakpoint, or at a continue's budget, records
+nothing (the instruction does not run there; its single step does), and one whose fetch then faults or is refused
+(S-STALERAM's guard: the session then stops as it would untraced) is recorded all the same. At a pc where a lab hook
+answers in place of the firmware (not a pass-through observer) no firmware instruction runs: each arrival there is
+recorded as kind `hook` with the hook's name; the answer lists the armed pcs a hook holds now (`hooked`). `hits
+{limit?}` takes the hits since the last take: `hits` (the first `limit`, default 10,000: `kind` pc, hook or mem, `pc` in
+the disassembly notation, `hook`, `range`, `addr`, `size`, `dir`, `value`, the 16 registers before the instruction or
+as the access happens, `lab_ns`, the lab clock at the hit, which hits close together can share), `dropped` (the rest,
+counted: the log keeps the first 10,000 since the last take) and `counts` (each pc and range, every hit counted). The
+log outlives a session's close, so a power-off's hits are taken after it. `detach` turns the probes off with the rest.
+A host may hold a debug stop by a callback instead of a blocking queue (`holdStop`, `src/debug/live.mjs`): the
+scripted session does (Scripted sessions), so `break` and stopping watchpoints are accepted there; it runs its own
+tokens at the stop and lets it go at `resume` (it does not script `cont`, whose answer is deferred).
+
 **Calling a firmware function (`call`).** On the live route, `call` runs one firmware function natively between ticks
 (the session running or halted; refused at a debug stop, which is inside a tick, and while a stopping watchpoint is
 armed) through the lab's own call (`src/lab/hle.mjs` `HLE.call`), so the session's hooks and stand-ins answer as they
@@ -977,6 +998,9 @@ line.
 | `expect:mem:ADDR=HEX`, `expect:mem:ADDR!=HEX` | the bytes at ADDR are (or are not) HEX |
 | `expect:card:DOS/PATH`, `expect:standin:NAME` | the file is on the card; the stand-in is in use |
 | `expect:exif:DOS/PATH:FIELD=TEXT`, `~TEXT` | the Exif field (`Make`, `Model`, `ImageDescription`, `UserComment`, `DateTimeOriginal`, `ExposureTime`, ...) is, or contains, TEXT |
+| `trace:PC[,PC...]`, `trace:mem:ADDR:LEN[:r\|w\|rw]`, `trace:off` | log each arrival at the pcs and each access to the range (`w` by default) while the later steps run (the debug route's `probe`); `off` disarms every trace |
+| `break:PC[,PC...]`, `break:mem:ADDR:LEN[:r\|w\|rw]`, `break:off` | stop the firmware where it reaches a pc, or after an access to the range (the route's `break` and stopping `watch`); `off` disarms every stop |
+| `resume` | at a debug stop: let the firmware go on; its record carries the rest of the step that stopped |
 
 A card path takes `/` or `\`, compared without case one character for one (`straße.txt` does not name `STRASSE.TXT`,
 as in `bin/card.mjs`); its last part may be a pattern with `*` and `?`, which names the
@@ -1031,6 +1055,43 @@ getter, S2's Exif, the restart with the dial still where it was; and a run past 
 the audit and read as the fill).
 `test/test_osdwrap.mjs` checks `osd_errors` and A-BMPWRAP with Caduceus for OM-3's v0.29 guide pictures on E147 when
 `OM_CADUCEUS` names their checkout (`emu/FIDELITY-NOTES.md` 5.7).
+
+**Traces, breakpoints and watchpoints.** The `trace:` and `break:` tokens arm the debug route's logging probes and
+stops (The debug API) for the rest of the run: the armed sets are the script's, sent whole at each such token and again
+after each `restart`, and a PC in the image's notation range is taken as notation (`0x50436558`, run at
+`0x60457578` on E147). The arming step's record has `armed` (both sets) and `hooked` (the traced pcs a lab hook holds,
+whose arrivals come as kind `hook`); a `break:` at a pc a lab hook holds is refused, as no debug stop can happen there.
+While traces are armed every record has `hits` (the first 100: `kind`, `pc`, the registers, ... as the route's
+`hits`), `hits_dropped` (the rest, counted) and `hit_counts` (per pc and per range, every hit counted); the summary's
+`traces` lists the arming steps (`armed`), what is armed at the end (`now`), the `counts` over the run, `hits_dropped`
+and `stops`. A step whose firmware meets a stop ends there: its record has `stopped` (`kind` break or watch, `pc`
+where the firmware is held, in the notation, `lab_ns`, `regs`, and for a watchpoint `watch`: `range`, `addr`, `size`,
+`dir`, `value` and the accessing `pc`) and `phase` `debug`. The next tokens then run at the stop: `read:`, `write:`,
+`expect:...`, `card-ls`, `card-get:`, `exif:`, `shot:`, `trace:` and `break:` (`break:off` before `resume` at a pc the
+firmware keeps reaching); `call:` is refused there (the stop is inside the lab's tick, where the route refuses a call),
+and so is any token that runs lab time. `resume` lets the firmware go on: its record (`resumed: {step, pc}`) carries
+the rest of the step that stopped, and may itself end at the next stop. A run whose tokens end at a stop, or whose step
+at a stop fails, ends there with the firmware held: nothing runs after the stop, the session closes, the summary's
+`ended_at_stop` names it (`{step, token, kind, pc, lab_ns}`) and the last line says so; with every step passed it
+exits 0. Arming nothing changes nothing, and a logging trace does not change what the firmware does (X,
+`test/test_trace.mjs`: every step's lab time and frame equal with and without traces on E143 and E147, and a patched
+build's audit the same; a flow of S1, S2 and the menu on E143 took 8.2 s untraced, 8.2 s with a pc traced 8,774
+times, 8.7 s with a 4-byte range traced too, on an Apple M4 Max, 2026-11-13). A stop is a main-loop visit the untraced run need not make,
+so the interrupt taken after it may differ (as on the live route). Through the module API (contract additions):
+`onRecord(record)` gets each record as it ends, in step order (a stop's record before those of the tokens run at it);
+`run(tokens)` takes a stop's tokens from its list; a lone `step()` takes them from `atStop(record)`, which returns
+the next token's text, `resume`, or null to end the run at the stop (without `atStop` a lone `step()` refuses
+`break:`); a `step()` that met a stop returns the record that ran last (`resume`'s).
+
+Checked (`test/test_trace.mjs`): the tokens, the machine's probes on a blank image (each instruction at a probed pc
+counted once, at a budget pause, a breakpoint and the step off it; the registers and memory those of an unprobed run)
+and the route's hit log (firmware-free); on E143 a flow traced and untraced equal step for step (control: one 100 ms
+shorter told apart), the hits bounded with the rest counted, a hook's arrivals, a breakpoint with reads at the stop and
+`resume`, a stopping write watchpoint at the trace's first hit, a run ending at a stop, a failed expect, a press and a
+call there, a break at a hooked pc, a trace at a pc in an S-STALERAM gap recording the arrival before the session
+stops, the traces re-armed after a restart, and `atStop` and `onRecord`; on E147 S1 and S2 traced and untraced equal,
+the per-shot EXIF fill site reached once, in the S2 press, a patched build's audit the same with a trace armed, and a
+breakpoint at the fill site with the picture written after `resume`.
 
 ## The browser player
 
@@ -1213,6 +1274,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E148, E144, E139, E134, E137, E142, E140, E125, E130, E133, E145, E129, E132, E122, E118, E120), or those named: start (E145 and E129: then MENU at the date and time setting, E132: the clock set there by UP and OK on each field, `START_PROMPT`), S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one (the whole path on the E118 family's, `EVF_PLAY`), then MENU, DOWN, MENU on both (the menu opened with the frame changed, DOWN moving in it, MENU back to the shooting state; on the EVF E146 and E147 expected to fail, MENU_EVF_XFAIL, strictly); GUI states by name; after S2 a frame of more than one value, the shooting screen back after the rec view; after S1 the count probe: the screen must change with the remaining-shots query's answer (S-CARD's count, or on a body whose card is native the firmware's, replaced for one window by the probe's own answer of the query) and only there, on a body whose application asks for the count only when its shooting screen is redrawn (E118, E120, E122: `PROBE_REDRAW`) with the screen redrawn by INFO through its views before each window; on a body whose card is native the card check: mounted, the shots counted from it, each picture's file found again by `refs/volume.mjs` (FAT or exFAT) with its size (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run); `--card-size GiB` puts a blank card of that size in the slot (with an SDXC card E144 is expected to stop, SDXC_XFAIL, as strictly) | the models' firmware |
 | `node emu/test/test_scpum4.mjs [--session]` | also in both suites above: the bridge that puts the SCPU's own firmware behind the link, its clock (A-SCPUM4-1), the frame log rebuilt from the wire against S-SCPUDEV's own, the byte mover through SPI2 and DMA1 (pure); with `--session` a play session's start with S-SCPUDEV and with the SCPU's firmware (`OM_EMU_SCPU=native`), whose frame log, transfers and pin levels must equal S-SCPUDEV's (`OM_EMU_MODEL=E146` for E146) | the E143 (or E146) firmware blocks and SCPU block for `--session` |
 | `node emu/test/test_osdwrap.mjs [--units] [--session]` | also in both suites above: the OSD engine's format-0x0B runs across a row end (A-BMPWRAP, `FIDELITY-NOTES.md` 5.7) on a bare machine: drawn as one stream at the stride and counted, and refused (BMP_TOKEN, nothing drawn) past the last row, in format 0x02 and with set bits past a word's last token; with `OM_EMU_MODEL=E147 OM_CADUCEUS=DIR` their v0.29 release through `host/session.mjs` (the patch file, LOOKS.BIN put by `bin/card.mjs`): the HSL wheel's four guide pictures drawn with no step's `osd_errors` and A-BMPWRAP in the summary, not before the first INFO; control: the pages' 175 x 50 pictures poked with bits past a word's last token, refused and reported in `osd_errors` (skipped without `OM_CADUCEUS`) | the E147 firmware and a Caduceus for OM-3 checkout for `--session` |
+| `node emu/test/test_trace.mjs [--units] [--session]` | also in both suites above: the scripted session's traces, breakpoints and watchpoints: the tokens, the machine's exec probes on a blank image and the live route's hit log; through `bin/session.mjs` on E143, and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification

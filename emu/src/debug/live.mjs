@@ -21,7 +21,8 @@
 //   step {n?}               at a debug stop only: n single steps (no interrupt accepted), ending early at a fault, a
 //                           watchpoint hit or before an instruction at one of the harness's breakpoints (harness:
 //                           true; cont then lets the harness take that stop as its own)
-//   break {pcs}             the debug breakpoints ([] clears)
+//   break {pcs}             the debug breakpoints ([] clears); a pc in the image's notation range is taken as
+//                           notation and stops at run time, as probe's and call's (the answer lists run-time pcs)
 //   watch {list}            as the protocol's; stopping entries need a host whose queue blocks (below); the log
 //                           entries carry lab_ns and n
 //   detach                  breakpoints, watchpoints, traces and probes off, then run on: {state: 'running'}
@@ -323,7 +324,7 @@ export class LiveDebug {
     }
   }
   _break(pcs, what) {
-    const set = new Set(list(pcs, what).map((x) => addr(x, what)));
+    const set = new Set(list(pcs, what).map((x, i) => codePc(x, `${what}[${i}]`)));   // notation as notation (probe, call)
     if (set.size) this._needRouted('break');
     this.pcs = set;
     this._hook();

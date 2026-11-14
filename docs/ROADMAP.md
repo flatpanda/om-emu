@@ -591,9 +591,9 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    probes (`probe`, `hits`) record pcs, a lab hook's arrivals and memory accesses with the registers, at no cost while
    none is armed (exec probes in the interpreter's breakpoint filter); the `call` op takes `entry` and `stops`. Left:
    a call at a debug stop is refused (it would be a harness call nested in the held tick, on the same trampoline and
-   stack); the live `break` op takes its pcs as given, so a pc in the disassembly notation never stops there (the
-   firmware runs at run-time addresses, X), and it accepts a pc a lab hook holds, where the harness takes every stop
-   (`src/lab/sim.mjs` `_debugCont`, D): the session's `break:` converts the one and refuses the other.
+   stack); the live `break` op accepts a pc a lab hook holds, where the harness takes every stop (`src/lab/sim.mjs`
+   `_debugCont`, D), and the session's `break:` refuses it. Since the round's final pass the live op takes a notation
+   pc as notation, as `probe` and `call` do (`emu/test/test_live.mjs`).
 
 ## Emulator architecture
 

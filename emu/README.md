@@ -663,10 +663,10 @@ the newest run's parameter image, S-PDT) and `ems1` (the EMS1 engine's model on 
 and the newest run's start word, channels and parameter image, S-EMS1); `load`, `reset`, `cpuStore`, the snapshots,
 `abort`, `quit` and `lab` time moves are refused. Run control:
 `halt` pauses the session at the current tick boundary (phase `debug`; only debug inputs and controls run, the
-other inputs wait in the queue in their order); `break {pcs}` (run-time pcs, taken as given: the firmware runs at
-run-time addresses, so a pc in the disassembly notation never stops, and nor does a pc where a lab hook answers, as
-the harness takes every stop at its own breakpoints; the scripted session's `break:` converts the one and refuses the
-other) and a stopping watchpoint make a debug stop inside a tick,
+other inputs wait in the queue in their order); `break {pcs}` (a pc in the image's notation range is taken as
+notation and stops at its run-time address, as `probe`'s and `call`'s, and the answer lists run-time pcs; a pc where a
+lab hook answers never stops, as the harness takes every stop at its own breakpoints, and the scripted session's
+`break:` refuses it) and a stopping watchpoint make a debug stop inside a tick,
 where the session is held (the harness's continue or step waits in the Simulator's debug hook) while debug inputs run:
 `step {n?}` single-steps there (no interrupt accepted; it stops before an instruction at one of the harness's own
 breakpoints, `harness: true`, which a `cont` then lets the harness take); `cont {stops?, maxMs?}` runs on and answers at

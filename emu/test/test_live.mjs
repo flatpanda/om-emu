@@ -5,8 +5,8 @@
 //     browser driver's wait while halted;
 //   liveSession (E143 firmware, a headless Player): refused without --debug-api; halt with an input held and resume;
 //     a stopping watchpoint and a breakpoint hit inside an input's run, reads, steps and cont while held there, then
-//     detach, the input answered as without the debugger; a control letting a stop go; cont's maxMs; the refusals of a
-//     queue that does not block;
+//     detach, the input answered as without the debugger; a break at the same pc in the disassembly notation stops
+//     at its run-time address; a control letting a stop go; cont's maxMs; the refusals of a queue that does not block;
 //   liveHost (E143 firmware, bin/play.mjs over HTTP): /api/debug halt, reads, a stop, step, detach on a session pacing
 //     against the wall clock, and bin/debug.mjs --attach's JSON lines (the call op among them: refused at the stop,
 //     answered once the session runs; test_call.mjs has its own tests).
@@ -242,6 +242,18 @@ export async function liveSession() {
     ok(bans[0]?.stop === 'break' && bans[0].regs.pc !== pc, `step off the breakpoint: ${bans[0]?.regs?.pc}`);
     ok(bans[1]?.stop === 'break' && bans[1].regs.pc === pc && bans[1].stops === bc.stops + 1, `the next hit: ${JSON.stringify(bans[1]).slice(0, 160)}`);
     ok(!w.error && pl.phase === 'running', `the WAIT finished: ${w.error}`);
+    // the same pc in the disassembly notation: taken as notation (as probe's and call's), so it stops at run time
+    const { notationOf } = await import('../src/debug/live.mjs');
+    const npc = `0x${notationOf(Number(pc)).toString(16).padStart(8, '0')}`;
+    ok(npc !== pc, `the store's pc ${pc} is an image pc (notation ${npc})`);
+    script.push({ op: 'state' }, { op: 'break', pcs: [] }, { op: 'resume' });
+    sent.length = 0;
+    const nb = ask({ op: 'break', pcs: [npc] });
+    w = run('WAIT:20');
+    const nst = results.get(sent[0])?.debug;
+    ok(JSON.stringify(nb?.pcs) === JSON.stringify([pc]) && nst?.state === 'stopped' && nst.stop?.regs?.pc === pc && !w.error,
+      `break at the notation ${npc}: ${JSON.stringify(nb)} ${String(JSON.stringify(nst)).slice(0, 200)} | WAIT ${w?.error}`);
+    if (script.length) { script.length = 0; ask({ op: 'break', pcs: [] }); }   // no stop: the rest of this check unused
     // a control lets a stop go: the breakpoints cleared, the control runs after the tick
     script.push({ op: 'state' });
     sent.length = 0;

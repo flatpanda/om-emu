@@ -375,6 +375,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   the position (`creative_dial`) and the labels (`creative_dial_positions`). Other bodies have no such dial in the lab:
   E143's tables lack the code, and the input is refused with that reason; E122's tables hold it, and there it is only
   decoded (what each position selects is not read).
+- The OM-3's still / movie switch (E147) is UI_IN's position switch `0x1909` on three bits. At its positions 0 and 1
+  the application reads its movie mode (setting 44, which E143 sets at the mode dial's Movie) and gives the shooting
+  sequence no release keys; at 2 it reads stills. E147's sessions start it at 2 (`src/fw/models.mjs` switch_idle,
+  `docs/hle-gaps.md` 4.1.13); before 2026-11-13 they started at 1, in movie mode. It is not an input of the players.
 - REC records with the mode dial at Movie (position 7) once the LLPSW firmware key is released (with the native lens
   it reads released from the start: the lens is locked on the mount, and pressing it detaches the lens); while it
   records, the GUI shows its movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,

@@ -362,8 +362,10 @@ export function mode_dial_names(v, n) {
 // E147's 0x1909 and its creative dial 0x1906): [[group, byte, bit, polarity] of the idle position], set in the idle
 // image. The idle position is the second: on E147 the first makes S2 ask for the dial to be turned (X). The creative
 // dial (CONTROLS creative_dial) starts there too unless the session asks for another position (opts.creative_dial);
-// on E147 the second is COLOR (src/fw/models.mjs creative_dial). What 0x1909 is on E147 is not known: its three
-// positions change neither the picture-mode family nor the screen (X)
+// on E147 the second is COLOR (src/fw/models.mjs creative_dial). A body's MODELS entry can name another idle
+// position for a code (switch_idle): E147's 0x1909 is its still / movie switch, whose first two positions the
+// application takes for movie mode (src/fw/models.mjs switch_idle; docs/hle-gaps.md 4.1.13), so it starts at the
+// third; its positions change neither the picture-mode family nor the screen (X)
 export const SWITCH_IDLE_POSITION = 1;
 export const POSITION_SWITCHES = [];
 // a ported model's switches the idle image sets by state, not by bit: [code, state], a switch's state 0 being its bit
@@ -500,7 +502,12 @@ export function apply_uiin_layout(image) {
   Object.assign(MODE_DIAL, dial);
   const byCode = new Map();
   groups.forEach(({ entries }, g) => entries.forEach(([b, bit, code, typ, pol]) => { if (code && code !== MODE_DIAL_CODE && typ === 1) { if (!byCode.has(code)) byCode.set(code, []); byCode.get(code).push([g, b, bit, pol]); } }));
-  POSITION_SWITCHES.splice(0, POSITION_SWITCHES.length, ...[...byCode.values()].filter((l) => l.length > 1).map((l) => l[SWITCH_IDLE_POSITION]));
+  const idle = MODEL_INFO.switch_idle ?? {};
+  for (const [code, k] of Object.entries(idle)) {
+    const l = byCode.get(Number(code));
+    if (!l || l.length < 2 || !(k >= 0 && k < l.length)) throw new PlayError(`UI_IN tables: src/fw/models.mjs switch_idle names position ${k} of 0x${fx(Number(code), 4)}, which ${MODEL}'s tables hold ${l?.length ?? 0} of`);
+  }
+  POSITION_SWITCHES.splice(0, POSITION_SWITCHES.length, ...[...byCode].filter(([, l]) => l.length > 1).map(([code, l]) => l[idle[code] ?? SWITCH_IDLE_POSITION]));
   const states = new Map(IDLE_SWITCH_STATES);
   STATE_SWITCHES.splice(0, STATE_SWITCHES.length, ...groups.flatMap(({ entries }, g) => (entries.some((e) => e[2] === PRODUCER_CODE) ? [] : entries
     .filter(([, , code, typ]) => typ === 1 && states.has(code)).map(([b, bit, code, , pol]) => [g, b, bit, states.get(code) === 0 ? pol : 1 - pol]))));

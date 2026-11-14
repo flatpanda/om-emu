@@ -667,6 +667,14 @@ export const MODELS = {
     // positions CRT, ART, COLOR, MONO set 897 to 900, 899, 901, 988, and 898 is no position of the body's dial; which
     // way the dial turns between the lab's positions is not in the firmware (?)
     creative_dial: { labels: ['MONO', 'COLOR', 'position 2', 'ART', 'CRT'] },
+    // the still / movie switch (src/lab/play.mjs switch_idle): UI_IN's 0x1909 on bits 0..2 of group 4, polarity 1
+    // (its tables, X), which the application's mode reader reads right after the mode dial's 0x1901 (D). At its
+    // positions 0 and 1 the application's setting 44 reads 1, at 2 it reads 0 (X); E143 sets 44 to 1 at the mode
+    // dial's MOVIE (X), its button functions take their movie column while 44 is 1 and OlyHfwOpeShoot::ctrlRelease
+    // is then given no release keys, so S1 and S2 never reach the shooting sequence's phase 101 cases (D, X under
+    // control camapp 3: phase 101 throughout; docs/hle-gaps.md 4.1.13). The lab's sessions are stills sessions: the
+    // switch starts at position 2. That 44 is the movie mode is I (its name is not read)
+    switch_idle: { 0x1909: 2 },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

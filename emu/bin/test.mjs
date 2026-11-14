@@ -13,7 +13,7 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
-// frames), S-MODPOST (test_modpost.mjs), the TAKE
+// frames), S-MODPOST (test_modpost.mjs), a still under camapp 3 on E143, E146 and E147 (test_c3take.mjs), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
 // core (test_cpu2.mjs), the VSC's histogram unit in play under camapp 3 (test_hist.mjs), the firmware's start
 // tasks' conditions and the start probe's records on E143 (test_ustart.mjs), the lab's audio output and the
@@ -328,6 +328,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`S-TAKERDY: its rule ${tu.checks - tu.bad.length}/${tu.checks}; three shots and a full shot in play (camapp 3) ${ts.checks - ts.bad.length}/${ts.checks}`);
   [...tu.bad, ...ts.bad].forEach((x) => console.log('  ', x));
   bad += tu.bad.length + ts.bad.length;
+}
+// a still under control camapp 3 per body (test_c3take.mjs): S1 to READY (and 103 with S-TAKERDY), S1 released alone
+// back to STANDBY with MENU taken, a full shot left in its phase with MENU untaken; E143 here, E146 and E147 each in a
+// process of its own (E147's still / movie switch at its stills position, src/fw/models.mjs switch_idle)
+{
+  const { stillSession } = await import('../test/test_c3take.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const cs = await stillSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_c3take.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`a still under control camapp 3: E143 ${cs.checks - cs.bad.length}/${cs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
 // H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie

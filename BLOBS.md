@@ -3,7 +3,8 @@
 Firmware images, descrambled blocks, patched candidates, third-party
 references and the built objdump are not committed. `BLOBS.sha256` pins
 every one of them except the objdump, a host build whose hash is not
-reproducible; after restoring, check with:
+reproducible, and the caduceus-om3 checkout, whose release files a test
+fixture pins (last row); after restoring, check with:
 
 ```bash
 sha256sum -c BLOBS.sha256
@@ -18,3 +19,4 @@ sha256sum -c BLOBS.sha256
 | `refs/mn103_ida_module.zip` | https://web.archive.org/web/20120927114459id_/http://www.pentax-hack.info/firmware/pan/mn103.zip |
 | `refs/mn103_isa_13250-040e.pdf` | https://web.archive.org/web/20160404092019id_/http://pentax-hack.info/firmware/pan/13250-040e.pdf |
 | `tools/mn10300-objdump` | Built from GNU binutils 2.43 (`https://ftp.gnu.org/gnu/binutils/binutils-2.43.tar.xz`) with `configure --target=mn10300-elf --disable-nls --disable-werror`, then `make all-binutils`; copy `binutils/objdump`. Host build, so its hash is not reproducible. |
+| `$OM_CADUCEUS` (a caduceus-om3 checkout, outside the tree) | Third party, Apache-2.0: `git clone https://github.com/androidfanman/caduceus-om3`. `emu/test/test_caduceus.mjs` reads its `releases/` and never fetches; `emu/test/fixtures/caduceus-releases.json` pins each release's `patch.json` and card files by sha256, with the patch reader's digests and what the release's flow shows in the lab. A release whose files differ from their pins fails; a folder with no pin is reported. None of its bytes is committed. |

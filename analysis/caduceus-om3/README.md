@@ -17,8 +17,10 @@ release lists), and its emulator drivers were read, not changed; their effects w
 scripts on om-emu itself. Every firmware fact below was checked on om-emu's pinned E147 block with
 `tools/mn10300dis.sh`, small node scripts that only read bytes, and probe sessions of the E147 lab at `f2b326b`, the
 round's base. Where this round's modules changed what the lab shows, the text marks the base's observation "at
-`f2b326b`" and gives the result on the round's final tree beside it (X, 2026-11-13). No excerpt of Caduceus' code, no
-byte of its patch and no picture it draws is committed.
+`f2b326b`" and gives the result on the round's final tree beside it (X, 2026-11-13). A second round the same day, on
+base `ae63e25`, took up section 7's follow-ups against the checkout at `0b1d5cb`, which adds v0.29.1; its modules are
+listed in 4.1, and where it changed a result the text says so. No excerpt of Caduceus' code, no byte of its patch and
+no picture it draws is committed.
 
 **Licence.** The repository is Apache-2.0 (`LICENSE`) with a `NOTICE` that says the release patch files hold only the
 bytes the project writes, that its tour screenshots were drawn by om-emu running its firmware, and that its developer
@@ -51,7 +53,7 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
 2. **What it is.** About 16,600 lines of MN10300 assembly built with GNU binutils into hooks, code tails and a
    relocatable block, shipped per release as a digest-anchored `patch.json` of new bytes with no old ones, and turned
    into the camera's SD update file by a stdlib Python patcher from the user's own official `.BIN` (section 1).
-   Eighteen release folders, v0.16 to v0.29 with test versions, in a history from 2026-11-05 to 2026-11-13.
+   Nineteen release folders, v0.16 to v0.29.1 with test versions, in a history from 2026-11-05 to 2026-11-13.
 3. **How it uses om-emu.** Builds run in an E147 lab session before the camera (their notebook), through scripts
    that import 11 of om-emu's internal modules, write memory the lab leaves unset and call firmware functions with
    hand-made stubs (section 3). At `f2b326b` one write was still needed: the section loader's copied mask
@@ -68,14 +70,18 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
    table, the Creative Dial's power-on mapping, and that a native power-off save carries store M's unused tail
    (section 2).
 6. **What om-emu takes:** this round's modules for verifying modified firmware, each answering one of their workarounds,
-   and a recipe for verifying a build (section 4). **Corrections to om-emu's docs:** four (section 5), all made.
+   and a recipe for verifying a build (section 4). The second round adds a regression run of every release against
+   pinned digests and observations, their guide pictures drawn, calls into the middle of a function, traces and
+   breakpoints in scripted sessions, and a check of a film's values below the pixels (4.1, 4.2, 4.6). **Corrections
+   to om-emu's docs:** four (section 5), all made.
 
 ## 1. What it is, and how it is built and delivered
 
 - **Repository (D).** 449 commits from 2026-11-05 to 2026-11-13, 627 tracked files: the firmware sources
   (`firmware/src/editor.s` 13,734 lines, `xblock.s` 2,855, the linker script `editor.ld` 203), the build and patch
   scripts (`firmware/build.py`, `patch.py`), card-file generators (`card/`), a web app for making films (LookLab,
-  `webapp/`), user docs (`docs/`), the per-release folders (`releases/v0.16` .. `v0.29`, with alphas and betas), the
+  `webapp/`), user docs (`docs/`), the per-release folders (`releases/v0.16` .. `v0.29`, with alphas and betas;
+  `v0.29.1` at `0b1d5cb`), the
   research notebook (`research/NOTES.md`, 3,763 lines, and `BUTTONS.md`) and the om-emu drivers (`tools/emulator/`,
   `research/emulator/`). The status words of the notebook are defined at its head: "camera" is seen on a real OM-3,
   "emulator" is om-emu only.
@@ -167,7 +173,9 @@ loader leaves it (`emu/FIDELITY-NOTES.md` 7.17): it reads `0x3ff` at open with n
 
 The phase mask beside it, `0xa32de58c` (`FACTS.E147.boot.stage`), has three references: the wait `0x50024e1b` and the
 per-section step's `or` at `0x5002503e..0x50025046` (X, the same scan); S-BOOTSTAGE sets bit 0 and it reads 1 (X).
-Their gate does not test it; only the card-load worker of v0.25..v0.27 waited for bits `0x2e9` (D, their source).
+Their gate does not test it; only the card-load worker of v0.25..v0.27 waited for bits `0x2e9` (D, their source). Of
+those releases the patch audit lists a task in patched bytes for v0.26.2 and v0.27 only (X, the regression run of 4.2),
+and there the worker never gets past that wait.
 
 ### 2.3 The media word and its setter
 
@@ -190,7 +198,9 @@ read `0xa4` (their 164), the call site ran at the shutter events, SD's word was 
 after S1. With `0xa32de590 = 0x3ff` written after open it was `0x8801` after the next S1: the gate opened and the block
 was published. On the round's final tree no write is needed: the mask reads `0x3ff` at open and the state word is
 non-zero after the first S1 (X, section 4.2). Its value differs between flows (`0x5d81`, `0x7f81`, `0x8801` were seen):
-their source publishes a heap handle there (D), and S-HEAP's allocation order depends on the flow.
+their source publishes a heap handle there (D), and S-HEAP's allocation order depends on the flow. A write trace on
+the word (`trace:mem:`, second round, X) shows the first S1 writing `0xffff` there from `0x502fda3a` and then `0x5d81`
+from `0x50a6e1a4`, both in patched section tails.
 
 ### 2.5 Store M's tail
 
@@ -214,8 +224,8 @@ and v0.29, S1 then S2): the set-up's UserComment loop `0x50434fd7` (theirs `0x60
 did not, as S-EXIFPRM stood in for TAKE's EXIF set. Since H-RECPRECON the EXIF set runs natively at S2
 (`docs/hle-gaps.md` 4.3.11), the fill site with it: under v0.29 the S2 picture on the card has ImageDescription
 `FILM 1 Portra 400` and a UserComment that starts `Caduceus FILM 1 Portra 400` (X, `refs/exif.mjs` on the file
-`bin/session.mjs` took off the card, section 4.2). The exposure fields beside them are S-EXIFPRM's, not the session's
-(section 4.4).
+`bin/session.mjs` took off the card, section 4.2), and a `trace:` of the site records one arrival per S2 press, stock
+and v0.29 (X, second round). The exposure fields beside them are S-EXIFPRM's, not the session's (section 4.4).
 
 ### 2.7 The Creative Dial and the settings getters
 
@@ -273,20 +283,23 @@ None of their workarounds is needed on the round's final tree. The media word (2
 2026-11-12, and `PlaySession.lab_created` has existed since 2026-10-31, against their note that it does not. Section 4.1
 names the module that replaces each of the others: the mask write, the allow-list edit for a task the patch creates
 (v0.25..v0.27; v0.29 creates none, its two worker hook sites hold stock bytes, X), the stubs, the card rewriter, the
-kept file's edit and the local dial change.
+kept file's edit and the local dial change. Their own driver still runs against om-emu's internals (X, second round:
+`session_ed1.mjs` with `s1 tonecall ncall` on v0.29 exits 0), and their notebook's "om-emu cannot take the card out
+on E147" no longer holds: the card's removal and insertion run there (X, the regression run of 4.2).
 
 **Where the lab misled them or could not answer.**
 
 | Case (their name) | On the camera (their report) | In the lab (their notebook) | Why (om-emu side) | Closed by |
 |---|---|---|---|---|
 | Slider code at `0x60133000`, in the `0xff` run below section 1 | not flashed: it would not have been loaded | ran | the whole block is mapped (2.1) | closed: the loaded-ranges mode stops code there as not shown to load (?) and lists patched bytes there at the start (4.1) |
-| v0.20-t1: stage code in section 2 calling section-8 code | boot loop, recovered by flashing v0.19 | booted | every section is present from the start; the lab runs no boot order (their cause is a static reading, I) | follow-up 5 |
-| Capture-path crashes: v0.24's getter during capture, lk6's WB read from the heap at S1, ft5 / ft7 / ft8, rc2b's broken file, grain with RAW+JPEG | reboot, hang, a file with EXIF and thumbnail only | not reached ("the emulator cannot capture") | TAKE, development and encode are stood in (S-RELSEQ, S-EXPOSE, S-EXIFPRM, S-JPEGENC) | the photo code: closed, the per-shot EXIF fill runs (4.1); development: follow-up 6 |
+| v0.20-t1: stage code in section 2 calling section-8 code | boot loop, recovered by flashing v0.19 | booted | every section is present from the start; the lab runs no boot order (their cause is a static reading, I) | follow-up 7 |
+| Capture-path crashes: v0.24's getter during capture, lk6's WB read from the heap at S1, ft5 / ft7 / ft8, rc2b's broken file, grain with RAW+JPEG | reboot, hang, a file with EXIF and thumbnail only | not reached ("the emulator cannot capture") | TAKE, development and encode are stood in (S-RELSEQ, S-EXPOSE, S-EXIFPRM, S-JPEGENC) | the photo code: closed, the per-shot EXIF fill runs (4.1); development: follow-up 8 |
 | `fb`-prefixed `movbu (d8,An),Am` (gt1) | misread | "worked" | om-emu faults on `fb` with nn = 2 (`src/core/cpu.mjs`, D); the instruction sat in the capture path the lab never ran (I) | nothing in the CPU |
 | lk7 / lk9: block code in the uncached heap on the COLOR switch | 1 s hang, restart | fine | no fetch cost, watchdog or stack-depth model | not taken (4.4) |
-| The colour wheel's plane | drawn | `PLANC_UNOBSERVED`, on stock too | the OpenVG / K3000 stack on CPU 1 is dormant (`docs/hle-gaps.md` 4.12) | follow-up 7 |
+| The colour wheel's plane | drawn | `PLANC_UNOBSERVED`, on stock too | the OpenVG / K3000 stack on CPU 1 is dormant (`docs/hle-gaps.md` 4.12) | follow-up 9 |
+| Their guide pictures (Test 11) | drawn | `BMP_TOKEN`, not drawn | the OSD engine refused every run across a row end; stock has none (X, 4.1) | closed: format 0x0B's runs go on in the next row (A-BMPWRAP, 4.1) |
 | v0.27's sporadic start-up hang with the dial moved while off | hang | not shown | one deterministic schedule; no dial position | the position: closed, the dial is an input a power cycle keeps (4.1); the race is not taken |
-| Stills-mode arrow keys and the front dial (`research/BUTTONS.md`) | differ | other setting ids read | the lab's key routing; their stills-mode lab results declared void | follow-up 3 |
+| Stills-mode arrow keys and the front dial (`research/BUTTONS.md`) | differ | other setting ids read | the lab's key routing; until 2026-11-13 also the lab's movie mode on E147: its still / movie switch started at a movie position, and the button-function lookup then takes its movie column (`docs/hle-gaps.md` 4.1.13, D); whether that is their case is not checked; their stills-mode lab results declared void | follow-up 2 |
 
 **Where the lab answered.** Their notebook credits the lab with a frame bug that overwrote a saved register (`gd_set`),
 a cached-alias relocation landing at a wild address, an assembler-made wild call that stopped the session (the lab was
@@ -315,7 +328,7 @@ Each option, its stand-in and its status are in `emu/README.md`; where the lab d
   FILE` takes a patched decoded main block and turns it into the same overlay against stock, so every digest pin stays.
   Both work on `bin/play.mjs`, `bin/nav.mjs`, `bin/debug.mjs`, `bin/session.mjs` and, with one model named,
   `bin/modelcheck.mjs`; the browser player's Patch option takes a file too. A patched build keeps its own settings
-  file (`nvram-<model>-<8 hex>`). Every release from v0.16 to v0.29 is taken (X, `emu/README.md` "Patch overlays").
+  file (`nvram-<model>-<8 hex>`). Every release from v0.16 to v0.29.1 is taken (X, `emu/README.md` "Patch overlays").
   Replaces their direct `Player` bring-up.
 - **The patch audit** (`src/lab/patchaudit.mjs`, FIDELITY 7.16). A lab hook reached on patched bytes stops the session
   (`PatchHooked`); the pass-through observers, which only record and then run the instruction, are exempt. The status
@@ -354,14 +367,44 @@ Each option, its stand-in and its status are in `emu/README.md`; where the lab d
 - **A firmware call op** on the debug route (`{"type": "debug", "op": "call", ...}`, the session's `call:` token): a
   function run to its return through the lab's own call path, its hooks answering as for the lab's own calls, every
   register returned. In the loaded-ranges mode a call into code the boot does not load or is not shown to load is
-  refused before it runs. Replaces their stubs, for whole functions (4.3).
+  refused before it runs. Replaces their stubs (4.3; for calls into the middle of a function, below).
 - **The per-shot EXIF fill** (2.6), run with the EXIF set natively at S2 (H-RECPRECON, `docs/hle-gaps.md` 4.3.11):
   their photo code runs, and its fields are read back from the card's JPEG.
 - **A scripted session tool**: `bin/session.mjs` and its module `host/session.mjs` (`openSession`), the supported
-  scripting API. A headless play session runs from tokens: keys, dials, switches, waits, `power:off` and `restart`,
-  shots, reads, calls, the card's files and a JPEG's EXIF, and expects that fail the run. One JSON record per step and
-  a summary with the patch audit, the stand-ins in use and every poke (`emu/README.md` "Scripted sessions"). Replaces
+  scripting API. A headless play session runs from tokens: keys, switches, waits, `power:off` and `restart`, shots,
+  reads, calls, the card's files and a JPEG's EXIF, and expects that fail the run. One JSON record per step and a
+  summary with the patch audit, the stand-ins in use and every poke (`emu/README.md` "Scripted sessions"). Replaces
   their drivers' use of internals.
+
+The second round (base `ae63e25`) adds:
+
+- **Their guide pictures** (A-BMPWRAP, `emu/FIDELITY-NOTES.md` 5.7, `src/dev/engine.mjs`). A format-0x0B picture run
+  that crosses a row end goes on at the start of the next row. No stock picture has such a run (X: 136,474 resource
+  pictures on 33 bodies); their encoder makes them and their notes report the guides drawn on the camera. Runs of
+  other formats that cross, and a run past the last row, stay refused (`BMP_TOKEN`). Each session record now carries
+  `osd_errors`, the engine's refusals in that step, which the firmware takes silently. On v0.29 the HSL wheel's four
+  guide pictures are drawn with no `osd_errors` and A-BMPWRAP in the summary (X, `emu/test/test_osdwrap.mjs`).
+- **Calls into the middle of a function** (`src/debug/call.mjs`): the call op's `entry` (a pc inside `fn`, whose frame
+  the harness's CALL still builds) and `stops` (up to 64 pcs, the run ending before the first one reached); in
+  `bin/session.mjs` `call:FN:entry=PC,stop=PC,frame=MASK/SIZE` and `call:@FILE`, the op's whole request as JSON
+  (memory, reads, scratch, restore). `sp` and `mdr` are the frame's, not free values. Their tone hook's 6 cases
+  (`tonecall`) and their stage test's 8 runs (`ncall`) give their drivers' values this way on v0.29 (X).
+- **Traces, breakpoints and watchpoints in scripted sessions** (`host/session.mjs`; the debug route's `probe` and
+  `hits`, `src/debug/live.mjs`; exec probes in the interpreter's breakpoint filter, `src/core/interp.mjs`):
+  `trace:PC` and `trace:mem:ADDR:LEN[:r|w|rw]` record each hit with the 16 registers in the step's record, and
+  `break:` stops the firmware, runs the next tokens at the stop and goes on at `resume`. A logging trace changes
+  nothing the firmware does (X, `emu/test/test_trace.mjs` on E143 and E147: every step's lab time and frame equal).
+- **The regression run of every release** (`emu/test/test_caduceus.mjs`, its pins in
+  `emu/test/fixtures/caduceus-releases.json`; 4.2).
+- **A film's values below the pixels** (`emu/test/test_looks.mjs`; 4.6).
+- **The still path's coverage below S2, pinned per body** (`emu/test/test_storage.mjs` STILL_PATH, `docs/hle-gaps.md`
+  4.3.12; 4.4).
+- **E147 in stills mode** (`src/fw/models.mjs` switch_idle, `docs/hle-gaps.md` 4.1.13). The lab started the OM-3's
+  still / movie switch (UI_IN's position switch `0x1909`) at a movie position, so every E147 session ran the camera
+  application in its movie mode (setting 44 = 1, X); sessions now start at the stills position. v0.29's flows pass as
+  before (X: 4.2's recipe, and a 63-step flow whose EXIF is the same but for the dates and whose frames are the same
+  but the Super Control Panel's after the first OK). With the rule takeRequests, E146 and E147 also reach E143's level under `control camapp 3` (S-TAKERDY,
+  S-MODPOST), which no flow here uses: their hook sites hit as under camapp 1 (X).
 
 ### 4.2 Verifying a caduceus build
 
@@ -394,7 +437,8 @@ card-get:DCIM/100OMSYS/*.JPG=shot.jpg
 power:off
 ```
 
-On v0.29 (X, 2026-11-13) this exits 0 with `session.mjs: passed; 26 step(s) on E147, patched; no poke`. `film1.png` is
+On v0.29 (X, 2026-11-13, again on `d38ceff`) this exits 0 with `session.mjs: passed; 26 step(s) on E147, patched; no
+poke`, and no step's record has `osd_errors` (an OSD picture the engine refused; 4.1). `film1.png` is
 the Picture Mode page with FILM 1 "Portra 400" highlighted, and the JPEG's ImageDescription is `FILM 1 Portra 400`. The
 start lines name the patched build (158 patches, 321,613 bytes changed, `frames` and `card_files` not applied) and give
 the audit's loaded ranges: `patch audit: no patched byte where the boot does not load or is not shown to load`. The
@@ -434,8 +478,8 @@ right five times to FILM 2 and OK; S2 and the picture's ImageDescription and pho
 `Caduceus FILM 2 Gold 200 om3.1.` from v0.27; the films of v0.29 and v0.29.1 give `Portra 160`); the page's title by
 the same getter (id 203, which their code answers with the selected film's name); the card's `OM3MOD` files (v0.24.1 to
 v0.28 write `EDITS.BIN`, `BUNDLES.BIN` and `.NEW` copies, v0.29 on nothing); `power:off`, a restart (from v0.29 on a
-blank card), S1, S2 and the title again: the film kept. Frames are not pinned. Measured (X, 2026-11-13, on `ae63e25`):
-all 19 folders from v0.16 to v0.29.1 as pinned, 25 to 34 s each, 3 min 19 s with three at once. The pins' controls are
+blank card), S1, S2 and the title again: the film kept. Frames are not pinned. Measured (X, 2026-11-13, on `d38ceff`):
+all 19 folders from v0.16 to v0.29.1 as pinned, 24 to 35 s each, 3 min 20 s with three at once. The pins' controls are
 in the test: v0.29 with section 6's end word put back to stock stops at the open naming section 6 (651 ranges in the
 audit's `unloaded`), and a pin with one digest character changed fails; with S-SECLOADED left out of the lab the flows
 of v0.16, v0.25, v0.29 and v0.29.1 fail (X, by hand). What it cannot show, pinned as such: v0.16 to v0.22 keep their
@@ -460,15 +504,15 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 | a whole `main.bin` as the image | `--main FILE`, through the overlay, the audit and the loaded-ranges mode (`--loaded off` is their whole-block load) |
 | the card file; a saved copy | `--card FILE`, written back in place (copy it first); `card-get` / `--card-get` take files off |
 | the settings file | `--nvram FILE` (off, a blank camera, by default) |
-| key clicks and holds, the dials, waits; 1200 ms after each token | `KEY` (down, 150 ms, up, then the settle), `hold:KEY[:MS]`, `main_dial:+N` / `sub_dial:-N`, `wait:MS`; `--settle 1200` for presses, dials and switches |
+| key clicks and holds, the dials, waits; 1200 ms after each token | `KEY` (down, 150 ms, up, then the settle), `hold:KEY[:MS]`, `wait:MS`; `--settle 1200` for presses and switches. `main_dial:+N` / `sub_dial:-N` parse, but a session refuses them on `d38ceff`: the token sends the control's id where the player takes `main` or `sub` (X: `ValueError: dial "main_dial": main or sub`; follow-up 1) |
 | the GUI state and their state word after each step | each record's `gui`; `read:ADDR:LEN`, `expect:mem` |
 | their editor's fields at an address read from memory | the module API: `s.step('read:...')` returns the bytes and the client computes the next address |
 | shots | `shot:FILE.png`, the last published frame (`/api/frame`'s pixels), not their own composite |
 | the mask and media-word writes | not needed; a `write:` is still taken and reported as a poke |
 | power-off | `power:off`; `restart` then powers on again on the kept state |
 | calls of whole functions (getters, setters, malloc) | `call:FN:d0=..`, every register returned; the lab's hooks answer as for its own calls, where their stepping ran past them |
-| calls from a spec with memory, sp or pc and stop pcs (`ncall`, `tonecall`) | partly: memory, reads and restore through `s.input({type: 'debug', op: 'call', ...})`; no entry mid-function, no stop pc, no sp or pc |
-| exec-trace watches (`WATCH`, `WSTACK`, ...) | no (4.4); log watchpoints only through `s.input` |
+| calls from a spec with memory, sp or pc and stop pcs (`ncall`, `tonecall`) | `call:FN:entry=PC,stop=PC,frame=MASK/SIZE`, or `call:@FILE` with the op's whole request (memory, reads, scratch, restore); `sp` and `mdr` are the frame the harness's CALL builds, a larger frame for code that moved `sp` before the entry (their two drivers give their values so, 4.1) |
+| exec-trace watches (`WATCH`, `WSTACK`, ...) | `trace:PC`, `trace:mem:ADDR:LEN[:r\|w\|rw]`: each step's hits with the 16 registers and counts; `break:` with `read:` and the other tokens at the stop, then `resume`. `WSTACK`'s stack at every hit is not provided: `read:` it at a stop |
 | a dump of RAM | no token; `read` takes at most 64 KiB, a module client can loop |
 | the player's `a15` and EVF options | not exposed: play's defaults (the TFT) |
 
@@ -487,19 +531,27 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   the stub at `0x50496710`, their `.hook_su`, after CreateParam's extension allocates two buffers (D). The lab writes no
   picture mode into the shot's record, so its create takes the still constructor and `.hook_su` does not run: writing
   it stops the still at that allocation, which MM does not answer in the lab (X).
-- **The colour wheel's plane**: the GPU plane is not composed (`PLANC_UNOBSERVED`, stock too).
+- **The colour wheel's plane**: the GPU plane is not composed (`PLANC_UNOBSERVED`, stock too), so on the wheel's pages
+  the published frame stays the one before them and `shot:` cannot show the wheel or its guides (X).
 - **The boot order** of sections against the tasks that call into them (FIDELITY 7.18).
 - **Timing, the watchdog and the cache**: no fetch cost, no cache or watchdog model (their lk7 / lk9 hang).
 - **Component 2's frames**: the lab loads only the main and resource blocks, and `om3-patch-2`'s `frames` are
   reported as not applied.
 - **The EXIF exposure fields**: ExposureTime `10/10`, FNumber `0/10` and ISO 25 are S-EXIFPRM's, not the session's
   exposure (X, the picture of 4.2).
-- **Their pictures that cross a row end**: the OSD engine refuses them (`BMP_TOKEN`).
+- **Picture runs across a row end in formats other than 0x0B**, and a run past a picture's last row: the OSD engine
+  refuses them (`BMP_TOKEN`, in the step's `osd_errors`); A-BMPWRAP covers format 0x0B only, the one their pictures use.
+- **A power-on without a card, and the medium word after a removal.** A session always starts with a card in the
+  first slot (`src/lab/player.mjs`), and after a removal S-MEDIA leaves S-CARD's OK in the SD medium word their gate
+  reads (2.3), so their card-less behaviour needs a poke (4.2, v0.29.1).
+- **Their power-on film load (v0.26.2, v0.27)**: its worker waits for boot-stage bits S-BOOTSTAGE does not set (2.2,
+  4.2); the half press loads the films instead.
+- **The OM-3's movie mode**: the still / movie switch is not a player input, and every session runs in stills mode.
+- **A call at a debug stop**: refused, as the stop is inside the lab's tick. A call between ticks runs with traces
+  armed, and breakpoints do not stop it. A stop is a main-loop visit an untraced run need not make, so the interrupt
+  taken after it may differ; logging traces do not change the run (X).
 - **`bin/nav.mjs` on E147**: its bring-up check stops at start, stock too (X: `error: bring-up: tasks started: [...]`).
   Use `bin/session.mjs`.
-- **Calls into the middle of a function** with stop pcs: the call op runs a function to its return.
-- **Exec traces, breakpoints and stopping watchpoints in a headless session**: its input queue does not block, so the
-  live route refuses them.
 
 ### 4.5 Facts taken, and what is not taken
 
@@ -517,9 +569,10 @@ evidence beyond saying they exist.
 Before anyone builds a development pipeline: where a film acts, which of those places run in the lab, and what the lab
 can check today. Read from their `v0.29` sources (`firmware/src/editor.s`, `xblock.s`, `firmware/build.py`,
 `docs/FORMATS.md`, `docs/DEVELOPER_NOTES.md`; D, their source), with their symbols from a build of the tag outside the
-tree (its main block differs from the release's in 25 bytes, its layout is the release's, X). Run on the round's base
-`ae63e25` with the v0.29 release's `patch.json` and `LOOKS.BIN`, through `host/session.mjs` only: reads, calls and log
-watchpoints sent through `input()` (X, 2026-11-13). Addresses in E147 notation.
+tree (its main block differs from the release's in 25 bytes, its layout is the release's, X). Run on the second
+round's base `ae63e25` with the v0.29 release's `patch.json` and `LOOKS.BIN`, through `host/session.mjs` only: reads,
+calls and log watchpoints sent through `input()` (X, 2026-11-13; the `trace:` tokens of 4.1 now do the same from a
+script). Addresses in E147 notation.
 
 **How a film reaches the picture (D, their source).** Picking FILM j puts look j % 5 + 1 on COLOR k = j / 5 and does
 two things (`pf_put`): it writes 18 of the camera's own settings of COLOR k through the camera's settings manager, as
@@ -573,9 +626,9 @@ It shows that a film's values reach the settings the development reads and that 
 reads with the film's values. It does not show what the development does with them, nor anything of the hue and
 lightness, tone, split-toning, grain, glow or halation hooks. Those could be checked on their outputs without pixels
 by a call into the COLOR stage with a stop after `hl_pp`'s jump back (it is entered by a jump inside the stage and
-leaves by one, so the call op, which runs a function from its entry to its return, cannot run it) and by a call of the
-tone hook on a job context written into the call's scratch (it ends in the stock `0x504f7f84`, which reads the whole
-job): a mid-function call with stop pcs (7.4) and a job layout read from the stages, days (I).
+leaves by one) and by a call of the tone hook on a job context written into the call's scratch, stopped where it
+jumps on to the stock `0x504f7f84`. The call op takes such an entry and stops since the second round (4.1; their
+`tonecall` runs so on v0.29, X); what is missing is a job layout read from the stages: days (I, follow-up 3).
 
 **What stands between the hook sites and the JPEG**, in the camera's order (I for the order):
 
@@ -635,6 +688,10 @@ All four are made (2026-11-13).
 
 ## 6. Open questions
 
+- What the media manager stores in the SD medium word `0x60369308` when the card is taken out: S-MEDIA's notifications
+  do not include it, and the lab keeps S-CARD's OK (4.2, 4.4).
+- Which of the Art Effect converter stub's two tests sent their code to its stock exit at S2: the capture's Art Effect
+  byte or the parameters' key (4.6, ?).
 - What the boot stage before the main block's loads: whether it covers the ranges the lab treats as not shown loaded
   (E147 `0x60129000..0x60134000` and `0x603a2bd4..0x603a3804`, 2.1). A camera probe of those ranges in the way of their
   GX probes would settle it. Who reads the end the head stores to `0x629607a0` is not read either (?).
@@ -642,31 +699,45 @@ All four are made (2026-11-13).
   loaded-ranges mode should use is a model choice, not a fact.
 - When sections 6..10 are copied relative to the tasks that call into them, the order behind their v0.20-t1 boot loop.
 - Why the camera sends their custom Picture Mode row's OK as another event than the lab's (their test 12), and the
-  stills-mode key and front-dial routing on E147 (`research/BUTTONS.md`).
+  stills-mode key and front-dial routing on E147 (`research/BUTTONS.md`). The om-emu versions their notebook names
+  start E147's still / movie switch at the movie position the lab used until 2026-11-13 (`SWITCH_IDLE_POSITION` 1 at
+  `147ca89` and `d24ff9d`, D; 4.1); whether a re-run in stills mode agrees with the camera is open (follow-up 2).
 - Why the firmware's `fopen` found `DEBUG.TXT` but not `DEBUG.ON` in the lab (their notebook; not tried on a camera).
 - Whether E143's SD updater accepts a modified main block as E147's does.
 
 ## 7. Follow-ups, ranked
 
-1. **A local regression run of each Caduceus release**: the flow of 4.2 per release, pinned by the release's digests
-   and never fetched by the tests. Size: a day. Payoff: an om-emu change that breaks a camera-tested downstream build
-   is seen before it is published. Done: `emu/test/test_caduceus.mjs` with `OM_CADUCEUS`, its pins in
-   `emu/test/fixtures/caduceus-releases.json` (4.2, "Every release, as a regression run"). Left: a boot without a
-   card and S-MEDIA's medium word after a removal, so that v0.29.1's fix needs no poke.
-2. **Row-crossing OSD runs**: om-emu's engine refuses a picture run that crosses a row end (`BMP_TOKEN`,
-   `src/dev/engine.mjs`), while their `GUIDES.BIN` pictures do so and draw on the camera (their report). Size: a day
-   to read the engine's decoder. Payoff: their pictures, and any firmware stream that does this, draw in the lab.
-3. **E147 stills-mode key dispatch** (their `research/BUTTONS.md`: the arrow keys and front dial in P / A / M read other
-   setting ids in the lab). Size: days. Payoff: the Button Function and dial paths users run.
-4. **Mid-function calls and exec traces in scripted sessions**: a call entered at a pc with stop pcs and sp set, and
-   trace hits with registers, through `host/session.mjs` (their `ncall`, `tonecall` and `WATCH`). Size: days (I).
-   Payoff: their remaining drivers need no internals.
-5. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
+The first round's follow-ups 1 (a regression run of each release), 2 (row-crossing OSD runs) and 4 (mid-function
+calls and exec traces in scripted sessions) are done (4.1, 4.2); what they left is below.
+
+1. **The session's dial tokens**: `main_dial:+N` and `sub_dial:-N` send the control's id where the player takes `main`
+   or `sub`, so a session refuses them (4.3); the test checks only the token's parse. Size: hours, with a session test
+   that turns a dial. Payoff: their driver's dial steps through the supported API, and follow-up 2.
+2. **E147 stills-mode key dispatch** (their `research/BUTTONS.md`: the arrow keys and front dial in P / A / M read
+   other setting ids in the lab). First re-run their cases on the stills position (4.1, `docs/hle-gaps.md` 4.1.13),
+   then read what still differs; an input for the still / movie switch would let a session choose movie mode. Size:
+   a day to re-run, days if a difference stays (I). Payoff: the Button Function and dial paths users run.
+3. **Their look hooks on their outputs, without pixels**: the COLOR stage entered for `hl_pp`, the tone hook and
+   `st_run` called on a job layout written into the call's scratch, with the call op's `entry` and `stops`, checked
+   against LOOKS.BIN; `hl_run` on a synthetic YCbCr image (4.6). Size: days (I: the job layout is to be read from the
+   stages). Payoff: hue and lightness, Blacks and Whites, split toning and halation checked on the firmware's own CPU
+   path, as their notebook did with stubs.
+4. **A power-on without a card, and the medium word after a removal**: a session whose first slot starts empty, and
+   S-MEDIA writing what the media manager stores on a removal once that is read (6). Size: days (I); S-MEDIA's change
+   reaches every body whose card runs its HLS side, and E143's golden sessions. Payoff: v0.29.1's films with no card
+   (their #38) without a poke.
+5. **E147's still at COLOR, MONO and ART** (`docs/hle-gaps.md` 4.3.12): S-EXIFPRM writing the picture mode, once MM
+   answers CreateParam's extension allocation (`0x50521c4b`) and the second step's stub's failing allocation is read.
+   Size: days to weeks (I: neither cause is read). Payoff: their still set-up code (`.hook_su`) runs at the create.
+6. **The boot-stage bits** their v0.26.2 / v0.27 power-on worker waits for (`0x2e9` at `0xa32de58c`; 2.2): which boot
+   steps set the bits past bit 0, so that S-BOOTSTAGE sets them where the camera does. Size: days (I). Payoff: those
+   releases' power-on load runs; v0.29 does not use that worker.
+7. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
    calls a later section early faults. Size: weeks (it is CPU 2's boot job). Payoff: the v0.20-t1 class of boot loop.
-6. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
+8. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
    months. Payoff: the largest: their looks, grain and halation, and every capture-path crash in section 3. It splits
    (4.6): first TAKE's shot, the white balance gains and the image library's parameter set and run natively up to the
    pipeline unit's request, which runs every data hook so that its records, LUTs and tables can be checked against
    LOOKS.BIN without pixels (weeks, I); then a model of the pipeline unit, which the firmware gives no evidence for
    and which would be a declared stand-in (months).
-7. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and stock.
+9. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and stock.

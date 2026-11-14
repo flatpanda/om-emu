@@ -436,9 +436,11 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 
 ### 4.4 What the lab cannot verify today
 
-- **Looks on pixels.** Their looks act in the development stages, which the lab stands in (S-SCENE, S-IMGPRO); the
-  S2 picture is S-SCENE's frame encoded by S-JPEGENC, so no film changes it (I). The capture path below the EXIF fill
-  (TAKE, development, encode), where their reboots and hangs happened, does not run.
+- **Looks on pixels.** Their looks act as data handed to the development (settings, parameter records, LUTs and
+  tables) and, for halation and the CPU grain, as code on the developed image (4.6). The S2 picture is S-SCENE's frame
+  encoded by S-JPEGENC, so no film changes it, and none of the development's hook sites runs (X, 4.6). What the lab
+  checks today is a film's values where the camera takes them: its settings and the hooked capture reads (4.6). The
+  capture path below the EXIF fill (TAKE, development, encode), where their reboots and hangs happened, does not run.
 - **The colour wheel's plane**: the GPU plane is not composed (`PLANC_UNOBSERVED`, stock too).
 - **The boot order** of sections against the tasks that call into them (FIDELITY 7.18).
 - **Timing, the watchdog and the cache**: no fetch cost, no cache or watchdog model (their lk7 / lk9 hang).
@@ -463,6 +465,107 @@ request and combiner fields, the tone stage), the Button Function tables and the
 **Does not take** code, patch bytes or assets (no assembly, no `patch.json` or built image, no card files, LookLab,
 film data or pictures; the tests write synthetic patches, `emu/README.md` "Patch overlays"), nor their camera claims as
 evidence beyond saying they exist.
+
+### 4.6 Checking a look below the pixels
+
+Before anyone builds a development pipeline: where a film acts, which of those places run in the lab, and what the lab
+can check today. Read from their `v0.29` sources (`firmware/src/editor.s`, `xblock.s`, `firmware/build.py`,
+`docs/FORMATS.md`, `docs/DEVELOPER_NOTES.md`; D, their source), with their symbols from a build of the tag outside the
+tree (its main block differs from the release's in 25 bytes, its layout is the release's, X). Run on the round's base
+`ae63e25` with the v0.29 release's `patch.json` and `LOOKS.BIN`, through `host/session.mjs` only: reads, calls and log
+watchpoints sent through `input()` (X, 2026-11-13). Addresses in E147 notation.
+
+**How a film reaches the picture (D, their source).** Picking FILM j puts look j % 5 + 1 on COLOR k = j / 5 and does
+two things (`pf_put`): it writes 18 of the camera's own settings of COLOR k through the camera's settings manager, as
+the GUI's edits do (Saturation 928 + 12k + s from the record's +24 + s, Contrast 908 + k from +41, Sharpness 904 + k
+from +42, Shading 912 + k from +43, Shadows, Midtones and Highlights 978, 977 and 976 + 3k from +44, +45 and +46), and
+copies the record's other fields into its own slot in their heap block. The camera's development reads the settings;
+their hooks read the slot.
+
+| Film parameter (record) | Where it acts | Data or code | Runs in the lab at S1 / S2 |
+|---|---|---|---|
+| Saturation per colour, Contrast, Shading, Shadows / Midtones / Highlights (+24..+35, +41, +43..+46) | the camera's settings above, read by the stock development | data | written at the pick (X, the check below); the development's reads: no |
+| Hue and Lightness per colour (+0..+23) | `jmp hl_pp` at `0x504f75f5`, the COLOR stage's (`0x504f7553`) call of the HSL builder `0x504f7361`; it rewrites hue (+18) and lightness (+22) of the builder's 12 output records (24 bytes each from the output's +836) through a table of theirs | data: the stage's parameter records | no |
+| Blacks, Whites (+39, +40) | `call tone` at `0x504f87b7` in the stage list, in place of `call 0x504f7f84`: the job's 256-entry 10-bit luminance LUT copied to its +3832 and remapped (a toe and a shoulder) | data: a LUT | no (I, below) |
+| Split toning, Tone Balance (+53..+56, +58) | `st_run`, the tone hook's exit: the job's R, G and B gamma tables (+1252, +1892, +2532; 256 + 64 entries, 12-bit) bent in place | data: tables | no (I, below) |
+| WB shift A-B, G-M (+36..+38) | `wb_get` at the 21 call sites of the capture-safe getter `0x50042360` with the WB fine-tune keys (34041, 38521 and the Auto WB ones): 14 in the EXIF set's body `0x50435773..0x50436ffd`, `0x50442192` / `0x504421a5`, `0x504666a3` / `0x504666b8` and three at `0x518c5610..0x518c563c`; the camera's value plus the shift, clamped to -7..7 | data: a setting's value | the EXIF set's: yes, twice at S2 (the A-B and G-M reads it stores at the shot's +37734 and +37736, D); the others: no |
+| Sharp, NR, VigFix (+52, +49, +50) | `s_nr` -> `xb_nr` at `0x503c665f` (Sharpness, key 33049), `0x503a7018` and `0x503c6871` (Noise Filter, 38681) and seven Shading Comp. reads (`0x8c21`) | data: a setting's value | the EXIF set's Shading Comp. read (`0x50436e63`): once at S2; the others: no |
+| Grain (+51) | the camera route: Grainy Film's texture and combiner 1's gains on a COLOR job, at `0x50496710` (still set-up), `0x50497d71` (work list), `0x504745d1` (request configuration), `0x504e3b3d` and `0x504e43ac` (combiner set-up); the CPU route (`xb_gs`, a luma pass row by row) with Glow or an Art Effect | data; the CPU route code on pixels | no |
+| Glow / Clarity (+47), Halation (+57) | `jmp s_cap` at `0x50534e30` in the Art Effect converter `0x50534e27` (Soft Focus job flags), `s_wt` at `0x504e38a1` (the blend weight); halation: `hl_run`, a CPU pass on the YCbCr image after the Soft Focus blend | data, then the pipeline unit's passes; halation code on pixels | the converter: once at S2, and their code took its stock exit before reading the film (which of its two tests sent it there is not read, ?); the weight and `hl_run`: no |
+| White frames (Art Effect Frame) | job flag `0x8000` and the frame layers of container component 2 | data | no: the Art Effect reads 0 in v0.29 (`XB_ART 0`, D) and the lab does not load component 2 |
+| Live view | `s_lv` at `0x5044a89b` (the live view's development request) | data | no: the live view is S-SCENE's |
+
+The film WB mode (+59..+62, v0.28) is not traced here. The last column is X where not tagged: log watchpoints on reads
+of their state word `0x62b4dd16`, their heap block and their code block, during S1 and then S2 after FILM 1 was picked;
+every hook above reads the state word at its entry or right after its stock call (`hl_pp`, `wb_get` after its picture
+mode tests, `xp` for the stubs), and each hit's pc names its function by the build's symbols. At S1 no look code ran
+(their editor's save, film list and photo code did). At S2: `wb_get` twice (the slot's WB-on, A-B and G-M bytes
+read), `xb_nr` once (the VigFix byte), the converter's stub once and their photo code once; nothing else. So the only
+look code the lab runs today is in the EXIF set (metadata) and in the converter, which a static call scan reaches from
+rec_jpeg_make_image (`0x50536e37`) through `0x5052e69f` (D). `tone` and `st_run` read the job before the state word,
+so their absence is I: no chain of direct calls reaches the stage list from rec_jpeg_make_image (the same scan; its
+callers' chains end in indirect calls, D), and the stages sit in the image library's run, which S-JPEGENC stands in
+(`emu/src/lab/rec.mjs`).
+
+**The check (X).** `emu/test/test_looks.mjs` (with `OM_CADUCEUS` set to a caduceus-om3 checkout; `bin/test.mjs` runs it
+then, about 20 s) takes a release's `patch.json` as `--patch` and its `LOOKS.BIN` onto a card `bin/card.mjs` made, on a
+blank camera, and picks FILM 1, 2 and 3 in the Picture Mode list as in 4.2. After each pick it reads COLOR 1's 18
+settings with the settings getter (`0x503cf0f1`) and calls the hooked capture reads, their targets read from the
+patched image at the EXIF set's A-B read `0x50436962` and at the Sharpness read `0x503c665f`, with the keys 34041,
+38521 and 33049; it expects the settings to equal the film's record, the WB reads the capture-safe getter's value plus
+the film's shift (or the getter's value where the shift is off) and the Sharpness read the film's Sharp. S2 on FILM 3
+must write `FILM 3` and the film's name into ImageDescription, so the films checked are the ones the camera names; no
+poke and no harness input. On v0.29 and on v0.29.1 all 18 checks pass. FILM 1 (Portra 400): Saturation `-1 0 0 0 0 0
+-2 0 -1 1 1 -1`, Shadows 2, Midtones 1, Highlights 0, the WB reads 1 and 1 (the getter's 0 and 0), Sharp -1; FILM 2
+(its shift off): the WB reads 0 and 0; FILM 3: 1 and -1. Controls: each film's record must differ from the values read
+before its pick (a pick that changed nothing would pass otherwise), and among the three a film with its shift on must
+move the WB reads and one with it off must not. Mutants (X): the Shadows and Highlights ids swapped in the expectation
+fail all three films (15 of 18); the WB read's target replaced by the camera's getter fails FILM 1, FILM 3, the hook
+check and the control (14 of 18).
+
+It shows that a film's values reach the settings the development reads and that their hooks answer the capture's
+reads with the film's values. It does not show what the development does with them, nor anything of the hue and
+lightness, tone, split-toning, grain, glow or halation hooks. Those could be checked on their outputs without pixels
+by a call into the COLOR stage with a stop after `hl_pp`'s jump back (it is entered by a jump inside the stage and
+leaves by one, so the call op, which runs a function from its entry to its return, cannot run it) and by a call of the
+tone hook on a job context written into the call's scratch (it ends in the stock `0x504f7f84`, which reads the whole
+job): a mid-function call with stop pcs (7.4) and a job layout read from the stages, days (I).
+
+**What stands between the hook sites and the JPEG**, in the camera's order (I for the order):
+
+1. **TAKE's shot** (S-RELSEQ, S-EXPOSE, S-TAKEFRAME): no take request, exposure record or RAW frame;
+   rec_ImgPro_ImageParam's four sources find no buffer in TAKE's shot table (X on E143, E146 and E147: S-JPEGENC's
+   text). Size: TAKE natively with its neighbours stood in, 1-2 weeks (`docs/hle-gaps.md` 4.3, I); the lab has no RAW
+   image to give it (S-SCENE draws a view frame), so a RAW source would be a new stand-in.
+2. **The white balance gains** (S-RECREQ in place of REC_PREPRO's step; REC_RAWNR's on E147): the shot record's four
+   gains stay 0 and the library's parameter set divides by them; on the camera a computation over TAKE's shot fields
+   gives them (`docs/hle-gaps.md` 4.3.4, D on E143). Size: weeks (I). Whether the development's own WB reads
+   (`0x50442192`, `0x504666a3`) belong to this step is not read (?).
+3. **The image library's parameter set, the run and Jpeg_Result** (S-JPEGENC's three steps, on E147 as on E143 since
+   2026-11-11, `emu/src/lab/rec.mjs`, D): the stage table, the work pool (a probe's allocator walk did not end on E143,
+   `docs/hle-gaps.md` 4.3.4, X) and the development stages whose builders their hooks patch (I; the work-list hook is
+   reached from rec_jpeg_make_image through `0x5049272b` in a static call scan, D, and did not run, X). Size: the
+   library is about 275k instructions, 162k of them straight-line parameter packing (`docs/hle-gaps.md` 4.3, D); the
+   set and the run's set-up natively up to the pipeline unit's request: weeks after 1 and 2 (I). With 1 to 3 every data
+   hook in the table runs and its records, LUTs and tables can be checked against LOOKS.BIN.
+4. **The pipeline unit at `0x9c200000`**: one kind 0 request makes the developed image and the primary JPEG; its
+   registers and interrupts are not read (?) and the lab refuses its first write (`docs/hle-gaps.md` 4.3.9, D). The
+   firmware gives no evidence of its pixel processing (`docs/hle-gaps.md` 4.3, D), so a model of it is a declared
+   stand-in, and a data look checked on its pixels would check that stand-in, not the camera. Size: months (I).
+5. **The JPEG codec at `0x99901000`**: driver and registers read (`docs/hle-gaps.md` 4.3.9, D on E143), fed by the
+   unit, no buffer address of its own. Size: days after 4 (I).
+6. **S-IMGPRO's other request kinds**: only kind 14's fills are computed; Jpeg_Result's kind 13 copy is not. Size: days
+   (I).
+7. **The CPU passes on pixels** (`hl_run`, `xb_gs`): they would run on the lab's CPU once a developed image is in
+   memory after the Soft Focus blend, so they wait on 3 and 4 (I). A call of `hl_run` on an image put in the call's
+   scratch would test halation's code on pixels before that, at their address and with a buffer record and bus window
+   of their layout; not tried.
+8. **Container component 2** (the white frames' layers): not loaded (`frames` not applied, 4.1). Size: days (I); the
+   blend itself is the unit's.
+
+The E147 capture path at E143's level removes none of these: E143 stops at the same three steps of S-JPEGENC (3), and
+E147's rec_jpeg_make_image already runs natively up to them (D, `emu/src/lab/rec.mjs`). Only running 1 to 3 natively
+reaches a development hook.
 
 ## 5. Where it corrects om-emu's docs
 
@@ -513,5 +616,9 @@ All four are made (2026-11-13).
 5. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
    calls a later section early faults. Size: weeks (it is CPU 2's boot job). Payoff: the v0.20-t1 class of boot loop.
 6. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
-   months. Payoff: the largest: their looks, grain and halation, and every capture-path crash in section 3.
+   months. Payoff: the largest: their looks, grain and halation, and every capture-path crash in section 3. It splits
+   (4.6): first TAKE's shot, the white balance gains and the image library's parameter set and run natively up to the
+   pipeline unit's request, which runs every data hook so that its records, LUTs and tables can be checked against
+   LOOKS.BIN without pixels (weeks, I); then a model of the pipeline unit, which the firmware gives no evidence for
+   and which would be a declared stand-in (months).
 7. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and stock.

@@ -1022,10 +1022,13 @@ shot), `exif` (exif), `expect` (its kind), `session`, `nvram` and `carried` (res
 restored, the controls' positions carried from `power:off` or null),
 `osd_errors` (the OSD engine's refusals in the step, `{NAME: count}`, such as `BMP_TOKEN`: the firmware goes on and
 that picture is not drawn; reported, not a failure),
-`frame_error` (when the composite's error changes), and on a failure `error`. The last line is the summary: `summary:
+`frame_error` (when the composite's error changes), `armed`, `hooked`, `hits`, `hits_dropped`, `hit_counts`, `stopped`
+and `resumed` (traces and stops: Traces, breakpoints and watchpoints, below), and on a failure `error`. The last line
+is the summary: `summary:
 true`, `ok`, `model`, `patch` (the patched line), `patch_audit` (`hooks`, `ported`, `unloaded`, `tasks`, as play's
 status; when no session finished its bring-up, the start's `unloaded` with `hooks` and `ported` null, not audited), `stand_ins` (every one any session of the run used), `pokes`, `harness_inputs`, `calls`, `card` (the listing
-at the end), `card_file`, `nvram`, `errors`, `steps`, `failed` (`{step, token, message}` or null). The human lines go to
+at the end), `card_file`, `nvram`, `errors`, `steps`, `failed` (`{step, token, message}` or null), `traces` and
+`ended_at_stop` (below). The human lines go to
 stderr: the patched firmware and the patch audit at the start, the kept state, the card, and last
 `session.mjs: passed; ...` or `session.mjs: FAILED at step N (TOKEN): MESSAGE; ...`, which also says `POKED: n
 write(s) (...)` or `no poke`. Exit 0 when every step passed; 1 for a firmware or lab error (a session that stops, an
@@ -1075,7 +1078,11 @@ where the firmware is held, in the notation, `lab_ns`, `regs`, and for a watchpo
 `dir`, `value` and the accessing `pc`) and `phase` `debug`. The next tokens then run at the stop: `read:`, `write:`,
 `expect:...`, `card-ls`, `card-get:`, `exif:`, `shot:`, `trace:` and `break:` (`break:off` before `resume` at a pc the
 firmware keeps reaching); `call:` is refused there (the stop is inside the lab's tick, where the route refuses a call),
-and so is any token that runs lab time. `resume` lets the firmware go on: its record (`resumed: {step, pc}`) carries
+and so is any token that runs lab time. A `call:` between ticks runs with the traces armed: its own arrivals and
+accesses are recorded in its record, at the lab time it ran (a call takes none), while the debug breakpoints do not
+stop it (the call op takes the live debugger's hook off while it runs; its `stop=` pcs are its stops, and an arrival
+at one records nothing, as at a breakpoint); with a `break:mem:` armed it is refused, as the route refuses a call
+while a stopping watchpoint is armed. `resume` lets the firmware go on: its record (`resumed: {step, pc}`) carries
 the rest of the step that stopped, and may itself end at the next stop. A run whose tokens end at a stop, or whose step
 at a stop fails, ends there with the firmware held: nothing runs after the stop, the session closes, the summary's
 `ended_at_stop` names it (`{step, token, kind, pc, lab_ns}`) and the last line says so; with every step passed it

@@ -15,8 +15,11 @@
 //                 breakpoint stop with reads there, break:off and resume; a stopping write watchpoint whose stop is the
 //                 logging trace's first hit (pc, address, value, lab time); a break at a hooked pc refused; a run that
 //                 ends at a stop (exit 0, ended_at_stop), a failed expect there and a press there (exit 1, nothing
-//                 after), a call there refused, a resume without a stop; with --loaded on a trace at a pc in a gap
-//                 records the arrival, then the session stops as without it; the traces re-armed after a restart;
+//                 after), a call there refused, a resume without a stop; a call between ticks with a trace and a
+//                 break armed at its callee (the arrival recorded in the call's record, no stop; the call's own stop
+//                 at the traced pc records none) and refused with a stopping watchpoint armed; with --loaded on a
+//                 trace at a pc in a gap records the arrival, then the session stops as without it; the traces
+//                 re-armed after a restart;
 //                 the module API: a lone step() refuses a break, atStop gives a stop its tokens and onRecord sees the
 //                 stop's record first. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): S1 and S2 untraced
 //                 and traced (the per-shot EXIF fill site 0x50436558, a stack write range) equal step for step, the
@@ -217,6 +220,20 @@ async function e143({ ok }, { T, step }) {
   const pr = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', 's1']), ca = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', `call:${GET}:d0=24`]), rz = cli(['--model', 'E143', 'resume']);
   ok(pr.rc === 1 && /FAILED at step 3 \(s1\): s1: at a debug stop only read:, write:, expect:/.test(pr.last) && ca.rc === 1 && /FAILED at step 3 \(call:0x503c49ab:d0=24\): call: not at a debug stop/.test(ca.last) &&
     rz.rc === 1 && /FAILED at step 1 \(resume\): resume: the session is not at a debug stop/.test(rz.last), `E143 refused at a stop, and resume without one: ${pr.last} | ${ca.last} | ${rz.last}`);
+  // a call between ticks with a trace and a break armed at the getter's callee (test_call.mjs getterShape): the call
+  // records its own arrival there (the registers it entered with, the lab time it ran at: a call takes none) and the
+  // break does not stop it (the call op takes the live debugger's hook off while it runs); a call's own stop at the
+  // traced pc records no arrival (the instruction does not run there); a stopping watchpoint armed refuses the call
+  const INNER = '0x503c5c26';
+  const cb = cli(['--model', 'E143', 'wait:500', `trace:${INNER}`, `break:${INNER}`, `call:${GET}:d0=24`, `call:${GET}:d0=24,stop=${INNER}`, 'break:off', 'trace:off', 'wait:100']);
+  const c1 = step(cb, `call:${GET}:d0=24`), c2 = step(cb, `call:${GET}:d0=24,stop=${INNER}`), c1h = c1.hits ?? [];
+  ok(cb.rc === 0 && c1.ok && c1.end === 'return' && Number(c1.d0) === 3 && !('stopped' in c1) && c1.phase === 'running' && c1h.length === 1 && c1h[0].kind === 'pc' && c1h[0].pc === INNER &&
+    c1h[0].regs?.d0 === '0x00000018' && c1h[0].lab_ns === c1.lab_ns && c1.lab_ns === step(cb, 'wait:500').lab_ns,
+    `E143 a call with a trace and a break armed on its path: rc ${cb.rc} ${JSON.stringify(c1).slice(0, 500)}`);
+  ok(c2.ok && c2.end === 'stop' && c2.stop?.notation === INNER && !('hits' in c2) && cb.sum?.traces?.stops === 0 && cb.sum.traces.counts?.[INNER] === 1 && cb.sum.ended_at_stop === null,
+    `E143 a call's stop at a traced pc: ${JSON.stringify(c2).slice(0, 300)} ${JSON.stringify(cb.sum?.traces)}`);
+  const cw = cli(['--model', 'E143', 'wait:500', 'break:mem:0xa21fffc0:64:w', `call:${GET}:d0=24`]);
+  ok(cw.rc === 1 && /FAILED at step 3 \(call:0x503c49ab:d0=24\): call: BadRequest: call: a stopping watchpoint is armed/.test(cw.last), `E143 a call with a stopping watchpoint armed: rc ${cw.rc} ${cw.last}`);
   // S-STALERAM (--loaded on, the patch test_session writes: a call to a jmp into a gap): the arrival in the gap is
   // recorded, then the session stops as it does untraced
   const { loadImage } = await import('../checks/lib/env.mjs');

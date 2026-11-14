@@ -430,7 +430,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const ou = osdWrapUnits();
   const r = spawnSync(process.execPath, [new URL('../test/test_osdwrap.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
   const out = (r.stdout + r.stderr).trim().split('\n'), skipped = r.status === 0 && out.some((l) => l.includes(': skipped ('));
-  console.log(`OSD runs across a row end (A-BMPWRAP): units ${ou.checks - ou.bad.length}/${ou.checks}; their guides on E147 ${skipped ? 'skipped (OM_CADUCEUS unset)' : r.status === 0 ? 'ok' : 'FAILED'}`);
+  console.log(`OSD runs across a row end (A-BMPWRAP): units ${ou.checks - ou.bad.length}/${ou.checks}; their guides on E147 ${skipped ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : r.status === 0 ? 'ok' : 'FAILED'}`);
   [...ou.bad, ...(r.status === 0 ? [] : out.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += ou.bad.length + (r.status === 0 ? 0 : 1);
 }
@@ -687,7 +687,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const lu = looksUnits();
   const r = process.env.OM_CADUCEUS ? spawnSync(process.execPath, [new URL('../test/test_looks.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' }) : null;
   const lines = r ? (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0) : [];
-  console.log(`Caduceus films below the pixels: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'not run (OM_CADUCEUS unset)' : r.status === 0 ? 'ok' : 'FAILED'}`);
+  console.log(`Caduceus films below the pixels: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : r.status === 0 ? 'ok' : 'FAILED'}`);
   [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
 }

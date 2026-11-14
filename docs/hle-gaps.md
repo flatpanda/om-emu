@@ -1444,10 +1444,10 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   - The player lists S-MODPOST and S-TAKERDY on E147 now; no stand-in retires.
 - **Caduceus for OM-3 (X).** Their v0.29 flow (`bin/session.mjs`, camapp 1) passes as before, with no poke, the same
   EXIF but the date and the same picture's size. Every frame is the same but the Super Control Panel's after the first
-  OK of each session, which differs (what it shows in each mode is not compared); the `call` step's result is the same,
-  its a1 at return (a heap address) not. Their hook sites hit as before in
-  one S1 and S2 under camapp 1 and camapp 3 (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the
-  others 0).
+  OK of each session, which differs (X, stock E147: at the stills position its shooting-mode cell shows the stills icon
+  and P; at the old position that cell is empty; the other cells are the same); the `call` step's result is the same,
+  its a1 at return (a heap address) not. Their hook sites hit as before in one S1 and S2 under camapp 1 and camapp 3
+  (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the others 0).
 - **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; setting 44's name.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)

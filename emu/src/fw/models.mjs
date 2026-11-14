@@ -673,7 +673,9 @@ export const MODELS = {
     // dial's MOVIE (X), its button functions take their movie column while 44 is 1 and OlyHfwOpeShoot::ctrlRelease
     // is then given no release keys, so S1 and S2 never reach the shooting sequence's phase 101 cases (D, X under
     // control camapp 3: phase 101 throughout; docs/hle-gaps.md 4.1.13). The lab's sessions are stills sessions: the
-    // switch starts at position 2. That 44 is the movie mode is I (its name is not read)
+    // switch starts at position 2. The Super Control Panel agrees (X): at position 2 its shooting-mode cell shows the
+    // stills icon and P, at position 1 that cell is empty, the other cells the same. That 44 is the movie mode is I
+    // (its name is not read)
     switch_idle: { 0x1909: 2 },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca

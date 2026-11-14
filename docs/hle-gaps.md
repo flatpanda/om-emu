@@ -3947,7 +3947,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 - **E147's extension differs (D).** Its test (`0x505307c8`) passes also when the record's +37689 is 11 or 12 (E143's
   and E146's for byte +8 1 only), so at COLOR or MONO CreateParam's extension first allocates the request's two
   buffers (`0x50530805`: through REC's `0x50538326` and MM's `0x50521c4b`).
-- **Tried in the lab (X, experiments, nothing committed).**
+- **Tried in the lab (X, experiments of 2026-11-13, nothing committed; the cause found 2026-11-14, below).**
   - S-EXIFPRM also writing the three settings at E147's offsets: the request's format word is {0, 0, 11}, the
     extension's test passes and its apply calls MM's allocation, which does not return: `0x50521cdc`'s retry calls
     `0x5002c6e5` 10,124 times from 3855.7 ms to 13,993 ms of lab time, the create is never called, no file is written
@@ -3960,12 +3960,45 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   - S-EXIFPRM also writing setting 38017 on E143 (2): the format word is {0, 0, 2}, the counts above are unchanged,
     and the pin's request check fails (the negative control of the pin's request bytes; the dead control: the EXIF
     fill's observer moved one byte gives 0 runs and fails, X on E146).
-- **The lab (no change).** The picture mode is a TAKE setting with D on the three bodies, but writing it stops
-  E147's still at an allocation the lab does not answer, and past that the stub fails too. So S-EXIFPRM writes the
-  six fields of 4.3.5 only, the request's format word, flags, kind and option are 0 on the three bodies, and the
-  create takes the still constructor for every still (pinned, above). On the camera an E147 still at COLOR, MONO or
-  ART takes `0x504966f7` and the stub `0x50496710` (D); in the lab neither runs (X). `emu/src/lab/playui.mjs`
-  S-EXIFPRM says so. The files are unchanged (the pin adds observers only; golden is not touched).
+- **Why MM's allocation did not return (2026-11-14; E147 unless said).** Not MM: the request it was asked (X, observers
+  at the allocation's steps through one S2 at COLOR). The extension's apply (`0x50530805`) sizes the request's first
+  buffer (+16, its size at +24) from the packet's Command (+36): 16 gives `0x0f000000` (240 MiB), 19 `0x06e00000`; any
+  other Command leaves rec_jpeg_make_image's clear, 0 (`0x5053080c..0x50530828`; E143's `0x50543fc4..0x50543fdd`, +52,
+  the same values). It hands that size to REC's allocation (`0x50538326`, from `0x505308cf`), which calls MM's
+  (`0x50521c4b` -> `0x50521cdc`) with flags 1 (`0x5053860e`: 1 for a size up to 6549504). The bank's allocation
+  (`0x5051eed4`) counts blocks as (size - 1) / block size + 1, so a size of 0 wraps to 20985 blocks of 204672 bytes
+  against the bank's 4096 free (`0xa31f9444`: X, its +8 and +80), and returns status 1; MM's loop retries a
+  request without flag 2 after a sleep (`0x50521e4b..0x50521e5e`, `call 0x5002c6e5`) without end: the 10,124 calls of
+  2026-11-13. On the camera Command is never 0: REC_MAIN copies it from the requester's message and refuses one
+  below 16 (E143 `0x50539be0`), and its still handler, the one that sets Mode 4097 (E143 `0x5053a306`, E146
+  `0x50517800`, E147 `0x505268e6`), is reached only through Command 16's case of its table (E143 `0x606dcee8` entry 16
+  `0x50539a4e`, E146 `0x50516f8a`, E147 `0x50526072`, each for the request's Mode 4113; D). S-RECREQ left Command at
+  REC_MAIN's clear, 0. With 16 (X, E147 at COLOR) the apply allocates `0x0f000000` and then `0x700000` bytes, both
+  answered at once, MM's sleep is never called, the create takes `0x504966f7`, and the second step's stub returns
+  0 and the file is written: the stub's 40655 of 2026-11-13 came from forcing bit 19 without the extension's buffers
+  (I: its option objects take them; not read further, as it now passes).
+- **The lab (2026-11-14).** S-RECREQ gives the packet's Command 16 (fact `rec_file` packet.fields.Command, read from
+  the packet dump on the three), and S-EXIFPRM writes the three fields CreateParam's format word is made from as
+  TAKE's fill writes them (fact `rec_image` take, src/fw/facts.mjs recImage: the offsets CreateParam's format helper
+  adds, the picture mode's fill in its own form with 40209 read where 38017 gives 6). So the request's format word
+  follows the creative dial on E147 and the create takes the camera's constructor (X, `emu/test/test_stillsetup.mjs`,
+  one shot at each position; `emu/test/test_storage.mjs` STILL_PATH at the start position):
+
+  | E147 position | 38017 | format word | flags (copy) | constructor | extension's apply, stub `0x50496710` |
+  |---|---|---|---|---|---|
+  | 0 MONO | 12 | {0, 0, 12} | bits 19 and 23 | `0x504966f7` | once each |
+  | 1 COLOR (the start) | 11 | {0, 0, 11} | bit 19 | `0x504966f7` | once each |
+  | 2 | 2 | {0, 0, 2} | 0 | still, `0x504aa8b2` | never |
+  | 3 ART | 100 | {1, 1, 100} | 0 | `0x504966f7` | once each |
+  | 4 CRT | 9 | {0, 0, 9} | 0 | still, `0x504aa8b2` | never |
+
+  E143 and E146 take the still constructor as before, now with the format word {0, 0, 2}. Every still's file
+  changes on the three bodies (X, exiftool and a byte compare): with Command 16 REC writes the maker notes'
+  ImageProcessing 0x2103..0x2105 (40 0 40, 40 0 40, 16 0 16; E143 `0x50551a89` from `0x50551e88`, the record's
+  +10504..+10521, X: a write watch), and the EXIF set, which reads the picture mode, writes the maker notes'
+  PictureMode (2 2, before 0 2) and ToneLevel. Caduceus for OM-3 v0.29 at COLOR now runs its `.hook_su` (the
+  stub's call replaced by a jump to its code, which calls the stock set-up `0x504987bb`) once per S2 and still writes
+  its picture with the film's ImageDescription (X, `test_stillsetup.mjs --caduceus`).
 - **Corrects.** 4.3.9's "the others ... by the request's bytes +37, +42 and +8, are not read": read above. A scout's
   note of the same day put the code at `0x50496710` inside the constructor `0x50496707`; it is the second step's
   own stub (E143 `0x504953c2`), taken for byte +8 1 or bit 19, not for the option byte.
@@ -3977,8 +4010,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   reads store at the shot's +37734 and +37736 from two branches (D): keys 7401 and 7417 (`0x50436d3f`, `0x50436d72`),
   the one the lab's S2 runs (X, a trace), and keys 34041 and 38521 (`0x50436962`, `0x5043697c`).
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
-- **Open.** MM's allocation for E147's extension; the stub's option objects (`0x504970dd`) and its 40655; the
-  constructor `0x504953a9`'s stages (not read); the run (4.3.9).
+- **Open.** What the set-up and the constructor `0x504966f7` build (stages, not read); the run (4.3.9); TAKE's other
+  fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
+  written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still
+  have Command 0 (their dumps' Command not read).
 
 ### 4.4 AF, lens and body IS
 

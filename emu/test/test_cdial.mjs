@@ -4,9 +4,10 @@
 //                 inputs ({type: switch, value}) the family reads 988, 901, 898, 899, 900 (src/fw/models.mjs
 //                 creative_dial) and the application opens the Picture Mode page at every position but 2; a step and a
 //                 key press move it on, wrapping; /api/controls and the status show it wired with its labels; a
-//                 session started with creative_dial 3 reads 899 from the start. Controls: with the mutant cdial-reversed
-//                 (the entries in reverse order) position 0 sets the last entry's family, and a position past the
-//                 dial's last is refused. E143 (bin/test.mjs's process): the dial is not wired, and an input or a start
+//                 session started with creative_dial 3 (the browser's ?creative_dial=3, web/args.mjs) reads 899 from the
+//                 start, and the browser's ?creative_dial= empty or 'x' is refused, not position 0. Controls: with the
+//                 mutant cdial-reversed (the entries in reverse order) position 0 sets the last entry's family, and a
+//                 position past the dial's last is refused. E143 (bin/test.mjs's process): the dial is not wired, and an input or a start
 //                 position for it is refused with the reason
 //   node emu/test/test_cdial.mjs              (OM_EMU_MODEL=E147 for the OM-3)
 
@@ -22,6 +23,7 @@ export async function cdialSession() {
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { BY_ID, Tables } = await import('../src/lab/play.mjs');
   const { PlayApi } = await import('../src/lab/playapi.mjs');
+  const { playerArgs } = await import('../web/args.mjs');
   const rom = loadImage();
   const env = { rom, resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   const open = (more = {}) => {
@@ -69,11 +71,17 @@ export async function cdialSession() {
   ok(s().cdial_index === 1 && s().get(FAMILY) === 901, `a key press (3 -> 4), then a step of 2 (wrapping to 1): position ${s().cdial_index}, family ${s().get(FAMILY)}`);
   ok(throwsLike(() => pl.run_input({ type: 'switch', id: 'creative_dial', value: 5 }), /Creative dial position 5: 0\.\.4/) === true, 'control: position 5 refused');
   pl.close_session();
-  // the start position: 3 (ART) from the start
-  pl = open({ creative_dial: 3 });
+  // the start position: 3 (ART) from the start, as the browser's ?creative_dial=3 gives it (web/args.mjs playerArgs)
+  pl = open({ creative_dial: playerArgs({ creative_dial: '3' }).creative_dial });
   ok(s().status().creative_dial === 3 && s().get(FAMILY) === 899, `started at position 3: position ${s().status().creative_dial}, family ${s().get(FAMILY)}`);
   pl.close_session();
   ok(throwsLike(() => open({ creative_dial: 7 }), /--creative-dial 7: a position 0\.\.4/) === true, 'control: a start position past the last refused');
+  // the browser's empty or malformed ?creative_dial= is refused as play.mjs's --creative-dial refuses it, not taken as
+  // position 0
+  for (const q of ['', 'x']) {
+    const v = playerArgs({ creative_dial: q }).creative_dial;
+    ok(throwsLike(() => open({ creative_dial: v }), /--creative-dial .*: a position 0\.\.4/) === true, `?creative_dial=${q} refused: ${JSON.stringify(v)}`);
+  }
   // control: the dial's entries taken in reverse order (the mutant cdial-reversed): position 0 sets the last entry's
   // family, which the check above would refuse
   pl = open({ x_mutant: 'cdial-reversed' });

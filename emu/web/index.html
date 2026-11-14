@@ -178,7 +178,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
   <label class="tb" title="rotate=on: PER_ROTATE natively (E143, E146; H-ROTINIT): the camera's orientation from the accelerometer, and the tilt input all the way round (the GUI lays the level gauge out for portrait)"><input type="checkbox" id="opt-rotate"> Orientation</label>
   <label class="tb" title="lens=stand-in: S-LENS, the lens record written by the lab, in place of the native lens (the default on E143, E146 and E147: the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, docs/hle-gaps.md 4.4.2, 4.4.3); the other bodies always have S-LENS"><input type="checkbox" id="opt-lens"> Stand-in lens</label>
-  <label class="tb" title="S-NVRAM (on by default; nvram=0 in the query when off): the camera's settings and clock kept in this browser (OPFS) between sessions, one document per model, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt; off, every start is a blank camera"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
+  <label class="tb" title="S-NVRAM (on by default; nvram=0 in the query when off): the camera's settings and clock kept in this browser (OPFS) between sessions, one document per model (patched firmware keeps its own), in place of S-SETSAVE: a camera whose clock was set starts without the date prompt; off, every start is a blank camera"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
   <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">
     <option value="">8 GiB SDHC</option><option value="64">64 GiB SDXC</option><option value="128">128 GiB SDXC</option></select></label>
@@ -1052,7 +1052,7 @@ PP.onEvent = (m) => {
     }
   }
   else if (m.type === 'progress' && m.stage === 'cache-cleared') { $('fwcache').disabled = true; fwStatus('the cached firmware is gone from this browser'); }
-  else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
+  else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings, the stock build\'s and every patched build\'s, are gone from this browser (a running session with them keeps its own until it saves again)';
   else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
 };
 const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card', 'opt-patch']) $(id).disabled = !on || (id === 'opt-nvram' && !!noOpfs); };

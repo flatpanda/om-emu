@@ -4,7 +4,7 @@
 // (test/fixtures/isa_vectors.json) on both engines, the core's two tiers in lockstep and its length tables
 // (test_core.mjs), the pure sha256, the router's request bodies, the browser player's driver, result box and page
 // after a stop, the players' Card panel and session options (the card's reader, the card routes on a headless
-// Player, the browser's S-NVRAM host), the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
+// Player, the browser's S-NVRAM host and its OPFS directories per build, the page's creative_dial), the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
 // src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
@@ -123,7 +123,7 @@ report('request bodies', bodyTests());
 report('driver', await driverTests());
 report('wait_result', await resultBoxTests());
 report('page after a stop', await pageTests());
-report('Card panel and session options (web/cardfiles.mjs, the card routes, web/nvram.mjs)', await cardTests());
+report('Card panel and session options (web/cardfiles.mjs, the card routes, web/nvram.mjs, web/opfs.mjs, web/args.mjs)', await cardTests());
 report('the published site\'s files and the player\'s download command (bin/site.mjs, src/fw/updater.mjs)', siteTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());

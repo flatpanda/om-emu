@@ -116,27 +116,40 @@ export async function clear() {
 
 // S-NVRAM's document for the browser player (web/nvram.mjs: the camera's settings stores, the SCPU's backed-up words
 // and the sub-CPU's memory, as host/nvram.mjs's file holds them): one JSON file in a directory of its own per model,
-// apart from the firmware, so forgetting the firmware keeps it and forgetting it keeps the firmware.
+// apart from the firmware, so forgetting the firmware keeps it and forgetting it keeps the firmware. Patched firmware
+// (the page's Patch option) keeps its own: nvramDir.
 export const NVRAM_DIR = `nvram-${MODEL}`, NVRAM_FILE = 'nvram.json';
-// The document, or null when none is kept; a file that is not JSON is an error that says how to drop it.
-export async function loadNvram() {
+// The directory of a build's document: build, patched firmware's main code block sha256 (null for stock), keys it as
+// host/nvram.mjs nvramDefault keys bin/play.mjs's file: nvram-<model>-<its first 8 hex digits>, so that a patched
+// build and the stock one never load each other's state
+export const nvramDir = (build = null) => (build ? `${NVRAM_DIR}-${build.slice(0, 8)}` : NVRAM_DIR);
+const OWN_DIR = new RegExp(`^${NVRAM_DIR}(-[0-9a-f]{8})?$`);
+// The document in dir, or null when none is kept; a file that is not JSON is an error that says how to drop it.
+export async function loadNvram(dir = NVRAM_DIR) {
   if (unsupported()) return null;                    // nothing kept (storeNvram says why)
   const r = await root();
   let bytes;
-  try { bytes = await get(await r.getDirectoryHandle(NVRAM_DIR), NVRAM_FILE); } catch (e) {
+  try { bytes = await get(await r.getDirectoryHandle(dir), NVRAM_FILE); } catch (e) {
     if (e?.name === 'NotFoundError') return null;
     throw e;
   }
   try { return JSON.parse(new TextDecoder().decode(bytes)); } catch (e) {
-    throw new Error(`OPFS ${NVRAM_DIR}/${NVRAM_FILE}: ${e.message} (forget the kept settings to start blank)`);
+    throw new Error(`OPFS ${dir}/${NVRAM_FILE}: ${e.message} (forget the kept settings to start blank)`);
   }
 }
-export async function storeNvram(text) {
+export async function storeNvram(text, dir = NVRAM_DIR) {
   const r = await root();
-  await put(await r.getDirectoryHandle(NVRAM_DIR, { create: true }), NVRAM_FILE, new TextEncoder().encode(text));
+  await put(await r.getDirectoryHandle(dir, { create: true }), NVRAM_FILE, new TextEncoder().encode(text));
 }
+// Forget this model's kept documents: the stock build's and every patched build's (the page does not know the build
+// before a boot); returns the directories removed
 export async function clearNvram() {
-  if (unsupported()) return;                         // none kept
-  const r = await root();
-  try { await r.removeEntry(NVRAM_DIR, { recursive: true }); } catch { /* none kept */ }
+  if (unsupported()) return [];                      // none kept
+  const r = await root(), gone = [];
+  const names = [];
+  for await (const name of r.keys()) if (OWN_DIR.test(name)) names.push(name);
+  for (const name of names.sort()) {
+    try { await r.removeEntry(name, { recursive: true }); gone.push(name); } catch { /* gone meanwhile */ }
+  }
+  return gone;
 }

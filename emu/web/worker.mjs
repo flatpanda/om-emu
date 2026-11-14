@@ -11,7 +11,9 @@
 //                                                            patch file, src/fw/patch.mjs, applied to the stock blocks
 //                                                            after their check and the cache; a refusal fails the boot,
 //                                                            as {name, error} does: the page could not read the file)
-//                   {type: 'clear-nvram'}                    forget S-NVRAM's kept document (progress nvram-cleared)
+//                   {type: 'clear-nvram'}                    forget S-NVRAM's kept documents, the stock build's and
+//                                                            every patched build's (progress nvram-cleared, dirs: the
+//                                                            OPFS directories removed)
 //                   {type: 'req', id, method, path, body, t_page}   an API request (src/lab/playapi.mjs); t_page: the
 //                                                            page's send time in seconds (timeOrigin + now), the t_wall
 //                                                            of an input it submits
@@ -47,7 +49,7 @@ import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../src/f
 import { Player } from '../src/lab/player.mjs';
 import { Tables } from '../src/lab/play.mjs';
 import { PlayApi } from '../src/lab/playapi.mjs';
-import { PLAYER_PARSER } from '../scenarios/session_replay.mjs';
+import { playerArgs } from './args.mjs';
 import { Driver } from './driver.mjs';
 import { rgbaOf } from './frame.mjs';
 import * as OPFS from './opfs.mjs';
@@ -95,16 +97,6 @@ async function firmware(file, { cache = true } = {}) {
   return { rom: c.rom, res: c.res, nand: c.nand, from: 'cache', manifest: c.manifest, T };
 }
 
-// The page's query string as play.mjs's command line (the options that move the lab; --no-browser, no --out).
-function playerArgs(q = {}) {
-  const a = { ...PLAYER_PARSER, no_browser: true, out: '<out>', no_wait_on_error: false };
-  for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'rotate']) if (typeof q[k] === 'string') a[k] = q[k];
-  for (const k of ['no_bgdraw', 'debug_api']) if (q[k] !== undefined) a[k] = !!q[k];
-  if (q.x_trim_keep !== undefined) a.x_trim_keep = q.x_trim_keep;
-  if (typeof q.creative_dial === 'string') a.creative_dial = Number(q.creative_dial);   // the creative dial's start position
-  return a;
-}
-
 function sendFrame() {
   const f = frameOut;
   if (!f || framePending) return;
@@ -144,11 +136,13 @@ async function boot(msg) {
     const card = cardSize !== null ? memoryCard({ sectors: cardSectors(cardSize) }) : null;
     card?.open();
     // (a browser without OPFS, or a body whose S-NVRAM sites the lab does not place, keeps no settings: the session
-    // runs without S-NVRAM and the page says why)
+    // runs without S-NVRAM and the page says why). Patched firmware keeps its own document, keyed by its main block's
+    // sha256 (the stock one for a patch to the resource block alone), as bin/play.mjs keys its default file
     const noKeep = msg.args?.nvram ? nvramUnsupported() ?? OPFS.unsupported() : null;
     if (noKeep) post({ type: 'progress', stage: 'nvram-error', message: `the settings are not kept: ${noKeep}` });
-    const nvram = msg.args?.nvram && !noKeep ? browserNvram(await OPFS.loadNvram(), OPFS.storeNvram,
-      (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${OPFS.NVRAM_DIR})`) : null;
+    const build = patch ? patch.blocks.find((b) => b.block === 'main')?.sha256 ?? MODEL_INFO.rom_sha256 : null, nvDir = OPFS.nvramDir(build);
+    const nvram = msg.args?.nvram && !noKeep ? browserNvram(await OPFS.loadNvram(nvDir), (text) => OPFS.storeNvram(text, nvDir),
+      (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${nvDir}${build ? ', the patched build\'s own' : ''})`) : null;
     const env = {
       rom: fw.rom, resBlock: fw.res, createHash, wallClock, asyncHost: true, refuseUnported: true,
       // the NAND the bring-up's resource tables are read from (src/lab/resnand.mjs): the extract, a read beyond it
@@ -235,7 +229,7 @@ onmessage = (e) => {
     else if (msg.type === 'gate') gate(msg).catch(fail);
     else if (msg.type === 'clear-cache') OPFS.clear().then(() => post({ type: 'progress', stage: 'cache-cleared' }), fail);
     else if (msg.type === 'cache-info') OPFS.info().then((m) => post({ type: 'progress', stage: 'cache', manifest: m, opfs: OPFS.unsupported() }), fail);
-    else if (msg.type === 'clear-nvram') OPFS.clearNvram().then(() => post({ type: 'progress', stage: 'nvram-cleared' }), fail);
+    else if (msg.type === 'clear-nvram') OPFS.clearNvram().then((dirs) => post({ type: 'progress', stage: 'nvram-cleared', dirs }), fail);
     else if (msg.type === 'quit') { if (player) { player.set_stop(); driver.kick(); } }
     else fail(new Error(`worker: message type ${msg.type}`));
   } catch (err) { fail(err); }

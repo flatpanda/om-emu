@@ -17,13 +17,16 @@
 //   cache answer names why, forgetting the cache and the settings errs nowhere, the boot runs uncached): a file that is
 //   no .BIN and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR a patch
 //   file whose old bytes are not the stock block's and one the page could not read refused (the boot offered again),
-//   the E143 .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and
+//   a patched boot's kept settings read from the build's own OPFS directory, not the stock one (a Worker with an OPFS
+//   in memory, test/fakeopfs.mjs), the E143 .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and
 //   the session's options through GET /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s
 //   apart beside the half press's AF beep (6144 frames of source native), a ?sync=1 request answered when the session
 //   quits; with $OM_FW_DIR every other model whose .BIN is there booted in its own Worker to running with a frame;
 // - the Card panel and the session options without firmware (cardTests): base64, the card's reader
 //   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
-//   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
+//   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs), its
+//   OPFS directories on an OPFS in memory (web/opfs.mjs: a patched build's apart from the stock one's, both forgotten
+//   together) and the page's creative_dial as play.mjs reads --creative-dial (web/args.mjs).
 //   node emu/test/test_web.mjs [--no-api]   (--no-api: skip the Player sessions of B4 and B6's page inputs, about 15 s)
 // Writes its temporary files under emu/out/test-web/.
 import fs from 'node:fs';
@@ -49,6 +52,10 @@ import { jpegOfFrame } from '../src/lab/jpeg.mjs';
 import { bytesBase64, base64Bytes } from '../src/util/bytes.mjs';
 import { CARD_VIEW, cardList, cardFile, jpegRgba } from '../web/cardfiles.mjs';
 import { browserNvram } from '../web/nvram.mjs';
+import * as OPFS from '../web/opfs.mjs';
+import { playerArgs } from '../web/args.mjs';
+import { FakeDir, installFakeOpfs } from './fakeopfs.mjs';
+import { MODEL } from '../src/fw/model.mjs';
 import { pngRgba } from '../host/server.mjs';
 import { buildExfat } from './test_storage.mjs';
 import { MODELS } from '../src/fw/models.mjs';
@@ -630,6 +637,27 @@ export async function cardTests() {
   ok(errors === 1 && same(base64Bytes(JSON.parse(texts.at(-1)).E), Uint8Array.of(8)), `S-NVRAM: a failed write reported (${errors}) and the next save written`);
   const kept = browserNvram({ version: 1, M: bytesBase64(M), clock_offset: 5 }, async () => {}, () => {});
   ok(same(kept.load().M, M) && kept.load().E === null && kept.load().clock_offset === 5 && kept.load().scpu === null, 'S-NVRAM: a kept document loads as host/nvram.mjs loads its file');
+  // web/opfs.mjs on an OPFS in memory (test/fakeopfs.mjs): a patched build's document in its own directory, keyed by
+  // its main block's sha256 as host/nvram.mjs keys play.mjs's file; the stock build's directory untouched by it (the
+  // control: the stock load finds nothing), and forgetting the settings removes both, nothing else
+  const fake = new FakeDir().seed({ [`firmware-${MODEL}/manifest.json`]: '{}', 'nvram-E999/nvram.json': '{}' }), restore = installFakeOpfs(fake);
+  try {
+    const build = 'ab'.repeat(32), pdir = OPFS.nvramDir(build);
+    ok(pdir === `nvram-${MODEL}-abababab` && OPFS.nvramDir(null) === OPFS.NVRAM_DIR && OPFS.NVRAM_DIR === `nvram-${MODEL}`, `nvramDir: ${pdir}, stock ${OPFS.nvramDir(null)}`);
+    await OPFS.storeNvram('{"version":1,"patched":true}', pdir);
+    const lp = await OPFS.loadNvram(pdir), ls = await OPFS.loadNvram();
+    ok(lp?.patched === true && ls === null && !fake.entries.has(OPFS.NVRAM_DIR), `the patched build's document kept apart: ${JSON.stringify(fake.dump())}`);
+    await OPFS.storeNvram('{"version":1}');
+    const gone = await OPFS.clearNvram();
+    ok(JSON.stringify(gone) === JSON.stringify([OPFS.NVRAM_DIR, pdir]) && JSON.stringify(Object.keys(fake.dump())) === JSON.stringify([`firmware-${MODEL}/manifest.json`, 'nvram-E999/nvram.json']),
+      `clearNvram: removed ${JSON.stringify(gone)}, left ${JSON.stringify(Object.keys(fake.dump()))}`);
+  } finally { restore(); }
+  ok(OPFS.unsupported() !== null, 'the fake OPFS taken away again');
+  // web/args.mjs: the page's creative_dial as play.mjs's --creative-dial reads it: decimal digits the position, any
+  // other text left as text for the session to refuse (Number() made '' position 0)
+  ok(playerArgs({ creative_dial: '3' }).creative_dial === 3 && playerArgs({ creative_dial: '' }).creative_dial === '' && playerArgs({ creative_dial: 'x' }).creative_dial === 'x' &&
+    playerArgs({ creative_dial: '0x3' }).creative_dial === '0x3' && (playerArgs({}).creative_dial ?? null) === null,
+    `playerArgs creative_dial: ${JSON.stringify(['3', '', 'x', '0x3'].map((v) => playerArgs({ creative_dial: v }).creative_dial))}`);
   return { checks, bad };
 }
 
@@ -708,6 +736,13 @@ export async function workerTests() {
       w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'gone.json', error: 'NotReadableError' } } });
       const qf = await until((m, i) => i >= q0 && m.type === 'boot-failed', 60000);
       if (!qf || qf.message !== 'gone.json: cannot read it (NotReadableError)' || seen.slice(q0).some((m) => m.type === 'status')) bad.push(`worker boot with an unread patch: ${qf ? qf.message : 'no boot-failed'}`);
+      // the kept settings of patched firmware (web/opfs.mjs nvramDir), in a Worker of its own with an OPFS in memory
+      // whose stock and patched-build documents are not JSON, so a boot stops at the one it reads: a patched boot
+      // reads nvram-E143-<its main block's sha256, 8 hex digits>, not the stock build's (the control: a stock boot
+      // stops at nvram-E143's), neither file is written, and forgetting the settings removes both
+      checks++;
+      const nv = await kept(bin);
+      if (nv) bad.push(`worker: a patched build's kept settings: ${nv}`);
       checks++;
       // with the cache asked for (the page's boot): without OPFS the blocks are not cached, the reason is in the
       // firmware progress, and the session runs from the .BIN
@@ -794,6 +829,50 @@ export async function workerTests() {
   }
   const others = await modelWorkerTests();
   return { checks: checks + others.checks, bad: [...bad, ...others.bad], skipped };
+}
+
+// workerTests' kept settings of patched firmware (above): null, or what went wrong
+async function kept(bin) {
+  const { ORIGINAL, readBytes } = await import('../checks/lib/env.mjs');
+  const main = readBytes(ORIGINAL), TAIL = 0x1ffff00;
+  const patched = main.slice(); patched.fill(0x5a, TAIL, TAIL + 16);
+  const sha8 = nodeHash('sha256').update(patched).digest('hex').slice(0, 8);
+  const patch = { name: 'tail.json', text: JSON.stringify([{ block: 0, offset: TAIL, old: Buffer.alloc(16, 0xff).toString('base64'), new: Buffer.alloc(16, 0x5a).toString('base64') }]) };
+  const seedFiles = { [`nvram-E143-${sha8}/nvram.json`]: 'patched junk', 'nvram-E143/nvram.json': 'stock junk' };
+  const w = new NodeWorker(new URL('./workershim.mjs', import.meta.url), { env: { ...process.env, OM_EMU_MODEL: 'E143', OM_TEST_FAKE_OPFS: JSON.stringify(seedFiles) } });
+  const seen = [];
+  let wake = null;
+  w.on('message', (m) => { seen.push(m); if (wake) wake(); });
+  w.on('error', (e) => { seen.push({ type: 'thread-error', message: String(e?.stack ?? e) }); if (wake) wake(); });
+  const until = async (pred, ms) => {
+    const end = performance.now() + ms;
+    for (;;) {
+      const x = seen.find(pred);
+      if (x) return x;
+      if (performance.now() > end) return null;
+      await new Promise((r) => { wake = r; setTimeout(r, 50); });
+    }
+  };
+  const boot = async (args) => {
+    const k = seen.length;
+    w.postMessage({ type: 'boot', binPath: bin, cache: false, args: { idle: 'off', nvram: true, ...args } });
+    return until((m, i) => i >= k && (m.type === 'boot-failed' || m.type === 'thread-error' || m.type === 'status'), 60000);
+  };
+  try {
+    const p = await boot({ patch });
+    if (p?.type !== 'boot-failed' || !p.message.startsWith(`OPFS nvram-E143-${sha8}/nvram.json: `)) return `the patched boot: ${JSON.stringify(p)?.slice(0, 300)}`;
+    const s = await boot({});
+    if (s?.type !== 'boot-failed' || !s.message.startsWith('OPFS nvram-E143/nvram.json: ')) return `control, the stock boot: ${JSON.stringify(s)?.slice(0, 300)}`;
+    let k = seen.length;
+    w.postMessage({ type: 'fake-opfs-dump' });
+    const d = await until((m, i) => i >= k && m.type === 'fake-opfs', 5000);
+    if (JSON.stringify(d?.files) !== JSON.stringify(seedFiles)) return `the documents written: ${JSON.stringify(d?.files)}`;
+    k = seen.length;
+    w.postMessage({ type: 'clear-nvram' });
+    const c = await until((m, i) => i >= k && m.type === 'progress' && m.stage === 'nvram-cleared', 5000);
+    if (JSON.stringify(c?.dirs) !== JSON.stringify(['nvram-E143', `nvram-E143-${sha8}`])) return `clear-nvram: ${JSON.stringify(c)}`;
+    return null;
+  } finally { await w.terminate(); }
 }
 
 // Every other model whose .BIN is in $OM_FW_DIR (fw/ from E140 on, fw/old/ below, as BLOBS.md files them), booted in a

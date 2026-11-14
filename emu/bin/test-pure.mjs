@@ -54,11 +54,11 @@
 // area's builder, S-RESNAND's layer), S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits), and
 // the scripted session's token grammar, its Player inputs, the expects on fakes and bin/session.mjs's usage errors
 // (test_session.mjs sessionUnits), its traces and stops: the tokens, the machine's exec probes on a blank image,
-// the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), its stack
-// captures, dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN
-// reader with a film's values (test_looks.mjs looksUnits), and the caduceus-om3 release pins' checks on made-up
-// folders (test_caduceus.mjs caduceusUnits), and the session's card:out / card:in tokens (test_nocard.mjs
-// nocardUnits).
+// the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), its stack captures,
+// dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN reader with a film's
+// values (test_looks.mjs looksUnits), the look hooks' expectations from their source's tables (test_lookhooks.mjs
+// lookhooksUnits), and the caduceus-om3 release pins' checks on made-up folders (test_caduceus.mjs caduceusUnits), and
+// the session's card:out / card:in tokens (test_nocard.mjs nocardUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -110,6 +110,7 @@ import { sessionUnits } from '../test/test_session.mjs';
 import { traceUnits } from '../test/test_trace.mjs';
 import { toolsUnits } from '../test/test_tools.mjs';
 import { looksUnits } from '../test/test_looks.mjs';
+import { lookhooksUnits } from '../test/test_lookhooks.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
 import { nocardUnits } from '../test/test_nocard.mjs';
 
@@ -150,6 +151,7 @@ report('the scripted session: tokens, their Player inputs, the expects on fakes,
 report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());
 report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals, a film\'s settings and hooked reads (test_looks.mjs)', looksUnits());
+report('a Caduceus film\'s look hooks on their outputs: their source\'s tables, the hue and lightness records, the tone LUT, the split toning tables (test_lookhooks.mjs)', lookhooksUnits());
 report('caduceus-om3 release pins: a changed or missing file, an unpinned folder, an observation that differs (test_caduceus.mjs)', caduceusUnits());
 report('the session\'s card tokens: card:out, card:in and the second slot\'s, the Player input each sends (test_nocard.mjs)', nocardUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());

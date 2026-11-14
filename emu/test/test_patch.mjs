@@ -10,10 +10,12 @@
 //                 digest-anchored runs (made-up om3-patch-1 / om3-patch-2 documents): taken, the changed ranges,
 //                 frames and card_files reported as not applied, a wrong before or after digest, another main_base,
 //                 a run out of range, overlapping runs, another file's main-block patch, an unknown format or field
-//                 and every malformed run refused; mainPatches' runs, a block of another length or the stock block
-//                 itself refused; the lab's patch rules on a made-up image (an instruction on patched bytes, the hook
-//                 rule and its neighbour, the audit's hooks, ports, facts and line, the changed bytes in the gaps the
-//                 boot does not load and none beside them); H-PATCHTASK in the kernel's task
+//                 (a format that names an Object.prototype member or is no string too) and every malformed run
+//                 refused; mainPatches' runs, a block of another length or the stock block itself refused; the lab's
+//                 patch rules on a made-up image (an instruction on patched bytes, the hook rule and its neighbour, a
+//                 pass-through observer let be and left out of the audit, the audit's hooks, ports, facts and line, a
+//                 word fact checked over its 4 bytes, the changed bytes in the gaps the boot does not load and none
+//                 beside them); H-PATCHTASK in the kernel's task
 //                 guard (src/lab/kernel.mjs) on a made-up kernel, with its negative controls; the patched build's
 //                 default S-NVRAM file (host/nvram.mjs)
 //   patchSession  (E143's blocks) a patch file the test writes: 16 bytes of the main block's 0xFF tail padding
@@ -32,7 +34,10 @@
 //                 mode on as with --patch: 0xA5 at the run-time address and the start line; --loaded off: the new
 //                 bytes, not checked) and nav.mjs (the audit's line, no port table on E143, the tail unloaded), --main
 //                 with --patch and a block of another length refused by all three; the hook rule: a byte of malloc's
-//                 hooked first instruction changed stops nav.mjs, the byte after it does not (and is loaded)
+//                 hooked first instruction changed stops nav.mjs, the byte after it does not (and is loaded); a
+//                 pass-through observer (obs-setting-value at a settings read's return) on patched bytes does not
+//                 stop it: the instruction there moved to the tail behind a jmp, nav.mjs runs the stock run's steps
+//                 (the controls: the jmp alone stops at the tail, a byte of SETTINGS_READ's hooked entry stops it)
 //   patchModelSession  (another body, OM_EMU_MODEL; bin/test.mjs runs E147) see its head below
 //   node emu/test/test_patch.mjs [--session] [--session-model]
 import fs from 'node:fs';
@@ -41,7 +46,7 @@ import { spawnSync } from 'node:child_process';
 import { PatchRefused, readPatchText, applyPatches, patchLayout, resolveBlock, patchLine, mainPatches } from '../src/fw/patch.mjs';
 import { createHash } from '../src/util/sha256.mjs';
 import { replayPatchRefusal } from '../src/lab/player.mjs';
-import { PatchRanges, PatchHooked, auditTables, auditLine, unloadedRuns, unloadedLine } from '../src/lab/patchaudit.mjs';
+import { PatchRanges, PatchHooked, auditTables, auditLine, unloadedRuns, unloadedLine, factLeaves } from '../src/lab/patchaudit.mjs';
 import { LabTask } from '../src/lab/kernel.mjs';
 import { IMAGE_BASE } from '../src/fw/model.mjs';
 import { nvramChoice } from '../host/nvram.mjs';
@@ -178,6 +183,13 @@ export function patchUnits() {
   refuses(() => applyPatches({ resource }, anchored(om3(runs)), { layout: al, createHash }), /r.json: the main block is not loaded here/, 'no main block');
   const rd = (doc, re, what) => refuses(() => anchored(doc), re, what);
   rd(om3(runs, { format: 'om3-patch-3' }), /format "om3-patch-3": not one this reader knows \(om3-patch-1, om3-patch-2\)/, 'an unknown format');
+  // a format that names an Object.prototype member, or is no string (a list's text would be 'om3-patch-2'): refused
+  // as unknown, not a TypeError
+  for (const f of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 2, ['om3-patch-2']]) {
+    let m;
+    try { m = refusal(() => anchored(om3(runs, { format: f }))); } catch (e) { m = `not a refusal: ${e.name}: ${e.message}`; }
+    ok(m !== null && m.startsWith(`r.json: format ${JSON.stringify(f)}: not one this reader knows`), `the format ${JSON.stringify(f)}: ${m ?? 'taken'}`);
+  }
   rd({ ...om3(runs), format: 'om3-patch-1' }, /om3-patch-1 field "frames": not one this reader knows, refused rather than left out/, 'frames in om3-patch-1');
   rd(om3(runs, { extra: 1 }), /field "extra": not one this reader knows/, 'an unknown field');
   rd(om3(runs, { frames: { component: 1 } }), /frames: not \{component: 2 or later/, 'frames in a block the lab loads');
@@ -217,6 +229,12 @@ export function patchUnits() {
   let quiet = true;
   try { pr.refuseHook(0x60000030, 'ret'); pr.refuseHook(0x60000017, 'next'); } catch { quiet = false; }
   ok(quiet, 'the hook rule: a hook beside the patched bytes runs');
+  // a pass-through observer (src/lab/hle.mjs hook's pass) on the same patched instruction is let be: the patched bytes
+  // run under it; the same pc without the flag still stops (the control)
+  let passQuiet = true;
+  try { pr.refuseHook(0x60000010, 'obs', true); } catch { passQuiet = false; }
+  ok(passQuiet && refusal(() => { try { pr.refuseHook(0x60000010, 'obs', false); } catch (e) { if (e instanceof PatchHooked) throw new PatchRefused(e.message); throw e; } }) !== null,
+    'the hook rule: a pass-through observer on patched bytes runs, the same hook without the flag stops');
   const au = auditTables(pr, { hooks: [[0x60000010, 'h1'], [0x60000030, 'h2'], [0xa0000000, 'ram']], len: 0x100,
     ports: { 0x50000010: [0x50001000], 0x50000042: [0x50002000, 0x50002002], 0x50000030: [0x50003000], 0x60000044: [0x60004000], 0x60000041: [0x60005000] },
     facts: [['t.a', 0x60000015], ['t.b', 0x60000016], ['n', 7], ['c', 0x50000040]] });
@@ -224,6 +242,16 @@ export function patchUnits() {
   ok(JSON.stringify(au.ported) === JSON.stringify([{ at: '0x50000042', e143: ['0x50002000', '0x50002002'] }, { at: '0x60000041', e143: ['0x60005000'] }, { at: '0x60000015', fact: 't.a' }, { at: '0x50000040', fact: 'c' }]),
     `audit: the ported addresses and facts on patched bytes (a hooked one is the hook's; data by its byte): ${JSON.stringify(au.ported)}`);
   ok(auditTables(pr, { hooks: [], ports: null, facts: null, len: 0x100 }).ported === null, 'audit: no tables (E143), ported null');
+  // a pass-through observer is no hook that stops the session: left out, and a port at its pc is reported as ported
+  const aup = auditTables(pr, { hooks: [[0x60000010, 'obs', true]], ports: { 0x50000010: [0x50001000] }, facts: [], len: 0x100 });
+  ok(JSON.stringify(aup.hooks) === '[]' && JSON.stringify(aup.ported) === '[{"at":"0x50000010","e143":["0x50001000"]}]', `audit: a pass-through observer left out: ${JSON.stringify(aup)}`);
+  // a fact naming a 32-bit word: checked over its 4 bytes (a patch to its byte +2 alone is reported), at its first byte
+  // with width 1 (the control: not reported); factLeaves gives the section loader's end words width 4
+  const pw = new PatchRanges([[0x42, 1]], image, 0x60000000);
+  const fw4 = auditTables(pw, { hooks: [], ports: {}, facts: [['w', 0x60000040, 4]], len: 0x100 }), fw1 = auditTables(pw, { hooks: [], ports: {}, facts: [['w', 0x60000040, 1]], len: 0x100 });
+  ok(JSON.stringify(fw4.ported) === '[{"at":"0x60000040","fact":"w"}]' && JSON.stringify(fw1.ported) === '[]', `audit: a word fact's byte +2 patched: width 4 ${JSON.stringify(fw4.ported)}, width 1 ${JSON.stringify(fw1.ported)}`);
+  ok(JSON.stringify(factLeaves({ sections: { ends: [0x60000040, 0x60000044], table: 0x60000080 }, n: 7 })) === JSON.stringify([['sections.ends[0]', 0x60000040, 4], ['sections.ends[1]', 0x60000044, 4], ['sections.table', 0x60000080, 1], ['n', 7, 1]]),
+    'factLeaves: the end words 4 bytes wide, any other fact 1');
   ok(auditLine(au, ['0x50000020']) === '1 lab hook(s) on patched bytes, each stopping the session when reached: h1 0x50000010' +
     '; 4 ported address(es) or fact(s) on patched bytes, which the lab calls or reads as patched: 0x50000042 (E143 0x50002000, 0x50002002), 0x60000041 (E143 0x60005000), 0x60000015 (fact t.a), 0x50000040 (fact c); H-PATCHTASK: 0x50000020',
     `auditLine: ${auditLine(au, ['0x50000020'])}`);
@@ -434,6 +462,36 @@ export async function patchSession() {
         : h.status === 0 && h.stdout.includes('patch audit: no lab hook on patched bytes') && h.stdout.includes('patch audit: no patched byte where the boot does not load'),
       `the hook rule, a byte ${at - MALLOC} past malloc's entry: rc ${h.status} ${h.stderr.slice(0, 300)} ${h.stdout.slice(0, 200)}`);
     }
+    // the hook rule spares a pass-through observer (src/lab/hle.mjs hook's pass): obs-setting-value, at the return of
+    // SETTINGS_READ's call in the menu's reader (0x50b4e88a), records the read's value and single-steps the instruction
+    // there. That instruction and the 4 bytes after it (5 bytes, up to the reader's ret) replaced by a jmp to a copy of
+    // them in the code's 0xFF tail (0x1a70c40, which the boot loads): nav.mjs runs, and its steps are the stock run's,
+    // DOWN's settings reads (all returning there) with their values. Controls: the jmp without the copy stops at the
+    // tail, so the patched bytes ran under the observer; a byte of SETTINGS_READ's own hooked entry (obs-setting, which
+    // can finish the read in the lab's place) changed still stops the session
+    const RA = 0xb4e88a, CAVE = 0x1a70c40, SETTINGS_READ = 0xb7b618;
+    ok(main[RA] === 0x62 && main[RA + 2] === 0xdf && main.subarray(CAVE, CAVE + 5).every((x) => x === 0xff),
+      `the reader's return: ${Buffer.from(main.subarray(RA, RA + 5)).toString('hex')} (mov d0,(a2); clr d0; ret), the tail ${Buffer.from(main.subarray(CAVE, CAVE + 5)).toString('hex')}`);
+    const jmp = Buffer.alloc(5); jmp[0] = 0xdc; jmp.writeInt32LE(CAVE - RA, 1);      // jmp (d32,pc), 5 bytes (src/core/cpu.mjs)
+    const navRun = (name, list) => {
+      const pf = path.join(tmp, `${name}.json`), out = path.join(tmp, `nav-${name}`);
+      if (list) fs.writeFileSync(pf, JSON.stringify(list));
+      const r = node([path.join(EMU, 'bin/nav.mjs'), '--png', 'none', '--out', out, ...(list ? ['--patch', pf] : []), 'DOWN']);
+      let doc = null;
+      try { doc = JSON.parse(fs.readFileSync(path.join(out, 'session.json'), 'utf8')); } catch { /* reported below */ }
+      return { r, steps: doc?.steps ? JSON.stringify(doc.steps.map(({ seconds, ...s }) => s)) : null, down: doc?.steps?.[1]?.settings ?? null };
+    };
+    const stockNav = navRun('stock', null);
+    const viaCave = navRun('cave', [{ block: 0, offset: RA, old: b64(main.subarray(RA, RA + 5)), new: b64(jmp) }, { block: 0, offset: CAVE, old: b64(main.subarray(CAVE, CAVE + 5)), new: b64(main.subarray(RA, RA + 5)) }]);
+    ok(stockNav.r.status === 0 && viaCave.r.status === 0 && !/lab hook/.test(viaCave.r.stderr) && viaCave.r.stdout.includes('patch audit: no lab hook on patched bytes') &&
+      viaCave.r.stdout.includes('patch audit: no patched byte where the boot does not load') && viaCave.steps === stockNav.steps && viaCave.down?.length > 0 && viaCave.down.every(([, v]) => v !== null),
+      `the hook rule spares obs-setting-value on patched bytes: rc ${viaCave.r.status} ${viaCave.r.stderr.slice(0, 300)}; DOWN's settings ${JSON.stringify(viaCave.down)} against the stock run's ${JSON.stringify(stockNav.down)}; steps equal ${viaCave.steps === stockNav.steps}`);
+    const jmpOnly = navRun('jmp', [{ block: 0, offset: RA, old: b64(main.subarray(RA, RA + 5)), new: b64(jmp) }]);
+    ok(jmpOnly.r.status === 1 && /^error: stopped at 0x[0-9a-f]{8} \(disasm 0x51a70c40\)/.test(jmpOnly.r.stderr),
+      `control: the jmp without its copy stops at the tail: rc ${jmpOnly.r.status} ${jmpOnly.r.stderr.slice(0, 300)}`);
+    const entry = navRun('entry', [{ block: 0, offset: SETTINGS_READ, old: b64(main.subarray(SETTINGS_READ, SETTINGS_READ + 1)), new: b64([main[SETTINGS_READ] ^ 1]) }]);
+    ok(entry.r.status === 1 && /^error: lab hook obs-setting reached at 0x[0-9a-f]{8} \(disasm 0x50b7b618\), on bytes the patch overlay changed/.test(entry.r.stderr),
+      `control: a byte of SETTINGS_READ's hooked entry stops the session: rc ${entry.r.status} ${entry.r.stderr.slice(0, 300)}`);
     const both = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--patch', file, '--image', ORIGINAL]);
     ok(both.status === 2 && /not with --image/.test(both.stderr), `debug.mjs --patch with --image: rc ${both.status} ${both.stderr.slice(0, 200)}`);
   } finally {

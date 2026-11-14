@@ -44,7 +44,7 @@ export class Kernel {
   go_native(intc) {
     this.intc = intc;
     this._native_seen = intc.sync().length;
-    this.hle.hook(IRQ_ATTACH, (hh, r) => this._irq_attach_observer(hh, r), 'obs-irq_attach');
+    this.hle.hook(IRQ_ATTACH, (hh, r) => this._irq_attach_observer(hh, r), 'obs-irq_attach', true);
   }
   rtos_names() { return new Set(this.events.filter((e) => e[0] === 'rtos').map((e) => e[1])); }
   _deliver(bound = 8) {
@@ -115,7 +115,7 @@ export class Kernel {
       }
       hle2.sim.run([], true);
     };
-    hle.hook_rt(ra, back, 'obs-irq_attach return');
+    hle.hook_rt(ra, back, 'obs-irq_attach return', true);
     hle.sim.run([], true);
   }
   _clk_ctrl(hle, r) {

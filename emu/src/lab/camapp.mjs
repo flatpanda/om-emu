@@ -1483,7 +1483,7 @@ export class CamApp {
     if (ret === undefined && !lab.hooks.has(ra)) {
       ret = [];
       this.tra_returns.set(ra, ret);
-      lab.hook_rt(ra, (h, rr) => { const x = ret.shift(); if (x) x[2] = rr.d0 >>> 0; lab.passthrough(rr); }, 'camapp 3 (TRA result)');
+      lab.hook_rt(ra, (h, rr) => { const x = ret.shift(); if (x) x[2] = rr.d0 >>> 0; lab.passthrough(rr); }, 'camapp 3 (TRA result)', true);
     }
     if (ret) ret.push(rec);
     lab.passthrough(r);

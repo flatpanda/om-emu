@@ -121,7 +121,7 @@ export class NavLab extends MM.MenuLab {
     // variable (E142 and E140: 2 bytes, E144: 382, E146: 152, at the port's place of the setter, D) and the record
     // is not identified, so only E143's is observed
     if (ON_LAB_MODEL) this.observe(VAR_SET, (lab, r) => this._var(lab, r), 'obs-var226');
-    this.hook(MM.API_WRITE, (h, r) => this._vt4(h, r), 'obs-vt4');
+    this.hook(MM.API_WRITE, (h, r) => this._vt4(h, r), 'obs-vt4', true);
     // The event storm guard counts the GESetEvent calls that queue an event. GESetEvent does not queue an event that is
     // already pending (E143's SET_EVENT: 0x1002 and 0x1100 by their pending bytes, the others by a scan of the pending
     // list, D; the addresses are in docs/model-survey.md, 2026-11-02), so a set of an event set and not taken since
@@ -161,7 +161,7 @@ export class NavLab extends MM.MenuLab {
     if (!this.write_sites.has(ra)) {
       if (this.hooks.has(ra)) throw new NavError(`vt+4 returns to ${where(ra)}, which is already hooked: return value not observable`);
       this.write_sites.set(ra, []);
-      this.hooks.set(ra, [(h, r2) => this._vt4_return(h, r2), 'obs-vt4-return']);
+      this.hooks.set(ra, [(h, r2) => this._vt4_return(h, r2), 'obs-vt4-return', true]);
     }
     this.write_sites.get(ra).push(this.writes.length - 1);
     this.passthrough(r);

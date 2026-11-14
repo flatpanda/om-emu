@@ -183,7 +183,7 @@ export class OsdLab extends HLE {
     this.lt = new K.LabTask(this.nk, KN_LAB_PRI, null, 0x60000, KN_TASKS);
     this.lt.start();
     this.lt.make_settle_sem();
-    for (const [address, name] of RTOS) this.hook(address, this.rtos_observer(name), name + '(native)');
+    for (const [address, name] of RTOS) this.hook(address, this.rtos_observer(name), name + '(native)', true);
     const orig = this.kernel.deliver;
     this.kernel.deliver = (bound = 8) => K.in_interrupt(this.lt, () => orig(bound));
     this._deliver_raw = orig;

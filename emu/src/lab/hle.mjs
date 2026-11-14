@@ -87,19 +87,23 @@ export class HLE {
   close() { if (this.session) this.session.close(this, () => this.sim.close()); else this.sim.close(); }
   // address in the disassembly notation (BASE + body offset): a runtime address of the image would be converted twice
   // and the hook would silently never fire, so one is refused (a plain Error: a caller bug, not a firmware outcome)
-  hook(address, stub, name = null) {
+  // pass: a pass-through observer, whose stub only reads (registers, memory) and records, and then single-steps the
+  // instruction at pc (sim.run([], true)), so the firmware's own bytes there run, patched or not: the hook rule
+  // (src/lab/patchaudit.mjs) leaves it alone. A stub that finishes, skips, writes or seeds anything is not one
+  hook(address, stub, name = null, pass = false) {
     refuseUnmapped(address, `hook ${name ?? stub.name}`);
     if (address >= IMAGE_BASE && address < IMAGE_BASE + this.image.length) throw new Error(`hook ${name ?? stub.name}: 0x${fx(address >>> 0, 8)} is a runtime address (hook() takes the disassembly notation; hook_rt a runtime address)`);
-    this.hooks.set(runtime(address), [stub, name ?? stub.name]);
+    this.hooks.set(runtime(address), [stub, name ?? stub.name, pass]);
   }
   // A hook keyed by a runtime address (a return address, a harness trampoline); a disassembly address is refused.
-  hook_rt(address, stub, name) {
+  hook_rt(address, stub, name, pass = false) {
     refuseUnmapped(address, `hook ${name}`);
     if (address >= BASE && address < BASE + this.image.length) throw new Error(`hook ${name}: 0x${fx(address >>> 0, 8)} is a disassembly address (hook() converts it)`);
-    this.hooks.set(address, [stub, name]);
+    this.hooks.set(address, [stub, name, pass]);
   }
   // Layer a stub over the hook at address (disassembly notation): make(previous stub) gives the new one, named name or
   // the previous name. A missing hook is a port bug (the layer below did not install it). Returns the previous entry.
+  // The layered hook is no pass-through, whatever the previous one was: a stand-in may sit in the layer.
   wrap(address, make, name = null) {
     const prev = this.hooks.get(runtime(address));
     if (!prev) throw new Error(`wrap ${name ?? ''}: no hook at 0x${fx(address >>> 0, 8)} to wrap`);
@@ -240,8 +244,8 @@ export class HLE {
       }
       const hook = this.hooks.get(pc);
       if (hook && !result.fault) {
-        const [stub, name] = hook;
-        if (this.patch !== null) this.patch.refuseHook(pc, name);
+        const [stub, name, pass] = hook;
+        if (this.patch !== null) this.patch.refuseHook(pc, name, pass);
         used += 1;
         if (this.coverage !== null) this.coverage.stub(pc, name);
         this.on_stub(name);

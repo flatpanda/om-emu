@@ -547,10 +547,10 @@ export class DisplayLab extends OsdLab {
         if ((r2.d0 & 0xFF) !== 1) throw new FirmwareError(`native CHANGE poll ${h8(CHANGE_WAIT_POLL)} returned ${r2.d0 & 0xFF}: the DISPLAY_CHANGE task is not waiting to receive`);
         this.sim.run([], true);
       };
-      this.hook_rt(ra, back, 'obs-chgwait return');
+      this.hook_rt(ra, back, 'obs-chgwait return', true);
       this.sim.run([], true);
     };
-    this.hook(CHANGE_WAIT_POLL, poll, 'obs-chgwait');
+    this.hook(CHANGE_WAIT_POLL, poll, 'obs-chgwait', true);
     refuseUnmapped(CHANGE_LOOP, 'K-CHANGE');
     const ids = [];
     for (const [tid, [entry]] of this.nk.tasks()) if (entry === CHANGE_LOOP) ids.push(tid);
@@ -794,7 +794,7 @@ export class DisplayLab extends OsdLab {
         this.hooks.delete(ra);
         this.sim.run([], true);
       };
-      this.hook_rt(ra, back, 'H-TIMER return');
+      this.hook_rt(ra, back, 'H-TIMER return', true);
       this.sim.run([], true);
     };
     const program = (fn) => (hle, r) => {
@@ -802,7 +802,7 @@ export class DisplayLab extends OsdLab {
     };
     for (const fn of HW_TIMER_GUARD_RETURNS.keys()) {
       saved.set(runtime(fn), this.hooks.get(runtime(fn)) ?? null);
-      this.hook(fn, guard(fn), 'H-TIMER guard');
+      this.hook(fn, guard(fn), 'H-TIMER guard', true);
     }
     for (const fn of HW_TIMER_PROGRAM) {
       saved.set(runtime(fn), this.hooks.get(runtime(fn)) ?? null);

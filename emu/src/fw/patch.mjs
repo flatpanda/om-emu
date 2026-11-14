@@ -109,7 +109,8 @@ const SHA = /^[0-9a-f]{64}$/;
 // A digest-anchored file's runs as patches (old null: the stock block's, taken by applyPatches), each with the file's
 // anchor {source, format, main_base, before, after, not_applied}.
 function readAnchored(doc, source) {
-  const keys = ANCHORED[doc.format];
+  // (the file's format is looked up as an own key of a string: 'constructor' or ['om3-patch-2'] is no format)
+  const keys = typeof doc.format === 'string' && Object.hasOwn(ANCHORED, doc.format) ? ANCHORED[doc.format] : null;
   if (!keys) throw new PatchRefused(`${source}: format ${JSON.stringify(doc.format)}: not one this reader knows (${Object.keys(ANCHORED).join(', ')})`);
   for (const k of Object.keys(doc)) {
     if (!['format', 'main_base', 'main_sha256_before', 'main_sha256_after', 'runs', ...keys].includes(k)) {

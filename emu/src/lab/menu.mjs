@@ -258,7 +258,10 @@ export class MenuLab extends T.TextDisplayLab {
   }
   // Let the hooked instruction at r.pc run natively once (a step ignores breakpoints).
   passthrough(r) { this.sim.run([], true); }
-  observe(address, fn, name) { this.hook(address, (hle, r) => { fn(this, r); this.passthrough(r); }, name); }
+  // fn(lab, r) and then the instruction at r.pc natively. An obs- name (the lab's observers, which on_stub leaves out of
+  // stub_hits: fn only reads and records) makes it a pass-through hook (src/lab/hle.mjs hook); an S-/H- one does not,
+  // since fn feeds a stand-in there (S-ACCSAMPLE and S-TPINTWAIT write memory first)
+  observe(address, fn, name, pass = name.startsWith('obs-')) { this.hook(address, (hle, r) => { fn(this, r); this.passthrough(r); }, name, pass); }
   stack_args(r, n) {
     const call = this.sim.read(r.mdr - 7, 7);
     let size;
@@ -377,7 +380,7 @@ export class MenuLab extends T.TextDisplayLab {
       else if (EV_WRAPPERS.has(name)) this.wrap(address, (stub) => scoped(name, stub, (r) => vsync.has(r.d0 & 0xFFFF)), name + '(scoped)');
       else if (name === 'OlyQeWr') this.wrap(address, (stub) => scoped(name, stub, (r) => (r.d0 & 0xFFFF) === change), name + '(scoped)');
       else if (name === 'OlyTaSS') this.wrap(address, (stub) => scoped(name, stub, () => this.in_display_run() || this.lab_task_call()), name + '(scoped)');
-      else this.observe(address, (lab, r) => lab._native_call(name, r), name + '(native)');
+      else this.observe(address, (lab, r) => lab._native_call(name, r), name + '(native)', true);
     }
     // S-TPINTWAIT (the touch driver of the E118 and E144 families, src/fw/facts.mjs touchIntWait): the touch panel
     // controller's INT, a GIO pin (E120's 30, E144's 120), which the lab does not model (no GIO interrupt on those
@@ -571,7 +574,7 @@ export class MenuLab extends T.TextDisplayLab {
           this.hooks.delete(ra);
           this.passthrough(r2);
         };
-        this.hook_rt(ra, back, 'obs-b2-return');
+        this.hook_rt(ra, back, 'obs-b2-return', true);
       }
     };
     // (ctrl_or, the VSC's CTRL3 read-modify-write, only where the port places it: the kind-3 VSC's builds, the E118
@@ -1000,7 +1003,7 @@ export class MenuLab extends T.TextDisplayLab {
     if (!this.value_sites.has(ra)) {
       if (this.hooks.has(ra)) throw new MenuError(`S-STORE read ${sid} returns to ${where(ra)}, which is already hooked: value not observable`);
       this.value_sites.set(ra, []);
-      this.hook_rt(ra, (h, r2) => this._on_setting_value(h, r2), 'obs-setting-value');
+      this.hook_rt(ra, (h, r2) => this._on_setting_value(h, r2), 'obs-setting-value', true);
     }
     this.value_sites.get(ra).push(this.settings_log.length - 1);
     this.passthrough(r);

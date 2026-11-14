@@ -3,14 +3,16 @@
 // against the stock block, so the lab checks where they meet the patched bytes. "On patched bytes" is said of an
 // address whose instruction (its length from the opcode, src/core/cpu.mjs insnLength; an opcode a patch changed is
 // itself a changed byte) overlaps a changed byte, for a code address (a hook's pc, a task's entry, an address in the
-// disassembly notation); of the byte itself for a run-time data address.
+// disassembly notation); for a run-time data address, of its byte, or of its 4 bytes for a fact known to name a
+// 32-bit word (WORD_FACTS: the section loader's end words).
 //   the hook rule    a lab hook reached at a pc on patched bytes stops the session (PatchHooked, from src/lab/hle.mjs
 //                    _loop1): its stand-in would run in place of the patched code, so the session would not be
-//                    running the firmware it claims to
+//                    running the firmware it claims to. A pass-through observer (src/lab/hle.mjs hook's pass: it
+//                    reads and records, then single-steps the instruction at pc) is exempt: the patched bytes run
 //   H-PATCHTASK      a task start whose entry is on patched bytes is taken (src/lab/kernel.mjs LabTask._task_start):
 //                    a task the patch made (no stock task's code is there), run natively and listed
 //   patchAudit       after the bring-up (src/lab/player.mjs, host/navcli.mjs): the lab hooks installed then on patched
-//                    bytes (each would stop the session when reached), and the model's ported addresses and facts
+//                    bytes (each would stop the session when reached; pass-through observers are left out), and the model's ported addresses and facts
 //                    (src/fw/ports.mjs PORTS and FACTS) on patched bytes: the lab calls or reads the patched bytes
 //                    there, which is reported, not refused. E143 has no such table (its addresses are src/lab's own
 //                    literals): ported is null there
@@ -56,8 +58,9 @@ export class PatchRanges {
   }
   // a run-time code address (a hook's pc, a task's entry)
   code(address) { return this.insnAt(((address >>> 0) - this.base) | 0); }
-  // the hook rule: a lab hook reached at pc (run-time)
-  refuseHook(pc, name) {
+  // the hook rule: a lab hook reached at pc (run-time); pass, a pass-through observer (src/lab/hle.mjs hook), is let be
+  refuseHook(pc, name, pass = false) {
+    if (pass) return;
     let r = this.seen.get(pc);
     if (r === undefined) this.seen.set(pc, r = this.code(pc));
     if (r !== null) {
@@ -66,37 +69,44 @@ export class PatchRanges {
   }
 }
 
-// The audit's rules on given tables (patchAudit's, or a test's): ranges a PatchRanges; hooks [[run-time pc, name]];
-// ports {model address: [E143 addresses]} or null; facts [[path, value]] or null; len the main block's length.
+// The audit's rules on given tables (patchAudit's, or a test's): ranges a PatchRanges; hooks [[run-time pc, name,
+// pass]] (pass: a pass-through observer, left out: the patched bytes run under it); ports {model address: [E143
+// addresses]} or null; facts [[path, value, width]] or null (width: the bytes a run-time data address names, 1 when
+// left out); len the main block's length.
 // {hooks: [{at (disasm), name}], ported: [{at, e143: [...]} | {at, fact}] or null}
 export function auditTables(ranges, { hooks, ports, facts, len }) {
   const base = ranges.base, out = { hooks: [], ported: ports === null && facts === null ? null : [] };
   const hooked = new Set();
-  for (const [pc, name] of hooks) {
-    if (ranges.code(pc) === null) continue;
+  for (const [pc, name, pass] of hooks) {
+    if (pass || ranges.code(pc) === null) continue;
     hooked.add(pc - base + CODE >>> 0);
     out.hooks.push({ at: hex8(pc - base + CODE), name });
   }
   out.hooks.sort((a, b) => (a.at < b.at ? -1 : 1));
-  // an address on patched bytes: in the disassembly notation the instruction there, at run time the byte
-  const on = (v) => {
+  // an address on patched bytes: in the disassembly notation the instruction there, at run time the width bytes from it
+  const on = (v, width = 1) => {
     v >>>= 0;
     if (v >= CODE && v < CODE + len) return !hooked.has(v) && ranges.insnAt(v - CODE) !== null;
-    if (v >= base && v < base + len) return !hooked.has(v - base + CODE >>> 0) && ranges.hit(v - base, 1) !== null;
+    if (v >= base && v < base + len) return !hooked.has(v - base + CODE >>> 0) && ranges.hit(v - base, width) !== null;
     return false;
   };
   if (out.ported !== null) {
     for (const [at, from] of Object.entries(ports ?? {})) if (on(Number(at))) out.ported.push({ at: hex8(Number(at)), e143: from.map(hex8) });
-    for (const [path, v] of facts ?? []) if (on(v)) out.ported.push({ at: hex8(v), fact: path });
+    for (const [path, v, width] of facts ?? []) if (on(v, width)) out.ported.push({ at: hex8(v), fact: path });
   }
   return out;
 }
 
-// [[path, value]] of every number in a FACTS entry
-function leaves(x, path, out) {
-  if (typeof x === 'number') out.push([path, x]);
-  else if (Array.isArray(x)) x.forEach((v, i) => leaves(v, `${path}[${i}]`, out));
-  else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) leaves(v, path ? `${path}.${k}` : k, out);
+// The facts known to name a 32-bit word, by path: their whole word is checked (a patch may change its bytes +1..+3
+// alone, as caduceus-om3's raise of an end word does, their report). sections.ends: the section loader's end words,
+// which src/fw/sections.mjs bootLoads reads as u32. Any other fact is checked at its first byte
+const WORD_FACTS = /^sections\.ends\[\d+\]$/;
+
+// [[path, value, width]] of every number in a FACTS entry (width 4 for WORD_FACTS, else 1)
+export function factLeaves(x, path = '', out = []) {
+  if (typeof x === 'number') out.push([path, x, WORD_FACTS.test(path) ? 4 : 1]);
+  else if (Array.isArray(x)) x.forEach((v, i) => factLeaves(v, `${path}[${i}]`, out));
+  else if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) factLeaves(v, path ? `${path}.${k}` : k, out);
   return out;
 }
 
@@ -109,9 +119,9 @@ export function patchAudit(lab) {
   if (!ON_LAB_MODEL) {
     ports = {};
     for (const [from, to] of Object.entries(PORTS[MODEL] ?? {})) if (to !== null) (ports[to >>> 0] ??= []).push(Number(from));
-    facts = leaves(FACTS[MODEL] ?? {}, '', []);
+    facts = factLeaves(FACTS[MODEL] ?? {});
   }
-  const hooks = [...lab.hooks].map(([pc, [, name]]) => [pc, name]);
+  const hooks = [...lab.hooks].map(([pc, [, name, pass]]) => [pc, name, pass === true]);
   const a = auditTables(ranges, { hooks, ports, facts, len: lab.image.length });
   return { ...a, unloaded: unloadedRuns(ranges.ranges, lab.sim?.loads ?? null, ranges.base) };
 }

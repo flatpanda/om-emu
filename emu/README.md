@@ -664,9 +664,10 @@ and the newest run's start word, channels and parameter image, S-EMS1); `load`, 
 `abort`, `quit` and `lab` time moves are refused. Run control:
 `halt` pauses the session at the current tick boundary (phase `debug`; only debug inputs and controls run, the
 other inputs wait in the queue in their order); `break {pcs}` (a pc in the image's notation range is taken as
-notation and stops at its run-time address, as `probe`'s and `call`'s, and the answer lists run-time pcs; a pc where a
-lab hook answers never stops, as the harness takes every stop at its own breakpoints, and the scripted session's
-`break:` refuses it) and a stopping watchpoint make a debug stop inside a tick,
+notation and stops at its run-time address, as `probe`'s and `call`'s, and the answer lists run-time pcs; at a pc where
+a lab hook answers, the stop is held where the harness's continue ends anyway, before the hook answers, so it adds no
+visit of the run loop: its record names the hook (`hook`), registers set there are the hook's, and the hook answers
+after the stop unless the pc was moved; `src/lab/hle.mjs` `_loop1`) and a stopping watchpoint make a debug stop inside a tick,
 where the session is held (the harness's continue or step waits in the Simulator's debug hook) while debug inputs run:
 `step {n?}` single-steps there (no interrupt accepted; it stops before an instruction at one of the harness's own
 breakpoints, `harness: true`, which a `cont` then lets the harness take); `cont {stops?, maxMs?}` runs on and answers at
@@ -694,7 +695,9 @@ answers in place of the firmware (not a pass-through observer) no firmware instr
 recorded as kind `hook` with the hook's name; the answer lists the armed pcs a hook holds now (`hooked`). `hits
 {limit?}` takes the hits since the last take: `hits` (the first `limit`, default 10,000: `kind` pc, hook or mem, `pc` in
 the disassembly notation, `hook`, `range`, `addr`, `size`, `dir`, `value`, the 16 registers before the instruction or
-as the access happens, `lab_ns`, the lab clock at the hit, which hits close together can share), `dropped` (the rest,
+as the access happens, `lab_ns`, the lab clock at the hit, which hits close together can share, and `stack` for a pc
+the probe's `stack: [[pc, n], ...]` names: the n words, at most 256, read from `sp` up at the hit by the debugger, which
+the run does not see; a word that cannot be read ends them, and a hit the log drops reads none), `dropped` (the rest,
 counted: the log keeps the first 10,000 since the last take) and `counts` (each pc and range, every hit counted). The
 log outlives a session's close, so a power-off's hits are taken after it. `detach` turns the probes off with the rest.
 A host may hold a debug stop by a callback instead of a blocking queue (`holdStop`, `src/debug/live.mjs`): the
@@ -702,8 +705,8 @@ scripted session does (Scripted sessions), so `break` and stopping watchpoints a
 tokens at the stop and lets it go at `resume` (it does not script `cont`, whose answer is deferred).
 
 **Calling a firmware function (`call`).** On the live route, `call` runs one firmware function natively between ticks
-(the session running or halted; refused at a debug stop, which is inside a tick, and while a stopping watchpoint is
-armed) through the lab's own call (`src/lab/hle.mjs` `HLE.call`), so the session's hooks and stand-ins answer as they
+(the session running or halted) or at a breakpoint's debug stop (below; refused at a watchpoint's stop, and while a
+stopping watchpoint is armed) through the lab's own call (`src/lab/hle.mjs` `HLE.call`), so the session's hooks and stand-ins answer as they
 do for the lab's own calls: a function whose path reaches the lab's memcpy, memset or a stand-in works there, where a
 debugger single-stepping a stub of its own runs past them (on E147, X 2026-11-13: the settings getter 0x603f0111 for
 id 901 returns 54 through the call, memset answered by its hook, and single-stepped from a stub it does not return
@@ -776,6 +779,21 @@ session goes on; a callee that reaches one answers `UnloadedCode`, its message s
 false`, and every later run or write answers `HostStopped`. A
 standalone machine (`--serve`) refuses `call`: it has no harness; write a stub, `reset {regs}` and `cont {stops}`
 there.
+
+**A call at a breakpoint's stop.** A debug stop is inside a tick: the lab is inside a call of its own (its
+`call_depth` is 1 or more), whose frames are live on the harness stack below the top where a call's CALL writes, the
+CPU may hold state the 16 registers do not show (the flags' undefined bits and the PSW hazard a `mov` to `psw` leaves,
+which a register write clears: `src/core/cpu.mjs` `setRegs`), and the stand-ins are in the middle of their work. So a
+call there also puts back the CPU's whole context (the machine's `cpuContext`: every CPU word, the run loop's flags but
+the interrupt request, the interpreter's TB-start record, a pending debug stop) and the harness stack (512 KiB under its
+top), and it ends before any lab hook but the builtins memset and memcpy and `prop_get` (the property read, which
+answers from the property map or runs the read natively and changes only its own logs) answers: `CallHooked`, its
+detail naming the hook, with everything put back. Measured (X, `test/test_tools.mjs`, 2026-11-14): on E143 the settings
+getter for id 24 called at a breakpoint on it gives 3, as between ticks, and every later step's lab time and frame, the
+harness stack at the stop and 64 MiB of DRAM at the end equal the run without the call; with the harness stack not put
+back the resumed step faults (fault 3), and on E147 a call of the getter at the EXIF fill site's stop in S2 leaves the
+rest of the shot and its Exif unchanged. At a watchpoint's stop the call is refused: a single step's watch hit leaves a
+pending stop that a nested continue would take.
 
 The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
 
@@ -974,8 +992,11 @@ node emu/bin/session.mjs --model E147 --patch patch.json --card card.omsd --card
 node emu/bin/session.mjs --main main.bin --loaded off ...      # --main, --loaded as play's (Patch overlays)
 ```
 
-Options: `--model`, `--patch FILE...` or `--main FILE`, `--loaded auto|on|off` and `--creative-dial K` as on
-`bin/play.mjs`. `--card FILE` is the card in the first slot, kept in FILE as play's `OM_EMU_CARD` keeps it: **the file is
+Options: `--model`, `--patch FILE...` or `--main FILE`, `--loaded auto|on|off`, `--creative-dial K`, `--a15
+auto|off|on` (A15's guard: `auto`, the default, assumes A15 under play's bracket guard, `on` always, `off` never, so a
+composite that needs it is not published) and `--device tft|evf` (the display shown at the start; the `eye` and `lv`
+tokens and `switch:eye=1|0` switch it later) as on `bin/play.mjs`. `--osd-errors fail|report`: a step in which the OSD
+engine refused a picture fails (`fail`, the default) or only lists the refusals (`report`, below). `--card FILE` is the card in the first slot, kept in FILE as play's `OM_EMU_CARD` keeps it: **the file is
 written back in place** at each session's end if the firmware wrote to it (copy it first to keep the original); without
 `--card` a blank card in memory that the firmware formats at the first start and that stays in the slot for the whole
 run. `--card-put DOS/PATH=LOCAL` (repeatable, needs `--card`) puts files on that card before the first session mounts
@@ -998,8 +1019,9 @@ line.
 | `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `OPEN`, ... | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
 | `power:off` | the power lever off: the firmware's own power-off, which saves the kept state |
 | `restart[:card=FILE]` | a new session in this process on the same `--nvram` file and card (or the card FILE from now on); after `power:off` the camera's power-on, the mode dial, creative dial and (E143) Fn lever where they were (the record's `carried`); without `power:off` before it a battery pull, a fresh start at the idle positions |
-| `shot:FILE.png` | the last published frame as an RGB PNG, the pixels `GET /api/frame` gives |
+| `shot:FILE.png` | the last published frame of the display shown (`--device`, the eye sensor) as an RGB PNG, the pixels `GET /api/frame` gives; the record's `device` and `size` say which |
 | `read:ADDR:LEN`, `call:FN[:d0=..,a0=..,limit=N,space=..]` | the debug route's `read` and `call` ops (The debug API); `entry=PC`, `stop=PC` (repeatable) and `frame=MASK/SIZE` make a call into the middle of a function or one that ends at a stop pc |
+| `dump:ADDR:LEN:FILE` | LEN bytes (at most 64 MiB) from ADDR into FILE through the route's `read`, 64 KiB at a time; the record has `file`, `addr`, `len`, `sha256`, and for the ranges the boot does not load or is not shown to load under the loaded-ranges mode `unloaded` (`[{lo, hi, kind}]`) and `fill`: their bytes are S-STALERAM's fill, not anything a camera holds. A read that fails fails the step and writes no file |
 | `call:@FILE` | the `call` op's whole request read from FILE as JSON (`fn`, `space`, `entry`, `stops`, `regs`, `stack`, `frame`, `mem`, `read`, `restore`, `limit`, `scratch`; another field or a refused value is a usage error before the boot); one with `mem` is a poke |
 | `write:ADDR=HEX` | the debug route's `write`: allowed but **a poke**, listed in the summary and named on the last line |
 | `card-ls`, `card-get:DOS/PATH=LOCAL`, `exif:DOS/PATH` | the card as it stands, read by `refs/volume.mjs`; a JPEG's Exif fields by `refs/exif.mjs` |
@@ -1007,8 +1029,8 @@ line.
 | `expect:mem:ADDR=HEX`, `expect:mem:ADDR!=HEX` | the bytes at ADDR are (or are not) HEX |
 | `expect:card:DOS/PATH`, `expect:standin:NAME` | the file is on the card; the stand-in is in use |
 | `expect:exif:DOS/PATH:FIELD=TEXT`, `~TEXT` | the Exif field (`Make`, `Model`, `ImageDescription`, `UserComment`, `DateTimeOriginal`, `ExposureTime`, ...) is, or contains, TEXT |
-| `trace:PC[,PC...]`, `trace:mem:ADDR:LEN[:r\|w\|rw]`, `trace:off` | log each arrival at the pcs and each access to the range (`w` by default) while the later steps run (the debug route's `probe`); `off` disarms every trace |
-| `break:PC[,PC...]`, `break:mem:ADDR:LEN[:r\|w\|rw]`, `break:off` | stop the firmware where it reaches a pc, or after an access to the range (the route's `break` and stopping `watch`); `off` disarms every stop |
+| `trace:PC[,PC...][:stack=N]`, `trace:mem:ADDR:LEN[:r\|w\|rw]`, `trace:off` | log each arrival at the pcs and each access to the range (`w` by default) while the later steps run (the debug route's `probe`); `stack=N` (1 to 256) gives each hit at these pcs the N words from `sp` up as they are at the hit (a pc's last `trace:` token sets it); `off` disarms every trace |
+| `break:PC[,PC...]`, `break:mem:ADDR:LEN[:r\|w\|rw]`, `break:off` | stop the firmware where it reaches a pc, or after an access to the range (the route's `break` and stopping `watch`); at a pc a lab hook holds, before the hook answers; `off` disarms every stop |
 | `resume` | at a debug stop: let the firmware go on; its record carries the rest of the step that stopped |
 
 A card path takes `/` or `\`, compared without case one character for one (`straße.txt` does not name `STRASSE.TXT`,
@@ -1024,8 +1046,11 @@ composite's sha256, as the status and the session log give it), then the step's 
 shot), `exif` (exif), `expect` (its kind), `session`, `nvram` and `carried` (restart: the stores the new session
 restored, the controls' positions carried from `power:off` or null),
 `osd_errors` (the OSD engine's refusals in the step, `{NAME: count}`, such as `BMP_TOKEN`: the firmware goes on and
-that picture is not drawn; reported, not a failure),
-`frame_error` (when the composite's error changes), `armed`, `hooked`, `hits`, `hits_dropped`, `hit_counts`, `stopped`
+that picture is not drawn; the step fails, unless `--osd-errors report`: a verification should not pass a build whose
+picture the lab could not draw. No stock flow measured has one: X, 2026-11-14, flows of INFO, the Super Control Panel,
+the menus, S1 and S2, playback and the mode dial on E143, E146 and E147, 123 steps each, and E147's Picture Mode and
+creative dial, 41 steps: no `osd_errors`), `device` (shot), the dump's fields (dump),
+`frame_error` (when the composite's error changes), `armed`, `hooked`, `hooked_breaks`, `hits`, `hits_dropped`, `hit_counts`, `stopped`
 and `resumed` (traces and stops: Traces, breakpoints and watchpoints, below), and on a failure `error`. The last line
 is the summary: `summary:
 true`, `ok`, `model`, `patch` (the patched line), `patch_audit` (`hooks`, `ported`, `unloaded`, `tasks`, as play's
@@ -1044,14 +1069,16 @@ runs, and nothing is retried or swallowed.
 
 **The scripting contract.** Stable, for projects that script om-emu: the module `host/session.mjs` with
 `openSession(options)` (options `model`, `patch`, `main`, `card`, `cardPut`, `cardGet`, `nvram`, `loaded`,
-`creativeDial`, `settle`, `out`, `tokens`, `say`) and the session's `step(token)`, `run(tokens)`, `input(json)`,
+`creativeDial`, `a15`, `device`, `osdErrors`, `settle`, `out`, `tokens`, `say`) and the session's `step(token)`, `run(tokens)`, `input(json)`,
 `status()`, `summary()` and `close()`; its errors `TokenError` (a usage error) and `SessionRefused`; the token grammar
 above; the fields of the step records and of the summary named above; `bin/session.mjs`'s options, output and exit
 status. `input(json)` takes what `POST /api/input` takes, and the summary lists what goes through it as it lists the
 tokens: a debug `write`, `setReg`, `setRegs` or a `call` with `mem` is a poke, a harness token (`EV:`, `SET:`,
 `CLOCK:`, `XCALL:`, `OPEN`, `CLOSE`) is in `harness_inputs` and a call that ran is in `calls`, the last two with
 `via: "input"`. A field may be added; one named here is not removed or changed in meaning without a
-note here. Not part of the contract: the lab's internals (`src/`, `scenarios/`, the Player's other fields), the play
+note here. Notes: from 2026-11-14 a step with `osd_errors` fails unless `osdErrors: 'report'` (before, it only
+reported them); a `break:` at a pc a lab hook holds stops there (before, it was refused); `call:` runs at a
+breakpoint's stop (before, refused). Not part of the contract: the lab's internals (`src/`, `scenarios/`, the Player's other fields), the play
 status document beyond what the records copy from it, and the stand-in lists' contents, which follow the lab.
 
 Checked (`test/test_session.mjs`): the grammar, every token's Player inputs, every expect against fakes with its
@@ -1072,16 +1099,19 @@ the audit and read as the fill).
 stops (The debug API) for the rest of the run: the armed sets are the script's, sent whole at each such token and again
 after each `restart`, and a PC in the image's notation range is taken as notation (`0x50436558`, run at
 `0x60457578` on E147). The arming step's record has `armed` (both sets) and `hooked` (the traced pcs a lab hook holds,
-whose arrivals come as kind `hook`); a `break:` at a pc a lab hook holds is refused, as no debug stop can happen there.
+whose arrivals come as kind `hook`, and `stack` when a `stack=` is set); a `break:` at a pc a lab hook holds stops there
+before the hook answers (the arming record's `hooked_breaks` and the stop's `stopped.hook` name it), where the harness's
+continue ends anyway, so the run after `resume` is the unstopped run's (X, `test/test_tools.mjs`).
 While traces are armed every record has `hits` (the first 100: `kind`, `pc`, the registers, ... as the route's
 `hits`), `hits_dropped` (the rest, counted) and `hit_counts` (per pc and per range, every hit counted); the summary's
 `traces` lists the arming steps (`armed`), what is armed at the end (`now`), the `counts` over the run, `hits_dropped`
 and `stops`. A step whose firmware meets a stop ends there: its record has `stopped` (`kind` break or watch, `pc`
 where the firmware is held, in the notation, `lab_ns`, `regs`, and for a watchpoint `watch`: `range`, `addr`, `size`,
 `dir`, `value` and the accessing `pc`) and `phase` `debug`. The next tokens then run at the stop: `read:`, `write:`,
-`expect:...`, `card-ls`, `card-get:`, `exif:`, `shot:`, `trace:` and `break:` (`break:off` before `resume` at a pc the
-firmware keeps reaching); `call:` is refused there (the stop is inside the lab's tick, where the route refuses a call),
-and so is any token that runs lab time. A `call:` between ticks runs with the traces armed: its own arrivals and
+`dump:`, `expect:...`, `card-ls`, `card-get:`, `exif:`, `shot:`, `trace:`, `break:` (`break:off` before `resume` at a
+pc the firmware keeps reaching) and, at a breakpoint's stop, `call:` (A call at a breakpoint's stop, The debug API: the
+CPU's whole context and the harness stack put back, a lab hook other than memset, memcpy and `prop_get` ending it as
+`CallHooked`); any token that runs lab time is refused there. A `call:` between ticks runs with the traces armed: its own arrivals and
 accesses are recorded in its record, at the lab time it ran (a call takes none), while the debug breakpoints do not
 stop it (the call op takes the live debugger's hook off while it runs; its `stop=` pcs are its stops, and an arrival
 at one records nothing, as at a breakpoint); with a `break:mem:` armed it is refused, as the route refuses a call
@@ -1108,6 +1138,21 @@ call there, a break at a hooked pc, a trace at a pc in an S-STALERAM gap recordi
 stops, the traces re-armed after a restart, and `atStop` and `onRecord`; on E147 S1 and S2 traced and untraced equal,
 the per-shot EXIF fill site reached once, in the S2 press, a patched build's audit the same with a trace armed, and a
 breakpoint at the fill site with the picture written after `resume`.
+
+Checked (`test/test_tools.mjs`): the `stack=` and `dump:` tokens and their refusals, the route's stack words at a hit
+(from `sp` up, a word that cannot be read ending them, none read for a dropped hit) and the machine's CPU context
+keeping the PSW hazard `setRegs` clears (firmware-free); on E143 a flow with a 16-word stack capture equal step for
+step to the untraced one (control: 100 ms shorter told apart), its first hit's words those a `read:` gives at a
+breakpoint on the same arrival; a dump across 64 KiB reads, a slice equal to a `read:`, and under `--loaded on` one
+across a gap with its `unloaded` range and the fill; a break at the S-HEAP malloc hook with a dump there and the run
+after `resume` the unstopped run's; a call at a breakpoint's stop (above) against the run without it, one reaching
+another hook (`CallHooked`) and one at a watchpoint's stop refused; `--a15 off` publishing no frame and `on` one;
+`--device evf` and the eye sensor's switches with `shot:` taking each display's frame (EVF 1600 x 1200, TFT 900 x
+600); `--osd-errors` failing a step with an engine refusal by default and only reporting it with `report`; on E147 a
+32-word capture at the EXIF fill site through S2, a call of the settings getter at a breakpoint there with the rest of
+the shot unchanged, and `--device evf`'s first shot from the EVF (1024 x 768). On E147 the switch from the EVF back to
+the TFT fails its re-entry check (X: `the re-entry landed on GUI state 0x0108 panel 0`), so a script starting on the
+EVF stays there.
 
 ## The browser player
 
@@ -1291,6 +1336,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/test/test_scpum4.mjs [--session]` | also in both suites above: the bridge that puts the SCPU's own firmware behind the link, its clock (A-SCPUM4-1), the frame log rebuilt from the wire against S-SCPUDEV's own, the byte mover through SPI2 and DMA1 (pure); with `--session` a play session's start with S-SCPUDEV and with the SCPU's firmware (`OM_EMU_SCPU=native`), whose frame log, transfers and pin levels must equal S-SCPUDEV's (`OM_EMU_MODEL=E146` for E146) | the E143 (or E146) firmware blocks and SCPU block for `--session` |
 | `node emu/test/test_osdwrap.mjs [--units] [--session]` | also in both suites above: the OSD engine's format-0x0B runs across a row end (A-BMPWRAP, `FIDELITY-NOTES.md` 5.7) on a bare machine: drawn as one stream at the stride and counted, and refused (BMP_TOKEN, nothing drawn) past the last row, in format 0x02 and with set bits past a word's last token; with `OM_EMU_MODEL=E147 OM_CADUCEUS=DIR` their v0.29 release through `host/session.mjs` (the patch file, LOOKS.BIN put by `bin/card.mjs`): the HSL wheel's four guide pictures drawn with no step's `osd_errors` and A-BMPWRAP in the summary, not before the first INFO; control: the pages' 175 x 50 pictures poked with bits past a word's last token, refused and reported in `osd_errors` (skipped without `OM_CADUCEUS`) | the E147 firmware and a Caduceus for OM-3 checkout for `--session` |
 | `node emu/test/test_trace.mjs [--units] [--session]` | also in both suites above: the scripted session's traces, breakpoints and watchpoints: the tokens, the machine's exec probes on a blank image and the live route's hit log; through `bin/session.mjs` on E143, and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` |
+| `node emu/test/test_tools.mjs [--units] [--session]` | also in both suites above: the scripted session's stack captures, dumps, breaks at hooked pcs, calls at a breakpoint's stop, `--a15`, `--device` and `--osd-errors`: the tokens, the route's stack words and the machine's CPU context firmware-free; through `bin/session.mjs` on E143, and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 | `OM_EMU_MODEL=E147 OM_CADUCEUS=CHECKOUT node emu/test/test_looks.mjs [--units] [--session]` | a Caduceus film checked below the pixels (`analysis/caduceus-om3/README.md` 4.6): the LOOKS.BIN reader and its refusals and a film's expected values (pure, also in both suites above); with `--session` a caduceus-om3 release (`releases/$OM_CADUCEUS_RELEASE`, `v0.29` by default) as `--patch` on E147 through `host/session.mjs`, FILM 1, 2 and 3 picked in the Picture Mode list: COLOR 1's 18 settings by the settings getter and the hooked WB fine-tune and Sharpness reads (targets read from the patched image; both of the EXIF set's WB pairs, and a trace over S2 showing it reads keys 7401 and 7417, not 34041 and 38521) against the film's LOOKS.BIN record, the film's name in S2's ImageDescription, no poke; controls: the values before each pick, a film with its WB shift off. `bin/test.mjs` runs the session only when `OM_CADUCEUS` is set (about 20 s) | the E147 firmware and a caduceus-om3 checkout for `--session` |
 | `OM_CADUCEUS=DIR OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs [--units] [--session]` | every caduceus-om3 release folder of the checkout DIR (`DIR/releases`, read, never fetched) against its pins (`test/fixtures/caduceus-releases.json`: each file's sha256, the reader's `main_sha256` before and after, and what its flow observed): a file that differs from its pin fails (upstream changed a published release), a folder with no pin is reported as unpinned and the others still run, and a checkout with none of the pinned folders fails (a wrong checkout or a changed layout); then each release's flow on E147 through `host/session.mjs` and `bin/card.mjs` (`OM_CADUCEUS_JOBS` at once, default 3): the session under the loaded-ranges mode with the pinned patch audit, their state word set by the half press, the Picture Mode page, the films' names and the selected film's title through the string getter, S2's photo code in the Exif (v0.27 on), the card's `OM3MOD` files, the selection after `power:off` and a restart (on a blank card from v0.29), and v0.29.1's films with no card (against v0.29); controls: v0.29 with section 6's end word put back to stock stops at the open naming section 6, and a pin with one digest character changed fails (a run without v0.29 says in a note that the section-6 control did not run). All 19 releases from v0.16 to v0.29.1 take about 3.5 min with 3 at once (24 to 35 s each, X 2026-11-13). The session part refuses another model than E147. Without `OM_CADUCEUS` one SKIPPED line (also in both suites above: the pin units in `test-pure.mjs`, the releases in `test.mjs`). To pin a new release: `OM_CADUCEUS=DIR OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs --pin v0.30 [--flow JSON]` prints its row (flow defaults: every `.BIN` of the folder on the card under `OM3MOD`, films when it has `LOOKS.BIN`); read it against the release's NOTES before adding it | the E147 firmware blocks; a caduceus-om3 checkout |

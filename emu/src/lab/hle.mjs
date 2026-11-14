@@ -239,7 +239,7 @@ export class HLE {
         if (hook !== undefined && hook[0] === stub && pc !== done) folded.push(pc);
       }
       this.drained = 0;
-      const result = this.sim.run([...stops].sort((a, b) => a - b), false, null, folded);
+      let result = this.sim.run([...stops].sort((a, b) => a - b), false, null, folded);
       used += this.drained;
       const pc = result.pc;
       if (pc === done && !result.fault) {
@@ -252,6 +252,16 @@ export class HLE {
       const hook = this.hooks.get(pc);
       if (hook && !result.fault) {
         const [stub, name, pass] = hook;
+        // a live debug breakpoint at the hooked pc (src/debug/live.mjs through sim.debug): held here, where the
+        // harness's continue ends anyway, before the hook answers, so the stop adds no visit of the run loop; the
+        // registers the debugger left are the hook's, and a pc it moved elsewhere goes on from there without the hook
+        const d = this.sim.debug;
+        if (d !== null && d.pcs.has(pc)) {
+          d.stopped({ kind: 'break', pc, during: 'continue', hook: name });
+          const now = this.sim.m.getRegs();                // the machine's own, no packet the session's Stats count
+          result = Object.fromEntries(REGS.map((k, i) => [k, now[i] >>> 0]));
+          if (result.pc !== pc) continue;
+        }
         if (this.patch !== null) this.patch.refuseHook(pc, name, pass);
         if (this.probeHook !== null && !pass) this.probeHook(pc, name, result);
         used += 1;

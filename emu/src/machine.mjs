@@ -460,6 +460,25 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       failed = null; lastStop = null; lastWatch = null; mem.clearWatchHit();
     },
     snapshotBytes(snap) { return snap.mem.data.length + devicesBytes(snap.devices) + 4 * snap.R.length; },
+    // The CPU's whole context at a stop, for a nested harness run there and back (src/debug/call.mjs at a debug stop):
+    // every CPU word with the ones getRegs leaves out (the flags' undefined bits, the PSW hazard), the run loop's flags
+    // but the interrupt request (the controller's line, which the nested run does not roll back), the interpreter's
+    // TB-start record, a pending debug stop and the last stop. Memory and devices are not in it.
+    cpuContext() {
+      live(); notPaused('cpuContext');
+      if (cores !== null) throw new Error('cpuContext: not with a second core (src/core/cores.mjs keeps per-core state)');
+      const cpuS = {};
+      for (const k of Object.keys(S)) if (k !== 'intc' && k !== 'irqReq') cpuS[k] = S[k];
+      return { gen: myGen, R: R.slice(), S: cpuS, interp: interpState(), pendingDebug, lastStop, lastWatch };
+    },
+    setCpuContext(c) {
+      live(); runnable('setCpuContext'); notPaused('setCpuContext');
+      if (c.gen !== myGen) throw new Error('setCpuContext: the context of another machine');
+      R.set(c.R);
+      for (const [k, v] of Object.entries(c.S)) S[k] = v;
+      setInterpState(c.interp);
+      pendingDebug = c.pendingDebug; lastStop = c.lastStop; lastWatch = c.lastWatch;
+    },
   });
   stats.createMs = clock() - tCreate;
   for (const fn of ON_MACHINE.slice()) fn(m);

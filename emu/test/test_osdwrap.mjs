@@ -109,7 +109,8 @@ export async function osdWrapSession() {
     c = spawnSync(process.execPath, [CARD, 'put', card, path.join(REL, 'LOOKS.BIN'), 'OM3MOD/LOOKS.BIN'], { encoding: 'utf8', timeout: 120000 });
     ok(c.status === 0, `card.mjs put LOOKS.BIN: rc ${c.status} ${c.stderr.slice(0, 300)}`);
     const { openSession } = await import('../host/session.mjs');
-    const s = await openSession({ model: 'E147', patch: [path.join(REL, 'patch.json')], card, out: path.join(tmp, 'out'), say: () => {} });
+    // --osd-errors report: the control's refused pictures are counted, not a failure (the default fails the step)
+    const s = await openSession({ model: 'E147', patch: [path.join(REL, 'patch.json')], card, out: path.join(tmp, 'out'), osdErrors: 'report', say: () => {} });
     ok(s.first.ok, `the patched boot: ${JSON.stringify(s.first).slice(0, 300)}`);
     // Picture Mode at FILM 1 (their first film), the HSL row; their guides are the wheel's Hue, Luminance, Shadows and
     // Highlights pages (their docs/USING.md)

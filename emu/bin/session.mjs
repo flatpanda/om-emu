@@ -5,7 +5,9 @@
 // (emu/README.md "Scripted sessions").
 //   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--card-put DOS/PATH=LOCAL]...
 //                            [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE] [--loaded auto|on|off] [--creative-dial K]
+//                            [--a15 auto|off|on] [--device tft|evf] [--osd-errors fail|report]
 //                            [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
+// --osd-errors fail (the default) fails a step in which the OSD engine refused a picture; report only lists them.
 // --nvram is off by default (a blank camera at each start), unlike play's: a scripted verification starts from a known
 // camera unless told otherwise. --card FILE is written back in place at each session's end, as play's OM_EMU_CARD.
 // Each argument and each --script line is split into tokens at white space ("..." keeps spaces; # starts a comment).
@@ -13,14 +15,15 @@
 // main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...), switch:ID=V or
 // switch:ID+N (creative_dial, mode_dial, lever, ...), power:off, restart[:card=FILE] (a new session in this process
 // on the same nvram file and card, or the card FILE), shot:FILE.png (the last published frame, /api/frame's pixels),
-// read:ADDR:LEN, write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N]
+// read:ADDR:LEN, dump:ADDR:LEN:FILE (up to 64 MiB into FILE), write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N]
 // (and entry=PC, stop=PC..., frame=MASK/SIZE: a mid-function call), call:@FILE (the call op's whole request as JSON;
 // one with mem is a poke), card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
 // !=HEX), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
 // pattern with * and ? (the last match by name). Relative LOCAL and FILE paths of the tokens resolve against --out.
-// Traces and stops: trace:PC[,PC...] and trace:mem:ADDR:LEN[:r|w|rw] record each hit in the later steps' records
-// (trace:off disarms); break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] end the step that meets one at the stop, where
-// the next tokens (reads, writes, expects, the card, trace:, break:) run until resume (break:off disarms). A run whose
+// Traces and stops: trace:PC[,PC...][:stack=N] and trace:mem:ADDR:LEN[:r|w|rw] record each hit in the later steps'
+// records, with N stack words per pc hit (trace:off disarms); break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] end the
+// step that meets one at the stop (at a hooked pc before the hook answers), where the next tokens (reads, dumps, writes,
+// a call at a breakpoint's stop, expects, the card, trace:, break:) run until resume (break:off disarms). A run whose
 // tokens end at a stop ends there, nothing run after it (the summary's ended_at_stop, the last line), exit 0 when
 // every step passed.
 // Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, a local file a step cannot write
@@ -42,6 +45,9 @@ const SPEC = [
   { opt: '--nvram', type: 'str', default: 'off', metavar: 'off|FILE' },
   { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
   { opt: '--creative-dial', type: 'int', metavar: 'K' },
+  { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
+  { opt: '--device', type: 'str', choices: ['tft', 'evf'], default: 'tft' },
+  { opt: '--osd-errors', type: 'str', choices: ['fail', 'report'], default: 'fail' },
   { opt: '--settle', type: 'int', metavar: 'MS' },
   { opt: '--out', type: 'path', metavar: 'DIR' },
   { opt: '--script', type: 'path', repeat: true, metavar: 'FILE' },
@@ -68,7 +74,7 @@ async function main(argv) {
   let s;
   try {
     s = await openSession({ patch: a.patch, main: a.main, card: a.card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded,
-      creativeDial: a.creative_dial, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
+      creativeDial: a.creative_dial, a15: a.a15, device: a.device, osdErrors: a.osd_errors, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
   } catch (e) {
     if (!(e instanceof SessionRefused)) throw e;
     err(e.message);

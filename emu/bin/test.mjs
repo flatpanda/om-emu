@@ -34,7 +34,8 @@
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
-// watchpoints on E143 and E147 (test_trace.mjs), a Caduceus film's values below the pixels on E147 with OM_CADUCEUS
+// watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop, display
+// options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147 with OM_CADUCEUS
 // (test_looks.mjs), every caduceus-om3 release against its pins when OM_CADUCEUS names a checkout
 // (test_caduceus.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
@@ -676,6 +677,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const r = spawnSync(process.execPath, [new URL('../test/test_trace.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
   const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
   console.log(`session traces and stops: units ${tu.checks - tu.bad.length}/${tu.checks}; E143 ${ts.checks - ts.bad.length}/${ts.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...tu.bad, ...ts.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += tu.bad.length + ts.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the scripted session's tools (test_tools.mjs): stack captures, dumps, a break at a hooked pc, a call at a stop, the
+// display options and the OSD policy; its units, then whole runs on E143 here and on E147 in a process of its own
+{
+  const { toolsUnits, toolsSession } = await import('../test/test_tools.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const tu = await toolsUnits(), ts = await toolsSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_tools.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`session tools: units ${tu.checks - tu.bad.length}/${tu.checks}; E143 ${ts.checks - ts.bad.length}/${ts.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...tu.bad, ...ts.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += tu.bad.length + ts.bad.length + (r.status === 0 ? 0 : 1);
 }

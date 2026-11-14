@@ -16,7 +16,8 @@
 //   play's OM_EMU_CARD; absent: a blank card in memory that the firmware formats), cardPut ['DOS/PATH=LOCAL'...] (on
 //   the card FILE before the first session mounts it), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
-//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, out DIR (session-N.json logs; relative paths of the tokens
+//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
+//   and --device), osdErrors 'fail' (the default: a step with an OSD engine refusal fails) | 'report', out DIR (session-N.json logs; relative paths of the tokens
 //   resolve against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
 //   lines: the patched firmware, the patch audit, the kept state, the card), onRecord(record) (each step's record as
@@ -50,15 +51,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { UsageError, intValue } from '../checks/lib/args.mjs';
 
 export const PRESS_MS = 150, HOLD_MS = 2000, SETTLE_MS = 600, DIAL_MAX = 8, READ_MAX = 0x10000;
 export const HITS_PER_STEP = 100;      // a record's hits: the first this many, the rest counted (hits_dropped)
+// trace:PC:stack=N's bound (src/debug/live.mjs STACK_WORDS_MAX, which the live route checks); dump:'s, in bytes (the
+// debug read's READ_MAX at a time)
+export const STACK_WORDS = 256, DUMP_MAX = 64 * 1024 * 1024;
 export class TokenError extends UsageError {}
 export class SessionRefused extends Error {}
 class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
 // the steps that run at a debug stop (the firmware held inside a tick): reads, pokes, checks, the card, arming, resume
-const AT_STOP = new Set(['read', 'write', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
+const AT_STOP = new Set(['read', 'dump', 'write', 'call', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
 
 // ---- the token grammar (firmware-free) --------------------------------------------------------------------------
 // A script's text as tokens: '#' at a token's start comments out the rest of its line; tokens are separated by white
@@ -89,7 +94,7 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // play's tokens that are harness inputs, not the camera's (the summary lists them): a GUI event posted, a setting
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
-const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'write', 'call', 'exif', 'expect', 'trace', 'break', 'resume'];
+const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'exif', 'expect', 'trace', 'break', 'resume'];
 const CALL_KEYS =['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'limit', 'space', 'entry', 'stop', 'frame'];
 // the fields of a call:@FILE request (src/debug/call.mjs callSpec's)
 export const CALL_FILE_KEYS = ['fn', 'space', 'entry', 'stops', 'regs', 'stack', 'frame', 'mem', 'read', 'restore', 'limit', 'scratch'];
@@ -152,14 +157,27 @@ export function parseToken(t) {
     }
     return step('call', { fn: addrOf(t, m[1], 'the function'), regs, limit, space, ...(entry !== null ? { entry } : {}), ...(stops.length ? { stops } : {}), ...(frame ? { frame } : {}) });
   }
-  if ((m = /^(trace|break):(?:(off)|mem:([^:]+):([^:]+)(?::(r|w|rw))?|([^:]+))$/.exec(t))) {
+  if ((m = /^(trace|break):(?:(off)|mem:([^:]+):([^:]+)(?::(r|w|rw))?|([^:]+)(?::stack=([^:]*))?)$/.exec(t))) {
     if (m[2]) return step(m[1], { off: true });
+    if (m[7] !== undefined) {                     // trace:PC[,PC...]:stack=N: each hit at these pcs carries N stack words
+      const n = intValue(m[7]);
+      if (m[1] !== 'trace') throw new TokenError(`${t}: stack=N is trace's (a stop's read: reads the stack there)`);
+      if (n === null || n < 1 || n > STACK_WORDS) throw new TokenError(`${t}: stack=${m[7]} is not 1..${STACK_WORDS} words`);
+      return step('trace', { pcs: m[6].split(',').map((a) => addrOf(t, a, 'the pc')), stack: n });
+    }
     if (m[6] !== undefined) return step(m[1], { pcs: m[6].split(',').map((a) => addrOf(t, a, 'the pc')) });
     const len = intValue(m[4]), lo = addrOf(t, m[3], 'the address');
     if (len === null || len < 1 || lo + len > 2 ** 32) throw new TokenError(`${t}: the length ${JSON.stringify(m[4])} is not 1.. bytes within 32 bits`);
     return step(m[1], { mem: { addr: lo, len, kind: m[5] ?? 'w' } });
   }
-  if ((m = /^(trace|break):/.exec(t))) throw new TokenError(`${t}: ${m[1]}:PC[,PC...], ${m[1]}:mem:ADDR:LEN[:r|w|rw] or ${m[1]}:off`);
+  if ((m = /^(trace|break):/.exec(t))) throw new TokenError(`${t}: ${m[1]}:PC[,PC...]${m[1] === 'trace' ? '[:stack=N]' : ''}, ${m[1]}:mem:ADDR:LEN[:r|w|rw] or ${m[1]}:off`);
+  if ((m = /^dump:([^:]+):([^:]+):(.+)$/.exec(t))) {   // dump:ADDR:LEN:FILE: LEN bytes from ADDR into FILE (under --out)
+    const len = intValue(m[2]), lo = addrOf(t, m[1], 'the address');
+    if (len === null || len < 1 || len > DUMP_MAX) throw new TokenError(`${t}: the length ${JSON.stringify(m[2])} is not 1..${DUMP_MAX} bytes`);
+    if (lo + len > 2 ** 32) throw new TokenError(`${t}: ${JSON.stringify(m[1])}+${len} runs past 32 bits`);
+    return step('dump', { addr: lo, len, file: m[3] });
+  }
+  if ((m = /^dump(?::|$)/.exec(t))) throw new TokenError(`${t}: dump:ADDR:LEN:FILE (LEN 1..${DUMP_MAX} bytes)`);
   if (t === 'resume') return step('resume');
   if (t === 'card-ls') return step('card-ls');
   if ((m = /^card-get:([^=]+)=(.+)$/.exec(t))) return step('card-get', { path: dosPath(t, m[1]), local: m[2] });
@@ -325,6 +343,13 @@ export async function openSession(o = {}) {
     return { path: item.slice(0, at), local: item.slice(at + 1) };
   });
   const puts = pairs(o.cardPut, '--card-put'), gets = pairs(o.cardGet, '--card-get');
+  // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
+  // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
+  const a15Arg = o.a15 ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? 'fail';
+  if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
+  if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
+  if (!['tft', 'evf'].includes(deviceArg)) throw new TokenError(`--device ${deviceArg}: tft or evf`);
+  if (deviceArg === 'evf' && !BY_ID.has('eye')) throw new TokenError(`--device evf: ${MODEL} has no eye sensor in the lab (no EVF to start on)`);
   if (o.main && o.patch?.length) throw new TokenError('--main and --patch exclude each other (--main is the whole change to the main code block)');
   if ((gets.length || puts.length) && !STORAGE) throw new TokenError(`--card-put / --card-get: ${MODEL} has no card with a file system in the lab (S-CARD)`);
 
@@ -372,13 +397,13 @@ export async function openSession(o = {}) {
 
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: 'off',
-    take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null };
+    take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, a15: a15Arg, device: deviceArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
     wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r) },
-    onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16 }; }, onAudio: () => {} };
+    onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16, device: meta.device }; }, onAudio: () => {} };
   const envFor = (k) => ({ ...baseEnv, card, ...(nv.file ? { nvram: fileNvram(nv.file) } : {}),
     ...(out ? { logSink: (name, text) => { const f = path.join(out, `session-${k}${name.slice('session'.length)}`); if (name.endsWith('.jsonl')) fs.appendFileSync(f, text); else fs.writeFileSync(f, text); } } : {}) });
 
@@ -387,7 +412,7 @@ export async function openSession(o = {}) {
   // traces and stops: the armed sets (run-time pcs, ranges {addr, len, kind}), the arming steps, the hits' totals; the
   // record whose inputs run now (a stop ends it, resume's takes over), the stop held now and the one the run ended at,
   // where a held stop's tokens come from (run()'s list; else options.atStop), the records completed
-  const traced = { pcs: [], mem: [] }, stops = { pcs: [], mem: [] }, armedLog = [], hitTotals = new Map(), completed = new WeakSet();
+  const traced = { pcs: [], mem: [], stack: new Map() }, stops = { pcs: [], mem: [] }, armedLog = [], hitTotals = new Map(), completed = new WeakSet();
   let hitsDropped = 0, stopCount = 0, running = null, held = null, ended = null, source = null, stopError = null;
   const fail = (rec, message) => { rec.ok = false; rec.error = message; failed ??= { step: rec.step, token: rec.token, message }; errors.push(`step ${rec.step} (${rec.token}): ${message}`); };
   const labMessage = () => pl?.error?.message ?? 'the session stopped';
@@ -402,6 +427,13 @@ export async function openSession(o = {}) {
     for (const [k, v] of Object.entries(eng.failures)) if (v > (osdSeen[k] ?? 0)) d[k] = v - (osdSeen[k] ?? 0);
     osdSeen = { ...eng.failures };
     return Object.keys(d).length ? d : null;
+  };
+  // --osd-errors fail (the default): a step whose OSD engine refused a picture fails, as a picture the lab could not
+  // draw is not verified (no stock flow measured has one: emu/README.md); report: the record only lists them
+  const osdFail = (rec, osd) => {
+    rec.osd_errors = osd;
+    const n = Object.values(osd).reduce((x, y) => x + y, 0);
+    if (osdPolicy === 'fail' && rec.ok) fail(rec, `the OSD engine refused ${n} picture(s) (${Object.entries(osd).map(([k, v]) => `${k} ${v}`).join(', ')}), not drawn; --osd-errors report only reports them`);
   };
   const note = () => {                             // what the run used, kept across sessions
     if (!pl) return;
@@ -488,6 +520,22 @@ export async function openSession(o = {}) {
     if (!r.debug?.ok) throw new SessionRefused(`read ${h8(addr)}+${len}: ${r.debug?.error?.message ?? r.error}`);
     return r.debug.hex;
   };
+  // dump:ADDR:LEN:FILE: the debug read READ_MAX bytes at a time (a read that fails fails the step, the file unwritten);
+  // the record names the ranges of it the boot does not load or is not shown to load under the loaded-ranges mode
+  // (S-STALERAM): their bytes are the lab's fill, not anything the camera holds
+  const dump = (st, rec) => {
+    const out = new Uint8Array(st.len);
+    for (let o = 0; o < st.len; o += READ_MAX) {
+      const n = Math.min(READ_MAX, st.len - o);
+      out.set(Buffer.from(memHex(st.addr + o, n), 'hex'), o);
+    }
+    const file = local(st.file);
+    writeLocal(file, out);
+    const un = pl?.session?.lab?.sim?.unloaded ?? null, hi = st.addr + st.len;
+    const overlap = un ? un.gaps.filter((g) => g.lo < hi && g.hi > st.addr) : [];
+    Object.assign(rec, { file, addr: h8(st.addr), len: st.len, sha256: createHash('sha256').update(out).digest('hex'),
+      ...(overlap.length ? { unloaded: overlap.map((g) => ({ lo: h8(Math.max(g.lo, st.addr)), hi: h8(Math.min(g.hi, hi)), kind: g.kind ?? 'gap' })), fill: `0x${un.fill.toString(16)}` } : {}) });
+  };
 
   // one step: its record (the JSON line); a failure ends the run
   const run = (st) => {
@@ -498,8 +546,7 @@ export async function openSession(o = {}) {
       if (failed) throw new SessionRefused(`the run failed at step ${failed.step}`);
       if (ended) throw new SessionRefused(`the run ended at the debug stop of step ${ended.step}`);
       if (held && !AT_STOP.has(st.kind)) {
-        throw new SessionRefused(st.kind === 'call' ? 'call: not at a debug stop: the stop is inside the lab\'s tick, where the live route refuses a call (src/debug/live.mjs); resume, then call'
-          : `${st.text}: at a debug stop only read:, write:, expect:, card-ls, card-get:, exif:, shot:, trace:, break: and resume run (the firmware is held inside a tick); resume first`);
+        throw new SessionRefused(`${st.text}: at a debug stop only read:, dump:, write:, call:, expect:, card-ls, card-get:, exif:, shot:, trace:, break: and resume run (the firmware is held inside a tick); resume first`);
       }
       if (st.kind === 'restart') {
         const positions = pl?.phase === 'off' ? pl.off_positions : null;    // after power:off; else a battery pull, a fresh start
@@ -519,7 +566,9 @@ export async function openSession(o = {}) {
         writeLocal(file, pngRaw(frame.w, frame.h, frame.raw));
         rec.file = file;
         rec.size = [frame.w, frame.h];
-      } else if (st.kind === 'card-ls') rec.card = listing();
+        rec.device = frame.device;
+      } else if (st.kind === 'dump') dump(st, rec);
+      else if (st.kind === 'card-ls') rec.card = listing();
       else if (st.kind === 'card-get') {
         const f = fileBytes(st.path);
         if (!f) throw new SessionRefused(`no ${st.path} on the card`);
@@ -588,7 +637,7 @@ export async function openSession(o = {}) {
     if (pl?.frame_error && pl.frame_error !== lastFrameError) rec.frame_error = pl.frame_error;     // once, when it changes
     lastFrameError = pl?.frame_error ?? null;
     const osd = osdErrors();
-    if (osd) rec.osd_errors = osd;
+    if (osd) osdFail(rec, osd);
     drain(rec);
     note();
     o.onRecord?.(rec);
@@ -598,7 +647,8 @@ export async function openSession(o = {}) {
   // ---- traces and stops (trace:, break:, resume): the live debug route's probe, break and watch ops on the
   // session's Player (src/debug/live.mjs), the script's armed sets sent whole at each change and after each restart
   const label = (w) => `${h8(w.addr)}+${w.len}:${w.kind}`;
-  const describe = () => ({ trace: { pcs: traced.pcs.map((pc) => h8(notationOf(pc))), mem: traced.mem.map(label) },
+  const describe = () => ({ trace: { pcs: traced.pcs.map((pc) => h8(notationOf(pc))), mem: traced.mem.map(label),
+      ...(traced.stack.size ? { stack: Object.fromEntries([...traced.stack].map(([pc, n]) => [h8(notationOf(pc)), n])) } : {}) },
     break: { pcs: stops.pcs.map((pc) => h8(notationOf(pc))), mem: stops.mem.map(label) } });
   const debugOp = (op, body) => {
     const r = apply({ type: 'debug', op, ...body });
@@ -608,26 +658,30 @@ export async function openSession(o = {}) {
   const sendArmed = (rec, probes, breaks) => {
     if (!pl?.session) throw new SessionRefused(`no session to arm (${pl?.phase ?? 'none'}): restart first`);
     if (breaks) {
-      const hooks = pl.session.lab?.hooks ?? new Map();
-      const hooked = stops.pcs.filter((pc) => hooks.has(pc)).map((pc) => `${h8(notationOf(pc))} (${hooks.get(pc)[1]})`);
-      if (hooked.length) throw new SessionRefused(`break: the lab's hook takes every stop at ${hooked.join(', ')}, so no debug stop can happen there; break at the caller, or trace: the pc (a hook's arrivals come as kind 'hook')`);
+      // a pc the lab hooks stops before the hook answers (the stop's record names it, stopped.hook)
+      const hooks = pl.session.lab?.hooks ?? new Map(), hooked = stops.pcs.filter((pc) => hooks.has(pc));
+      if (hooked.length) rec.hooked_breaks = hooked.map((pc) => ({ pc: h8(notationOf(pc)), hook: hooks.get(pc)[1] }));
       debugOp('break', { pcs: stops.pcs });
       debugOp('watch', { list: stops.mem.map((w, i) => ({ id: i, addr: w.addr, len: w.len, kind: w.kind, action: 'stop' })) });
     }
     if (probes) {
-      const p = debugOp('probe', { pcs: traced.pcs, mem: traced.mem.map((w) => ({ addr: w.addr, len: w.len, kind: w.kind })) });
+      const p = debugOp('probe', { pcs: traced.pcs, mem: traced.mem.map((w) => ({ addr: w.addr, len: w.len, kind: w.kind })), stack: [...traced.stack] });
       if (p.hooked.length) rec.hooked = p.hooked;
     }
     rec.armed = describe();
   };
   const arm = (st, rec) => {
-    const set = st.kind === 'trace' ? traced : stops, was = { pcs: [...set.pcs], mem: [...set.mem] };
+    const set = st.kind === 'trace' ? traced : stops, was = { pcs: [...set.pcs], mem: [...set.mem], stack: new Map(set.stack ?? []) };
     if (st.kind === 'break' && !st.off && !source && !o.atStop) throw new SessionRefused('break: a debug stop runs the script\'s next tokens where it is held: run() (bin/session.mjs) or options.atStop gives them, a lone step() does not');
-    if (st.off) { set.pcs = []; set.mem = []; } else {
-      for (const a of st.pcs ?? []) { const pc = codePc(a, 'pc'); if (!set.pcs.includes(pc)) set.pcs.push(pc); }
+    if (st.off) { set.pcs = []; set.mem = []; set.stack?.clear(); } else {
+      for (const a of st.pcs ?? []) {
+        const pc = codePc(a, 'pc');
+        if (!set.pcs.includes(pc)) set.pcs.push(pc);
+        if (set.stack) { if (st.stack) set.stack.set(pc, st.stack); else set.stack.delete(pc); }   // the pc's last trace: token's stack=
+      }
       if (st.mem) set.mem.push(st.mem);
     }
-    try { sendArmed(rec, st.kind === 'trace', st.kind === 'break'); } catch (e) { set.pcs = was.pcs; set.mem = was.mem; throw e; }
+    try { sendArmed(rec, st.kind === 'trace', st.kind === 'break'); } catch (e) { set.pcs = was.pcs; set.mem = was.mem; if (set.stack) set.stack = was.stack; throw e; }
     armedLog.push({ step: rec.step, token: st.text });
   };
   // the probes' hits since the last record onto rec (at most HITS_PER_STEP, the rest counted), and their counts
@@ -647,7 +701,7 @@ export async function openSession(o = {}) {
   // script's end or a failure there ends the run at the stop (StopEnd unwinds the tick: nothing runs after it)
   const holdStop = (srec) => {
     const rec = running, rt = Number(srec.regs.pc);
-    rec.stopped = { kind: srec.stop, pc: h8(notationOf(rt)), lab_ns: srec.lab_ns, regs: srec.regs,
+    rec.stopped = { kind: srec.stop, pc: h8(notationOf(rt)), lab_ns: srec.lab_ns, regs: srec.regs, ...(srec.hook ? { hook: srec.hook } : {}),
       ...(srec.watch ? { watch: { range: stops.mem[srec.watch.id] ? label(stops.mem[srec.watch.id]) : srec.watch.id, addr: srec.watch.addr, size: srec.watch.size, dir: srec.watch.dir, value: srec.watch.value, pc: h8(notationOf(Number(srec.watch.pc))) } } : {}) };
     stopCount += 1;
     held = { step: rec.step, token: rec.token, kind: srec.stop, pc: rec.stopped.pc, lab_ns: srec.lab_ns };
@@ -685,7 +739,7 @@ export async function openSession(o = {}) {
     Object.assign(rec, { phase: pl?.phase ?? null, lab_ns: pl?.session?.lab?.lab_time() ?? null, gui: pl?.session ? pl.status_doc.gui_name ?? null : null, frame: pl?.frame?.[3] ?? null,
       session: sessionNo, ...(pl?.status_doc?.nvram ? { nvram: pl.status_doc.nvram } : {}) });
     const osd = osdErrors();
-    if (osd) rec.osd_errors = osd;
+    if (osd) osdFail(rec, osd);
     note();
   }
 

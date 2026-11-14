@@ -22,22 +22,27 @@
 //                           watchpoint hit or before an instruction at one of the harness's breakpoints (harness:
 //                           true; cont then lets the harness take that stop as its own)
 //   break {pcs}             the debug breakpoints ([] clears); a pc in the image's notation range is taken as
-//                           notation and stops at run time, as probe's and call's (the answer lists run-time pcs)
+//                           notation and stops at run time, as probe's and call's (the answer lists run-time pcs); a
+//                           pc the lab hooks stops where the harness takes it, before the hook answers (src/lab/hle.mjs
+//                           _loop1: the stop's record names the hook), and goes on into the hook unless the pc moved
 //   watch {list}            as the protocol's; stopping entries need a host whose queue blocks (below); the log
 //                           entries carry lab_ns and n
 //   detach                  breakpoints, watchpoints, traces and probes off, then run on: {state: 'running'}
 //   state                   {state, stops, breakpoints, watchpoints, probes, waiting, routed, stop?: the record}
-//   probe {pcs?, mem?}      the logging probes, the set replaced ({} or empty lists: off): pcs, code addresses whose
+//   probe {pcs?, mem?, stack?}  the logging probes, the set replaced ({} or empty lists: off): pcs, code addresses whose
 //                           instructions are recorded as they are about to run (an address in the image's notation
 //                           range is taken as notation, as call's fn, and probed at run time; any other as run), and
 //                           the lab's hooks that answer at one of them in place of the firmware; mem [{addr, len,
 //                           kind: r|w|rw}], ranges whose CPU accesses are recorded (Debugger.probes: nothing of the
-//                           run changes); answers {pcs: [{pc, runtime}], mem: [{addr, len, kind}], hooked: [{pc, hook,
-//                           pass}]} (hooked: the armed pcs a lab hook holds now: a hook that is not a pass-through
-//                           observer answers there in place of the firmware, so its arrivals come as kind 'hook')
+//                           run changes); stack [[pc, n], ...], pcs among pcs whose hits also carry n words (at most
+//                           STACK_WORDS_MAX) read from sp up at the hit (a debugger read: the run does not see it; a
+//                           word that cannot be read ends them, a hit the log drops reads none); answers {pcs: [{pc,
+//                           runtime}], mem: [{addr, len, kind}], hooked: [{pc, hook, pass}], stack?} (hooked: the
+//                           armed pcs a lab hook holds now: a hook that is not a pass-through observer answers there in
+//                           place of the firmware, so its arrivals come as kind 'hook')
 //   hits {limit?}           the probes' hits since the last hits (kept across a session's close, so the hits of a
 //                           power-off are not lost), taken off the log: {hits: the first limit (default HITS_MAX)
-//                           [{kind: pc|hook|mem, pc, hook?, range?, addr?, size?, dir?, value?, regs, lab_ns}],
+//                           [{kind: pc|hook|mem, pc, hook?, range?, addr?, size?, dir?, value?, regs, lab_ns, stack?}],
 //                           dropped (the hits beyond them: the log keeps the first HITS_MAX since the last take,
 //                           and counts the rest), counts {pc or 'mem:N': hits, each counted}}; pc in the disassembly
 //                           notation for an image address, regs as run
@@ -58,8 +63,10 @@
 //   call {fn, ...}          a firmware function run natively through the lab's harness, its hooks and stand-ins
 //                           answering, to its return or to a stop pc, from its entry or a pc inside it
 //                           (src/debug/call.mjs lists the fields, the convention and what is restored);
-//                           running or halted only (refused at a debug stop, inside a tick) and with no stopping
-//                           watchpoint armed; an error's detail (pc, steps, stubs, reads) rides in error.detail
+//                           running, halted or at a breakpoint's stop (inside a tick: the CPU's whole context and the
+//                           harness stack put back too, and a lab hook other than memset's and memcpy's ends it as
+//                           CallHooked; refused at a watchpoint's stop), with no stopping watchpoint armed; an
+//                           error's detail (pc, steps, stubs, reads) rides in error.detail
 // and the protocol's reads and the ops that change memory or registers (regs, reg, setReg, setRegs, read, write,
 // stack, stderr, stats, disasm, watchLog, trace, lab {time}); load, quit, reset, cpuStore, snapshot, restore, drop,
 // abort and lab time moves are refused (protocol.mjs). A control input (restart, power, quit, ...) while stopped lets
@@ -84,6 +91,7 @@ import { BASE, runtime, disasm } from '../lab/hle.mjs';
 
 const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call', 'probe', 'hits']);
 export const HITS_MAX = 10000;           // the probes' log: the first this many hits since the last take, the rest counted
+export const STACK_WORDS_MAX = 256;      // a probed pc's stack capture: at most this many words per hit
 const KIND_NAMES = { r: 'r', w: 'w', rw: 'rw' };
 // A code address of a request: one in the image's notation range is taken as notation (call's fn), any other as run
 export function codePc(v, what) {
@@ -110,6 +118,7 @@ export class LiveDebug {
     this.stops = 0;                  // debug stops so far, this session
     this.let_go = null;              // why the last stop was let go without a cont (a control, the host's stop)
     this.probes = null;              // the armed probes {pcs: [run-time pc], mem: [{lo, len, kind}]}, or null
+    this.stackWords = new Map();     // run-time pc -> the stack words its hits carry (probe's stack)
     this.hitLog = []; this.hitDropped = 0; this.hitCounts = new Map();   // since the last take (hits), across sessions
   }
   get routed() { return this.player.q.canBlock === true || typeof this.host.holdStop === 'function'; }
@@ -134,7 +143,7 @@ export class LiveDebug {
     try { this.proto._closeSinks(); this.dbg.close(); } catch { /* a machine a newer one replaced, or one stopped on a host error */ }
     if (this.sim.debug === this) this.sim.debug = null;
     this.lab = this.sim = this.dbg = this.proto = null;
-    this.pcs = new Set(); this.watches = []; this.probes = null;
+    this.pcs = new Set(); this.watches = []; this.probes = null; this.stackWords = new Map();
     this.halted = false; this.at = null; this.holding = false; this.stops = 0;
   }
   // The Simulator's hook is on only while a stop is armed (a debug breakpoint, a stopping watchpoint).
@@ -230,7 +239,7 @@ export class LiveDebug {
       case 'detach': {
         this.pcs = new Set(); this.watches = [];
         this.dbg.watch([]);
-        this.dbg.probes(); this.probes = null;
+        this.dbg.probes(); this.probes = null; this.stackWords = new Map();
         this.proto._trace({ off: true });
         this._hook();
         this._answer('detach');
@@ -251,9 +260,9 @@ export class LiveDebug {
       case 'tasks': return this._tasks();
       case 'call': {
         const spec = callSpec(q);
-        if (this.at !== null) throw new BadRequest('call: not at a debug stop (the lab is inside a tick there): cont, then call between ticks (running or halted)');
+        if (this.at !== null && this.at.kind !== 'break') throw new BadRequest(`call: not at a ${this.at.kind} stop (only at a breakpoint's): cont, then call between ticks (running or halted)`);
         if (this.watches.some((w) => w.action === 'stop')) throw new BadRequest('call: a stopping watchpoint is armed (it would end the call inside the harness): give it action \'log\' or clear it');
-        return runCall(this.lab, this.dbg, spec);
+        return runCall(this.lab, this.dbg, spec, { atStop: this.at !== null });
       }
       case 'standins': {
         const n = absent(q.limit) ? 100 : count(q.limit, 'limit'), cut = (v) => (n ? v.slice(-n) : []);
@@ -298,22 +307,46 @@ export class LiveDebug {
       if (lo + len > 2 ** 32) throw new BadRequest(`mem[${i}]: ${hex8(lo)}+${len} runs past 32 bits`);
       return { lo, len, kind };
     });
+    // stack [[pc, n], ...]: a pc of pcs whose hits also carry the n words from sp up as they are at the hit
+    const stack = new Map(list(q.stack ?? [], 'stack').map((e, i) => {
+      if (list(e, `stack[${i}]`).length !== 2) throw new BadRequest(`stack[${i}]: [pc, words]`);
+      const pc = codePc(e[0], `stack[${i}] pc`), n = count(e[1], `stack[${i}] words`, 1);
+      if (!pcs.includes(pc)) throw new BadRequest(`stack[${i}]: ${hex8(notationOf(pc))} is not among pcs`);
+      if (n > STACK_WORDS_MAX) throw new BadRequest(`stack[${i}]: ${n} words is over ${STACK_WORDS_MAX}`);
+      return [pc, n];
+    }));
     this.dbg.probes({ pcs, mem }, (rec) => this._hit(rec));
     this.probes = pcs.length || mem.length ? { pcs, mem } : null;
+    this.stackWords = this.probes ? stack : new Map();
     const hooked = [];
     for (const pc of pcs) { const h = this.lab.hooks?.get(pc); if (h) hooked.push({ pc: hex8(notationOf(pc)), hook: h[1], pass: h[2] === true }); }
-    return { pcs: pcs.map((pc) => ({ pc: hex8(notationOf(pc)), runtime: hex8(pc) })), mem: mem.map((w) => ({ addr: hex8(w.lo), len: w.len, kind: w.kind })), hooked };
+    return { pcs: pcs.map((pc) => ({ pc: hex8(notationOf(pc)), runtime: hex8(pc) })), mem: mem.map((w) => ({ addr: hex8(w.lo), len: w.len, kind: w.kind })), hooked,
+      ...(stack.size ? { stack: [...stack].map(([pc, n]) => [hex8(notationOf(pc)), n]) } : {}) };
   }
   _hit(rec) {
     const key = rec.kind === 'mem' ? `mem:${rec.range}` : hex8(notationOf(rec.pc));
     this.hitCounts.set(key, (this.hitCounts.get(key) ?? 0) + 1);
-    if (this.hitLog.length < HITS_MAX) this.hitLog.push(rec); else this.hitDropped += 1;
+    if (this.hitLog.length >= HITS_MAX) { this.hitDropped += 1; return; }
+    const n = rec.kind === 'mem' ? 0 : this.stackWords.get(rec.pc >>> 0) ?? 0;
+    if (n) rec.stack = this._stack(rec.regs.sp >>> 0, n);
+    this.hitLog.push(rec);
+  }
+  // n words from sp up, read as the hit happens (the debugger's read: no access the run sees); a word that cannot be
+  // read ends them (the hit's stack is then shorter than asked)
+  _stack(sp, n) {
+    try { const b = this.dbg.read(sp, 4 * n); return Array.from({ length: n }, (_, i) => (b[4 * i] | b[4 * i + 1] << 8 | b[4 * i + 2] << 16 | b[4 * i + 3] << 24) >>> 0); } catch { /* word by word below */ }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      try { out.push(this.dbg.u32((sp + 4 * i) >>> 0)); } catch { break; }
+    }
+    return out;
   }
   // The probes' hits since the last take: the first limit as the hits op answers them, the rest counted as dropped
   take_hits(limit = HITS_MAX) {
     const log = this.hitLog, n = Math.min(limit, log.length);
     const hits = log.slice(0, n).map((h) => ({ kind: h.kind, pc: hex8(notationOf(h.pc)), ...(h.kind === 'hook' ? { hook: h.hook } : {}),
-      ...(h.kind === 'mem' ? { range: h.range, addr: hex8(h.addr), size: h.size, dir: h.dir, value: hex8(h.value) } : {}), regs: regsHex(h.regs), lab_ns: h.lab_ns }));
+      ...(h.kind === 'mem' ? { range: h.range, addr: hex8(h.addr), size: h.size, dir: h.dir, value: hex8(h.value) } : {}), regs: regsHex(h.regs), lab_ns: h.lab_ns,
+      ...(h.stack ? { stack: h.stack.map(hex8) } : {}) }));
     const out = { hits, dropped: this.hitDropped + log.length - n, counts: Object.fromEntries(this.hitCounts) };
     this.hitLog = []; this.hitDropped = 0; this.hitCounts = new Map();
     return out;
@@ -361,6 +394,7 @@ export class LiveDebug {
     const r = { stop: kind, regs: regsHex(this.dbg.regs()), lab_ns: this.sim.m.devices.clock.t, stops: this.stops, at: this.at ? 'run' : 'tick' };
     if (this.at?.watch) r.watch = hexWatch(this.at.watch);
     if (this.at?.during) r.during = this.at.during;
+    if (this.at?.hook) r.hook = this.at.hook;
     return r;
   }
   // The waiting conts, answered with the stop's record and the stderr lines since each (the last 1,000).

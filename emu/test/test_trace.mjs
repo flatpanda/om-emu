@@ -13,9 +13,10 @@
 //                 and frame equal (control: the same comparison tells a flow 100 ms shorter apart), the hits bounded per
 //                 record with the rest counted, the hook's arrivals as kind 'hook', the totals in the summary; a
 //                 breakpoint stop with reads there, break:off and resume; a stopping write watchpoint whose stop is the
-//                 logging trace's first hit (pc, address, value, lab time); a break at a hooked pc refused; a run that
-//                 ends at a stop (exit 0, ended_at_stop), a failed expect there and a press there (exit 1, nothing
-//                 after), a call there refused, a resume without a stop; a call between ticks with a trace and a
+//                 logging trace's first hit (pc, address, value, lab time); a break at a hooked pc stopping there
+//                 (test_tools.mjs has the rest); a run that ends at a stop (exit 0, ended_at_stop), a failed expect
+//                 there and a press there (exit 1, nothing after), a call there answered (test_tools.mjs has the
+//                 rest), a resume without a stop; a call between ticks with a trace and a
 //                 break armed at its callee (the arrival recorded in the call's record, no stop; the call's own stop
 //                 at the traced pc records none) and refused with a stopping watchpoint armed; with --loaded on a
 //                 trace at a pc in a gap records the arrival, then the session stops as without it; the traces
@@ -209,8 +210,8 @@ async function e143({ ok }, { T, step }) {
   ok(first && ws?.kind === 'watch' && ws.watch.pc === first.pc && ws.watch.addr === first.addr && ws.watch.value === first.value && ws.lab_ns === first.lab_ns && sw.rc === 0 && sw.sum?.ended_at_stop?.kind === 'watch',
     `E143 a write watchpoint's stop is the trace's first hit: ${JSON.stringify(first && { ...first, regs: undefined })} | ${JSON.stringify(ws && { ...ws, regs: undefined })}`);
   // refusals and the ends of a run at a stop
-  const hk = cli(['--model', 'E143', `break:${MALLOC}`, 'wait:100']);
-  ok(hk.rc === 1 && /FAILED at step 1 \(break:0x50002fdc\): break: the lab's hook takes every stop at 0x50002fdc \(S-HEAP malloc\)/.test(hk.last) && hk.steps.length === 2, `E143 a break at a hooked pc: rc ${hk.rc} ${hk.last}`);
+  const hk = cli(['--model', 'E143', `break:${MALLOC}`, 'wait:1500']);     // the stop before the hook answers (test_tools.mjs)
+  ok(hk.rc === 0 && step(hk, 'wait:1500').stopped?.hook === 'S-HEAP malloc' && hk.sum?.ended_at_stop?.pc === MALLOC, `E143 a break at a hooked pc: rc ${hk.rc} ${hk.last}`);
   const end = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', 'read:0x60360bec:4']);
   ok(end.rc === 0 && end.sum?.ok === true && end.sum.ended_at_stop?.step === 2 && end.sum.ended_at_stop.pc === GET && /^session\.mjs: passed; 4 step\(s\) on E143; ended at the debug stop of step 2 \(break at 0x503c49ab\): nothing ran after it; no poke$/.test(end.last),
     `E143 a run that ends at a stop: rc ${end.rc} ${JSON.stringify(end.sum?.ended_at_stop)} | ${end.last}`);
@@ -218,7 +219,7 @@ async function e143({ ok }, { T, step }) {
   ok(fx.rc === 1 && fx.steps.length === 4 && fx.sum?.failed?.step === 3 && fx.sum.ended_at_stop?.step === 2 && /^session\.mjs: FAILED at step 3 \(expect:mem:0x60360bec=00000000\): expect failed: .*; ended at the debug stop of step 2/.test(fx.last),
     `E143 a failed expect at a stop: rc ${fx.rc} ${fx.steps.length} | ${fx.last}`);
   const pr = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', 's1']), ca = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', `call:${GET}:d0=24`]), rz = cli(['--model', 'E143', 'resume']);
-  ok(pr.rc === 1 && /FAILED at step 3 \(s1\): s1: at a debug stop only read:, write:, expect:/.test(pr.last) && ca.rc === 1 && /FAILED at step 3 \(call:0x503c49ab:d0=24\): call: not at a debug stop/.test(ca.last) &&
+  ok(pr.rc === 1 && /FAILED at step 3 \(s1\): s1: at a debug stop only read:, dump:, write:, call:, expect:/.test(pr.last) && ca.rc === 0 && Number(step(ca, `call:${GET}:d0=24`).d0) === 3 &&
     rz.rc === 1 && /FAILED at step 1 \(resume\): resume: the session is not at a debug stop/.test(rz.last), `E143 refused at a stop, and resume without one: ${pr.last} | ${ca.last} | ${rz.last}`);
   // a call between ticks with a trace and a break armed at the getter's callee (test_call.mjs getterShape): the call
   // records its own arrival there (the registers it entered with, the lab time it ran at: a call takes none) and the

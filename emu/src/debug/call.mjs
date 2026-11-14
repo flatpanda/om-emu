@@ -57,7 +57,7 @@
 import { BadRequest, num, addr, word, count, list, dict } from './protocol.mjs';
 import { regsHex, hex8, REGS } from './regs.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
-import { CALLER, RETURN, SP as SP_TOP, DATA, DATA_END, BASE, runtime, disasm } from '../lab/hle.mjs';
+import { CALLER, RETURN, ISR_SP, SP as SP_TOP, DATA, DATA_END, BASE, runtime, disasm, BUILTIN_STUBS } from '../lab/hle.mjs';
 import { LabError } from '../lab/errors.mjs';
 import { gapAt } from '../fw/sections.mjs';
 
@@ -69,6 +69,12 @@ const REF = /^\s*scratch\s*(?:\+\s*(0x[0-9a-f]+|[0-9]+)\s*)?$/i;
 const HEXRE = /^(?:[0-9a-fA-F]{2})*$/;
 export class CallLimit extends Error { constructor(m, detail) { super(m); this.name = 'CallLimit'; this.detail = detail; } }
 export class CallFault extends Error { constructor(m, detail) { super(m); this.name = 'CallFault'; this.detail = detail; } }
+// The lab hooks a call at a debug stop lets answer, besides the builtins memset and memcpy (memory only): prop_get, the
+// property read (src/lab/display.mjs and menu.mjs _prop: it answers from the property map or runs the read natively,
+// and changes only its own logs of the reads, which the run does not read back, and the return trampoline the call
+// puts back)
+export const AT_STOP_HOOKS = new Set(['prop_get']);
+export class CallHooked extends Error { constructor(m, detail) { super(m); this.name = 'CallHooked'; this.detail = detail; } }
 
 // A value that may name the scratch: {off} (resolved once the scratch is placed) or a number (u32 / address).
 function valueOrRef(v, what, kind) {
@@ -149,10 +155,14 @@ export function callSpec(q) {
 const le4 = (v) => Uint8Array.of(v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff);
 const toHex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 
-// Run spec (callSpec's) on the session's lab between ticks; dbg: the live route's attached Debugger.
-export function runCall(lab, dbg, spec) {
+// Run spec (callSpec's) on the session's lab between ticks; dbg: the live route's attached Debugger. atStop: at a
+// debug breakpoint's stop inside a tick (live.mjs), where the lab is inside calls of its own: the CPU's whole context
+// (machine cpuContext) and the harness stack under SP_TOP, which holds the lab's own live frames there, are put back
+// too, and the call ends before any lab hook but the builtins memset and memcpy answers (CallHooked): a stand-in's
+// state is in the middle of the tick, so none may run.
+export function runCall(lab, dbg, spec, { atStop = false } = {}) {
   const sim = lab.sim, m = sim.m, { target, limit } = spec, fn = target.notation;
-  if ((lab.call_depth ?? 0) !== 0) throw new BadRequest('call: the lab is inside a call of its own');
+  if (!atStop && (lab.call_depth ?? 0) !== 0) throw new BadRequest('call: the lab is inside a call of its own');
   const cap = m.insnLimit();
   if (!cap) throw new BadRequest('call: the machine has no insn limit to bound the call by');
   if (limit > cap) throw new BadRequest(`limit: ${limit} is over the machine's insn limit ${cap}`);
@@ -171,17 +181,23 @@ export function runCall(lab, dbg, spec) {
       throw new BadRequest(`fn ${hex8(fn)}: ${e.message.replace(/; pass frame=$/, '')}: give frame [mask, size]`);
     }
   }
-  const saved = m.getRegs().slice(), labRegs = [16, 17, 18, 19].map((n) => m.getReg(n));
+  const saved = m.getRegs().slice(), labRegs = [16, 17, 18, 19].map((n) => m.getReg(n)), ctx = atStop ? m.cpuContext() : null;
   const keep = { stats: sim.stats, observer: sim.observer, stub: lab.stubObserver, debug: sim.debug, bps: [...sim.breakpoints], data: lab.data };
   const n0 = lab.log.length, ev0 = lab.kernel?.events.length ?? 0, err0 = lab.kernel?.errors.length ?? 0, k0 = m.stderrCount();
   const undo = [];                   // [address, bytes]: put back last first
   const keepBytes = (a, n) => { if (n) undo.push([a >>> 0, dbg.read(a >>> 0, n)]); };
   if (spec.scratch && typeof lab.alloc !== 'function') throw new BadRequest('scratch: this lab has no data ring');
   keepBytes(CALLER, 8); keepBytes(RETURN, 16); keepBytes(SP_TOP + 4, 4 * spec.stack.length);
+  if (atStop) keepBytes(ISR_SP, SP_TOP - ISR_SP + 4);   // the harness stack, the lab's own call frame at SP_TOP among it
   let base = null;
   const val = (v) => (typeof v === 'number' ? v : base + v.off) >>> 0;
   const start = cap - limit, out = { fn: formOf(target), ...(spec.entry ? { entry: formOf(spec.entry) } : {}), frame };
   const ends = spec.stops.length ? new Set(spec.stops.map((s) => s.runtime)) : null;
+  // at a stop every lab hook but the builtins' and AT_STOP_HOOKS' ends the call too, before it answers (CallHooked
+  // below); not one on the harness's own trampolines (the lab's own call there may observe its return at CALLER + 7,
+  // where this call returns too: the loop ends there before any hook)
+  const guard = atStop ? new Set([...lab.hooks].filter(([pc, h]) => !BUILTIN_STUBS.includes(h[0]) && !AT_STOP_HOOKS.has(h[1]) && !ends?.has(pc) && !inHarness(pc)).map(([pc]) => pc)) : null;
+  const callEnds = guard ? new Set([...(ends ?? []), ...guard]) : ends;
   sim.stats = null; sim.observer = null; lab.stubObserver = null; sim.debug = null;
   let failure = null, result = null, thrown = null;
   try {
@@ -201,7 +217,7 @@ export function runCall(lab, dbg, spec) {
     const regs = Object.fromEntries(Object.entries(spec.regs).map(([k, v]) => [k, val(v)]));
     const stack = spec.stack.length ? new Uint8Array(4 * spec.stack.length) : null;
     spec.stack.forEach((v, i) => stack.set(le4(val(v)), 4 * i));
-    try { result = lab.call(spec.entry?.notation ?? fn, { ...regs, insns: start }, stack, frame, limit, ends); } catch (e) {
+    try { result = lab.call(spec.entry?.notation ?? fn, { ...regs, insns: start }, stack, frame, limit, callEnds); } catch (e) {
       if (!(e instanceof LabError)) throw e;
       failure = e;
     }
@@ -236,6 +252,11 @@ export function runCall(lab, dbg, spec) {
       e.detail = detail;
       throw e;
     }
+    if (guard?.has(result.pc >>> 0)) {
+      const h = lab.hooks.get(result.pc >>> 0);
+      throw new CallHooked(`call ${hex8(fn)} (run-time ${hex8(target.runtime)}): at a debug stop it reached the lab's hook ${h[1]} at ${hex8(disasm(result.pc >>> 0))}, which does not answer there (the stand-ins are in the middle of the tick): resume, then call between ticks`,
+        { pc, steps, stubs: out.stubs, reads: out.reads, stderr: m.stderrFrom(k0).lines, hook: h[1] });
+    }
     out.regs = regsHex(Object.fromEntries(Object.entries(result).filter(([k]) => k !== 'insns')));
     // the loop ends only at the trampoline's return (checked) or at a stop pc (unchecked)
     const i = (result.pc >>> 0) === ((CALLER + 7) >>> 0) ? -1 : spec.stops.findIndex((s) => s.runtime === result.pc >>> 0);
@@ -251,8 +272,11 @@ export function runCall(lab, dbg, spec) {
     if (base !== null && lab.data === base + spec.scratch) lab.data = keep.data;
     try {
       for (let i = undo.length - 1; i >= 0; i--) dbg.write(undo[i][0], undo[i][1]);
-      m.setRegs(saved);
-      labRegs.forEach((v, i) => m.setReg(16 + i, v));
+      if (ctx) m.setCpuContext(ctx);
+      else {
+        m.setRegs(saved);
+        labRegs.forEach((v, i) => m.setReg(16 + i, v));
+      }
       sim.break_at(keep.bps);
     } catch (e) { if (thrown === null) throw e; }    // a machine a host error stopped refuses them: that error is the answer
   }

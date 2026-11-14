@@ -65,6 +65,10 @@ export async function toolsUnits() {
     const e = tok(s);
     ok(e instanceof TokenError && re.test(e.message), `${s}: ${e?.message ?? JSON.stringify(e)}`);
   }
+  // an unknown token's refusal lists the forms this file adds
+  const nt = tok('nope:x');
+  ok(nt instanceof TokenError && /not a token/.test(nt.message) && nt.message.includes('dump:ADDR:LEN:FILE') && nt.message.includes('[:stack=N]'),
+    `an unknown token's refusal names dump: and trace's stack=: ${nt?.message}`);
 
   // the live route's probe stack on a fake lab: the checks, the words from sp up at the hit, a short read, a dropped hit
   const { LiveDebug, HITS_MAX, STACK_WORDS_MAX } = await import('../src/debug/live.mjs');

@@ -196,7 +196,7 @@ export function parseToken(t) {
     return step('dial', { id: m[1], detents: n });
   }
   if (new RegExp(`^${ID}$`).test(t)) return step('press', { id: t });
-  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], card:out|in[:2], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
+  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], card:out|in[:2], shot:FILE.png, read:ADDR:LEN, dump:ADDR:LEN:FILE, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..][:stack=N]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
 }
 // A call:@FILE token's request: the file's text (name: the file, for the refusals) as a JSON object of the call op's
 // fields (CALL_FILE_KEYS; src/debug/call.mjs checks their values), else TokenError

@@ -301,7 +301,7 @@
    "devices": "96bf127b6305417763b994269971e56198668f3539d183473ba4c1c3c92a817c",
    "stops": "cd92c8bf146944fc012d993005f24d028be37e5333f7f34e7e04b25c5dbf85a1",
    "harness": "261eed61b291bc67b427192697b012fef01ea2af1078a984a9f756092e47e8ba",
-   "output": "ece5aee42846a62bbb59b4bbb53cc6ec8b8173b9d410b42cb734aa612b89e1dd",
+   "output": "c1d6313be8fab7aa71b557001f395f79f4b8c370b9d1c9ff96d5e6cfdbb8d671",
    "items": {
     "screen": 2,
     "devices": 1491,
@@ -315,7 +315,7 @@
    "devices": "b7b23f4ba6fc07c2d10074f7c255b6616b1ea44739139cfaab6f7b20a2cee22b",
    "stops": "46334119936a9efcebfe281c3e2870e8bdf05a303af2026e7cbf1ab83b1ae2c6",
    "harness": "b4421ed3e52f759a8786f1445b898833ffaae6bfbfb936f4311abed7227fe623",
-   "output": "ece5aee42846a62bbb59b4bbb53cc6ec8b8173b9d410b42cb734aa612b89e1dd",
+   "output": "c1d6313be8fab7aa71b557001f395f79f4b8c370b9d1c9ff96d5e6cfdbb8d671",
    "items": {
     "screen": 3,
     "devices": 1534,
@@ -371,7 +371,7 @@
    "devices": "01a3f2fe23a5ba4ba660cfb4c8c2956956bf35c218363cac99a27ed01e68306c",
    "stops": "e78e54e3a970d80b35ecdfd8ff84b991f34a4fd5f724b2b556ec87e2b2ef3fe7",
    "harness": "c1c66b69d9b7358085135bd06e8ee9e6fb422ce97bef26c3a720356862e2f3ab",
-   "output": "ece5aee42846a62bbb59b4bbb53cc6ec8b8173b9d410b42cb734aa612b89e1dd",
+   "output": "c1d6313be8fab7aa71b557001f395f79f4b8c370b9d1c9ff96d5e6cfdbb8d671",
    "items": {
     "screen": 2,
     "devices": 4243,
@@ -4186,6 +4186,19 @@
    "sessions": 67,
    "reason": "S-SECLOADED sets the section loader's copied mask at the store's start (load_section's RMW, FIDELITY 7.17) and joins the stand-ins list; S2 runs the EXIF set natively after H-RECPRECON (IMG_PRECON's init; docs/hle-gaps.md 4.3.11)",
    "evidence": "firmware"
+  },
+  {
+   "commit": "7cf40c0",
+   "sessions": 3,
+   "reason": "status: carried positions after a power-on (the power sessions' output layer; screen and devices identical)",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "power#2",
+     "power#3",
+     "power"
+    ]
+   }
   }
  ]
 }

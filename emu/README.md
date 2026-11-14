@@ -976,7 +976,9 @@ at the end), `card_file`, `nvram`, `errors`, `steps`, `failed` (`{step, token, m
 stderr: the patched firmware and the patch audit at the start, the kept state, the card, and last
 `session.mjs: passed; ...` or `session.mjs: FAILED at step N (TOKEN): MESSAGE; ...`, which also says `POKED: n
 write(s) (...)` or `no poke`. Exit 0 when every step passed; 1 for a firmware or lab error (a session that stops, an
-Unported path, a call that faults or runs out of budget), an input the player refused or dropped, a failed expect, a
+Unported path, a call that faults or runs out of budget; with the loaded-ranges mode on, a `call` into code the boot
+does not load or is not shown to load, refused before it runs, and a callee that reaches such code, which stops the
+session: `UnloadedCode`), an input the player refused or dropped, a failed expect, a
 local file a step cannot write (a `shot`, a `card-get`, a `--card-get`: `FILE: cannot write it (CODE)`), or an option
 refused (a patch, the nvram file, a `--card-put`, an `--out` it cannot make); 2 a usage error. A failure ends the run: no step after it
 runs, and nothing is retried or swallowed.
@@ -994,10 +996,13 @@ status document beyond what the records copy from it, and the stand-in lists' co
 Checked (`test/test_session.mjs`): the grammar, every token's Player inputs, every expect against fakes with its
 negative control, and the usage errors (firmware-free); through `bin/session.mjs` end to end on E143 (a card file put and
 read back, the loaded mask, the settings getter called, S2's Exif, a shot, `power:off` and `restart` with the stores
-restored, the card kept, a write reported as a poke; a failed expect exiting 1 with nothing after it, a restart with
-`--nvram off` restoring nothing, a call over its budget, an unknown control) and on E147 with a synthetic
+restored, the card kept, the mode dial and the Fn lever carried by a restart after `power:off` and not by one
+without it, a write reported as a poke; a failed expect exiting 1 with nothing after it, a restart with `--nvram off`
+restoring nothing, a call over its budget, with `--loaded on` a call into a gap refused and a callee that reaches one
+ending the run, an `--out` it cannot make and a shot it cannot write, an unknown control) and on E147 with a synthetic
 `om3-patch-2` file (S-SECLOADED and S-STALERAM, the patched bytes at run time, the creative dial's setting by the
-getter, S2's Exif, the restart; and a run past section 10's loaded end reported by the audit and read as the fill).
+getter, S2's Exif, the restart with the dial still where it was; and a run past section 10's loaded end reported by
+the audit and read as the fill).
 
 ## The browser player
 

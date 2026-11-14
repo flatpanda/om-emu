@@ -23,9 +23,10 @@
 // PATH runs the machine in the one-instruction mode (every instruction a one-instruction TB) and writes QEMU -d exec's
 // 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written). As for the checks, OM_MACHINE
 // gives the machine options (checks/lib/env.mjs). --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
-// src/lab/sim.mjs loadedRanges: the DRAM the boot does not load holds a fill, an instruction there an uncaught
-// FirmwareError naming the section and its end word, exit 1); auto, the default, is on with --patch or --main on a body whose
-// section loader the lab reads, off otherwise. Also:
+// src/lab/sim.mjs loadedRanges: the DRAM the boot does not load or is not shown to load holds a fill, an instruction
+// there an uncaught FirmwareError naming the range: the section and its end word, or what bounds a range not shown
+// loaded; exit 1); auto, the default, is on with --patch or --main on a body whose section loader
+// the lab reads, off otherwise. Also:
 //   --serve                     the JSON-lines mode (no --entry needed)
 //   --watch ADDR:LEN[:KIND]     a stopping watchpoint (KIND r, w or rw; default w), per virtual address; a stop on it
 //                               adds "watch" to the output

@@ -82,8 +82,9 @@ const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
 // be one the firmware formatted (node emu/bin/card.mjs new); the lab's env too, not among session.json's args
 const CARD_PUT = { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' };
 // --loaded auto|on|off: the loaded-ranges mode (S-STALERAM, src/lab/sim.mjs loadedRanges): the DRAM the boot does not
-// load holds a fill, and code run there stops the session; auto, the default, is on with --patch or --main on a body
-// whose section loader the lab reads (E143, E146, E147), off otherwise. The lab's env too, not among session.json's args
+// load or is not shown to load holds a fill, and code run there stops the session; auto, the default, is on with
+// --patch or --main on a body whose section loader the lab reads (E143, E146, E147), off otherwise. The lab's env too,
+// not among session.json's args
 const LOADED = { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
 // non-enumerable patch, --main's file (null when not given) as the non-enumerable main, --nvram's value (null when
@@ -211,7 +212,8 @@ export async function main(argv) {
   const holder = { port: 0 };
   const check = { token, get port() { return holder.port; }, noHost: a.x_mutant === 'no-host-check' };
   if (overlay) say(`play: patched firmware: ${patchLine(overlay.summary)}`);
-  // the overlay's bytes where the boot does not load (S-STALERAM's gaps), before the lab starts (src/lab/patchaudit.mjs)
+  // the overlay's bytes where the boot does not load or is not shown to load (S-STALERAM's ranges), before the lab
+  // starts (src/lab/patchaudit.mjs)
   const unloaded = overlay ? startUnloaded(overlay, a.loaded) : undefined;
   if (unloaded !== undefined) say(`play: patch audit: ${unloadedLine(unloaded)}`);
   if (cardFiles) say(`play: --card-put: ${cardFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')} onto ${process.env.OM_EMU_CARD} before the first session`);

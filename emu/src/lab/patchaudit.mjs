@@ -12,10 +12,10 @@
 //   H-PATCHTASK      a task start whose entry is on patched bytes is taken (src/lab/kernel.mjs LabTask._task_start):
 //                    a task the patch made (no stock task's code is there), run natively and listed
 //   patchAudit       after the bring-up (src/lab/player.mjs, host/navcli.mjs): the lab hooks installed then on patched
-//                    bytes (each would stop the session when reached; pass-through observers are left out), and the model's ported addresses and facts
-//                    (src/fw/ports.mjs PORTS and FACTS) on patched bytes: the lab calls or reads the patched bytes
-//                    there, which is reported, not refused. E143 has no such table (its addresses are src/lab's own
-//                    literals): ported is null there
+//                    bytes (each would stop the session when reached; pass-through observers are left out), and the
+//                    model's ported addresses and facts (src/fw/ports.mjs PORTS and FACTS) on patched bytes: the lab
+//                    calls or reads the patched bytes there, which is reported, not refused. E143 has no such table
+//                    (its addresses are src/lab's own literals): ported is null there
 //   unloadedRuns     the changed bytes that lie where the boot does not load (S-STALERAM's gaps, src/lab/sim.mjs
 //                    loadedRanges): on the camera they never reach DRAM; and, a class of their own, those where it is
 //                    not shown to load (bootLoads' unshown, ?): no copy the lab reads puts them in DRAM. Code there

@@ -7,7 +7,7 @@
 // line first, a 'patch audit: ...' line after the bring-up (src/lab/patchaudit.mjs), and session.json's patch the
 // overlay's summary, its patch_audit the audit. --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
 // src/lab/sim.mjs loadedRanges; auto, the default, on with --patch or --main on a body whose section loader the lab
-// reads, a run in the unloaded ranges then an 'error: ...' line and rc 1). Node-only (host/).
+// reads, a run in the unloaded ranges or those not shown loaded then an 'error: ...' line and rc 1). Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
@@ -102,7 +102,8 @@ function run(a) {
       return 1;
     }
     say(`patched: ${patchLine(fw.summary)}`);
-    const unloaded = startUnloaded(fw, a.loaded);     // the overlay's bytes the boot does not load, before the lab
+    // the overlay's bytes the boot does not load or is not shown to load, before the lab
+    const unloaded = startUnloaded(fw, a.loaded);
     if (unloaded !== undefined) say(`patch audit: ${unloadedLine(unloaded)}`);
   }
   const out = a.out ?? path.join(OUT, a.tag);

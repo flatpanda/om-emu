@@ -11,8 +11,9 @@
 //                   read and expected, a shot, power:off and restart on the kept state (the stores M, E and B
 //                   restored), the card kept across the restart, a write reported as a poke (summary and the last
 //                   line); controls: a failed expect exits 1 naming the step and runs nothing after it, a restart with
-//                   --nvram off restores nothing, a call over its budget exits 1, a control the model lacks is a usage
-//                   error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic om3-patch-2 file
+//                   --nvram off restores nothing, a call over its budget exits 1, with --loaded on a call into a gap
+//                   refused and a callee that reaches one ending the run (the session cannot go on), a control the
+//                   model lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic om3-patch-2 file
 //                   the test writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the tail of the reset
 //                   head's first copy, loaded, never run) as --patch: the patched and audit start lines, S-SECLOADED and S-STALERAM, the
 //                   loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative dial's setting
@@ -178,6 +179,24 @@ async function e143({ ok }, { T, newCard, step, sameFile, hello }) {
   // control: a call over its budget is the step's failure
   const c = cli(['--model', 'E143', 'call:0x503c49ab:d0=24,limit=5', 'wait:100']);
   ok(c.rc === 1 && /FAILED at step 1 \(call:0x503c49ab:d0=24,limit=5\): call: CallLimit/.test(c.last) && c.steps.length === 2, `E143 control: CallLimit: rc ${c.rc} | ${c.last}`);
+  // S-STALERAM (--loaded on): a call into a gap is refused before it runs (the step fails, the run ends); a callee
+  // that jumps into a gap (a patch the test writes: a call at section 6's 0xFF tail to a `mov imm32,a0; jmp (a0)`
+  // there, the call site giving the frame) fails the step and ends the run, saying the session cannot go on
+  const { loadImage } = await import('../checks/lib/env.mjs');
+  const { sectionsFact } = await import('../src/lab/sim.mjs');
+  const { bootLoads } = await import('../src/fw/sections.mjs');
+  const { MODEL_INFO } = await import('../src/fw/model.mjs');
+  const main = loadImage(), base = MODEL_INFO.image_base, gap = bootLoads(main, base, sectionsFact()).gaps[0].lo + 0x10, h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
+  const g = cli(['--model', 'E143', '--loaded', 'on', 'wait:500', `call:${h8(gap)}`, 'wait:100']);
+  ok(g.rc === 1 && g.steps.length === 3 && g.last.startsWith(`session.mjs: FAILED at step 2 (call:${h8(gap)}): call: BadRequest: `) && g.last.includes(`refused before it runs: pc ${h8(gap)} runs code the boot does not load`),
+    `E143 control: a call into a gap: rc ${g.rc} ${g.steps.length} steps | ${g.last.slice(0, 300)}`);
+  const SITE = 0x60F28F00, FN = 0x60F28F40, le = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24 & 0xff];
+  const pt = (at, bytes) => ({ block: 0, offset: at - base, old: Buffer.from(main.subarray(at - base, at - base + bytes.length)).toString('base64'), new: Buffer.from(bytes).toString('base64') });
+  ok(main.subarray(SITE - base, FN - base + 8).every((x) => x === 0xff), 'E143: 0xFF at the callee patch\'s place');
+  fs.writeFileSync(T('callee.json'), JSON.stringify([pt(SITE, [0xdd, ...le(FN - SITE), 0, 0]), pt(FN, [0xfc, 0xdc, ...le(gap), 0xf0, 0xf4])]));
+  const k = cli(['--model', 'E143', '--patch', T('callee.json'), 'wait:500', `call:${h8(FN)}`, 'wait:100']);
+  ok(k.rc === 1 && k.steps.length === 3 && k.last.startsWith(`session.mjs: FAILED at step 2 (call:${h8(FN)}): call: UnloadedCode: `) && k.last.includes(`pc ${h8(gap)} runs code the boot does not load`) &&
+    k.last.includes('the session cannot go on') && k.steps.at(-1).ok === false, `E143 control: a callee in a gap: rc ${k.rc} ${k.steps.length} steps | ${k.last.slice(0, 200)} ... ${k.last.slice(-300)}`);
   // control: a control the model does not have is a usage error before the boot
   const u = cli(['--model', 'E143', 'no_such_key']);
   ok(u.rc === 2 && /no_such_key: E143 has no control "no_such_key"/.test(u.err) && !u.lines.length, `E143 control: an unknown control: rc ${u.rc} ${u.err.slice(0, 200)}`);

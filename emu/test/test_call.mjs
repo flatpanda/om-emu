@@ -8,7 +8,9 @@
 //     registers as before; refusals (a stopping watchpoint, a debug stop); then the same inputs on a session that made
 //     no call: the records, the frame and every dirty memory page equal (the negative control: a write left in place,
 //     restore false, is told apart), a fault (CallFault), the memcpy request with the lab's hook taken away (the
-//     control for 'hooks honoured'), and an input after them.
+//     control for 'hooks honoured'), and an input after them; on a third with --loaded on (S-STALERAM) a fn in a gap and
+//     one in a range not shown loaded refused before they run (BadRequest) with the session going on, and a callee that
+//     reaches a gap answering UnloadedCode (the session cannot go on, restored false), the next call HostStopped.
 //   node emu/test/test_call.mjs [--units | --session]
 import { createHash } from 'node:crypto';
 import { callSpec, SCRATCH_MAX } from '../src/debug/call.mjs';
@@ -124,7 +126,7 @@ export async function callSession() {
     return out;
   };
   const differ = (a, b) => [...new Set([...a.keys(), ...b.keys()])].filter((p) => a.get(p) !== b.get(p)).map((p) => h8(0x60000000 + p * 65536 - DRAM_OFF));
-  let A = null, B = null;
+  let A = null, B = null, C = null;
   try {
     A = open();
     const ask = (f) => apply(A, { type: 'debug', ...f })?.debug;
@@ -191,8 +193,31 @@ export async function callSession() {
     ok(JSON.stringify(ia.recs) === JSON.stringify(ib.recs) && ia.frame === ib.frame, `the inputs after the calls as without: ${ia.recs} / ${ib.recs}, frames ${ia.frame === ib.frame}`);
     ok(pa.size > 100 && d0.length === 0, `memory as without the calls: ${pa.size} pages, differing ${d0.join(' ')}`);
     ok(d1.length === 1 && d1[0] === h8(AWAY), `the negative control, a write left in place (restore false), told apart: differing ${d1.join(' ')}`);
+    B.close_session();
+    // S-STALERAM (--loaded on): a fn in a gap or in a range not shown loaded is refused before it runs and the session
+    // goes on (without the check the fetch guard stops the machine: the getter after it answers HostStopped); a callee
+    // that reaches a gap (a jmp (a0) written at AWAY) answers UnloadedCode, says the session cannot go on and that
+    // nothing was put back (restored false), and the next call answers HostStopped
+    C = new Player(args, { ...base, loaded: 'on', queue: new ScriptQueue() });
+    C.open_session();
+    const askC = (f) => apply(C, { type: 'debug', ...f })?.debug;
+    const loads = C.session.lab.sim.loads, gap = loads?.gaps[0], head = loads?.unshown.find((u) => u.kind === 'head');
+    for (const [g, words] of [[gap, 'runs code the boot does not load'], [head, 'runs code the boot is not shown to load (?)']]) {
+      const fn = g.lo + 0x10;
+      r = askC({ op: 'call', fn: h8(fn), space: 'runtime', frame: [0, 0] });
+      ok(r && !r.ok && r.error.type === 'BadRequest' && r.error.message.includes(`(run-time ${h8(fn)}): refused before it runs: pc ${h8(fn)} ${words}: ${h8(g.lo)}..${h8(g.hi)}`),
+        `a fn at ${h8(fn)}: ${JSON.stringify(r?.error).slice(0, 300)}`);
+      r = askC({ op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } });
+      ok(r?.ok && Number(r.regs.d0) === P, `the getter after the refused fn at ${h8(fn)}: ${JSON.stringify(r).slice(0, 300)}`);
+    }
+    r = askC({ op: 'call', fn: h8(AWAY), space: 'runtime', frame: [0, 0], mem: [[h8(AWAY), 'f0f4']], regs: { a0: h8(gap.lo + 0x10) } });
+    ok(r && !r.ok && r.error.type === 'UnloadedCode' && r.error.message.includes(`pc ${h8(gap.lo + 0x10)} runs code the boot does not load`) &&
+      r.error.message.includes('the session cannot go on') && r.error.detail?.restored === false && r.error.detail?.pc === h8(gap.lo + 0x10),
+    `a callee in a gap: ${JSON.stringify(r).slice(0, 500)}`);
+    r = askC({ op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } });
+    ok(r && !r.ok && r.error.type === 'HostStopped', `the call after it: ${JSON.stringify(r?.error).slice(0, 200)}`);
   } catch (e) { t.bad.push(`call session: threw ${e.stack}`); }
-  finally { for (const p of [A, B]) if (p?.session) p.close_session(); }
+  finally { for (const p of [A, B, C]) { try { if (p?.session) p.close_session(); } catch (e) { if (p !== C) throw e; } } }
   return { checks: t.checks, bad: t.bad };
 }
 

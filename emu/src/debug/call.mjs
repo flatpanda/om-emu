@@ -38,13 +38,17 @@
 // a stand-in's state it moved (S-HEAP's next block, a queue a hook filled), the frames it left on the harness stack
 // below SP_TOP (dead memory the lab's next call overwrites). A call that ends on its budget answers CallLimit, a CPU
 // fault CallFault; a lab error (a hook's refusal, a bad return state) answers under its own type; each carries detail
-// (pc, steps, stubs, reads, stderr; fault). A host error (Unported: a device path the lab has not ported) stops the machine
-// mid-instruction, as in a tick: the session cannot go on.
+// (pc, steps, stubs, reads, stderr; fault). A host error (Unported: a device path the lab has not ported; or, with
+// --loaded on, code the boot does not load or is not shown to load, S-STALERAM) stops the machine mid-instruction, as
+// in a tick: the session cannot go on, and nothing above is put back. A fn in such a range is refused before the call
+// (BadRequest, the range named), so the session goes on; a callee that reaches one answers UnloadedCode, its detail
+// with restored false: every later run or write of the session fails (HostStopped).
 import { BadRequest, num, addr, word, count, list, dict } from './protocol.mjs';
 import { regsHex, hex8 } from './regs.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
 import { CALLER, RETURN, SP as SP_TOP, DATA, DATA_END, BASE, runtime, disasm } from '../lab/hle.mjs';
 import { LabError } from '../lab/errors.mjs';
+import { gapAt } from '../fw/sections.mjs';
 
 export const CALL_REGS = ['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3'];
 export const SCRATCH_MAX = 0x40000, STACK_MAX = 256, LIMIT_DEFAULT = 1000000;
@@ -126,6 +130,9 @@ export function runCall(lab, dbg, spec) {
   const cap = m.insnLimit();
   if (!cap) throw new BadRequest('call: the machine has no insn limit to bound the call by');
   if (limit > cap) throw new BadRequest(`limit: ${limit} is over the machine's insn limit ${cap}`);
+  // S-STALERAM: a fn the fetch guard would refuse, refused before the call stops the machine
+  const un = sim.unloaded ?? null, g = un ? gapAt(un.gaps, target.runtime) : null;
+  if (g) throw new BadRequest(`call ${hex8(fn)} (run-time ${hex8(target.runtime)}): refused before it runs: ${un.message(g, target.runtime)}`);
   let frame = spec.frame;
   if (frame === null) {
     try { frame = lab.frame(fn); } catch (e) {
@@ -179,6 +186,12 @@ export function runCall(lab, dbg, spec) {
     if (failure) {
       const st = m.lastStop(), detail = { pc, steps, stubs: out.stubs, reads: out.reads, stderr: m.stderrFrom(k0).lines };
       const at = `call ${hex8(fn)} (run-time ${hex8(target.runtime)})`;
+      if (m.failed() !== null) {          // a host error the lab wrapped (S-STALERAM's UnloadedCode): the machine stopped
+        const e = new Error(`${at}: ${failure.message}; the machine stopped on this host error, so the session cannot go on (nothing was put back; every later run or write fails with HostStopped)`);
+        Object.defineProperty(e, 'name', { value: m.failed().name ?? 'HostError' });
+        e.detail = { ...detail, restored: false };
+        throw e;
+      }
       if (st?.kind === 'limit') {          // the limit's fault 7 counts in insns, its instruction did not run
         detail.steps = limit;
         throw new CallLimit(`${at}: the budget of ${limit} instructions ran out at pc ${pc}`, detail);

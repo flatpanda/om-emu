@@ -54,8 +54,9 @@
 // area's builder, S-RESNAND's layer), S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits), and
 // the scripted session's token grammar, its Player inputs, the expects on fakes and bin/session.mjs's usage errors
 // (test_session.mjs sessionUnits), its traces and stops: the tokens, the machine's exec probes on a blank image,
-// the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), and the
-// LOOKS.BIN reader with a film's values (test_looks.mjs looksUnits).
+// the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), the LOOKS.BIN
+// reader with a film's values (test_looks.mjs looksUnits), and the caduceus-om3 release pins' checks on made-up
+// folders (test_caduceus.mjs caduceusUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -106,6 +107,7 @@ import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
 import { sessionUnits } from '../test/test_session.mjs';
 import { traceUnits } from '../test/test_trace.mjs';
 import { looksUnits } from '../test/test_looks.mjs';
+import { caduceusUnits } from '../test/test_caduceus.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -143,6 +145,7 @@ report('command-line parser', argsTests());
 report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
 report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals, a film\'s settings and hooked reads (test_looks.mjs)', looksUnits());
+report('caduceus-om3 release pins: a changed or missing file, an unpinned folder, an observation that differs (test_caduceus.mjs)', caduceusUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());

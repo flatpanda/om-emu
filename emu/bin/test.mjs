@@ -35,7 +35,8 @@
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
 // watchpoints on E143 and E147 (test_trace.mjs), a Caduceus film's values below the pixels on E147 with OM_CADUCEUS
-// (test_looks.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// (test_looks.mjs), every caduceus-om3 release against its pins when OM_CADUCEUS names a checkout
+// (test_caduceus.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -689,6 +690,22 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`Caduceus films below the pixels: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'not run (OM_CADUCEUS unset)' : r.status === 0 ? 'ok' : 'FAILED'}`);
   [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
+}
+// the caduceus-om3 releases (test_caduceus.mjs): the pins' units; with OM_CADUCEUS naming a caduceus-om3 checkout, each
+// release folder's files against its pins and its flow on E147 in processes of their own; without it SKIPPED
+{
+  const { caduceusUnits } = await import('../test/test_caduceus.mjs');
+  const cu = caduceusUnits();
+  let rc = 0, lines = ['SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)'];
+  if (process.env.OM_CADUCEUS) {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [new URL('../test/test_caduceus.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+    rc = r.status;
+    lines = (r.stdout + r.stderr).trim().split('\n').map((l) => l.replace(/^caduceus-om3 releases: /, ''));
+  }
+  console.log(`caduceus-om3 releases: pin units ${cu.checks - cu.bad.length}/${cu.checks}; E147 ${lines[0]}${rc === 0 ? '' : ' FAILED'}`);
+  [...cu.bad, ...lines.slice(1).map((l) => l.trim())].forEach((x) => console.log('  ', x));
+  bad += cu.bad.length + (rc === 0 ? 0 : 1);
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

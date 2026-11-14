@@ -1,0 +1,1386 @@
+{
+ "about": "Pins of the caduceus-om3 releases for emu/test/test_caduceus.mjs (OM_CADUCEUS): per release folder the sha256 of each file the run reads (release-relative), what src/fw/patch.mjs makes of its patch.json on the stock E147 block, the flow's inputs and what the flow observed, recorded with --pin and read against the release's NOTES. Digests and observations only: no byte of a release.",
+ "releases": {
+  "v0.16": {
+   "files": {
+    "v0.16/patch.json": "228195b3bf86ab973f97e597b0c027fb67e49c3382b60fa30354f2015ac7e928",
+    "v0.16/GUIDES.BIN": "54f86f6326d9878c4328efd40f4b1a706bae6738dbd90a72a2c7d03c3aaffee1"
+   },
+   "reader": {
+    "format": "om3-patch-1",
+    "runs": 233,
+    "bytes": 7052,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "25865938dd854cb37de14f8e5645b64a77e8253a203ab5ae5b534a725ced6100",
+    "not_applied": []
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.16/GUIDES.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.17": {
+   "files": {
+    "v0.17/patch.json": "c31149a1735199e7c2ebaf82b4bc88f4a2849ffcb82dc1842ba6ab77128fdce2",
+    "v0.17/GUIDES.BIN": "54f86f6326d9878c4328efd40f4b1a706bae6738dbd90a72a2c7d03c3aaffee1"
+   },
+   "reader": {
+    "format": "om3-patch-1",
+    "runs": 247,
+    "bytes": 7231,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "c85c5a88fa97326d999a26224ecb75129d065260e3a8ea9a5caa73ecf43e6cec",
+    "not_applied": []
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.17/GUIDES.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.18": {
+   "files": {
+    "v0.18/patch.json": "ebc169f9874c227d4c65b0067f6c3e5268f9d94821e56401b3aa5a75dbdcf1d7",
+    "v0.18/GUIDES.BIN": "54f86f6326d9878c4328efd40f4b1a706bae6738dbd90a72a2c7d03c3aaffee1"
+   },
+   "reader": {
+    "format": "om3-patch-1",
+    "runs": 247,
+    "bytes": 7233,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "4597665004a04a3b7fe3eddea34a0947327fcaa772de8eb3a06b167d7ac12710",
+    "not_applied": []
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.18/GUIDES.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.19": {
+   "files": {
+    "v0.19/patch.json": "34af791fc711abc7de5127e556325ee2795a55347444ee93e621468de97fea94",
+    "v0.19/GUIDES.BIN": "fdbc7c1fa1165f2379625535ffb8b97047ee606c8cf16472a912cd0d9cf56e0c"
+   },
+   "reader": {
+    "format": "om3-patch-1",
+    "runs": 92,
+    "bytes": 7281,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "b15901f1d39a763bc7e3df907b8fb3ec30228b5a43c489e2c8b8108920ab3c20",
+    "not_applied": []
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.19/GUIDES.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.20": {
+   "files": {
+    "v0.20/patch.json": "d8026092d50e47ab5121860760658b7997b9d3cf007ec2e861350cf389127aaf",
+    "v0.20/GUIDES.BIN": "ea1b900997ae5a70c433145b8380b289577b7cc7032412d0c165713a8611a5fd",
+    "v0.20/LABELS.BIN": "4fdee1ffb12020f6fc77a15793cd37a0ede97f52fcb797450dab7e3156e57326"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 46,
+    "bytes": 7540,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "78c944091345e657ac6289cd7a3a7514b80d49374dbb944f0bd310f8630d0f2b",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.20/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.20/LABELS.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN",
+     "LABELS.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.21": {
+   "files": {
+    "v0.21/patch.json": "e68bc85f96aaa2106bdbbb919c6935140f2068310d8b341021e5891c4a8ebc4c",
+    "v0.21/GUIDES.BIN": "d991fecd4f479a9ce2387d3f93a3fa3547bc1de9da5fd57080b69a536f25a6de",
+    "v0.21/LABELS.BIN": "73a28cb97682ed1598d77c46d6c6a7de7cf979365a51fbf83c8c1b00a801c6ea"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 62,
+    "bytes": 7613,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "d4eba4b13af1452c21005ed14bb62d2a01cb013fb93e7a808274d3fba5ef4182",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.21/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.21/LABELS.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN",
+     "LABELS.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.22": {
+   "files": {
+    "v0.22/patch.json": "7527b0fc417a7fab051c41ea7bc4a0bc5bd99fb434db0ee620e170c635bead0a",
+    "v0.22/GUIDES.BIN": "bb81a87ca8f7e89ab1a822152718a5b859f0d5b0e21477d9a90f1dc9081a4faf",
+    "v0.22/LABELS.BIN": "6932bfb806aeb5dd7f62076b7aab348463f15a4ef0585d73dc62701bf32cf90e"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 67,
+    "bytes": 7664,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "71129f9e9bb53d431b6428df90b7b101ed4de7497133a4dd853c2934762ea989",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.22/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.22/LABELS.BIN"
+    },
+    "films": false,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Picture Mode ",
+    "card": [
+     "GUIDES.BIN",
+     "LABELS.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Picture Mode "
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no film rows: its looks are on the colour wheel's page, whose plane the lab does not compose (PLANC_UNOBSERVED, stock too); no photo code (from v0.27)"
+   ]
+  },
+  "v0.24.1": {
+   "files": {
+    "v0.24.1/patch.json": "36d0e4c15a4e2461856f59bf6400cc5fb12f260c4fd4968938deaf9ab441fa83",
+    "v0.24.1/GUIDES.BIN": "112e8f93421a57de0f9e7946e3b828ef419960c36d9b72673318fde51d14ee9d",
+    "v0.24.1/LABELS.BIN": "903af75b4fb1757529d72f5ab825f06e664eb05e254eb44708e638af9ca4fc70",
+    "v0.25/LOOKS.BIN": "b7e4262a96f4b08a73e419e44d01800fdfb2b01c42dfd742ee7fd8d35bddc6d1"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 106,
+    "bytes": 68647,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "42d3f4d1367c59e9d8dc6c16f2429f9753fd3042805ca78a8f5a18e3dbc5bf05",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.24.1/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.24.1/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.25/LOOKS.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "ships no LOOKS.BIN: v0.25's, made of the camera's settings alone, is put",
+    "no photo code (from v0.27): the film kept over power:off shows in the title alone"
+   ]
+  },
+  "v0.25": {
+   "files": {
+    "v0.25/patch.json": "6a715f2254df333a0d4de904804aeaa6a16430bccc86ed7799872f608f02b61b",
+    "v0.25/GUIDES.BIN": "1edf66bd08a03d4825794ee1d033058c1b0b0937407329c6714a3838bada558a",
+    "v0.25/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.25/LOOKS.BIN": "b7e4262a96f4b08a73e419e44d01800fdfb2b01c42dfd742ee7fd8d35bddc6d1"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 125,
+    "bytes": 70321,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "d4384042d8d80736229db2b04daed881d8e94b3252a76d1653f5523dd4e8d2c7",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.25/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.25/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.25/LOOKS.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no photo code (from v0.27): the film kept over power:off shows in the title alone"
+   ]
+  },
+  "v0.26": {
+   "files": {
+    "v0.26/patch.json": "e09bc353fe8d68e24e14ca225b42866e4ceb2f976285940573dcf989b8fb0d9d",
+    "v0.26/GUIDES.BIN": "1189c811a300d0b9df437774c0a8043c246c43e47e9f1c42ecd893d3bea55f3b",
+    "v0.26/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.26/LOOKS.BIN": "e742c70b2ed8371e95ab0a62c119e24c8d0988b8ce2352eea4a7188f88b190a9",
+    "v0.26/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 125,
+    "bytes": 71673,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "2c522a8bbaf07ba6f43df45dc8e0c39e8c8c4f6458c7b17c9b5b68c85f8123eb",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.26/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.26/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.26/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.26/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no photo code (from v0.27): the film kept over power:off shows in the title alone"
+   ]
+  },
+  "v0.26.1": {
+   "files": {
+    "v0.26.1/patch.json": "585cbbd4b342b460ff1aad25cd14cab28a2196dd82572fd92a510d99aa8468ca",
+    "v0.26.1/GUIDES.BIN": "d2476a5407fde9f5922b6d193bcbc8f67830aff887e8b3eab748f10c8ebb0ac7",
+    "v0.26.1/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.26.1/LOOKS.BIN": "26998eeb1950512ccb4a9c19fb5578eed0479c73caec11607301b8f7cc60989d",
+    "v0.26.1/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 125,
+    "bytes": 71673,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "42cb956d8411b6c83ab5160a719554b5331f523a577fff740260723501bec9b9",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.26.1/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.26.1/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.26.1/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.26.1/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no photo code (from v0.27): the film kept over power:off shows in the title alone"
+   ]
+  },
+  "v0.26.2": {
+   "files": {
+    "v0.26.2/patch.json": "cb35edbe0767995a46d69eb833bea51dafb3bbd0fbe4d1e958cc287abb5d27f6",
+    "v0.26.2/GUIDES.BIN": "92b6791941d9aedcb582383bdffaf75ddb5fa877ed2cee5439bdf71aa5a7222b",
+    "v0.26.2/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.26.2/LOOKS.BIN": "26998eeb1950512ccb4a9c19fb5578eed0479c73caec11607301b8f7cc60989d",
+    "v0.26.2/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 130,
+    "bytes": 72999,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "22d6ab711acb495f365c89a3e3f6b155c285c98fb4203097145995a65a5815b6",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.26.2/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.26.2/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.26.2/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.26.2/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "",
+     "photo_code": null
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "",
+      "photo_code": null
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": [
+      "0x50a6e603"
+     ]
+    },
+    "pokes": []
+   },
+   "notes": [
+    "no photo code (from v0.27): the film kept over power:off shows in the title alone",
+    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bit 0 only, so the state word is still 0 after 4.5 s and the half press loads them"
+   ]
+  },
+  "v0.27": {
+   "files": {
+    "v0.27/patch.json": "529d75303e381cc261a522125ac143ee87c13cec2bfd52743aaea3d90583ce9c",
+    "v0.27/GUIDES.BIN": "99473777abc9b7f2528186abdbbe1c651e30665b93c1065dd0e8f20710b699a5",
+    "v0.27/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.27/LOOKS.BIN": "b03b895a0ec9635382a99b0f7ed924f0f63e7b73accf0cf9d6c194e05abd03f0",
+    "v0.27/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 158,
+    "bytes": 320396,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "733772dc980e84a3b8fac24b7d3ccef199bb5c1b21e7a63b7b8a83184394b780",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.27/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.27/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.27/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.27/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "FILM 2 Gold 200",
+     "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Gold 200",
+      "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": [
+      "0x50a6e603"
+     ]
+    },
+    "pokes": []
+   },
+   "notes": [
+    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bit 0 only, so the state word is still 0 after 4.5 s and the half press loads them"
+   ]
+  },
+  "v0.27.1": {
+   "files": {
+    "v0.27.1/patch.json": "7d34185c205cd6e5afe808b7a0c5eec8bb5f5b1b495d7e7d8a9c2c0a70f7a44a",
+    "v0.27.1/GUIDES.BIN": "32f490d1ff19988c69fd5df73abe9e2739759abbb9841316c181414c52b901e7",
+    "v0.27.1/LABELS.BIN": "d6c1b4aba6f6e731ea92cfccc11792da99131f08a3a11debf68193789668583c",
+    "v0.27.1/LOOKS.BIN": "b03b895a0ec9635382a99b0f7ed924f0f63e7b73accf0cf9d6c194e05abd03f0",
+    "v0.27.1/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 156,
+    "bytes": 320369,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "908f61168e73344e55ca768639ea79dc0ac4fb75056b76fcef5ebf906344ded4",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.27.1/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.27.1/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.27.1/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.27.1/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "FILM 2 Gold 200",
+     "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Gold 200",
+      "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   }
+  },
+  "v0.28-alpha": {
+   "files": {
+    "v0.28-alpha/patch.json": "393c3a6b3b3f88788e88710569c2d5485a25bc2feba108c27f00b97a853e7fa4",
+    "v0.28-alpha/GUIDES.BIN": "84236d92b2dedb4623d2444e2da1200120861b505ad5f12962ac203db23f878b",
+    "v0.28-alpha/LABELS.BIN": "eac8eb47930e3939652a8c3a5e79880f64e331a7d133938f938ae0ad5653ef99",
+    "v0.28-alpha/LOOKS.BIN": "b03b895a0ec9635382a99b0f7ed924f0f63e7b73accf0cf9d6c194e05abd03f0",
+    "v0.28-alpha/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 156,
+    "bytes": 278150,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "42ae840cd7cded7081b0877df79344473143b9f63385cd6cd8580a57d59cdb9b",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.28-alpha/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.28-alpha/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.28-alpha/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.28-alpha/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "FILM 2 Gold 200",
+     "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Gold 200",
+      "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   }
+  },
+  "v0.28": {
+   "files": {
+    "v0.28/patch.json": "3ca05727220e88253c5681d4eea89e1fa6647fbb253c3fb181776f5a2393fd46",
+    "v0.28/GUIDES.BIN": "8073a978ea214a6cd7675e6583c5a112c73364d6a92922490e86ce162004556b",
+    "v0.28/LABELS.BIN": "eac8eb47930e3939652a8c3a5e79880f64e331a7d133938f938ae0ad5653ef99",
+    "v0.28/LOOKS.BIN": "b03b895a0ec9635382a99b0f7ed924f0f63e7b73accf0cf9d6c194e05abd03f0",
+    "v0.28/TONES.BIN": "a5cd04e91f202688af7a2f195b48f99dff326945390ae7df85db913c307a6655"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 156,
+    "bytes": 278677,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "853c97b60756778468937d0a2fb03a33ddf3579dcc4d16bc2a9b19db6fcc1b2b",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/GUIDES.BIN": "v0.28/GUIDES.BIN",
+     "OM3MOD/LABELS.BIN": "v0.28/LABELS.BIN",
+     "OM3MOD/LOOKS.BIN": "v0.28/LOOKS.BIN",
+     "OM3MOD/TONES.BIN": "v0.28/TONES.BIN"
+    },
+    "films": true,
+    "restart_card": "same",
+    "nocard": false
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "FILM 2 Gold 200",
+     "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+    },
+    "title": "Gold 200",
+    "card": [
+     "BUNDLES.BIN",
+     "BUNDLES.NEW",
+     "EDITS.BIN",
+     "GUIDES.BIN",
+     "LABELS.BIN",
+     "LOOKS.BIN",
+     "LOOKS.NEW",
+     "TONES.BIN"
+    ],
+    "restart": {
+     "card": "same",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Gold 200",
+      "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+     },
+     "title": "Gold 200"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   }
+  },
+  "v0.29-beta": {
+   "files": {
+    "v0.29-beta/patch.json": "3af1b3052e6dfdf680bae0d3eef885b9ce981b6925529056b91c951786f05173",
+    "v0.29-beta/LOOKS.BIN": "b7b6dabbbbf611c581c4518ca08899306e47496c2ecc411190a9066936ba7ad6"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 158,
+    "bytes": 321613,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "6abbb3122106b830b7a0efaa3c37406dec24824caba03c634355599b844fb6b5",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.29-beta/LOOKS.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Gold 200",
+     "Agfa Ultra 100"
+    ],
+    "exif": {
+     "description": "FILM 2 Gold 200",
+     "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+    },
+    "title": "Gold 200",
+    "card": [
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Gold 200",
+      "photo_code": "Caduceus FILM 2 Gold 200 om3.1."
+     },
+     "title": "Gold 200"
+    },
+    "nocard": {
+     "state_after_s1": "0000",
+     "title": "Color Profile 1"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": [
+     "0x60369308"
+    ]
+   },
+   "notes": [
+    "the second session on a blank card: the films from the camera's memory",
+    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; the same firmware as v0.29: no film"
+   ]
+  },
+  "v0.29": {
+   "files": {
+    "v0.29/patch.json": "dac27cc2095e1ca72a2a3fa47e83a945f0e0774b4c8df3a3cf00745406c649a6",
+    "v0.29/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 158,
+    "bytes": 321613,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "0d40c510e00140fe220839dcd86605430418030a1e553fb4028d1c959576d3e5",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.29/LOOKS.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "state_after_s1": "0000",
+     "title": "Color Profile 1"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": [
+     "0x60369308"
+    ]
+   },
+   "notes": [
+    "the second session on a blank card: the films from the camera's memory",
+    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; v0.29 loads no film (#38)"
+   ]
+  },
+  "v0.29.1": {
+   "files": {
+    "v0.29.1/patch.json": "4be019e4ef19a44c2822d14e1b424aef06a161e4a64449abcee2e9f510fcbbe4",
+    "v0.29.1/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 158,
+    "bytes": 321631,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "3f455b4b56f87ec1497e1e93afea1541490dd163f201321b383a9a80a0ac75ce",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.29.1/LOOKS.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "state_after_s1": "set",
+     "title": "Portra 160"
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": [
+     "0x60369308"
+    ]
+   },
+   "notes": [
+    "the second session on a blank card: the films from the camera's memory",
+    "no card (v0.29.1, #38): a session cannot start without a card, and after the card is taken out S-MEDIA leaves S-CARD's OK (0xF000) in the SD medium word, where their gate looks; the flow sets it to NO_MOUNT by a poke (pokes), any value but OK takes the same path in their gate; v0.29.1 loads them from the camera's memory (their camera test)"
+   ]
+  }
+ }
+}

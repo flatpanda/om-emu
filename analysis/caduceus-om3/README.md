@@ -371,7 +371,7 @@ Each option, its stand-in and its status are in `emu/README.md`; where the lab d
 - **The per-shot EXIF fill** (2.6), run with the EXIF set natively at S2 (H-RECPRECON, `docs/hle-gaps.md` 4.3.11):
   their photo code runs, and its fields are read back from the card's JPEG.
 - **A scripted session tool**: `bin/session.mjs` and its module `host/session.mjs` (`openSession`), the supported
-  scripting API. A headless play session runs from tokens: keys, switches, waits, `power:off` and `restart`, shots,
+  scripting API. A headless play session runs from tokens: keys, dials, switches, waits, `power:off` and `restart`, shots,
   reads, calls, the card's files and a JPEG's EXIF, and expects that fail the run. One JSON record per step and a
   summary with the patch audit, the stand-ins in use and every poke (`emu/README.md` "Scripted sessions"). Replaces
   their drivers' use of internals.
@@ -504,7 +504,7 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 | a whole `main.bin` as the image | `--main FILE`, through the overlay, the audit and the loaded-ranges mode (`--loaded off` is their whole-block load) |
 | the card file; a saved copy | `--card FILE`, written back in place (copy it first); `card-get` / `--card-get` take files off |
 | the settings file | `--nvram FILE` (off, a blank camera, by default) |
-| key clicks and holds, the dials, waits; 1200 ms after each token | `KEY` (down, 150 ms, up, then the settle), `hold:KEY[:MS]`, `wait:MS`; `--settle 1200` for presses and switches. `main_dial:+N` / `sub_dial:-N` parse, but a session refuses them on `d38ceff`: the token sends the control's id where the player takes `main` or `sub` (X: `ValueError: dial "main_dial": main or sub`; follow-up 1) |
+| key clicks and holds, the dials, waits; 1200 ms after each token | `KEY` (down, 150 ms, up, then the settle), `hold:KEY[:MS]`, `wait:MS`; `--settle 1200` for presses and switches. `main_dial:+N` / `sub_dial:-N` turn the dials N detents (X: `emu/test/test_session.mjs` turns both in a session and each changes the frame; on `d38ceff` and before, the token sent the control's id where the player takes `main` or `sub`, and a session refused it; follow-up 1) |
 | the GUI state and their state word after each step | each record's `gui`; `read:ADDR:LEN`, `expect:mem` |
 | their editor's fields at an address read from memory | the module API: `s.step('read:...')` returns the bytes and the client computes the next address |
 | shots | `shot:FILE.png`, the last published frame (`/api/frame`'s pixels), not their own composite |
@@ -710,9 +710,9 @@ All four are made (2026-11-13).
 The first round's follow-ups 1 (a regression run of each release), 2 (row-crossing OSD runs) and 4 (mid-function
 calls and exec traces in scripted sessions) are done (4.1, 4.2); what they left is below.
 
-1. **The session's dial tokens**: `main_dial:+N` and `sub_dial:-N` send the control's id where the player takes `main`
-   or `sub`, so a session refuses them (4.3); the test checks only the token's parse. Size: hours, with a session test
-   that turns a dial. Payoff: their driver's dial steps through the supported API, and follow-up 2.
+1. **The session's dial tokens**: done in the second round's final pass. The step sends the player's dial id (`main`,
+   `sub`), and `emu/test/test_session.mjs` turns both dials in an E143 session (4.3). Their driver's dial steps now
+   run through the supported API, as follow-up 2 needs.
 2. **E147 stills-mode key dispatch** (their `research/BUTTONS.md`: the arrow keys and front dial in P / A / M read
    other setting ids in the lab). First re-run their cases on the stills position (4.1, `docs/hle-gaps.md` 4.1.13),
    then read what still differs; an input for the still / movie switch would let a session choose movie mode. Size:

@@ -208,7 +208,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'press': return [key(st.id, 'down'), wait(PRESS_MS), key(st.id, 'up'), wait(settle)];
     case 'hold': return [key(st.id, 'down'), wait(st.ms), key(st.id, 'up'), wait(settle)];
     case 'edge': return [key(st.id, st.action)];
-    case 'dial': return [{ type: 'dial', id: st.id, detents: st.detents }, wait(settle)];
+    case 'dial': return [{ type: 'dial', id: st.id.replace(/_dial$/, ''), detents: st.detents }, wait(settle)];   // the Player's dial ids: main, sub
     case 'wait': return [wait(st.ms)];
     case 'token': return [{ type: 'token', token: st.token }];
     case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, wait(settle)];

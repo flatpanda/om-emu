@@ -15,18 +15,17 @@
 //                   a second restart (no power:off) does not, a call over its budget exits 1, with --loaded on a call
 //                   into a gap refused and a callee that reaches one ending the run (the session cannot go on), an
 //                   --out it cannot make and a shot it cannot write exit 1 with the reason on one line, a control the
-//                   model lacks is a usage error; the module API's input(): a harness token (SET:) and a call sent
-//                   through it are listed in the summary (harness_inputs, calls, via 'input'), a read and a call that
-//                   fails (over its budget) are not. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a
-//                   synthetic om3-patch-2 file the test writes (16 bytes of the main block's 0xFF padding at 0x107f00,
-//                   in the tail of the reset head's first copy, loaded, never run) as --patch: the patched and audit
-//                   start lines, S-SECLOADED and S-STALERAM, the
-//                   loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative dial's setting
-//                   by the getter, power:off and restart with the stores restored and the dial still at ART (the
-//                   getter's 899, the record's carried), no poke; control: the same file
-//                   with a run in the 0xFF tail past section 10's loaded end, reported by the start line and the
-//                   summary's audit (unloaded), read as S-STALERAM's fill, a write reported as a poke, a failed expect
-//                   exiting 1
+//                   model lacks is a usage error; main_dial:+1 and sub_dial:-1 each run and change the frame; the
+//                   module API's input(): a harness token (SET:) and a call sent through it are listed in the summary
+//                   (harness_inputs, calls, via 'input'), a read and a call that fails (over its budget) are not. E147
+//                   (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic om3-patch-2 file the test
+//                   writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the tail of the reset head's
+//                   first copy, loaded, never run) as --patch: the patched and audit start lines, S-SECLOADED and
+//                   S-STALERAM, the loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative
+//                   dial's setting by the getter, power:off and restart with the stores restored and the dial still at
+//                   ART (the getter's 899, the record's carried), no poke; control: the same file with a run in the
+//                   0xFF tail past section 10's loaded end, reported by the start line and the summary's audit
+//                   (unloaded), read as S-STALERAM's fill, a write reported as a poke, a failed expect exiting 1
 //   node emu/test/test_session.mjs [--units] [--session]       (OM_EMU_MODEL=E147 for the OM-3)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -91,7 +90,8 @@ export function sessionUnits() {
   ok(inp('ok') === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, { type: 'token', token: `WAIT:${PRESS_MS}` }, { type: 'key', id: 'ok', action: 'up' }, { type: 'token', token: `WAIT:${SETTLE_MS}` }]), `a press: ${inp('ok')}`);
   ok(inp('hold:ok:900', 50) === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, { type: 'token', token: 'WAIT:900' }, { type: 'key', id: 'ok', action: 'up' }, { type: 'token', token: 'WAIT:50' }]), `a hold: ${inp('hold:ok:900', 50)}`);
   ok(inp('s2:down') === '[{"type":"key","id":"s2","action":"down"}]' && inp('wait:7') === '[{"type":"token","token":"WAIT:7"}]', 'an edge, a wait');
-  ok(inp('main_dial:-2', 10) === '[{"type":"dial","id":"main_dial","detents":-2},{"type":"token","token":"WAIT:10"}]', `a dial: ${inp('main_dial:-2', 10)}`);
+  ok(inp('main_dial:-2', 10) === '[{"type":"dial","id":"main","detents":-2},{"type":"token","token":"WAIT:10"}]' && inp('sub_dial:+1', 0).startsWith('[{"type":"dial","id":"sub",'),
+    `a dial (the Player's ids main, sub): ${inp('main_dial:-2', 10)} ${inp('sub_dial:+1', 0)}`);
   ok(inp('switch:creative_dial=4', 0) === '[{"type":"switch","id":"creative_dial","value":4},{"type":"token","token":"WAIT:0"}]' && inp('switch:mode_dial+2', 0).includes('"step":2'), 'a switch by value and by step');
   ok(inp('power:off') === '[{"type":"switch","id":"power","value":0}]', 'power:off is the lever off');
   ok(inp('read:16:4') === '[{"type":"debug","op":"read","addr":16,"size":4}]' && inp('write:16=ab') === '[{"type":"debug","op":"write","addr":16,"hex":"ab"}]', 'read and write');
@@ -218,6 +218,12 @@ async function e143({ ok }, { T, newCard, step, sameFile, hello }) {
   ok(w.rc === 1 && w.steps.length === 3 && step(w, 'shot:d.png').error === `${T('out2', 'd.png')}: cannot write it (EISDIR)` && /^session\.mjs: FAILED at step 2 \(shot:d\.png\): .*: cannot write it \(EISDIR\); /.test(w.last),
     `E143 a shot it cannot write: rc ${w.rc} ${JSON.stringify(step(w, 'shot:d.png'))} | ${w.last}`);
   // control: a control the model does not have is a usage error before the boot
+  // the dials in a live session: each detent step runs and changes the picture (the token's control id is the Player's
+  // dial id plus _dial; play's dial_input refuses 'main_dial')
+  const d = cli(['--model', 'E143', 'wait:1500', 'main_dial:+1', 'sub_dial:-1']);
+  const fr = ['wait:1500', 'main_dial:+1', 'sub_dial:-1'].map((x) => step(d, x).frame);
+  ok(d.rc === 0 && d.sum?.ok === true && d.steps.every((x) => x.ok) && fr.every((x) => typeof x === 'string') && new Set(fr).size === 3,
+    `E143 the dials in a session: rc ${d.rc} frames ${JSON.stringify(fr)} | ${d.last.slice(0, 300)}`);
   const u = cli(['--model', 'E143', 'no_such_key']);
   ok(u.rc === 2 && /no_such_key: E143 has no control "no_such_key"/.test(u.err) && !u.lines.length, `E143 control: an unknown control: rc ${u.rc} ${u.err.slice(0, 200)}`);
   // the module API's input(): what changes the camera or runs its code is listed as the tokens' are; controls: a read

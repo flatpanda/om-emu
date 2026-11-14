@@ -993,7 +993,7 @@ line.
 | --- | --- |
 | `KEY` (a control id: `s1`, `ok`, `menu`, `right`, `play`, ...) | a press: down, 150 ms, up, then the settle |
 | `KEY:down`, `KEY:up`, `hold:KEY[:MS]` | one edge; or down, MS (2000) ms, up and the settle |
-| `main_dial:+N`, `sub_dial:-N` | N detents (1 to 8, the player's cap), then the settle. A defect on 2026-11-13: the step sends the control's id, which the player refuses (`ValueError: dial "main_dial": main or sub`; it takes `main` or `sub`), so a script with a dial token fails at it |
+| `main_dial:+N`, `sub_dial:-N` | N detents (1 to 8, the player's cap), then the settle; the step sends the player's dial id (`main`, `sub`) |
 | `switch:ID=V`, `switch:ID+N` | a switch or position switch set to V, or stepped (`creative_dial`, `mode_dial`, `lever`, ...) |
 | `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `OPEN`, ... | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
 | `power:off` | the power lever off: the firmware's own power-off, which saves the kept state |

@@ -711,7 +711,11 @@ call: the 20 registers (the instruction count among them), the trampoline's byte
 none of it. What the function did stays: the memory it wrote, a stand-in's state it moved (S-HEAP's next block, a
 device's record of an access), its frames on the harness stack below the top (dead memory the lab's next call
 overwrites), and the stand-ins it reached stay in the stand-in log (`standins`). A host error (`Unported`, a device
-path the lab has not ported) stops the machine mid-instruction as it does in a tick, and the session cannot go on. A
+path the lab has not ported; or, in the loaded-ranges mode, code the boot does not load or is not shown to load,
+S-STALERAM) stops the machine mid-instruction as it does in a tick, and the session cannot go on: nothing above is put
+back. A `fn` in such a range is refused before the call (`BadRequest`, the range named), so the session goes on; a
+callee that reaches one answers `UnloadedCode`, its message saying the session cannot go on and its detail `restored:
+false`, and every later run or write answers `HostStopped`. A
 standalone machine (`--serve`) refuses `call`: it has no harness; write a stub, `reset {regs}` and `cont {stops}`
 there.
 
@@ -805,7 +809,11 @@ first instruction overlaps a changed byte, for a run-time data address the byte 
   listed at the start, before the lab runs (`play: patch audit: ...`; nav.mjs and debug.mjs print the same line), and
   in the audit's `unloaded` (each piece's run-time address and length, its section, that section's loaded end and its
   end word; `null` with the mode off). On the camera those bytes are stale RAM: code there stops the session when it
-  runs, but data there reads S-STALERAM's fill, which nothing else reports.
+  runs, but data there reads S-STALERAM's fill, which nothing else reports. The changed bytes where the boot is not
+  shown to load (below) are a class of their own: the line counts them apart (`... where the boot is not shown to load
+  (?) ...`) and `unloaded` gives each piece `unshown` (`head` or `stored`), the range and the head copy that bounds
+  it. The line says `no patched byte where the boot does not load or is not shown to load` only when neither class has
+  a byte.
 
 The patch files are the user's: none is committed here, and the tests write their own (`test/test_patch.mjs`).
 
@@ -815,7 +823,12 @@ browser's Patch option takes `auto`). The boot copies the main block to DRAM sec
 value of its end word, plus the reset head's own copies; the lab maps the whole block. In this mode what the boot does
 not load holds `0xA5` (S-STALERAM, `emu/FIDELITY-NOTES.md` 4.8), and code run there stops the session with the section,
 its loaded end and its end word named (`FirmwareError: pc ... runs code the boot does not load: ...`), as on the camera
-such code runs on stale RAM. Raise the section's end word (it is the immediate of the end switch's case; E147's section
+such code runs on stale RAM. The ranges no copy the lab reads is shown to load are filled and guarded the same way,
+with their own words (`... runs code the boot is not shown to load (?): ...`, naming the head copy that bounds the
+range): the head's range from the end of its first copy to section 1's start (E147 `0x60129000..0x60134000`, where
+caduceus-om3's slider build once put its code) and the piece of section 1's gap up to an end the head stores and never
+loads (E147 `0x603a2bd4..0x603a3804`). The boot stage before the main block's, which puts the head below its first
+copy in place, is not read; stock firmware runs nothing and reads nothing there (`emu/FIDELITY-NOTES.md` 4.8). Raise the section's end word (it is the immediate of the end switch's case; E147's section
 6: `0x60045e9c`) in the same patch to load more; the lab reads the ends from the patched image. The flash view
 (`0x50000000 +` offset) keeps every patched byte. Each session also sets the section loader's copied mask, one bit per
 section (S-SECLOADED, `emu/FIDELITY-NOTES.md` 7.17), as the loader would after its copies: patched code that tests it

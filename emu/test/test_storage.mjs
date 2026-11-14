@@ -33,7 +33,11 @@
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
 //                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
-//                   only), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
+//                   only; the still path's coverage, STILL_PATH: CreateParam's calls, the create, its stage-table
+//                   fill on a request with format word, flags, kind and option 0, the still constructor and the
+//                   second step once, the other constructors and stubs, the library's run, its generic kind handler,
+//                   TAKE's shot-record fill and takepic never, the per-shot EXIF fill once as the observers'
+//                   control), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
 //                   cleared, the aspect from the setting and the ISO from the record's +38174 0, the EXIF set run
 //                   natively once after H-RECPRECON (its resolution, zoom ratio and its conversions of the template's
 //                   zero exposure in the file; a fresh block with the clock moved gets the new date from the set and
@@ -109,6 +113,46 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
   E130: { model: 'E-M10 Mark III', version: '0231', ...OLY }, E133: { model: 'E-PL9', version: '0231', ...OLY }, E129: { model: 'TG-5', version: '0231', ...OLY },
   E122: { model: 'PEN-F', version: '0230', ...OLY }, E118: { model: 'E-M5MarkII', version: '0230', ...OLY, make: 'OLYMPUS IMAGING CORP.' },
   E120: { model: 'E-M10MarkII', version: '0230', ...OLY } };
+// The still path below S2 where REC_IMAGE runs natively (docs/hle-gaps.md 4.3.12): what of it runs in one shot, per
+// body, [what, address, runs]; each address's first instructions read on its body (D; E146's and E147's placed by the
+// cross-build map). rec_ImgPro_CreateParam and its four calls, which fill the request's format word (+8), flags (+12)
+// and kind byte and apply the request's extensions; the extensions' test, from CreateParam and from the release; the
+// image library's create, the constructor its stage-table fill picks (through a stub) and the create's second step;
+// ImageParam. Never run: the extension's apply (the format word's byte +8 is 0), the create's other constructors and
+// its second step's two others (the stub at E143 0x504953c2, E147 0x50496710, takes a format word with byte +8 1 or
+// the create's bit 19, which it sets for a format word of 11 or 12), the library's run and its generic kind handler
+// (S-JPEGENC), TAKE's shot-record fill and takepic (TAKE does not run). The per-shot EXIF fill inside the EXIF set is
+// the observers' control: it runs once. select: the stage-table fill, whose a0 is the create's handle with the
+// request's copy at +4 (size bytes; kind and option its bytes the fill tests first and second)
+const STILL_PATH = {
+  E143: { select: 0x504934A6, size: 48, kind: 37, option: 42, at: [
+    ['CreateParam', 0x50542363, 1], ['its call of the format word', 0x50542394, 1], ['its call of the flags', 0x5054239E, 1],
+    ['its call of the kind byte', 0x505423C1, 1], ['its call of the extensions', 0x505423FE, 1], ["the extension's test", 0x50543F93, 2],
+    ["the extension's apply", 0x50543FBB, 0], ['the create', 0x50491699, 1], ['the constructor stub', 0x504A7027, 1],
+    ['the still constructor', 0x504A8E07, 1], ["the create's second step", 0x50493541, 1], ['ImageParam', 0x50542528, 1],
+    ['the constructor for the kind byte', 0x5049CB5C, 0], ['the constructor for the option byte', 0x504953B9, 0],
+    ['the constructor for byte +8 1 or bit 19', 0x504953A9, 0], ["the second step's stub for byte +8 1 or bit 19", 0x504953C2, 0],
+    ["the second step's call for the kind byte", 0x5049CD1A, 0], ["the library's run", 0x50492758, 0], ['the generic kind handler', 0x5046D994, 0],
+    ["TAKE's shot-record fill", 0x503BBA51, 0], ['takepic', 0x503BCD51, 0], ['the per-shot EXIF fill (control)', 0x5042C2D5, 1]] },
+  E146: { select: 0x50485F48, size: 56, kind: 45, option: 50, at: [
+    ['CreateParam', 0x5051F5AF, 1], ['its call of the format word', 0x5051F5E0, 1], ['its call of the flags', 0x5051F5EA, 1],
+    ['its call of the kind byte', 0x5051F60D, 1], ['its call of the extensions', 0x5051F64A, 1], ["the extension's test", 0x505216CF, 2],
+    ["the extension's apply", 0x505216F7, 0], ['the create', 0x50483F0D, 1], ['the constructor stub', 0x5049A01A, 1],
+    ['the still constructor', 0x5049BFDB, 1], ["the create's second step", 0x50485FE3, 1], ['ImageParam', 0x5051F7C2, 1],
+    ['the constructor for the kind byte', 0x5048F852, 0], ['the constructor for the option byte', 0x50487EA9, 0],
+    ['the constructor for byte +8 1 or bit 19', 0x50487E99, 0], ["the second step's stub for byte +8 1 or bit 19", 0x50487EB2, 0],
+    ["the second step's call for the kind byte", 0x5048FA10, 0], ["the library's run", 0x50485182, 0], ['the generic kind handler', 0x5045F338, 0],
+    ["TAKE's shot-record fill", 0x503BC37E, 0], ['takepic', 0x503BD6AB, 0], ['the per-shot EXIF fill (control)', 0x50428252, 1]] },
+  E147: { select: 0x504947A6, size: 60, kind: 45, option: 50, at: [
+    ['CreateParam', 0x5052E69F, 1], ['its call of the format word', 0x5052E6D0, 1], ['its call of the flags', 0x5052E6DA, 1],
+    ['its call of the kind byte', 0x5052E6FD, 1], ['its call of the extensions', 0x5052E73A, 1], ["the extension's test", 0x505307C8, 2],
+    ["the extension's apply", 0x50530805, 0], ['the create', 0x5049272B, 1], ['the constructor stub', 0x504A88F1, 1],
+    ['the still constructor', 0x504AA8B2, 1], ["the create's second step", 0x50494841, 1], ['ImageParam', 0x5052E8B2, 1],
+    ['the constructor for the kind byte', 0x5049E129, 0], ['the constructor for the option byte', 0x50496707, 0],
+    ['the constructor for byte +8 1 or bit 19', 0x504966F7, 0], ["the second step's stub for byte +8 1 or bit 19", 0x50496710, 0],
+    ["the second step's call for the kind byte", 0x5049E2E7, 0], ["the library's run", 0x504939E0, 0], ['the generic kind handler', 0x5046DBA4, 0],
+    ["TAKE's shot-record fill", 0x503C660C, 0], ['takepic', 0x503C793B, 0], ['the per-shot EXIF fill (control)', 0x50436558, 1]] },
+};
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
 // clusters: 68880 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count; FSInfo's free count
@@ -602,6 +646,7 @@ export async function storageSession() {
     try {
       pl.open_session();
       const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL], setRuns = [];
+      const still = rec?.image && STILL_PATH[MODEL] ? { ...STILL_PATH[MODEL], runs: new Map(), requests: [] } : null;
       // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
@@ -612,6 +657,11 @@ export async function storageSession() {
         pl.session.settle('the clock setting');
         // the EXIF set's runs, seen at its entry (where the rule reads it: S-EXIFPRM runs it natively)
         if (rec.exif_set()) lab.observe(rec.R.exif.set, (l, r) => setRuns.push(r.a0 >>> 0), 'obs-exif-set');
+        // the still path's landmarks (STILL_PATH), counted through the shot; the request's copy at the stage-table fill
+        if (still) {
+          for (const [what, at] of still.at) { still.runs.set(what, 0); lab.observe(at, () => still.runs.set(what, still.runs.get(what) + 1), 'obs-still'); }
+          lab.observe(still.select, (l, r) => still.requests.push(l.sim.read((r.a0 >>> 0) + 4, still.size)), 'obs-still-select');
+        }
       }
       const SHOT = [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
         { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }];
@@ -659,6 +709,17 @@ export async function storageSession() {
             E147: [['0x503b9d62', '0x503b9e97', '0x503b9ee2', '0x503b9f78'], '0x50521140', 2] }[MODEL];
           const SRC_LOGS = SRC ? SRC[0].flatMap((at, k) => [...new Array(k === 0 ? SRC[2] : 1).fill(['0x25000402', at]), ['0x08010004', SRC[1]]]) : null;
           ok(JSON.stringify(run?.errlog) === JSON.stringify(SRC_LOGS), `the error logs up to the parameter set's call: ImageParam's sources' lookups (TAKE's 0x25000402, MM's 0x08010004 after each): ${JSON.stringify(run?.errlog)}`);
+          // the still path's coverage (STILL_PATH; docs/hle-gaps.md 4.3.12): each landmark's runs in the shot, the
+          // control (the per-shot EXIF fill) once, so an observer that never fires cannot pass
+          const runs = still ? still.at.map(([what, , n]) => [what, n, still.runs.get(what)]) : [];
+          const off = runs.filter(([, n, got]) => got !== n).map(([what, n, got]) => `${what} ${got} (want ${n})`);
+          ok(still && off.length === 0, still ? `the still path runs as pinned: ${off.length ? off.join('; ') : runs.map(([what, , got]) => `${what} ${got}`).join(', ')}` : `${MODEL}: no still-path table (STILL_PATH) for a body whose REC_IMAGE runs natively`);
+          // the stage-table fill once, on the request as CreateParam leaves it for a still in the lab's record: the
+          // format word (+8) and the flags (+12) 0, so no bit 19; the kind and option bytes 0: so the still
+          // constructor (S-EXIFPRM writes no picture-mode setting into the record: 4.3.12)
+          const q = still?.requests ?? [], b = q[0] ?? new Uint8Array(0), word = (o) => `0x${((b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0).toString(16)}`;
+          ok(q.length === 1 && word(8) === '0x0' && word(12) === '0x0' && b[still.kind] === 0 && b[still.option] === 0,
+            `the stage-table fill once (${q.length}), the request's format word ${word(8)}, flags ${word(12)}, kind byte (+${still?.kind}) ${b[still?.kind]}, option byte (+${still?.option}) ${b[still?.option]}: want all 0`);
           ok(y && y.status === 0 && y.free === 1 && y.header === HEADER && y.size === HEADER + stream.length && run.alive === 0, `REC_FILE's reply (S-RECREQ): ${JSON.stringify(y)}, pAlive ${run?.alive}`);
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);

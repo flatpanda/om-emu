@@ -11,15 +11,17 @@
 //                   read and expected, a shot, power:off and restart on the kept state (the stores M, E and B
 //                   restored), the card kept across the restart, a write reported as a poke (summary and the last
 //                   line); controls: a failed expect exits 1 naming the step and runs nothing after it, a restart with
-//                   --nvram off restores nothing, a call over its budget exits 1, with --loaded on a call into a gap
-//                   refused and a callee that reaches one ending the run (the session cannot go on), an --out it
-//                   cannot make and a shot it cannot write exit 1 with the reason on one line, a control the model
-//                   lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic
-//                   om3-patch-2 file the test writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the
-//                   tail of the reset head's first copy, loaded, never run) as --patch: the patched and audit start
-//                   lines, S-SECLOADED and S-STALERAM, the
+//                   --nvram off restores nothing, a restart after power:off carries the mode dial and the Fn lever and
+//                   a second restart (no power:off) does not, a call over its budget exits 1, with --loaded on a call
+//                   into a gap refused and a callee that reaches one ending the run (the session cannot go on), an
+//                   --out it cannot make and a shot it cannot write exit 1 with the reason on one line, a control the
+//                   model lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a
+//                   synthetic om3-patch-2 file the test writes (16 bytes of the main block's 0xFF padding at 0x107f00,
+//                   in the tail of the reset head's first copy, loaded, never run) as --patch: the patched and audit
+//                   start lines, S-SECLOADED and S-STALERAM, the
 //                   loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative dial's setting
-//                   by the getter, power:off and restart with the stores restored, no poke; control: the same file
+//                   by the getter, power:off and restart with the stores restored and the dial still at ART (the
+//                   getter's 899, the record's carried), no poke; control: the same file
 //                   with a run in the 0xFF tail past section 10's loaded end, reported by the start line and the
 //                   summary's audit (unloaded), read as S-STALERAM's fill, a write reported as a poke, a failed expect
 //                   exiting 1
@@ -178,6 +180,11 @@ async function e143({ ok }, { T, newCard, step, sameFile, hello }) {
   ok(f.rc === 1 && f.sum?.ok === false && f.steps.length === 5 && f.steps.at(-1).ok === false && /^session\.mjs: FAILED at step 4 \(expect:gui=NO_SUCH_STATE\): expect failed: GUI "SS_COMMON\/ID_ST_CA_REQ_DISP", want "NO_SUCH_STATE"; 5 step\(s\) on E143; no poke$/.test(f.last),
     `E143 control: a failed expect: rc ${f.rc} ${f.steps.length} steps | ${f.last}`);
   ok(step(f, 'restart').nvram === null && f.sum?.stand_ins?.includes('S-SETSAVE') && !f.sum.stand_ins.includes('S-NVRAM'), `E143 control: --nvram off: ${JSON.stringify(step(f, 'restart'))}`);
+  // a restart after power:off carries the physical controls (the mode dial, the Fn lever); one without is a battery
+  // pull, a fresh start
+  const pr = cli(['--model', 'E143', 'wait:500', 'switch:lever=0', 'power:off', 'restart', 'wait:500', 'restart', 'wait:100']);
+  const [r1, r2] = pr.steps.filter((x) => x.token === 'restart');
+  ok(pr.rc === 0 && r1?.carried?.lever === 0 && Number.isInteger(r1.carried.mode_dial) && r2?.carried === null, `E143 restart after power:off carries the controls, a second restart does not: ${JSON.stringify(r1?.carried)} ${JSON.stringify(r2?.carried)} | ${pr.last}`);
   // control: a call over its budget is the step's failure
   const c = cli(['--model', 'E143', 'call:0x503c49ab:d0=24,limit=5', 'wait:100']);
   ok(c.rc === 1 && /FAILED at step 1 \(call:0x503c49ab:d0=24,limit=5\): call: CallLimit/.test(c.last) && c.steps.length === 2, `E143 control: CallLimit: rc ${c.rc} | ${c.last}`);
@@ -237,7 +244,7 @@ async function e147({ ok }, { T, newCard, step, sameFile, hello }) {
   const r = cli(['--model', 'E147', '--patch', T('patch.json'), '--card', T('card.omsd'), '--card-put', `TEST/HELLO.TXT=${T('hello.txt')}`, '--nvram', T('nv.json'), '--out', T('out1'),
     'wait:1500 expect:standin:S-SECLOADED expect:standin:S-STALERAM read:0xa32de590:4 expect:mem:0xa32de590=ff030000', `read:${run}:16 expect:mem:${run}=${newHex}`,
     'expect:card:TEST/HELLO.TXT card-get:TEST/HELLO.TXT=got.txt', 's1 wait:1200 s2:down wait:300 s2:up wait:5000 expect:exif:DCIM/100OMSYS/*.JPG:Model~OM-3 exif:DCIM/100OMSYS/*.JPG',
-    GET, 'switch:creative_dial=3', GET, 'menu power:off restart wait:1500 expect:standin:S-NVRAM']);
+    GET, 'switch:creative_dial=3', GET, 'menu power:off restart wait:1500 expect:standin:S-NVRAM', GET]);
   ok(r.rc === 0 && r.sum?.ok === true && r.steps.every((x) => x.ok), `E147 run: rc ${r.rc} ${r.err.slice(-600)}`);
   ok(r.err.includes(`session.mjs: patched firmware: 1 patch (16 bytes changed) from ${T('patch.json')}`) && r.err.includes('session.mjs: patch audit: no patched byte where the boot does not load'), `E147 the start lines: ${r.err.slice(0, 500)}`);
   ok(JSON.stringify(r.sum?.patch_audit) === '{"hooks":[],"ported":[],"unloaded":[],"tasks":[]}' && /^1 patch \(16 bytes changed\)/.test(r.sum?.patch ?? ''), `E147 the summary's patch and audit: ${r.sum?.patch} ${JSON.stringify(r.sum?.patch_audit)}`);
@@ -246,7 +253,8 @@ async function e147({ ok }, { T, newCard, step, sameFile, hello }) {
   const ex = step(r, 'exif:DCIM/100OMSYS/*.JPG');
   ok(/OM-3/.test(ex.exif?.Model ?? '') && /OM Digital/.test(ex.exif?.Make ?? ''), `E147 S2's Exif: ${JSON.stringify(ex).slice(0, 300)}`);
   const gets = r.steps.filter((x) => x.token === GET).map((x) => x.d0);
-  ok(JSON.stringify(gets) === '["0x00000385","0x00000383"]', `E147 the creative dial's setting by the getter: ${JSON.stringify(gets)} (901 at position 1, 899 at 3)`);
+  ok(JSON.stringify(gets) === '["0x00000385","0x00000383","0x00000383"]' && step(r, 'restart').carried?.creative_dial === 3,
+    `E147 the creative dial's setting by the getter: ${JSON.stringify(gets)} (901 at position 1, 899 at 3, 899 after power:off and restart, the dial carried: ${JSON.stringify(step(r, 'restart').carried)})`);
   ok(JSON.stringify(step(r, 'restart').nvram?.loaded) === '["M","E","B"]' && r.sum.pokes.length === 0 && /^session\.mjs: passed; \d+ step\(s\) on E147, patched; no poke$/.test(r.last), `E147 power:off and restart, no poke: ${JSON.stringify(step(r, 'restart'))} | ${r.last}`);
   // control: a run past section 10's loaded end is reported (start line, audit), read as the fill; a write is a poke;
   // a failed expect exits 1

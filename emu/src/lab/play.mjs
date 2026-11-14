@@ -1080,6 +1080,25 @@ export class PlaySession extends N.NavSession {
     this.pressed = new Set();
     this.shutter_held = new Set();
     this.mode_index = mode_start();
+    // a power-on after the power lever's off (src/lab/player.mjs power): the physical controls where the closing
+    // session left them (positions()), set in the images before the start reads them, as --creative-dial's position
+    // is; a physical control keeps its position while the camera is off. Null for any other start
+    this.carried = opts.carried ?? null;
+    if (this.carried !== null) {
+      const { mode_dial: md, creative_dial: k = null, lever = null } = this.carried;
+      if (!(Number.isInteger(md) && md >= 0 && md < MODE_DIAL.positions.length)) throw new ValueError(`carried mode dial ${show(md)}: 0..${MODE_DIAL.positions.length - 1}`);
+      this.images[MODE_DIAL.group].set(mode_image(md));
+      this.mode_index = md;
+      if (k !== null) {
+        if (!cd.positions || !Number.isInteger(k) || k < 0 || k >= cd.positions.length) throw new ValueError(`carried creative dial ${show(k)}: not a position of this body's dial`);
+        this.posswitch_image(cd, k);
+      }
+      if (lever !== null) {
+        if (!ON_LAB_MODEL || (lever !== 0 && lever !== 1)) throw new ValueError(`carried Fn lever ${show(lever)}: a bit, on E143`);
+        const [g, b, bit] = BY_ID.get('lever').uiin;
+        set_bit(this.images[g], b, bit, lever);
+      }
+    }
     this.js_held = null; this.js_posted = null;
     this.play_log = [];
     this.notes = [];
@@ -1781,6 +1800,12 @@ export class PlaySession extends N.NavSession {
     const at = this.opts.mutant === 'cdial-reversed' ? c.positions.length - 1 - k : k;
     c.positions.forEach(([g, b, bit, pol], i) => set_bit(this.images[g], b, bit, i === at ? pol : 1 - pol));
     this.cdial_index = k;
+  }
+  // The physical controls a power-on after the lever's off starts at (opts.carried): the mode dial's position, the
+  // creative dial's where the body has one, and the Fn lever's bit on E143, whose start sets the lever (idle_images;
+  // a ported body's lever bit is left as the image has it and is not carried)
+  positions() {
+    return { mode_dial: this.mode_index, ...(this.cdial_index !== null ? { creative_dial: this.cdial_index } : {}), ...(ON_LAB_MODEL ? { lever: this.bit_of('lever') } : {}) };
   }
   // Fn lever, monitor, rotate, power, fw switches (value 0 or 1 = the bit), mode dial and creative dial (value = a
   // position, from 0).
@@ -2526,6 +2551,7 @@ export class PlaySession extends N.NavSession {
       lab_ns: lab.lab_time(), gate: lab.sim.u32(B7_GATE), pressed: [...this.pressed].sort(), mode_dial: this.mode_index,
       mode_dial_positions: MODE_DIAL.names, bits,
       ...(this.cdial_index !== null ? { creative_dial: this.cdial_index, creative_dial_positions: BY_ID.get('creative_dial').labels } : {}),
+      ...(this.carried !== null ? { carried: this.carried } : {}),
       dispq: this.dispq_total + (lab.dispq ? lab.dispq.length : 0), menu, engine_total: lab.exec_history.length + this.exec_trimmed,
       harness_entries: lists, heap, layout: lab.b2_snapshot(), a15: this.a15_status(), a15_frames: this.a15_frames, switches: this.switches,
       eye: lab.sim.read(EYE_WORD, 1)[0], xcpu: lab.xcpu_log ? lab.xcpu_log.length : 0, xcpu_waiting: lab.xcpu_waiting ?? 0,

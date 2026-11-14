@@ -331,10 +331,13 @@ export async function openSession(o = {}) {
     for (const x of pl.stand_ins_in_use()) standins.add(x);
     if (pl.patch_audit) { const d = pl.patch_audit_doc(); for (const t of d.tasks) tasks.add(t); audit = { ...d, tasks: [...tasks] }; }
   };
-  const open = () => {
+  // positions: the physical controls' positions a power:off left (src/lab/player.mjs power), which the next session's
+  // start reads: a restart after power:off is the same camera powered on
+  const open = (positions = null) => {
     sessionNo += 1;
     frame = null;
     pl = new Player(a, envFor(sessionNo));
+    pl.off_positions = positions;
     pl.open_session();
   };
   const closePlayer = () => {
@@ -408,9 +411,10 @@ export async function openSession(o = {}) {
     try {
       if (failed) throw new SessionRefused(`the run failed at step ${failed.step}`);
       if (st.kind === 'restart') {
+        const positions = pl?.phase === 'off' ? pl.off_positions : null;    // after power:off; else a battery pull, a fresh start
         closePlayer();
         if (st.card) { cardFile = path.resolve(local(st.card)); card = fileCard(cardFile); rec.card = cardFile; }
-        open();
+        open(positions);
         rec.session = sessionNo;
         if (pl.phase === 'error') fail(rec, labMessage());
       } else if (st.kind === 'shot') {
@@ -465,7 +469,10 @@ export async function openSession(o = {}) {
     } catch (e) { if (BUG(e)) throw e; }
     const st2 = pl?.status_doc ?? {};
     Object.assign(rec, { phase: pl?.phase ?? null, lab_ns: pl?.session?.lab?.lab_time() ?? null, gui: pl?.session ? st2.gui_name ?? null : null, frame: pl?.frame?.[3] ?? null });
-    if (st.kind === 'restart') rec.nvram = st2.nvram ?? null;          // the stores the new session restored (S-NVRAM)
+    if (st.kind === 'restart') {
+      rec.nvram = st2.nvram ?? null;          // the stores the new session restored (S-NVRAM)
+      rec.carried = st2.carried ?? null;      // the controls' positions carried from power:off (null: a fresh start)
+    }
     if (pl?.frame_error && pl.frame_error !== lastFrameError) rec.frame_error = pl.frame_error;     // once, when it changes
     lastFrameError = pl?.frame_error ?? null;
     note();

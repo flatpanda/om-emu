@@ -5,10 +5,14 @@
 //                 creative_dial) and the application opens the Picture Mode page at every position but 2; a step and a
 //                 key press move it on, wrapping; /api/controls and the status show it wired with its labels; a
 //                 session started with creative_dial 3 (the browser's ?creative_dial=3, web/args.mjs) reads 899 from the
-//                 start, and the browser's ?creative_dial= empty or 'x' is refused, not position 0. Controls: with the
-//                 mutant cdial-reversed (the entries in reverse order) position 0 sets the last entry's family, and a
-//                 position past the dial's last is refused. E143 (bin/test.mjs's process): the dial is not wired, and an input or a start
-//                 position for it is refused with the reason
+//                 start, and the browser's ?creative_dial= empty or 'x' is refused, not position 0; turned to 3, the
+//                 power lever off and the camera powered on again (control power), the new session starts at 3 and
+//                 reads 899, its status naming the positions carried. Controls: with the mutant cdial-reversed (the
+//                 entries in reverse order) position 0 sets the last entry's family, a position past the dial's last is
+//                 refused, and a control restart after the power-off is a fresh start at 1 (901). E143 (bin/test.mjs's
+//                 process): the dial is not wired, and an input or a start position for it is refused with the reason;
+//                 the mode dial and the Fn lever moved, the lever off and power on: both where they were (the status,
+//                 the lever's bit, the firmware's dial index), and at their idle positions after a restart
 //   node emu/test/test_cdial.mjs              (OM_EMU_MODEL=E147 for the OM-3)
 
 const FAMILY = 897;                              // the picture-mode family the dial sets (src/fw/models.mjs creative_dial)
@@ -40,6 +44,25 @@ export async function cdialSession() {
     ok(!('creative_dial' in pl.session.status()), 'E143: the status has no creative dial');
     pl.close_session();
     ok(throwsLike(() => open({ creative_dial: 0 }), /--creative-dial: 0x1906 is not in E143's UI_IN tables/) === true, 'E143: a start position refused with the reason');
+    // the mode dial and the Fn lever across the power lever's off and a power-on: where they were left
+    const p2 = open(), s2 = () => p2.session;
+    const { MODE_DIAL, MODE_DIAL_INDEX, mode_start } = await import('../src/lab/play.mjs');
+    const md = (mode_start() + 3) % MODE_DIAL.positions.length, lever0 = s2().bit_of('lever');
+    p2.run_input({ type: 'switch', id: 'mode_dial', value: md }); s2().idle_slice(s2().lab.lab_time() + 1000e6);
+    p2.run_input({ type: 'switch', id: 'lever', value: 1 - lever0 }); s2().idle_slice(s2().lab.lab_time() + 1000e6);
+    const dialIndex = () => s2().lab.sim.u32(MODE_DIAL_INDEX), before = dialIndex();
+    p2.power('off');
+    p2.control({ type: 'control', op: 'power', value: 1 });
+    s2().idle_slice(s2().lab.lab_time() + 1500e6);
+    let st = s2().status();
+    ok(st.mode_dial === md && s2().bit_of('lever') === 1 - lever0 && dialIndex() === before && JSON.stringify(st.carried) === JSON.stringify({ mode_dial: md, lever: 1 - lever0 }),
+      `E143: power off and on: mode dial ${st.mode_dial} (want ${md}), lever bit ${s2().bit_of('lever')} (want ${1 - lever0}), the firmware's dial index ${dialIndex()} (before ${before}), carried ${JSON.stringify(st.carried)}`);
+    p2.power('off');
+    p2.control({ type: 'control', op: 'restart' });
+    s2().idle_slice(s2().lab.lab_time() + 1500e6);
+    st = s2().status();
+    ok(st.mode_dial === mode_start() && s2().bit_of('lever') === lever0 && !('carried' in st), `E143 control: a restart after the off starts fresh: mode dial ${st.mode_dial}, lever ${s2().bit_of('lever')}, carried ${JSON.stringify(st.carried)}`);
+    p2.close_session();
     return { checks, bad };
   }
   let pl = open();
@@ -82,6 +105,22 @@ export async function cdialSession() {
     const v = playerArgs({ creative_dial: q }).creative_dial;
     ok(throwsLike(() => open({ creative_dial: v }), /--creative-dial .*: a position 0\.\.4/) === true, `?creative_dial=${q} refused: ${JSON.stringify(v)}`);
   }
+  // the power lever off and on: the dial stays at 3 while the camera is off, so the next start reads it (899)
+  pl = open();
+  turn({ type: 'switch', id: 'creative_dial', value: 3 });
+  const turned = [s().status().creative_dial, s().get(FAMILY)];
+  pl.power('off');
+  pl.control({ type: 'control', op: 'power', value: 1 });
+  s().idle_slice(s().lab.lab_time() + 1500e6);
+  st = s().status();
+  ok(turned.join() === '3,899' && st.creative_dial === 3 && s().get(FAMILY) === 899 && st.carried?.creative_dial === 3 && st.carried.mode_dial === st.mode_dial,
+    `turned to ${turned[0]} (family ${turned[1]}), power off and on: position ${st.creative_dial}, family ${s().get(FAMILY)}, carried ${JSON.stringify(st.carried)}`);
+  // control: a restart is a fresh start, at position 1
+  pl.power('off');
+  pl.control({ type: 'control', op: 'restart' });
+  s().idle_slice(s().lab.lab_time() + 1500e6);
+  ok(s().status().creative_dial === 1 && s().get(FAMILY) === 901 && !('carried' in s().status()), `control: a restart after the off: position ${s().status().creative_dial}, family ${s().get(FAMILY)}`);
+  pl.close_session();
   // control: the dial's entries taken in reverse order (the mutant cdial-reversed): position 0 sets the last entry's
   // family, which the check above would refuse
   pl = open({ x_mutant: 'cdial-reversed' });

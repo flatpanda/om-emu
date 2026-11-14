@@ -61,7 +61,13 @@ blocks are the model's). `npm run play` in `emu/` does the same as `play.sh`. Ct
 camera does across a power-off: the settings stores M and E as the firmware saves them (the menu's close, the
 power-off), the SCPU window's backed-up words (among them the store B, which the power lever's off saves there and
 the next start restores) and the sub-CPU's memory (its RTC and backup registers). A camera whose
-clock was set starts on its shooting screen with the last session's settings, not at the date prompt. `bin/play.mjs`
+clock was set starts on its shooting screen with the last session's settings, not at the date prompt. The physical
+controls keep their positions across the power-off too: a power-on after the power lever's off (the page's power
+lever, `{"type": "control", "op": "power"}`, `bin/session.mjs`'s `restart` after `power:off`) starts the mode dial,
+the creative dial (E147) and the Fn lever (E143) where the closing session left them, before the start reads them,
+and the status names them (`carried`, e.g. `{"mode_dial": 8, "lever": 1}`; X, `test/test_cdial.mjs`); a restart, a
+`camapp` control and every first start are fresh, at the idle positions. Other switches (the monitor, `rotate`)
+start at their idle levels after any power-on. `bin/play.mjs`
 keeps one JSON file per model, `~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`, ...), and its
 startup line names the file in use. `--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each start and leaves
 the file alone; `--nvram FILE` (or `OM_EMU_NVRAM=FILE`) keeps the state in FILE instead; `--nvram` wins over
@@ -360,7 +366,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   The labels follow those pages; Caduceus for OM-3's camera report names the body's four positions CRT, ART, COLOR and
   MONO with the same families, and 898 none of them. A session starts at position 1 (COLOR); `--creative-dial K` (the
   browser's `?creative_dial=K`, K in decimal digits: an empty or other value is refused, not taken as 0) starts it at
-  K, which the start reads (position 3 starts with 899). The status gives
+  K, which the start reads (position 3 starts with 899). A power-on after the power lever's off starts it where it
+  was turned (3 stays 3, family 899; the status's `carried`), as the kept state's paragraph above says; a restart
+  starts it at 1 or K again. The status gives
   the position (`creative_dial`) and the labels (`creative_dial_positions`). Other bodies have no such dial in the lab:
   E143's tables lack the code, and the input is refused with that reason; E122's tables hold it, and there it is only
   decoded (what each position selects is not read).
@@ -939,7 +947,7 @@ line.
 | `switch:ID=V`, `switch:ID+N` | a switch or position switch set to V, or stepped (`creative_dial`, `mode_dial`, `lever`, ...) |
 | `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `OPEN`, ... | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
 | `power:off` | the power lever off: the firmware's own power-off, which saves the kept state |
-| `restart[:card=FILE]` | a new session in this process on the same `--nvram` file and card (or the card FILE from now on); without `power:off` before it a battery pull |
+| `restart[:card=FILE]` | a new session in this process on the same `--nvram` file and card (or the card FILE from now on); after `power:off` the camera's power-on, the mode dial, creative dial and (E143) Fn lever where they were (the record's `carried`); without `power:off` before it a battery pull, a fresh start at the idle positions |
 | `shot:FILE.png` | the last published frame as an RGB PNG, the pixels `GET /api/frame` gives |
 | `read:ADDR:LEN`, `call:FN[:d0=..,a0=..,limit=N,space=..]` | the debug route's `read` and `call` ops (The debug API) |
 | `write:ADDR=HEX` | the debug route's `write`: allowed but **a poke**, listed in the summary and named on the last line |
@@ -959,7 +967,8 @@ Output: one JSON line per step on stdout, the boot first (`token` `open`): `step
 `running`, `off`, `error`), `lab_ns`, `gui` (the GUI state's name), `frame` (the first 16 hex digits of the published
 composite's sha256, as the status and the session log give it), then the step's result: `hex` (read), `fn`, `d0`,
 `steps`, `stubs`, `regs` (call), `card` (card-ls: `[{path, size} | {path, dir}]`), `path`, `size`, `file` (card-get,
-shot), `exif` (exif), `expect` (its kind), `session` and `nvram` (restart: the stores the new session restored),
+shot), `exif` (exif), `expect` (its kind), `session`, `nvram` and `carried` (restart: the stores the new session
+restored, the controls' positions carried from `power:off` or null),
 `frame_error` (when the composite's error changes), and on a failure `error`. The last line is the summary: `summary:
 true`, `ok`, `model`, `patch` (the patched line), `patch_audit` (`hooks`, `ported`, `unloaded`, `tasks`, as play's
 status; when no session finished its bring-up, the start's `unloaded` with `hooks` and `ported` null, not audited), `stand_ins` (every one any session of the run used), `pokes`, `harness_inputs`, `calls`, `card` (the listing

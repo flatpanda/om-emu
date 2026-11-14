@@ -330,6 +330,7 @@ export class Player {
     this.replaying = false;
     this.live = null;                // the live debug route (debug_input), made at the first debug input
     this.patch_audit = null;         // a patch overlay's audit (open_session), and the patch's tasks started in any session
+    this.off_positions = null;       // the physical controls' positions the power lever's off left, for the next power-on (power)
     this.patch_tasks = new Set();
     this.audio = new AudioRing();    // the sessions' sound as published (publish_audio), for GET /api/audio
     if (env.flags) {                 // the node host: stop and signalled live in shared memory (host/labworker.mjs)
@@ -359,6 +360,7 @@ export class Player {
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
+      ...(this.off_positions !== null ? { carried: this.off_positions } : {}),   // a power-on after the lever's off (power)
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
       ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}) };
   }
@@ -372,6 +374,7 @@ export class Player {
     // env.onPlaySession (the session replayer's recorder): the session and its lab as they stand right
     // after enter returned or raised (a failed enter closes and nulls the lab).
     try { s.enter(); } finally { this.env.onPlaySession?.(this, s, s.lab ?? null); }
+    this.off_positions = null;                 // taken by this session (its status: carried)
     this.session = s;
     this.patch_audit = patchAudit(s.lab);      // a patch overlay's audit after the bring-up (src/lab/patchaudit.mjs)
     this.down.clear();
@@ -1120,6 +1123,9 @@ export class Player {
       const rec = s.switch_input('power', 1 - s.bit_of('power'));
       const off = s.power_down();                    // the firmware's power-off to its last write, where the body runs it
       if (off !== null) rec.power_off = { lab_ns: off.lab_ns, frames: off.frames, pins: off.pins, ready: off.ready, scpu: off.scpu, request_word: off.request_word };
+      // the physical controls stay where they are while the camera is off: the next power-on (control power) starts
+      // there; a restart or camapp is a fresh start at the idle positions
+      this.off_positions = s.positions();
       this.close_session();
       this.set_phase('off');
       return rec;
@@ -1139,11 +1145,13 @@ export class Player {
         this.camapp_native_tra = Number(value) === 3;
         this.close_session();
         this.error = null;
+        this.off_positions = null;
         this.open_session();
         res.token = `camapp ${this.camapp_native_tra ? 'native transactions' : this.camapp_components ? 'components' : 'on'}`;
       } else if (op === 'restart' || (op === 'power' && value !== 0 && value !== false && value !== null)) {
         this.close_session();
         this.error = null;
+        if (op === 'restart') this.off_positions = null;      // power on keeps what the lever's off left (power)
         this.open_session();
       } else if (op === 'power') {
         if (this.session !== null) this.power('off');

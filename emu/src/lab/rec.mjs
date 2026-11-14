@@ -98,7 +98,12 @@
 //               0x503bbd26..0x503bbd98, from which rec_bracket_entry (0x5053b1dc) takes the last frame's index
 //               (0x5053b33f..0x5053b375; with them 0 it is 65535 and REC_IMAGE loops, X), and the aspect +38122 (id
 //               12417, a byte, 0x503bc035..0x503bc044), which rec_bracket_update makes the packet's ImgAspect
-//               (0x5053b45d..0x5053b469); on E146 and E147 at the offsets the rule reads (+37726.., the aspect +37774)
+//               (0x5053b45d..0x5053b469); on E146 and E147 at the offsets the rule reads (+37726.., the aspect +37774);
+//               and the three fields rec_ImgPro_CreateParam's format word is made from (since 2026-11-14), the
+//               picture mode +38037 (id 38017, or 40209 where it gives 6, as TAKE's fill reads them), the code +38008
+//               (49169) and the art parameter +38772 (17601; E146 and E147 +37689, +37660, +38224), so that the
+//               image library's create takes the constructor the picture mode selects, as on the camera: on E147 at
+//               the creative dial's COLOR, MONO and ART positions not the still constructor (docs/hle-gaps.md 4.3.12)
 //   REC_IMAGE's own task makes the packet's file buffer and header and hands it to REC_FILE natively, from the packet
 //   REC_PREPRO's task posts it (H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3; on E146 and E147 since 2026-11-10, at
 //   the addresses the rule reads, fact 'rec_image', src/fw/facts.mjs recImage, docs/hle-gaps.md 4.3.5, where the post
@@ -123,7 +128,8 @@
 //               (0x50541d5f), for each frame until rec_bracket_finish (0x5053b761) finds the last done
 //   S-RECREQ    the request REC_IMAGE takes, where TAKE, api_rec, REC_MAIN and REC_PREPRO do not run: the packet as
 //               REC_MAIN builds it (the fields below, every other 0 as its clear leaves it; ImgAspect left to
-//               REC_IMAGE) with pAlive (+0) a word of the lab's, set to 1, posted to REC_IMAGE's queue with REC's post
+//               REC_IMAGE; Command 16, the still's command, since 2026-11-14) with pAlive (+0) a word of the lab's,
+//               set to 1, posted to REC_IMAGE's queue with REC's post
 //               0x5053990f as REC_PREPRO's task posts it after rec_precon_exec (0x5054edcf: the only post to that queue
 //               on CPU 0, D); and the requester's side of REC_FILE's completion: with the packet's Free set
 //               (REC_IMAGE's rec_bracket_update sets it, X) REC_FILE replies {Status, Number, Packet} to the
@@ -250,6 +256,12 @@ const NO_MEDIA = 0xFFFF;     // Media2: no second slot (0x5053dd14)
 const CARD = 1;              // RecordDevice bit 0: the card (0x50540392, 0x50540418)
 const JPEG = 1;              // FileType: the extension and DCF kind tables' index 1 (0x5053fee3; JPG, kind 1)
 const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117)
+// Command: the requester's command, which REC_MAIN copies from its message (docs/hle-gaps.md 4.3.4) and dispatches on:
+// its still handler, the one that sets Mode 4097 (0x5053a349), is Command 16's case for the request's Mode 4113, and
+// its receive refuses a command below 16 (D on E143, E146 and E147). rec_ImgPro_CreateParam's extension sizes its
+// first buffer by it (16: 240 MiB); with the clear's 0 that size is 0, for which MM's bank allocation asks more blocks
+// than the bank has and retries without end (X on E147 at COLOR; docs/hle-gaps.md 4.3.12)
+const STILL_COMMAND = 16;
 // ImgAspect, S-RECIMAGE's (the E144 family): 1, which E143's aspect setting 12417 holds in the lab's store and its
 // maker notes give as 4:3 (X, exiftool); where REC_IMAGE runs natively it sets it from the record's aspect (S-EXIFPRM)
 const ASPECT = 1;
@@ -370,11 +382,14 @@ export class RecFile {
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
     // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
     // runs natively); the EXIF set reads the aspect too (0x5042c356)
+    // (an entry [id, at, n, when, other]: other's value instead where id gives when, the picture mode's fill)
     const take = {};
-    for (const [id, at, n] of this.image?.take ?? []) {
-      const v = lab.call(this.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 & (n === 1 ? 0xFF : 0xFFFF);
-      sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
+    const read = (id, n) => lab.call(this.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 & (n === 1 ? 0xFF : 0xFFFF);
+    for (const [id, at, n, when, other] of this.image?.take ?? []) {
+      let v = read(id, n);
       take[id] = v;
+      if (other !== undefined && v === when) take[other] = v = read(other, n);
+      sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
     }
     if (this.exif_set()) {
       // the EXIF set natively, as takepic calls it once its fill is made: the dates, the zoom ratio, the gains
@@ -403,6 +418,7 @@ export class RecFile {
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
+    if (this.image) put('Command', '<I', STILL_COMMAND);
     if (this.frame) {       // the E118 family's packet: FileType a halfword, no second slot; RecordDevice on E118 only
       put('FileType', '<H', JPEG);
       if (P.RecordDevice !== undefined) put('RecordDevice', '<H', CARD);

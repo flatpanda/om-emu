@@ -39,7 +39,8 @@
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
 // watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop, display
 // options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147 with OM_CADUCEUS
-// (test_looks.mjs), every caduceus-om3 release against its pins when OM_CADUCEUS names a checkout
+// (test_looks.mjs), E147's still set-up at each creative-dial position and, with OM_CADUCEUS, Caduceus' .hook_su run
+// by S2 at COLOR (test_stillsetup.mjs), every caduceus-om3 release against its pins when OM_CADUCEUS names a checkout
 // (test_caduceus.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
@@ -744,6 +745,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`Caduceus films below the pixels: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : r.status === 0 ? 'ok' : 'FAILED'}`);
   [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
+}
+// E147's still set-up (test_stillsetup.mjs): a shot at each creative-dial position, the constructor the picture mode
+// selects; with OM_CADUCEUS, Caduceus' .hook_su run by S2 at COLOR; each in a process of its own on E147
+{
+  const { spawnSync } = await import('node:child_process');
+  const one = (arg) => spawnSync(process.execPath, [new URL('../test/test_stillsetup.mjs', import.meta.url).pathname, arg], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const r = one('--session'), c = process.env.OM_CADUCEUS ? one('--caduceus') : null;
+  const lines = (x) => (x.stdout + x.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || x.status !== 0);
+  console.log(`E147's still set-up: dial ${r.status === 0 ? 'ok' : 'FAILED'}; Caduceus ${c === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : c.status === 0 ? 'ok' : 'FAILED'}`);
+  [...(r.status === 0 ? [] : lines(r)), ...(c === null || c.status === 0 ? [] : lines(c))].forEach((l) => console.log('  ', `E147: ${l.trim()}`));
+  bad += (r.status === 0 ? 0 : 1) + (c === null || c.status === 0 ? 0 : 1);
 }
 // the caduceus-om3 releases (test_caduceus.mjs): the pins' units; with OM_CADUCEUS naming a caduceus-om3 checkout, each
 // release folder's files against its pins and its flow on E147 in processes of their own; without it SKIPPED

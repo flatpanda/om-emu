@@ -3430,7 +3430,11 @@ export function recorder(img) {
 //   is read and its padded name loaded before the call that prints them, `mov`, `movhu` or `movbu` to d0 from a3, the
 //   packet, a2, a3 + N (`mov N,a2; add a3,a2`), or a1, the record a3 points at once moved past the packet's fields
 //   (`add P,a3; mov (a3),a1`: E146 and E147, after a return a conditional branch skips, X); the fields the lab writes
-//   or reads with their widths, which must lie in the packet
+//   or reads with their widths, which must lie in the packet; and Command (4 bytes, +52; E146 and E147 +36), which
+//   REC_MAIN copies from the requester's message and dispatches on, the still's handler being Command 16's case (D on
+//   the three: its jump table's entry 16, for the request's Mode 4113, the handler that sets Mode 4097), and which
+//   rec_ImgPro_CreateParam's extension reads for the size of its first buffer (S-RECREQ gives it 16; this version's
+//   dump only: the other versions' rules do not read it)
 // - jpeg: make_image (S-JPEGENC) by its trace; rec_jpeg_exec by its trace too, read as the form but not given since
 //   2026-11-11 (no stand-in reads it: REC_IMAGE's task runs it); header, the size rec_jpeg_exec clears before the
 //   encode, the
@@ -3475,7 +3479,7 @@ export const REC_FILE_E143 = {
   packet: {
     size: 316, post: 0x5053990F,
     fields: { pExifParam: 28, HandleTarget: 116, BuffAddr1: 144, BuffSize1: 148, HeaderSize: 184, Status: 208, Mode: 210,
-      Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314 },
+      Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314, Command: 52 },
   },
   jpeg: {
     make_image: 0x50549B42, header: 41984,
@@ -3606,7 +3610,7 @@ export function recFile(img, kcb) {
     else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
   }
   const fields = {};
-  for (const [name, width] of Object.entries(REC_FIELDS)) {
+  for (const [name, width] of Object.entries({ ...REC_FIELDS, Command: 4 })) {
     const f = named.get(name);
     if (f?.width !== width || f.ptr !== null) return undefined;
     fields[name] = f.at;
@@ -3717,7 +3721,13 @@ export function recFile(img, kcb) {
 //   0x5053b345), rec_bracket_update's aspect, `movbu (AS,An),d0; bra; mov 1,d0; mov (8,sp),a0; movbu
 //   d0,(ImgAspect,a0)` (0x5053b45d); each one's TAKE fill, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a0; clr d1;
 //   movhu d0,(B,a0)` (`movbu` for a byte; 0x503bbd26..0x503bbd98, 0x503bc035), one site each, S one settings read
-//   (0x500417da)
+//   (0x500417da); then the picture mode and the two fields the library's format mapper reads with it, the record
+//   offsets rec_ImgPro_CreateParam's format helper (its call after its trace) adds before its first call, `add
+//   OFF,Rn` three times: the picture mode (+38037), the code (+38008) and the art parameter (+38772; E146 and E147
+//   +37689, +37660, +38224, D on the three); TAKE fills the code and the parameter in the form above (`movhu` or
+//   `movbu`, one site each), and the picture mode in its own, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a2; add
+//   OFF,a2; movbu d0,(a2); extbu d0; cmp W,d0; bne; mov ID2,d0; mov 0,a0; clr d1; call S; movbu d0,(a2)`, one site,
+//   which reads ID2 instead where ID gives W: [ID, OFF, 1, W, ID2] (38017 and 40209 where it gives 6, D on the three)
 // - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps.md
 //   4.3.4, 4.3.9; given there by hand for E143 before the rule, REC_ENCODE_E143). rec_jpeg_make_image (rec's
 //   jpeg.make_image) calls, to its return, its trace, a clear, rec_ImgPro_CreateParam (by its trace, K 0x31000000),
@@ -3740,7 +3750,8 @@ export const REC_IMAGE_E143 = {
   reply: { fn: 0x5053984B, from: 0x5053F3C0 },
   alive: 0,
   settings: 0x500417DA,
-  take: [[35217, 38074, 2], [38737, 38076, 2], [38769, 38078, 2], [38785, 38080, 2], [40401, 38086, 1], [12417, 38122, 1]],
+  take: [[35217, 38074, 2], [38737, 38076, 2], [38769, 38078, 2], [38785, 38080, 2], [40401, 38086, 1], [12417, 38122, 1],
+    [38017, 38037, 1, 6, 40209], [49169, 38008, 2], [17601, 38772, 1]],
   encode: { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36, packet: 24 },
 };
 export const IMGPRO_UNIT_E143 = 0x9C600000;
@@ -3822,20 +3833,43 @@ export function recImage(img, kcb, rec) {
   if (as === null || (img[as + 1] & 0xf0) !== 0x40) throw new Error(`${rule}: rec_bracket_update ${D(bracketUpdate)} sets ImgAspect (+${IA}) from no record field`);
   const fields = [[u32(img, bt + 2), 2], [u32(img, bt + 12), 2], [u32(img, pair + 2), 2], [u32(img, pair + 8), 2], [B4, 1], [u32(img, as + 2), 1]];
   const take = [], reads = new Set();
-  for (const [at, n] of fields) {
+  // TAKE's fills of the record's +at in the plain form, of n bytes (null: either width, taken from the store)
+  const fills = (at, n) => {
     const sites = [];
     for (let o = img.indexOf(0x90); o >= 0; o = img.indexOf(0x90, o + 1)) {
-      if (!bytesAt(img, o, [0x90, 0x00, 0xdd, null, null, null, null, null, null, 0x5c, 0x04, 0x04, 0xfc, n === 2 ? 0x70 : 0x50, ...le32(at)])) continue;
-      const id = img[o - 6] === 0xfc && img[o - 5] === 0xcc ? u32(img, o - 4) : img[o - 3] === 0x2c ? img[o - 2] | img[o - 1] << 8 : null;
-      if (id !== null) sites.push({ o, id, read: callAt(img, o + 2).to });
+      for (const w of n === null ? [2, 1] : [n]) {
+        if (!bytesAt(img, o, [0x90, 0x00, 0xdd, null, null, null, null, null, null, 0x5c, 0x04, 0x04, 0xfc, w === 2 ? 0x70 : 0x50, ...le32(at)])) continue;
+        const id = img[o - 6] === 0xfc && img[o - 5] === 0xcc ? u32(img, o - 4) : img[o - 3] === 0x2c ? img[o - 2] | img[o - 1] << 8 : null;
+        if (id !== null) sites.push({ o, id, n: w, read: callAt(img, o + 2).to });
+      }
     }
     if (sites.length !== 1) throw new Error(`${rule}: ${sites.length} fills of the record's +${at} from the settings store, want one`);
-    take.push([sites[0].id, at, n]); reads.add(sites[0].read);
+    take.push([sites[0].id, at, sites[0].n]); reads.add(sites[0].read);
+  };
+  for (const [at, n] of fields) fills(at, n);
+  // the picture mode, the code and the art parameter (CreateParam's format helper's record offsets)
+  const createParam = traced('rec_ImgPro_CreateParam', 0x3100), cpc = callsIn(createParam, REC_FN_SPAN);
+  const helper = cpc[1]?.to, adds = [];
+  for (let p = helper ?? 0; helper !== undefined && p < helper + REC_FN_SPAN && !callAt(img, p) && !isRet(img, p); p = step(p)) {
+    if (img[p] === 0xfc && ((img[p + 1] & 0xfc) === 0xc0 || (img[p + 1] & 0xfc) === 0xd0)) adds.push(u32(img, p + 2));
   }
+  if (adds.length !== 3) throw new Error(`${rule}: CreateParam's format helper ${helper === undefined ? 'is not called' : D(helper)} adds ${adds.length} record offsets before its first call, want three`);
+  const [pm, code, param] = adds, pms = [];
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+    if (!bytesAt(img, o, [0xfc, 0xcc, null, null, null, null, 0x90, 0x00, 0xdd, null, null, null, null, null, null, 0x5e, 0x04, 0xfc, 0xd2, ...le32(pm),
+      0xf0, 0x52, 0x14, 0xa0, null, 0xc9, null, 0xfc, 0xcc, null, null, null, null, 0x90, 0x00, 0x04, 0xdd, null, null, null, null, null, null, 0xf0, 0x52])) continue;
+    if (o + 28 + s8(o + 29) !== o + 48) continue;
+    pms.push(o);
+  }
+  if (pms.length !== 1) throw new Error(`${rule}: ${pms.length} fills of the picture mode (+${pm}) with its second read, want one`);
+  const po = pms[0];
+  take.push([u32(img, po + 2), pm, 1, img[po + 27], u32(img, po + 32)]);
+  reads.add(callAt(img, po + 8).to); reads.add(callAt(img, po + 39).to);
+  fills(code, null); fills(param, null);
   if (reads.size !== 1) throw new Error(`${rule}: TAKE's fills call ${reads.size} settings reads, want one`);
   // S-JPEGENC's points: rec_jpeg_make_image's calls, the create's handle in the image, ImageParam's call of the set
   const make = rec.jpeg.make_image - 0x50000000, mk = callsIn(make, REC_FN_SPAN);
-  const createParam = traced('rec_ImgPro_CreateParam', 0x3100), imageParam = traced('rec_ImgPro_ImageParam', 0x3100);
+  const imageParam = traced('rec_ImgPro_ImageParam', 0x3100);
   const result = traced('rec_ImgPro_Jpeg_Result', 0x3100);
   const ci = mk.findIndex((x) => x.to === createParam), ii = mk.findIndex((x) => x.to === imageParam), ri = mk.findIndex((x) => x.to === result);
   if (ci < 0 || ii !== ci + 2 || ri < ii + 2 || ri !== mk.length - 2) throw new Error(`${rule}: rec_jpeg_make_image ${D(make)} does not call CreateParam, the create, ImageParam, the run, Jpeg_Result and the release in turn (calls ${ci}, ${ii}, ${ri} of ${mk.length})`);

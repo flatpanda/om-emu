@@ -292,9 +292,9 @@ export function replayCarried(file, text, read) {
     try { t = read(where); } catch (e) { if (e?.code === 'ENOENT') return null; throw e; }
     try { rec = JSON.parse(t); } catch (e) { throw new ValueError(`--replay ${file}: ${where}: ${e.message}`); }
   }
-  const keys = ['mode_dial', 'creative_dial', 'lever'];
+  const keys = ['mode_dial', 'creative_dial', 'still_movie', 'lever'];
   if (!isDict(rec) || !Object.keys(rec).every((k) => keys.includes(k) && Number.isInteger(rec[k])) || !Number.isInteger(rec.mode_dial))
-    throw new ValueError(`--replay ${file}: ${where === file ? 'its carried field' : where} ${show(rec)}: the controls' start positions ({mode_dial, creative_dial or lever}, integers)`);
+    throw new ValueError(`--replay ${file}: ${where === file ? 'its carried field' : where} ${show(rec)}: the controls' start positions ({mode_dial, creative_dial, still_movie or lever}, integers)`);
   return rec;
 }
 
@@ -1043,7 +1043,7 @@ export class Player {
       if (c.kind === 'modedial') return s.switch_input('mode_dial', (s.mode_index + (act === 'down' ? 1 : 0)) % MODE_DIAL.positions.length);
       if (c.kind === 'posswitch') {                 // a press steps it on, wrapping (not wired: refused with its reason)
         if (act !== 'down') return null;
-        return s.switch_input(c.id, c.positions ? (s.cdial_index + 1) % c.positions.length : 0);
+        return s.switch_input(c.id, c.positions ? (s.posswitch_at.get(c.id) + 1) % c.positions.length : 0);
       }
       if (c.kind === 'display') return act === 'down' ? s.display_input(c.id) : null;
       if (c.kind === 'power') return act === 'down' ? this.power(act) : null;
@@ -1073,9 +1073,9 @@ export class Player {
         return s.switch_input(c.id, (((s.mode_index + (integer(inp, 'step') % n)) % n) + n) % n);
       }
       if (c.kind === 'modedial') return s.switch_input(c.id, integer(inp, 'value'));
-      if (c.kind === 'posswitch' && c.positions && has(inp, 'step')) {  // the creative dial: step as the mode dial
+      if (c.kind === 'posswitch' && c.positions && has(inp, 'step')) {  // a position switch: step as the mode dial
         const n = c.positions.length;
-        return s.switch_input(c.id, (((s.cdial_index + (integer(inp, 'step') % n)) % n) + n) % n);
+        return s.switch_input(c.id, (((s.posswitch_at.get(c.id) + (integer(inp, 'step') % n)) % n) + n) % n);
       }
       if (c.kind === 'posswitch') return s.switch_input(c.id, c.positions ? integer(inp, 'value') : 0);
       return s.switch_input(c.id, bit_value(inp));

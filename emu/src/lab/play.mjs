@@ -251,6 +251,11 @@ CONTROLS.push(row('lock', 'Lock lever', 'none', null, [null, null, null], { stat
 export const CREATIVE_DIAL_CODE = 0x1906;
 CONTROLS.push(row('creative_dial', 'Creative dial', 'posswitch', null, [null, null, null], { posswitch: CREATIVE_DIAL_CODE, positions: null, labels: null,
   status: 'not-wired', reason: "0x1906 is not in E143's UI_IN tables" }));
+// The OM-3's still / movie switch: UI_IN's position switch 0x1909, wired as the creative dial is, its positions named
+// by the body's MODELS still_movie (E147's, with its evidence); a session starts it at the body's switch_idle position
+export const STILL_MOVIE_CODE = 0x1909;
+CONTROLS.push(row('still_movie', 'Still / movie switch', 'posswitch', null, [null, null, null], { posswitch: STILL_MOVIE_CODE, positions: null, labels: null,
+  status: 'not-wired', reason: "0x1909 is not in E143's UI_IN tables" }));
 export const FW_KEYS = [
   [0, 0, 6, 0x1229, 1, 0], [1, 0, 2, 0x000B, 2, 0], [1, 0, 3, 0x2403, 1, 0], [1, 0, 6, 0x200D, 2, 0],
   [1, 0, 7, 0x2007, 1, 1], [1, 1, 0, 0x1506, 1, 0], [1, 1, 1, 0x1518, 1, 0], [1, 1, 2, 0x1712, 1, 0],
@@ -521,9 +526,9 @@ export function apply_uiin_layout(image) {
     if (e) c.uiin = e;
     else { c.status = 'not-wired'; c.reason = `0x${c.uiin[3].toString(16)} is not in ${MODEL}'s UI_IN tables`; c.uiin = null; }
   }
-  for (const c of CONTROLS) {                      // the position switches (creative_dial): wired where the body names them
+  for (const c of CONTROLS) {                      // the position switches (creative_dial, still_movie): wired where the body names them
     if (!c.posswitch) continue;
-    const l = byCode.get(c.posswitch), named = MODEL_INFO.creative_dial?.labels ?? null;
+    const l = byCode.get(c.posswitch), named = MODEL_INFO[c.id]?.labels ?? null;
     if (!l || l.length < 2) { c.reason = `0x${fx(c.posswitch, 4)} is not in ${MODEL}'s UI_IN tables`; continue; }
     if (named && named.length !== l.length) throw new PlayError(`${c.name}: src/fw/models.mjs names ${named.length} positions, ${MODEL}'s UI_IN tables hold ${l.length}`);
     Object.assign(c, { uiin: at.get(c.posswitch), positions: l, labels: named ?? l.map((_, k) => `position ${k}`), status: named ? 'wired' : 'decoded',
@@ -1071,6 +1076,8 @@ export class PlaySession extends N.NavSession {
     // the creative dial at the session's start: the idle image's position (SWITCH_IDLE_POSITION), or opts.creative_dial
     const cd = BY_ID.get('creative_dial');
     this.cdial_index = cd.positions ? SWITCH_IDLE_POSITION : null;
+    // each wired position switch's position (posswitch_image keeps it): at the session's start the idle image's
+    this.posswitch_at = new Map(CONTROLS.filter((c) => c.posswitch && c.positions).map((c) => [c.id, MODEL_INFO.switch_idle?.[c.posswitch] ?? SWITCH_IDLE_POSITION]));
     if ((opts.creative_dial ?? null) !== null) {
       if (!cd.positions) throw new ValueError(`--creative-dial: ${cd.reason}`);
       const k = opts.creative_dial;
@@ -1092,13 +1099,18 @@ export class PlaySession extends N.NavSession {
     // is; a physical control keeps its position while the camera is off. Null for any other start
     this.carried = opts.carried ?? null;
     if (this.carried !== null) {
-      const { mode_dial: md, creative_dial: k = null, lever = null } = this.carried;
+      const { mode_dial: md, creative_dial: k = null, still_movie: sm = null, lever = null } = this.carried;
       if (!(Number.isInteger(md) && md >= 0 && md < MODE_DIAL.positions.length)) throw new ValueError(`carried mode dial ${show(md)}: 0..${MODE_DIAL.positions.length - 1}`);
       this.images[MODE_DIAL.group].set(mode_image(md));
       this.mode_index = md;
       if (k !== null) {
         if (!cd.positions || !Number.isInteger(k) || k < 0 || k >= cd.positions.length) throw new ValueError(`carried creative dial ${show(k)}: not a position of this body's dial`);
         this.posswitch_image(cd, k);
+      }
+      if (sm !== null) {
+        const sw = BY_ID.get('still_movie');
+        if (!sw.positions || !Number.isInteger(sm) || sm < 0 || sm >= sw.positions.length) throw new ValueError(`carried still / movie switch ${show(sm)}: not a position of this body's switch`);
+        this.posswitch_image(sw, sm);
       }
       if (lever !== null) {
         if (!ON_LAB_MODEL || (lever !== 0 && lever !== 1)) throw new ValueError(`carried Fn lever ${show(lever)}: a bit, on E143`);
@@ -1804,15 +1816,17 @@ export class PlaySession extends N.NavSession {
   // A position switch's group images at position k: k's bit at its polarity, every other position's at the other value
   // (the mutant cdial-reversed takes the entries in reverse order: test_cdial.mjs's control)
   posswitch_image(c, k) {
-    const at = this.opts.mutant === 'cdial-reversed' ? c.positions.length - 1 - k : k;
+    const at = this.opts.mutant === 'cdial-reversed' && c.id === 'creative_dial' ? c.positions.length - 1 - k : k;
     c.positions.forEach(([g, b, bit, pol], i) => set_bit(this.images[g], b, bit, i === at ? pol : 1 - pol));
-    this.cdial_index = k;
+    this.posswitch_at.set(c.id, k);
+    if (c.id === 'creative_dial') this.cdial_index = k;
   }
   // The physical controls a power-on after the lever's off starts at (opts.carried): the mode dial's position, the
-  // creative dial's where the body has one, and the Fn lever's bit on E143, whose start sets the lever (idle_images;
-  // a ported body's lever bit is left as the image has it and is not carried)
+  // creative dial's and the still / movie switch's where the body has them, and the Fn lever's bit on E143, whose
+  // start sets the lever (idle_images; a ported body's lever bit is left as the image has it and is not carried)
   positions() {
-    return { mode_dial: this.mode_index, ...(this.cdial_index !== null ? { creative_dial: this.cdial_index } : {}), ...(ON_LAB_MODEL ? { lever: this.bit_of('lever') } : {}) };
+    return { mode_dial: this.mode_index, ...(this.cdial_index !== null ? { creative_dial: this.cdial_index } : {}),
+      ...(this.posswitch_at.has('still_movie') ? { still_movie: this.posswitch_at.get('still_movie') } : {}), ...(ON_LAB_MODEL ? { lever: this.bit_of('lever') } : {}) };
   }
   // Fn lever, monitor, rotate, power, fw switches (value 0 or 1 = the bit), mode dial and creative dial (value = a
   // position, from 0).
@@ -2558,6 +2572,7 @@ export class PlaySession extends N.NavSession {
       lab_ns: lab.lab_time(), gate: lab.sim.u32(B7_GATE), pressed: [...this.pressed].sort(), mode_dial: this.mode_index,
       mode_dial_positions: MODE_DIAL.names, bits,
       ...(this.cdial_index !== null ? { creative_dial: this.cdial_index, creative_dial_positions: BY_ID.get('creative_dial').labels } : {}),
+      ...(this.posswitch_at.has('still_movie') ? { still_movie: this.posswitch_at.get('still_movie'), still_movie_positions: BY_ID.get('still_movie').labels } : {}),
       ...(this.carried !== null ? { carried: this.carried } : {}),
       dispq: this.dispq_total + (lab.dispq ? lab.dispq.length : 0), menu, engine_total: lab.exec_history.length + this.exec_trimmed,
       harness_entries: lists, heap, layout: lab.b2_snapshot(), a15: this.a15_status(), a15_frames: this.a15_frames, switches: this.switches,

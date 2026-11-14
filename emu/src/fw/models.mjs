@@ -677,6 +677,12 @@ export const MODELS = {
     // stills icon and P, at position 1 that cell is empty, the other cells the same. That 44 is the movie mode is I
     // (its name is not read)
     switch_idle: { 0x1909: 2 },
+    // the switch as a player input (src/lab/play.mjs still_movie): UI_IN's level getter answers 0x1909 from the board's
+    // value table at its decoded position (0..2), which for board 0 holds 3, 2, 1, and the mode reader above gives the
+    // shooting mode 10, the mode dial's MOVIE code on E143 and E146, for the levels 2 and 3 and the mode dial's own
+    // mode for 1 (D; the addresses in docs/hle-gaps.md 4.1.13). What tells positions 0 and 1 apart is not read (?):
+    // the labels name the level
+    still_movie: { labels: ['movie (level 3)', 'movie (level 2)', 'stills'] },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

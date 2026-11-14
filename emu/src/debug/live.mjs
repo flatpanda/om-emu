@@ -41,7 +41,8 @@
 //                           newest run {n, t_ns, start: the start word, channels: their mask, params: {offset:
 //                           value}} or null}, offsets and values in hex; refused on a board without the engine
 //   call {fn, ...}          a firmware function run natively through the lab's harness, its hooks and stand-ins
-//                           answering (src/debug/call.mjs lists the fields, the convention and what is restored);
+//                           answering, to its return or to a stop pc, from its entry or a pc inside it
+//                           (src/debug/call.mjs lists the fields, the convention and what is restored);
 //                           running or halted only (refused at a debug stop, inside a tick) and with no stopping
 //                           watchpoint armed; an error's detail (pc, steps, stubs, reads) rides in error.detail
 // and the protocol's reads and the ops that change memory or registers (regs, reg, setReg, setRegs, read, write,

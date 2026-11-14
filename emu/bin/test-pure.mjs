@@ -32,7 +32,8 @@
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), the call op's argument
-// checks and the exec trace's registers (test_call.mjs callUnits), the machine's second core
+// checks and the exec trace's registers (test_call.mjs callUnits) and the session tool's call token's mid-function
+// forms (callTokenUnits), the machine's second core
 // on a blank image (test_cpu2.mjs coresUnits), its trace rules and edge
 // cases (test_debug.mjs traceRuleUnits: halfword device accesses, code on the lab stub, the bus window, code-fetch
 // faults, a watch hit in an interrupt entry) and the publication
@@ -85,7 +86,7 @@ import { camFeUnits } from '../test/test_camfe.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
-import { callUnits } from '../test/test_call.mjs';
+import { callUnits, callTokenUnits } from '../test/test_call.mjs';
 import { coresUnits } from '../test/test_cpu2.mjs';
 import { traceRuleUnits } from '../test/test_debug.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
@@ -162,6 +163,7 @@ report('the lens serial controller, deferred-call triggers and the lens (S-LENSM
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 report('debug API: the call op\'s argument checks, the exec trace\'s registers (src/debug/call.mjs)', callUnits());
+report('the session tool\'s call token: entry=, stop=, frame= and call:@FILE (host/session.mjs)', callTokenUnits());
 report('the machine\'s second core: core numbers, local RAM, interleave, bank 2\'s request (src/core/cores.mjs)', await coresUnits());
 report('debug API: trace rules and edge cases (halfword device accesses, stub code, bus window, fetch faults, interrupt entry)', traceRuleUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());

@@ -13,8 +13,9 @@
 // main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...), switch:ID=V or
 // switch:ID+N (creative_dial, mode_dial, lever, ...), power:off, restart[:card=FILE] (a new session in this process
 // on the same nvram file and card, or the card FILE), shot:FILE.png (the last published frame, /api/frame's pixels),
-// read:ADDR:LEN, write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N],
-// card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
+// read:ADDR:LEN, write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N]
+// (and entry=PC, stop=PC..., frame=MASK/SIZE: a mid-function call), call:@FILE (the call op's whole request as JSON;
+// one with mem is a poke), card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
 // !=HEX), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
 // pattern with * and ? (the last match by name). Relative LOCAL and FILE paths of the tokens resolve against --out.
 // Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, a local file a step cannot write

@@ -7,7 +7,8 @@
 // on E122's board (test_vsc3.mjs), the kick model's TB-layout
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
-// (test_debug.mjs) and its live route to a play session (test_live.mjs) with its call op (test_call.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// (test_debug.mjs) and its live route to a play session (test_live.mjs) with its call op (test_call.mjs: mid-function
+// calls with stop pcs too, and through bin/session.mjs on E143 and E147), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
@@ -150,13 +151,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...lu.bad, ...ls.bad, ...lh.bad].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + ls.bad.length + lh.bad.length;
 }
-// the debug API's call op: its argument checks, and firmware functions called natively in two E143 play sessions
+// the debug API's call op: its argument checks, and firmware functions called natively in two E143 play sessions;
+// its mid-function forms through bin/session.mjs on E143, and on E147 in a process of its own
 {
-  const { callUnits, callSession } = await import('../test/test_call.mjs');
-  const cu = callUnits(), cs = await callSession();
-  console.log(`debug API call op: argument checks and the exec trace's registers ${cu.checks - cu.bad.length}/${cu.checks}; calls in a play session against one without ${cs.checks - cs.bad.length}/${cs.checks}`);
-  [...cu.bad, ...cs.bad].forEach((x) => console.log('  ', x));
-  bad += cu.bad.length + cs.bad.length;
+  const { callUnits, callSession, callScripted } = await import('../test/test_call.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const cu = callUnits(), cs = await callSession(), cx = await callScripted();
+  const r = spawnSync(process.execPath, [new URL('../test/test_call.mjs', import.meta.url).pathname, '--scripted'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const e147 = r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `E147: ${l.trim()}`);
+  console.log(`debug API call op: argument checks and the exec trace's registers ${cu.checks - cu.bad.length}/${cu.checks}; calls in a play session against one without ${cs.checks - cs.bad.length}/${cs.checks}; mid-function calls through bin/session.mjs ${cx.checks - cx.bad.length}/${cx.checks}, E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...cu.bad, ...cs.bad, ...cx.bad, ...e147].forEach((x) => console.log('  ', x));
+  bad += cu.bad.length + cs.bad.length + cx.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the image sensor stand-in (S-SCENE): its model, and its live view in a play session with a --replay of it
 {

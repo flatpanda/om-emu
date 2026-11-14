@@ -74,7 +74,9 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
 const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'write', 'call', 'exif', 'expect'];
-const CALL_KEYS =['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'limit', 'space'];
+const CALL_KEYS =['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'limit', 'space', 'entry', 'stop', 'frame'];
+// the fields of a call:@FILE request (src/debug/call.mjs callSpec's)
+export const CALL_FILE_KEYS = ['fn', 'space', 'entry', 'stops', 'regs', 'stack', 'frame', 'mem', 'read', 'restore', 'limit', 'scratch'];
 export const EXIF_FIELDS = {
   ifd0: { Make: 0x010f, Model: 0x0110, ImageDescription: 0x010e, Orientation: 0x0112, Software: 0x0131, DateTime: 0x0132, Artist: 0x013b, Copyright: 0x8298 },
   exif: { ExposureTime: 0x829a, FNumber: 0x829d, ExposureProgram: 0x8822, ISO: 0x8827, DateTimeOriginal: 0x9003, DateTimeDigitized: 0x9004,
@@ -113,18 +115,26 @@ export function parseToken(t) {
     return step('read', { addr: addrOf(t, m[1], 'the address'), len });
   }
   if ((m = /^write:([^=]+)=(.*)$/.exec(t))) return step('write', { addr: addrOf(t, m[1], 'the address'), hex: hexOf(t, m[2]) });
+  if ((m = /^call:@(.+)$/.exec(t))) return step('call', { file: m[1] });      // the request's JSON (read once the lab is in)
   if ((m = /^call:([^:]+)(?::(.*))?$/.exec(t))) {
-    const regs = {};
-    let limit = null, space = null;
+    const regs = {}, stops = [];
+    let limit = null, space = null, entry = null, frame = null;
     for (const kv of (m[2] ?? '').split(',').filter(Boolean)) {
       const [k, v, more] = kv.split('=');
       if (more !== undefined || v === undefined || !CALL_KEYS.includes(k)) throw new TokenError(`${t}: ${JSON.stringify(kv)} is not one of ${CALL_KEYS.map((x) => `${x}=`).join(', ')}`);
       if (k === 'space') { if (v !== 'notation' && v !== 'runtime') throw new TokenError(`${t}: space=notation or space=runtime`); space = v; continue; }
+      if ((k === 'entry' && entry !== null) || (k === 'frame' && frame !== null)) throw new TokenError(`${t}: ${k}= given twice`);
+      if (k === 'frame') {
+        const f = /^([^/]+)\/([^/]+)$/.exec(v), [mask, size] = f ? [intValue(f[1]), intValue(f[2])] : [null, null];
+        if (mask === null || size === null || mask < 0 || mask > 255 || size < 0 || size > 255) throw new TokenError(`${t}: frame=MASK/SIZE, two bytes (frame=0xf0/20)`);
+        frame = [mask, size];
+        continue;
+      }
       const n = intValue(v);
       if (n === null || n < 0 || n > 0xffffffff) throw new TokenError(`${t}: ${k}=${v} is not a 32-bit value`);
-      if (k === 'limit') limit = n; else regs[k] = n;
+      if (k === 'limit') limit = n; else if (k === 'entry') entry = n; else if (k === 'stop') stops.push(n); else regs[k] = n;
     }
-    return step('call', { fn: addrOf(t, m[1], 'the function'), regs, limit, space });
+    return step('call', { fn: addrOf(t, m[1], 'the function'), regs, limit, space, ...(entry !== null ? { entry } : {}), ...(stops.length ? { stops } : {}), ...(frame ? { frame } : {}) });
   }
   if (t === 'card-ls') return step('card-ls');
   if ((m = /^card-get:([^=]+)=(.+)$/.exec(t))) return step('card-get', { path: dosPath(t, m[1]), local: m[2] });
@@ -139,7 +149,17 @@ export function parseToken(t) {
     return step('dial', { id: m[1], detents: n });
   }
   if (new RegExp(`^${ID}$`).test(t)) return step('press', { id: t });
-  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..], card-ls, card-get:DOS=LOCAL, exif:DOS, expect:...)`);
+  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:...)`);
+}
+// A call:@FILE token's request: the file's text (name: the file, for the refusals) as a JSON object of the call op's
+// fields (CALL_FILE_KEYS; src/debug/call.mjs checks their values), else TokenError
+export function callFileRequest(t, name, text) {
+  let q;
+  try { q = JSON.parse(text); } catch (e) { throw new TokenError(`${t}: ${name}: not JSON (${e.message})`); }
+  if (q === null || typeof q !== 'object' || Array.isArray(q)) throw new TokenError(`${t}: ${name}: a JSON object of the call op's fields (${CALL_FILE_KEYS.join(', ')})`);
+  const bad = Object.keys(q).filter((k) => !CALL_FILE_KEYS.includes(k));
+  if (bad.length) throw new TokenError(`${t}: ${name}: ${bad.map((k) => JSON.stringify(k)).join(', ')} not among the call op's fields (${CALL_FILE_KEYS.join(', ')})`);
+  return q;
 }
 function parseExpect(t) {
   let m;
@@ -170,7 +190,10 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
     case 'write': return [{ type: 'debug', op: 'write', addr: st.addr, hex: st.hex }];
-    case 'call': return [{ type: 'debug', op: 'call', fn: st.fn, regs: st.regs, ...(st.limit !== null ? { limit: st.limit } : {}), ...(st.space ? { space: st.space } : {}) }];
+    case 'call':
+      if (st.file !== undefined && !st.request) throw new TokenError(`${st.text}: the request is read from the file by openSession (callFile)`);
+      return [st.request ?{ type: 'debug', op: 'call', ...st.request } : { type: 'debug', op: 'call', fn: st.fn, regs: st.regs, ...(st.limit !== null ? { limit: st.limit } : {}), ...(st.space ? { space: st.space } : {}),
+      ...(st.entry !== undefined ? { entry: st.entry } : {}), ...(st.stops ? { stops: st.stops } : {}), ...(st.frame ? { frame: st.frame } : {}) }];
     default: return [];
   }
 }
@@ -244,6 +267,7 @@ export async function openSession(o = {}) {
   const { fileCard } = await import('./card.mjs');
   const { nvramChoice, fileNvram } = await import('./nvram.mjs');
   const { pngRaw } = await import('./server.mjs');
+  const { callSpec } = await import('../src/debug/call.mjs');
   const say = o.say ?? (() => {});
   const settle = o.settle ?? SETTLE_MS;
   const out = o.out ? path.resolve(o.out) : null;
@@ -256,6 +280,14 @@ export async function openSession(o = {}) {
     if (st.kind === 'dial' && BY_ID.get(id).kind !== 'dial') throw new TokenError(`${st.text}: ${id} is not a dial (main_dial, sub_dial)`);
     if (['card-ls', 'card-get', 'exif'].includes(st.kind) || st.expect?.what === 'card' || st.expect?.what === 'exif') {
       if (!STORAGE) throw new TokenError(`${st.text}: ${MODEL} has no card with a file system in the lab (S-CARD)`);
+    }
+    if (st.kind === 'call' && st.file !== undefined) {           // call:@FILE: the request read and checked now
+      const file = local(st.file);
+      let text;
+      try { text = fs.readFileSync(file, 'utf8'); } catch (e) { throw new TokenError(`${st.text}: ${file}: cannot read it (${e.code ?? e.message})`); }
+      const request = callFileRequest(st.text, file, text);
+      try { callSpec(request); } catch (e) { if (e?.name !== 'BadRequest') throw e; throw new TokenError(`${st.text}: ${file}: ${e.message}`); }
+      return { ...st, request };
     }
     return st;
   };
@@ -465,11 +497,16 @@ export async function openSession(o = {}) {
           if (res.dropped) { fail(rec, `the player dropped ${JSON.stringify(inp)} (${Object.keys(pl.dropped.toObject()).filter((k) => pl.dropped.toObject()[k] !== before[k]).join(', ') || 'no reason counted'})`); break; }
           if (pl.input_error && inp.type !== 'debug') { fail(rec, `the input was not taken: ${pl.input_error}`); break; }
           if (res.debug) {
+            // a call:@FILE request with mem writes memory the firmware did not (a poke, as input()'s call with mem)
+            if (st.kind === 'call' && st.request?.mem?.length) pokes.push({ step: rec.step, token: st.text, mem: st.request.mem });
             if (!res.debug.ok) { fail(rec, `${inp.op}: ${res.debug.error?.type ?? 'error'}: ${res.debug.error?.message ?? JSON.stringify(res.debug.error)}`); break; }
             if (st.kind === 'read') rec.hex = res.debug.hex;
             if (st.kind === 'call') {
               const d = res.debug;
               Object.assign(rec, { fn: d.fn.notation, d0: d.regs.d0, steps: d.steps, stubs: d.stubs, regs: d.regs });
+              // a mid-function call's entry, how it ended (a stop: which), a call:@FILE request's reads and scratch
+              Object.assign(rec, { ...(d.entry ? { entry: d.entry.notation } : {}), end: d.end, ...(d.stop ? { stop: d.stop } : {}),
+                ...(d.reads.length ? { reads: d.reads } : {}), ...(d.scratch !== null ? { scratch: d.scratch } : {}) });
               calls.push({ step: rec.step, fn: d.fn.notation });
             }
             if (st.kind === 'write') pokes.push({ step: rec.step, token: st.text, addr: h8(st.addr), hex: st.hex });

@@ -202,13 +202,15 @@ export class HLE {
       throw new FirmwareError(`stub at ${where(here)} not reached by CALLS (mdr ${where(ra)}, bytes before ${h})`);
     }
   }
-  call(fn, regs = null, stack = null, frame = null, limit = 5000) {
+  // ends: null, or a Set of run-time pcs at which the call also ends, before the instruction there runs (before a
+  // hook there answers): it returns the registers at that pc, unchecked (src/debug/call.mjs's mid-function calls)
+  call(fn, regs = null, stack = null, frame = null, limit = 5000, ends = null) {
     refuseUnmapped(fn, 'call');
     const [mask, size] = frame ?? this.frame(fn);
     this.sim.write(CALLER, cat(bytes(0xdd), u32le(runtime(fn) - CALLER), bytes(mask, size, 0xff)));
     if (stack && stack.length) this.sim.write(SP + 4, stack);
     this.sim.reset({ pc: CALLER, sp: SP, ...SAVED, ...(regs ?? {}) });
-    return this._loop(CALLER + 7, SP, limit, regs);
+    return this._loop(CALLER + 7, SP, limit, regs, ends);
   }
   calls(fn, regs = null, sp = SP, trampoline = CALLER, limit = 5000) {
     refuseUnmapped(fn, 'calls');
@@ -217,15 +219,16 @@ export class HLE {
     return this._loop(trampoline + 6, sp, limit, regs);
   }
   // regs: the registers the call started with; a callee-saved one (SAVED's) given there must come back as given
-  _loop(done, sp, limit, regs = null) {
+  _loop(done, sp, limit, regs = null, ends = null) {
     this.call_depth = (this.call_depth ?? 0) + 1;
-    try { return this._loop1(done, sp, limit, regs); } finally { this.call_depth -= 1; }
+    try { return this._loop1(done, sp, limit, regs, ends); } finally { this.call_depth -= 1; }
   }
-  _loop1(done, sp, limit, regs = null) {
+  _loop1(done, sp, limit, regs = null, ends = null) {
     let used = 0;
     while (used < limit) {
       const stops = new Set(this.hooks.keys());
       stops.add(done);
+      if (ends !== null) for (const pc of ends) stops.add(pc);
       // the PERF2 builtin pcs (HLE.builtins with the stub hooked by identity): JS keeps their breakpoints
       const folded = [];
       for (const [pc, stub] of [[runtime(MEMSET), memset], [runtime(MEMCPY), memcpy]]) {
@@ -242,6 +245,7 @@ export class HLE {
         }
         return result;
       }
+      if (ends !== null && ends.has(pc) && !result.fault) return result;
       const hook = this.hooks.get(pc);
       if (hook && !result.fault) {
         const [stub, name, pass] = hook;

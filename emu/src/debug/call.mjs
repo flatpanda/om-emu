@@ -2,10 +2,20 @@
 // call (src/lab/hle.mjs HLE.call), so every hook and stand-in of the session answers as it does for the lab's own calls
 // (a raw single-step from the debugger runs past them). The live route (src/debug/live.mjs) serves it; a standalone
 // machine has no harness and refuses it (protocol.mjs).
-//   call {fn, space?, regs?, stack?, frame?, mem?, read?, restore?, limit?, scratch?}
+//   call {fn, space?, entry?, stops?, regs?, stack?, frame?, mem?, read?, restore?, limit?, scratch?}
 //     fn       the function's entry: an address in the image's notation range (0x50000000 + body offset) or its
 //              run-time range (IMAGE_BASE + body offset) is taken as such; space 'notation' or 'runtime' says which
-//              for any other address (a function the lab names below the image, as its memcpy)
+//              for any other address (a function the lab names below the image, as its memcpy); entry and stops are
+//              read the same way
+//     entry    a pc to start at instead of fn's first instruction (a mid-function call): the harness's CALL makes fn's
+//              frame (frame's) and lands there, so the code at entry runs with sp at SP_TOP - size, the return address
+//              and the masked registers above it, as after fn's own CALL; code that moved sp further before entry
+//              needs a frame whose size counts that move too. The return is fn's own, checked as below
+//     stops    [pc, ...] (at most STOPS_MAX): the call also ends before the first of them it reaches runs (after the
+//              trampoline's CALL: a stop at the entry ends after that one instruction); the return state is not
+//              checked there. A stop on a hooked pc ends before the hook answers: its stand-in does not run, so a
+//              patched build's hook rule (PatchHooked) is not reached there either. A stop counts at the call's own
+//              level only (a stand-in's own native calls do not stop at it)
 //     regs     {d0, d1, d2, d3, a0, a1, a2, a3}: the entry registers (the others are the harness's: sp, pc, mdr the
 //              CALL's, psw 0 so no interrupt is taken, d2 d3 a2 a3 default to the lab's markers 0x22222222 ...)
 //     stack    words stored from the harness stack's (4,sp) up before the CALL: at the callee's entry they are at
@@ -23,8 +33,9 @@
 //              or "scratch+OFF" in regs, stack, mem (both sides) and read is its address; after the call its bytes
 //              and the ring's next address are put back (the address only if no stand-in took a block from the
 //              ring meanwhile: that block may be in use)
-//   -> {fn: {given, notation, runtime}, frame, regs (the 16 at the return: pc and sp the harness's), steps (the
-//      instructions run), stubs: [[name, calls], ...] (the harness stubs that answered, stand-ins among them, in the
+//   -> {fn: {given, notation, runtime}, entry (given only), frame, regs (the 16 at the end: at the return pc and sp
+//      the harness's), end ('return' or 'stop'), stop ({index, notation, runtime}: the stop reached, at a stop),
+//      steps (the instructions run, the trampoline's CALL among them), stubs: [[name, calls], ...] (the harness stubs that answered, stand-ins among them, in the
 //      order first called; the session's stand-in log keeps them, as it keeps the lab's own calls'), prints and
 //      errlog (the kernel's print lines and error-log entries the call made), reads [{addr, hex}], scratch (its
 //      address or null), restored, stderr (the machine's lines the call wrote)}
@@ -38,20 +49,20 @@
 // a stand-in's state it moved (S-HEAP's next block, a queue a hook filled), the frames it left on the harness stack
 // below SP_TOP (dead memory the lab's next call overwrites). A call that ends on its budget answers CallLimit, a CPU
 // fault CallFault; a lab error (a hook's refusal, a bad return state) answers under its own type; each carries detail
-// (pc, steps, stubs, reads, stderr; fault). A host error (Unported: a device path the lab has not ported; or, with
+// (pc, steps, stubs, reads, stderr; fault; CallLimit's end 'budget' and the registers where the budget ran out). A host error (Unported: a device path the lab has not ported; or, with
 // --loaded on, code the boot does not load or is not shown to load, S-STALERAM) stops the machine mid-instruction, as
-// in a tick: the session cannot go on, and nothing above is put back. A fn in such a range is refused before the call
-// (BadRequest, the range named), so the session goes on; a callee that reaches one answers UnloadedCode, its detail
+// in a tick: the session cannot go on, and nothing above is put back. A fn, an entry or a stop in such a range is
+// refused before the call (BadRequest, the range named), so the session goes on; a callee that reaches one answers UnloadedCode, its detail
 // with restored false: every later run or write of the session fails (HostStopped).
 import { BadRequest, num, addr, word, count, list, dict } from './protocol.mjs';
-import { regsHex, hex8 } from './regs.mjs';
+import { regsHex, hex8, REGS } from './regs.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
 import { CALLER, RETURN, SP as SP_TOP, DATA, DATA_END, BASE, runtime, disasm } from '../lab/hle.mjs';
 import { LabError } from '../lab/errors.mjs';
 import { gapAt } from '../fw/sections.mjs';
 
 export const CALL_REGS = ['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3'];
-export const SCRATCH_MAX = 0x40000, STACK_MAX = 256, LIMIT_DEFAULT = 1000000;
+export const SCRATCH_MAX = 0x40000, STACK_MAX = 256, STOPS_MAX = 64, LIMIT_DEFAULT = 1000000;
 const IMAGE_LEN = IMAGE_END - IMAGE_BASE;
 const absent = (v) => v === undefined || v === null;
 const REF = /^\s*scratch\s*(?:\+\s*(0x[0-9a-f]+|[0-9]+)\s*)?$/i;
@@ -64,21 +75,36 @@ function valueOrRef(v, what, kind) {
   if (typeof v === 'string' && REF.test(v)) return { off: Number(REF.exec(v)[1] ?? 0), what };
   return kind === 'addr' ? addr(v, what) : word(v, what);
 }
-// fn and space -> {given, notation, runtime}
-export function callTarget(fn, space) {
-  const a = addr(fn, 'fn');
-  if (!absent(space) && space !== 'notation' && space !== 'runtime') throw new BadRequest(`space: 'notation' or 'runtime', got ${JSON.stringify(space)}`);
+// A code address (fn, entry, a stop) and space -> {given, notation, runtime}; what names it in a refusal
+function codeAt(v, space, what) {
+  const a = addr(v, what);
   let given = space ?? null;
   if (given === null) {
     if (a >= BASE && a < BASE + IMAGE_LEN) given = 'notation';
     else if (a >= IMAGE_BASE && a < IMAGE_END) given = 'runtime';
-    else throw new BadRequest(`fn: ${hex8(a)} is in neither the image's notation range [${hex8(BASE)}, ${hex8(BASE + IMAGE_LEN)}) nor its run-time range [${hex8(IMAGE_BASE)}, ${hex8(IMAGE_END)}): give space 'notation' or 'runtime'`);
+    else throw new BadRequest(`${what}: ${hex8(a)} is in neither the image's notation range [${hex8(BASE)}, ${hex8(BASE + IMAGE_LEN)}) nor its run-time range [${hex8(IMAGE_BASE)}, ${hex8(IMAGE_END)}): give space 'notation' or 'runtime'`);
   }
   return given === 'notation' ? { given, notation: a, runtime: runtime(a) } : { given, notation: disasm(a), runtime: a };
 }
+// fn and space -> {given, notation, runtime}
+export function callTarget(fn, space) {
+  if (!absent(space) && space !== 'notation' && space !== 'runtime') throw new BadRequest(`space: 'notation' or 'runtime', got ${JSON.stringify(space)}`);
+  return codeAt(fn, space, 'fn');
+}
+// the harness's own code: the CALL's trampoline and the one its stubs return through (hle.mjs finish and kin)
+const inHarness = (a) => (a >= CALLER && a < CALLER + 8) || (a >= RETURN && a < RETURN + 16);
+const formOf = (t) => ({ given: t.given, notation: hex8(t.notation), runtime: hex8(t.runtime) });
 // The request's fields checked and normalised (BadRequest on a malformed one); firmware-free.
 export function callSpec(q) {
   const target = callTarget(q.fn, q.space);
+  if (!absent(q.stop)) throw new BadRequest('stop: the stop pcs are stops, a list');
+  if (!absent(q.pc)) throw new BadRequest('pc: a pc to start at is entry (fn gives the frame)');
+  const entry = absent(q.entry) ? null : codeAt(q.entry, q.space, 'entry');
+  const stops = (absent(q.stops) ? [] : list(q.stops, 'stops')).map((v, i) => codeAt(v, q.space, `stops[${i}]`));
+  if (stops.length > STOPS_MAX) throw new BadRequest(`stops: ${stops.length} pcs is over ${STOPS_MAX}`);
+  for (const [t, what] of [[entry, 'entry'], ...stops.map((s, i) => [s, `stops[${i}]`])]) {
+    if (t !== null && inHarness(t.runtime)) throw new BadRequest(`${what}: ${hex8(t.runtime)} is the harness's own trampoline (${hex8(CALLER)}.. and ${hex8(RETURN)}..), where the call returns, not the firmware's code`);
+  }
   const scratch = absent(q.scratch) ? 0 : count(q.scratch, 'scratch');
   if (scratch > SCRATCH_MAX) throw new BadRequest(`scratch: ${scratch} bytes is over ${SCRATCH_MAX} (the lab's data ring is shared with the session's own messages)`);
   const regs = {};
@@ -117,7 +143,7 @@ export function callSpec(q) {
   for (const v of [...Object.values(regs), ...stack]) inside(v, 0, true);
   for (const m of mem) { inside(m.at, m.len, false); if (m.word !== undefined) inside(m.word, 0, true); }
   for (const r of read) inside(r.at, r.len, false);
-  return { target, regs, stack, frame, mem, read, restore: q.restore === true, limit, scratch };
+  return { target, entry, stops, regs, stack, frame, mem, read, restore: q.restore === true, limit, scratch };
 }
 
 const le4 = (v) => Uint8Array.of(v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff);
@@ -130,9 +156,14 @@ export function runCall(lab, dbg, spec) {
   const cap = m.insnLimit();
   if (!cap) throw new BadRequest('call: the machine has no insn limit to bound the call by');
   if (limit > cap) throw new BadRequest(`limit: ${limit} is over the machine's insn limit ${cap}`);
-  // S-STALERAM: a fn the fetch guard would refuse, refused before the call stops the machine
-  const un = sim.unloaded ?? null, g = un ? gapAt(un.gaps, target.runtime) : null;
-  if (g) throw new BadRequest(`call ${hex8(fn)} (run-time ${hex8(target.runtime)}): refused before it runs: ${un.message(g, target.runtime)}`);
+  // S-STALERAM: a fn, an entry or a stop the fetch guard would refuse, refused before the call stops the machine
+  const un = sim.unloaded ?? null;
+  if (un) {
+    for (const [t, what] of [[target, ''], [spec.entry, 'entry '], ...spec.stops.map((s, i) => [s, `stops[${i}] `])]) {
+      const g = t === null ? null : gapAt(un.gaps, t.runtime);
+      if (g) throw new BadRequest(`call ${hex8(fn)} (run-time ${hex8(target.runtime)}): ${what}refused before it runs: ${un.message(g, t.runtime)}`);
+    }
+  }
   let frame = spec.frame;
   if (frame === null) {
     try { frame = lab.frame(fn); } catch (e) {
@@ -149,7 +180,8 @@ export function runCall(lab, dbg, spec) {
   keepBytes(CALLER, 8); keepBytes(RETURN, 16); keepBytes(SP_TOP + 4, 4 * spec.stack.length);
   let base = null;
   const val = (v) => (typeof v === 'number' ? v : base + v.off) >>> 0;
-  const start = cap - limit, out = { fn: { given: target.given, notation: hex8(target.notation), runtime: hex8(target.runtime) }, frame };
+  const start = cap - limit, out = { fn: formOf(target), ...(spec.entry ? { entry: formOf(spec.entry) } : {}), frame };
+  const ends = spec.stops.length ? new Set(spec.stops.map((s) => s.runtime)) : null;
   sim.stats = null; sim.observer = null; lab.stubObserver = null; sim.debug = null;
   let failure = null, result = null, thrown = null;
   try {
@@ -169,11 +201,12 @@ export function runCall(lab, dbg, spec) {
     const regs = Object.fromEntries(Object.entries(spec.regs).map(([k, v]) => [k, val(v)]));
     const stack = spec.stack.length ? new Uint8Array(4 * spec.stack.length) : null;
     spec.stack.forEach((v, i) => stack.set(le4(val(v)), 4 * i));
-    try { result = lab.call(fn, { ...regs, insns: start }, stack, frame, limit); } catch (e) {
+    try { result = lab.call(spec.entry?.notation ?? fn, { ...regs, insns: start }, stack, frame, limit, ends); } catch (e) {
       if (!(e instanceof LabError)) throw e;
       failure = e;
     }
     const now = m.getRegs(), steps = now[15] - start, pc = hex8(now[9]);
+    const regsNow = () => regsHex(Object.fromEntries(REGS.slice(0, 15).map((k, i) => [k, now[i]])));     // insns aside
     out.steps = steps;
     const stubs = new Map();
     for (const name of lab.log.slice(n0)) stubs.set(name, (stubs.get(name) ?? 0) + 1);
@@ -194,9 +227,9 @@ export function runCall(lab, dbg, spec) {
       }
       if (st?.kind === 'limit') {          // the limit's fault 7 counts in insns, its instruction did not run
         detail.steps = limit;
-        throw new CallLimit(`${at}: the budget of ${limit} instructions ran out at pc ${pc}`, detail);
+        throw new CallLimit(`${at}: the budget of ${limit} instructions ran out at pc ${pc}`, { ...detail, end: 'budget', regs: regsNow() });
       }
-      if (/^more than \d+ stub calls$/.test(failure.message)) throw new CallLimit(`${at}: more than ${limit} stub calls (the budget) by pc ${pc}`, detail);
+      if (/^more than \d+ stub calls$/.test(failure.message)) throw new CallLimit(`${at}: more than ${limit} stub calls (the budget) by pc ${pc}`, { ...detail, end: 'budget', regs: regsNow() });
       if (st?.kind === 'fault' && now[14]) throw new CallFault(`${at}: fault ${now[14]} at pc ${pc}`, { ...detail, fault: now[14] });
       const e = new Error(`${at}: ${failure.message}`);
       Object.defineProperty(e, 'name', { value: failure.name });
@@ -204,6 +237,10 @@ export function runCall(lab, dbg, spec) {
       throw e;
     }
     out.regs = regsHex(Object.fromEntries(Object.entries(result).filter(([k]) => k !== 'insns')));
+    // the loop ends only at the trampoline's return (checked) or at a stop pc (unchecked)
+    const i = (result.pc >>> 0) === ((CALLER + 7) >>> 0) ? -1 : spec.stops.findIndex((s) => s.runtime === result.pc >>> 0);
+    out.end = i < 0 ? 'return' : 'stop';
+    if (i >= 0) out.stop = { index: i, notation: hex8(spec.stops[i].notation), runtime: hex8(spec.stops[i].runtime) };
     out.scratch = base === null ? null : hex8(base);
     out.restored = spec.restore;
     out.stderr = m.stderrFrom(k0).lines;

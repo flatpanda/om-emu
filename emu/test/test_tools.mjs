@@ -18,7 +18,8 @@
 //                 CallHooked and the run ends there; a call at a watchpoint's stop is refused; --a15 off publishes
 //                 no frame where on publishes one; --device evf and the eye sensor's switch: shot: takes the EVF's
 //                 frame; --osd-errors: a step whose engine refused a picture fails by default and only reports
-//                 with report (the refusal counted through the module API; test_osdwrap.mjs makes real ones).
+//                 with report (the refusal counted through the module API; test_osdwrap.mjs makes real ones); on
+//                 E118, whose stock INFO meets BMP_LUT refusals, the default is report and fail fails the step.
 //                 E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a 32-word stack capture at the
 //                 per-shot EXIF fill site through S2, untraced and traced equal; a call of E147's settings getter at
 //                 a breakpoint on the fill site, the run after it (lab time, frame, the JPEG's EXIF) the run without
@@ -218,10 +219,17 @@ async function e143({ ok }, { T, step }) {
     eng.failures.BMP_TOKEN = (eng.failures.BMP_TOKEN ?? 0) + 1;
     const r = m.step('wait:100'), next = m.step('wait:100'), sm = m.close();
     if (policy === 'fail') {
-      ok(!r.ok && JSON.stringify(r.osd_errors) === '{"BMP_TOKEN":1}' && /^the OSD engine refused 1 picture\(s\) \(BMP_TOKEN 1\), not drawn; --osd-errors report only reports them$/.test(r.error) && !next.ok && !sm.ok,
+      ok(!r.ok && JSON.stringify(r.osd_errors) === '{"BMP_TOKEN":1}' && /^the OSD engine refused 1 picture\(s\) \(BMP_TOKEN 1\), not drawn; --osd-errors report only reports them$/.test(r.error) && !next.ok && !sm.ok && sm.osd_errors_policy === 'fail',
         `E143 an OSD refusal fails the step by default: ${JSON.stringify(r).slice(0, 300)} ${sm.ok}`);
-    } else ok(r.ok && JSON.stringify(r.osd_errors) === '{"BMP_TOKEN":1}' && next.ok && !('osd_errors' in next) && sm.ok, `E143 --osd-errors report: ${JSON.stringify(r).slice(0, 300)}`);
+    } else ok(r.ok && JSON.stringify(r.osd_errors) === '{"BMP_TOKEN":1}' && next.ok && !('osd_errors' in next) && sm.ok && sm.osd_errors_policy === 'report', `E143 --osd-errors report: ${JSON.stringify(r).slice(0, 300)}`);
   }
+  // the default per body (host/session.mjs OSD_FAIL_BODIES): E118's stock INFO meets BMP_LUT refusals (X, 2026-11-14),
+  // so there the default is report (the step passes and lists them) and --osd-errors fail fails it (control: with fail
+  // as every body's default the first run fails at INFO, by hand)
+  const r118 = cli(['--model', 'E118', 'wait:1500', 'info', 'wait:300']), f118 = cli(['--model', 'E118', '--osd-errors', 'fail', 'wait:1500', 'info', 'wait:300']);
+  ok(r118.rc === 0 && r118.sum?.osd_errors_policy === 'report' && step(r118, 'info').osd_errors?.BMP_LUT > 0 && f118.rc === 1 && f118.sum?.osd_errors_policy === 'fail'
+    && /FAILED at step 2 \(info\): the OSD engine refused \d+ picture\(s\) \(BMP_LUT \d+\)/.test(f118.last),
+    `E118 the default report, --osd-errors fail: ${r118.last} ${JSON.stringify(step(r118, 'info').osd_errors)} | ${f118.last}`);
 }
 
 async function e147({ ok }, { T, step }) {

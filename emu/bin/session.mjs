@@ -7,7 +7,8 @@
 //                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
 //                            [--loaded auto|on|off] [--creative-dial K] [--a15 auto|off|on] [--device tft|evf]
 //                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
-// --osd-errors fail (the default) fails a step in which the OSD engine refused a picture; report only lists them.
+// --osd-errors fail fails a step in which the OSD engine refused a picture; report only lists them. The default is
+// fail on E143, E146 and E147, whose stock flows were measured with none, and report on the other bodies.
 // --nvram is off by default (a blank camera at each start), unlike play's: a scripted verification starts from a known
 // camera unless told otherwise. --card FILE is written back in place at each session's end, as play's OM_EMU_CARD.
 // --no-card starts with the first slot empty (the card, --card's or a blank one, out of it until card:in); card:out
@@ -16,7 +17,7 @@
 // Each argument and each --script line is split into tokens at white space ("..." keeps spaces; # starts a comment).
 // The tokens: KEY (a press: down, 150 ms, up, then --settle of lab time), KEY:down, KEY:up, hold:KEY[:MS],
 // main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...), switch:ID=V or
-// switch:ID+N (creative_dial, mode_dial, lever, ...), power:off, restart[:card=FILE] (a new session in this process
+// switch:ID+N (creative_dial, mode_dial, still_movie, lever, ...), power:off, restart[:card=FILE] (a new session in this process
 // on the same nvram file and card, or the card FILE), shot:FILE.png (the last published frame, /api/frame's pixels),
 // read:ADDR:LEN, dump:ADDR:LEN:FILE (up to 64 MiB into FILE), write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N]
 // (and entry=PC, stop=PC..., frame=MASK/SIZE: a mid-function call), call:@FILE (the call op's whole request as JSON;
@@ -51,7 +52,7 @@ const SPEC = [
   { opt: '--creative-dial', type: 'int', metavar: 'K' },
   { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--device', type: 'str', choices: ['tft', 'evf'], default: 'tft' },
-  { opt: '--osd-errors', type: 'str', choices: ['fail', 'report'], default: 'fail' },
+  { opt: '--osd-errors', type: 'str', choices: ['fail', 'report'] },       // the default: openSession's, per body
   { opt: '--settle', type: 'int', metavar: 'MS' },
   { opt: '--out', type: 'path', metavar: 'DIR' },
   { opt: '--script', type: 'path', repeat: true, metavar: 'FILE' },

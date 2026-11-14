@@ -423,14 +423,15 @@ The second round (base `ae63e25`) adds:
 
 The third round (base `a68dca3`, 2026-11-14) adds:
 
-- **Their driver's other tools** in `bin/session.mjs` (`emu/README.md` "Scripted sessions", 4.3): `trace:PC:stack=N`
-  (N words from `sp` up at each hit, 1 to 256), `dump:ADDR:LEN:FILE` (up to 64 MiB, the ranges the boot does not load
-  named with S-STALERAM's fill), `--a15 auto|off|on` and `--device tft|evf`, a `break:` at a pc a lab hook holds
-  (the stop comes before the hook answers), and `call:` at a breakpoint's stop (the CPU's whole context and the harness
-  stack put back; a lab hook other than memset, memcpy and `prop_get` ends the call as `CallHooked`; refused at a
-  watchpoint's stop). A step whose OSD picture the engine refused now fails (`--osd-errors report` only lists it): no
-  stock flow measured has one (X: flows on E143, E146 and E147, `emu/README.md` "Scripted sessions"); the tools are
-  checked by `emu/test/test_tools.mjs`.
+- **Their driver's other tools** in `bin/session.mjs` (`emu/README.md` "Scripted sessions", 4.3): `trace:PC:stack=N` (N
+  words from `sp` up at each hit, 1 to 256), `dump:ADDR:LEN:FILE` (up to 64 MiB, the ranges the boot does not load named
+  with S-STALERAM's fill), `--a15 auto|off|on` and `--device tft|evf`, a `break:` at a pc a lab hook holds (the stop
+  comes before the hook answers), and `call:` at a breakpoint's stop (the CPU's whole context and the harness stack put
+  back; a lab hook other than memset, memcpy and `prop_get` ends the call as `CallHooked`; refused at a watchpoint's
+  stop). A step whose OSD picture the engine refused now fails on E143, E146 and E147 (`--osd-errors report` only lists
+  it): no stock flow measured there has one (X: flows on E143, E146 and E147, `emu/README.md` "Scripted sessions"); on
+  the other bodies, where stock sessions meet such refusals, `report` stays the default; the tools are checked by
+  `emu/test/test_tools.mjs`.
 - **Waits in the idle player's slices.** The camera application's stand-ins (the DISPLAY and module replies, the timed
   callbacks) deliver at the end of each Player input, so a session's single long `WAIT` held back what the firmware did
   after a reply until the wait ended, and a result could depend on how a script split its waits. Every wait of a step

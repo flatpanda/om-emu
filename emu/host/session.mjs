@@ -19,8 +19,9 @@
 //   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
 //   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
-//   and --device), osdErrors 'fail' (the default: a step with an OSD engine refusal fails) | 'report', out DIR (session-N.json logs; relative paths of the tokens
-//   resolve against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
+//   and --device), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
+//   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
+//   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
 //   lines: the patched firmware, the patch audit, the kept state, the card), onRecord(record) (each step's record as
 //   it ends, in step order: a debug stop's record ends at the stop, before the records of the tokens run there),
@@ -61,6 +62,11 @@ export const HITS_PER_STEP = 100;      // a record's hits: the first this many, 
 // trace:PC:stack=N's bound (src/debug/live.mjs STACK_WORDS_MAX, which the live route checks); dump:'s, in bytes (the
 // debug read's READ_MAX at a time)
 export const STACK_WORDS = 256, DUMP_MAX = 64 * 1024 * 1024;
+// --osd-errors' default: fail on the bodies whose stock flows were measured with no OSD engine refusal (X, 2026-11-14:
+// about 410 steps of INFO, the Super Control Panel, the menus, S1 and S2, playback and the dials on E143, E146 and
+// E147), report on the others: stock sessions on E118, E120, E125, E129, E130, E132, E133, E137, E140, E142 and E145
+// meet BMP_LUT refusals at the open, INFO or the menu (X, 2026-11-14), so a default fail would fail stock firmware there
+export const OSD_FAIL_BODIES = new Set(['E143', 'E146', 'E147']);
 export class TokenError extends UsageError {}
 export class SessionRefused extends Error {}
 class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
@@ -361,7 +367,7 @@ export async function openSession(o = {}) {
   const puts = pairs(o.cardPut, '--card-put'), gets = pairs(o.cardGet, '--card-get');
   // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
   // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
-  const a15Arg = o.a15 ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? 'fail';
+  const a15Arg = o.a15 ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
   if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
   if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
   if (!['tft', 'evf'].includes(deviceArg)) throw new TokenError(`--device ${deviceArg}: tft or evf`);
@@ -449,8 +455,8 @@ export async function openSession(o = {}) {
     osdSeen = { ...eng.failures };
     return Object.keys(d).length ? d : null;
   };
-  // --osd-errors fail (the default): a step whose OSD engine refused a picture fails, as a picture the lab could not
-  // draw is not verified (no stock flow measured has one: emu/README.md); report: the record only lists them
+  // --osd-errors fail (the default on OSD_FAIL_BODIES): a step whose OSD engine refused a picture fails, as a picture
+  // the lab could not draw is not verified; report (the default elsewhere): the record only lists them
   const osdFail = (rec, osd) => {
     rec.osd_errors = osd;
     const n = Object.values(osd).reduce((x, y) => x + y, 0);
@@ -767,7 +773,7 @@ export async function openSession(o = {}) {
   const summary = () => {
     let cardRows = null;
     if (STORAGE) { try { cardRows = listing(); } catch (e) { if (BUG(e)) throw e; cardRows = { error: e.message }; } }
-    return { summary: true, ok: failed === null, model: MODEL, patch: fw ? patchLine(fw.summary) : null, patch_audit: audit ?? startAudit, stand_ins: [...standins], pokes, harness_inputs: harness, calls,
+    return { summary: true, ok: failed === null, model: MODEL, osd_errors_policy: osdPolicy, patch: fw ? patchLine(fw.summary) : null, patch_audit: audit ?? startAudit, stand_ins: [...standins], pokes, harness_inputs: harness, calls,
       card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed,
       traces: armedLog.length ? { armed: armedLog, now: describe(), counts: Object.fromEntries(hitTotals), hits_dropped: hitsDropped, stops: stopCount } : null, ended_at_stop: ended };
   };

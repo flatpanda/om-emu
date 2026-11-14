@@ -40,8 +40,11 @@ takes the digest-anchored release files of [Caduceus for OM-3](analysis/caduceus
 stops the session, and the status lists the ported addresses the patch rewrites. Like the camera, it gives DRAM only
 what the boot copies, so code a patch places where the boot does not load stops the session. `emu/bin/card.mjs`
 puts files on a saved card and takes them off, and `emu/bin/session.mjs` runs a whole session headless from a token
-script with expects, one JSON record per step and an exit status. Caduceus v0.29 runs through it to its films, its card
-load and its film's name in the picture's EXIF, with no write to memory.
+script with expects, one JSON record per step and an exit status; a script can also trace pcs and memory, stop at
+breakpoints and watchpoints, and call into the middle of a firmware function. Caduceus v0.29 runs through it to its
+films, its card load and its film's name in the picture's EXIF, with no write to memory. With a local checkout of
+theirs (`OM_CADUCEUS`) the tests run every Caduceus release against pinned observations and check a film's values
+where the camera's development takes them, below the pixels.
 
 Other bodies, through ports (as of 2026-11-02):
 

@@ -30,6 +30,9 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   for TAKE's capture (S-TAKERDY, 4.1.12); the histogram unit's bins are counted (4.2.7); the play opt-in's view is
   decoded on the image library's pipeline block (S-IMGPIPE, 4.8.13); cam.c's request 6, the sensor's power-on, runs
   under `cam_fe` as far as SSG1's command unit when a test makes it (S-TAKECAM keeps it in sessions, 4.2.6).
+  Since 2026-11-13 (X): E146 and E147 reach the same point under camapp 3 (S-TAKERDY and S-MODPOST by a rule; E147's
+  sessions had run its application in movie mode, 4.1.13), and what of the still path below S2 runs natively is
+  pinned on E143, E146 and E147 (4.3.12).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
@@ -1410,8 +1413,9 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not read. E147's
   other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections, link,
   patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
-  stills-mode key dispatch (`analysis/caduceus-om3/README.md` follow-up 3) read movie columns in P. Whether this is its
-  cause is not checked: their key table's mode checks name other ids.
+  stills-mode key results in the lab (`analysis/caduceus-om3/README.md` follow-up 2) came from om-emu versions that
+  started the switch at this movie position. Whether that explains them is not checked: their key table's mode checks
+  name other ids.
 - **TAKE's protocol on E146 and E147: the rule takeRequests (`emu/src/fw/facts.mjs`).** It reads, where recFile reads
   REC_FILE, the sites S-MODPOST and S-TAKERDY rest on. It starts at the E143 functions' places and takes each site in
   E143's bytes, with addresses and the values read left open (X: E146 and E147 hold every form):
@@ -3876,7 +3880,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   The release (`0x5054322e`; E146 `0x50520568`, E147 `0x5052f657`) runs once (4.3.9's pin). The format word's helper
   also runs once from another REC function (`0x50551b17`, not read), and the library's format mapper below it once
   more from `0x5054b3fa`, 1 ms earlier. TAKE's fill and takepic do not run even with E143's native TAKE under control
-  camapp 3 with `--take probe --cpu2 native` (X, a scout's probe of the same day, not rerun here). So natively:
+  camapp 3 with `--take probe --cpu2 native` (X, a scout's probe of the same day, not rerun here). So natively, on
+  the three bodies alike:
   CreateParam with its helpers, the create with the still constructor and its second step, ImageParam's body and the
   release; stood in or not reached: the parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot
   record and takepic (S-EXIFPRM).
@@ -3955,6 +3960,13 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 - **Corrects.** 4.3.9's "the others ... by the request's bytes +37, +42 and +8, are not read": read above. A scout's
   note of the same day put the code at `0x50496710` inside the constructor `0x50496707`; it is the second step's
   own stub (E143 `0x504953c2`), taken for byte +8 1 or bit 19, not for the option byte.
+- **Leads for E147's development (their source; the stages not read here).** Caduceus for OM-3 hooks E147's COLOR stage
+  `0x504f7553` at its call of the HSL builder `0x504f7361` (`0x504f75f5`), the stage list's call of `0x504f7f84` at
+  `0x504f87b7`, the work list at `0x50497d71` (reached from rec_jpeg_make_image through the create `0x5049272b` in a
+  static call scan, D), the combiner set-up at `0x504e3b3d` and `0x504e43ac`, and the Art Effect converter `0x50534e27`,
+  which is CreateParam's flags helper above (E143 `0x50547e3b`) and runs once per still (X). The EXIF set's WB fine-tune
+  reads (keys 34041 and 38521, `0x50436962`) store at the shot's +37734 and +37736 (D).
+  `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
 - **Open.** MM's allocation for E147's extension; the stub's option objects (`0x504970dd`) and its 40655; the
   constructor `0x504953a9`'s stages (not read); the run (4.3.9).
 

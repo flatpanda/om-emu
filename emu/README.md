@@ -1025,7 +1025,7 @@ rest of the line.
 
 | Token | What it does |
 | --- | --- |
-| `KEY` (a control id: `s1`, `ok`, `menu`, `right`, `play`, ...) | a press: down, 150 ms, up, then the settle (every wait of a step, these and `wait:MS`, goes to the player as `WAIT` inputs of at most 50 ms, the idle player's slice, below) |
+| `KEY` (a control id: `s1`, `ok`, `menu`, `right`, `play`, ...) | a press: down, 150 ms, up, then the settle (a display control, `lv` or `eye`, switches the display at its down and has no up: its token is the down and the settle, and `KEY:down`, `KEY:up` and `hold:` of it are refused; until 2026-11-14 its token failed, the player dropping the up) (every wait of a step, these and `wait:MS`, goes to the player as `WAIT` inputs of at most 50 ms, the idle player's slice, below) |
 | `KEY:down`, `KEY:up`, `hold:KEY[:MS]` | one edge; or down, MS (2000) ms, up and the settle |
 | `main_dial:+N`, `sub_dial:-N` | N detents (1 to 8, the player's cap), then the settle; the step sends the player's dial id (`main`, `sub`) |
 | `switch:ID=V`, `switch:ID+N` | a switch or position switch set to V, or stepped (`creative_dial`, `still_movie`, `mode_dial`, `lever`, ...) |

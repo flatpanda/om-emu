@@ -17,7 +17,7 @@
 //                 the CPU context's part is the unit's); a call at a stop that reaches another hook answers
 //                 CallHooked and the run ends there; a call at a watchpoint's stop is refused; --a15 off publishes
 //                 no frame where on publishes one; --device evf and the eye sensor's switch: shot: takes the EVF's
-//                 frame; --osd-errors: a step whose engine refused a picture fails by default and only reports
+//                 frame; the lv and eye tokens switch the display (eye:down refused); --osd-errors: a step whose engine refused a picture fails by default and only reports
 //                 with report (the refusal counted through the module API; test_osdwrap.mjs makes real ones); on
 //                 E118, whose stock INFO meets BMP_LUT refusals, the default is report and fail fails the step.
 //                 E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a 32-word stack capture at the
@@ -210,6 +210,12 @@ async function e143({ ok }, { T, step }) {
   const [sa, sb, sc] = ['shot:a.png', 'shot:b.png', 'shot:c.png'].map((x) => step(ev, x));
   ok(ev.rc === 0 && sa.device === 'evf' && JSON.stringify(sa.size) === '[1600,1200]' && sb.device === 'tft' && JSON.stringify(sb.size) === '[900,600]' && sc.device === 'evf' && sa.frame === sc.frame && ev.sum?.stand_ins?.includes('H-STOREFIRST'),
     `E143 --device evf and the eye sensor: ${ev.last} ${JSON.stringify([sa, sb, sc].map((x) => [x.device, x.size, x.frame]))}`);
+
+  // the display controls as tokens: lv and eye switch the display at their press (a down and the settle; control,
+  // before 2026-11-14: the step failed, the player dropping the key's up), eye:down refused
+  const lv = cli(['--model', 'E143', '--out', T('l'), 'wait:1500', 'lv', 'shot:a.png', 'lv', 'shot:b.png', 'eye', 'shot:c.png']), ed = cli(['--model', 'E143', 'eye:down']);
+  ok(lv.rc === 0 && JSON.stringify(['shot:a.png', 'shot:b.png', 'shot:c.png'].map((x) => step(lv, x).device)) === '["evf","tft","evf"]' && ed.rc === 2 && /eye:down: eye switches the display at its press/.test(ed.err),
+    `E143 lv and eye switch the display, eye:down refused: ${lv.last} ${JSON.stringify(['shot:a.png', 'shot:b.png', 'shot:c.png'].map((x) => step(lv, x).device))} | rc ${ed.rc} ${ed.last}`);
 
   // --osd-errors: a refusal fails the step by default, report only lists it (the engine's count raised by hand here)
   for (const policy of ['fail', 'report']) {

@@ -247,6 +247,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'press': return [key(st.id, 'down'), ...wait(PRESS_MS), key(st.id, 'up'), ...wait(settle)];
     case 'hold': return [key(st.id, 'down'), ...wait(st.ms), key(st.id, 'up'), ...wait(settle)];
     case 'edge': return [key(st.id, st.action)];
+    case 'display': return [key(st.id, 'down'), ...wait(settle)];      // a display control's press (openSession: lv, eye)
     case 'dial': return [{ type: 'dial', id: st.id.replace(/_dial$/, ''), detents: st.detents }, ...wait(settle)];   // the Player's dial ids: main, sub
     case 'wait': return wait(st.ms);
     case 'token': return [{ type: 'token', token: st.token }];
@@ -344,6 +345,12 @@ export async function openSession(o = {}) {
     const id = st.kind === 'power' ? 'power' : st.id;
     if (id !== undefined && !BY_ID.has(id)) throw new TokenError(`${st.text}: ${MODEL} has no control ${JSON.stringify(id)} (${[...BY_ID.keys()].filter((k) => !k.startsWith('fw_')).join(', ')}, fw_<code>)`);
     if (st.kind === 'dial' && BY_ID.get(id).kind !== 'dial') throw new TokenError(`${st.text}: ${id} is not a dial (main_dial, sub_dial)`);
+    // a display control (lv, eye): the Player switches the display at its key's down and takes no up (player.mjs), so
+    // the token is the down and the settle (a toggle); an edge or a hold of it is refused
+    if (id !== undefined && BY_ID.get(id).kind === 'display' && ['press', 'hold', 'edge'].includes(st.kind)) {
+      if (st.kind !== 'press') throw new TokenError(`${st.text}: ${id} switches the display at its press (the token ${id}${id === 'eye' ? ', or switch:eye=1|0' : ''}); it has no down, up or hold of its own`);
+      return { ...st, kind: 'display' };
+    }
     if (['card-ls', 'card-get', 'exif'].includes(st.kind) || st.expect?.what === 'card' || st.expect?.what === 'exif') {
       if (!STORAGE) throw new TokenError(`${st.text}: ${MODEL} has no card with a file system in the lab (S-CARD)`);
     }

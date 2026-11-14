@@ -1421,9 +1421,11 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not read. E147's
   other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections, link,
   patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
-  stills-mode key results in the lab (`analysis/caduceus-om3/README.md` follow-up 2) came from om-emu versions that
-  started the switch at this movie position. Whether that explains them is not checked: their key table's mode checks
-  name other ids.
+  stills-mode key results in the lab (their `research/BUTTONS.md`) came from om-emu versions that started the switch at
+  this movie position. Re-run at the stills position (2026-11-14, X) the arrow keys read setting ids 50..53 and the
+  dials work, where at the movie position the arrows read 1280..1283 and the front dial left exposure compensation
+  alone, so those results were the movie position's; OK on their custom Picture Mode row still differs from their
+  camera report (`analysis/caduceus-om3/README.md` section 6).
 - **TAKE's protocol on E146 and E147: the rule takeRequests (`emu/src/fw/facts.mjs`).** It reads, where recFile reads
   REC_FILE, the sites S-MODPOST and S-TAKERDY rest on. It starts at the E143 functions' places and takes each site in
   E143's bytes, with addresses and the values read left open (X: E146 and E147 hold every form):
@@ -2836,7 +2838,8 @@ traRoutingSession, below).
   - Tv and Av: ExposureTime and FNumber are the template's 0 (X: exiftool). The EXIF set (`0x5042992d`, which divides
     by zero in TAKE's state, 4.1.4) formats them from the record takepic filled; which of its fields it reads is not
     read. (4.3.11, 2026-11-13: the zero is IMG_PRECON's table, the set runs natively, and it reads Tv +38164 and Av
-    +38178; ExposureTime is now its 1 s for Tv 0, FNumber 0/10.)
+    +38178; ExposureTime was then its 1 s for Tv 0, FNumber 0/10. 4.3.13, 2026-11-14: Tv and Av are TAKE's fill's,
+    so ExposureTime is the exposure plan's; FNumber stays 0/10.)
   - ObjResponse, Number, Packet: REC_MAIN (`0x50539b9c`) copies them from the requester's 16-byte message on its
     queue (the id at `0x60043252`): +0 ObjResponse, +4 Number, +8 Command, +12 Packet (`0x50539bc8..0x50539bdd`).
     REC_FILE's reply sends Number and Packet back to ObjResponse (`0x5053984f..0x5053987a`). The requester (I: TAKE
@@ -3850,16 +3853,18 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   formatting and the zoom ratio 1/1 remain on the bodies whose rule reads no EXIF set (the E144 family,
   recFileInline's, the E118 family's).
 - **What runs (X, `emu/test/test_storage.mjs` storageSession on E143, E146 and E147).** One native run of the EXIF set
-  per picture, after H-RECPRECON. The file's dates are the clock's, as before. X and Y resolution 350/1, the zoom
-  ratio 0/100, ExposureTime 10/10 and FNumber 0/10 (refs/exif.mjs). Control: a fresh template copy, with the clock
+  per picture, after H-RECPRECON. The file's dates are the clock's, as before. X and Y resolution 350/1, the zoom ratio
+  0/100, ExposureTime 10/10 and FNumber 0/10 (refs/exif.mjs; since 2026-11-14 ExposureTime is the exposure plan's on
+  E143, and on E146 and E147 once S1 has left the start screen, 4.3.13). Control: a fresh template copy, with the clock
   read after the clock was set to another date, gets that date from the EXIF set and keeps the template's empty
-  DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus v0.29, outside the
-  tree) wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did
-  not before (X).
+  DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus v0.29, outside the tree)
+  wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did not before
+  (X).
 - **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1; read in 4.3.13,
-  where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144; the lens flag +37982 and the lens fields; the EXIF set on the E144 family's, recFileInline's and the
-  E118 family's REC versions (no rule reads it there; the E118 family's set divided by zero too, finding 103, whether
-  in the same table is not read); the orientation (4.1.4's plan step 3).
+  where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144; the lens flag +37982 and
+  the lens fields; the EXIF set on the E144 family's, recFileInline's and the E118 family's REC versions (no rule reads
+  it there; the E118 family's set divided by zero too, finding 103, whether in the same table is not read); the
+  orientation (4.1.4's plan step 3).
 
 #### 4.3.12 The still pipeline's coverage and the constructor's inputs (E143, E146, E147; 2026-11-13; D unless tagged)
 
@@ -3868,33 +3873,37 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   not read). A modified firmware's capture-path code sits behind some of them (`analysis/caduceus-om3/README.md` 4.4).
   Addresses are E143's unless a body is named.
 - **What runs (X, `emu/test/test_storage.mjs` storageSession's STILL_PATH: observers on each body's addresses through
-  one S1 + S2 with S-SCENE's live view; each address's first instructions read on its body, E146's and E147's placed
-  by the cross-build map).** The same on the three bodies:
+  one S1 + S2 with S-SCENE's live view; each address's first instructions read on its body, E146's and E147's placed by
+  the cross-build map).** As pinned since 2026-11-14, with S-RECREQ's Command 16 and S-EXIFPRM's picture mode (below;
+  E147 at the creative dial's start position, COLOR). On 2026-11-13, before those, E147's runs were E143's and E146's
+  (the still constructor, no extension's apply), and TAKE's exposure-record fill did not run on any body:
 
-| Part | E143 | E146 | E147 | Runs |
-|---|---|---|---|---|
-| rec_ImgPro_CreateParam | `0x50542363` | `0x5051f5af` | `0x5052e69f` | 1 |
-| its calls: format word, flags, kind byte, extensions | `0x50542394`, `0x5054239e`, `0x505423c1`, `0x505423fe` | `0x5051f5e0`, `0x5051f5ea`, `0x5051f60d`, `0x5051f64a` | `0x5052e6d0`, `0x5052e6da`, `0x5052e6fd`, `0x5052e73a` | 1 each |
-| the extension's test (CreateParam's, the release's) | `0x50543f93` | `0x505216cf` | `0x505307c8` | 2 |
-| the extension's apply | `0x50543fbb` | `0x505216f7` | `0x50530805` | 0 |
-| the create; its stage-table fill | `0x50491699`; `0x504934a6` | `0x50483f0d`; `0x50485f48` | `0x5049272b`; `0x504947a6` | 1 |
-| the still constructor's stub and body | `0x504a7027`, `0x504a8e07` | `0x5049a01a`, `0x5049bfdb` | `0x504a88f1`, `0x504aa8b2` | 1 |
-| the create's second step | `0x50493541` | `0x50485fe3` | `0x50494841` | 1 |
-| rec_ImgPro_ImageParam | `0x50542528` | `0x5051f7c2` | `0x5052e8b2` | 1 |
-| the other constructors (kind, option, byte +8 1 or bit 19) | `0x5049cb5c`, `0x504953b9`, `0x504953a9` | `0x5048f852`, `0x50487ea9`, `0x50487e99` | `0x5049e129`, `0x50496707`, `0x504966f7` | 0 |
-| the second step's others (byte +8 1 or bit 19; kind) | `0x504953c2`, `0x5049cd1a` | `0x50487eb2`, `0x5048fa10` | `0x50496710`, `0x5049e2e7` | 0 |
-| the library's run; the generic kind handler | `0x50492758`; `0x5046d994` | `0x50485182`; `0x5045f338` | `0x504939e0`; `0x5046dba4` | 0 |
-| TAKE's shot-record fill; takepic | `0x503bba51`; `0x503bcd51` | `0x503bc37e`; `0x503bd6ab` | `0x503c660c`; `0x503c793b` | 0 |
-| the per-shot EXIF fill (the observers' control) | `0x5042c2d5` | `0x50428252` | `0x50436558` | 1 |
+| Part | E143 | E146 | E147 | Runs, E143 and E146 | Runs, E147 |
+|---|---|---|---|---|---|
+| rec_ImgPro_CreateParam | `0x50542363` | `0x5051f5af` | `0x5052e69f` | 1 | 1 |
+| its calls: format word, flags, kind byte, extensions | `0x50542394`, `0x5054239e`, `0x505423c1`, `0x505423fe` | `0x5051f5e0`, `0x5051f5ea`, `0x5051f60d`, `0x5051f64a` | `0x5052e6d0`, `0x5052e6da`, `0x5052e6fd`, `0x5052e73a` | 1 each | 1 each |
+| the extension's test (CreateParam's, the release's) | `0x50543f93` | `0x505216cf` | `0x505307c8` | 2 | 2 |
+| the extension's apply | `0x50543fbb` | `0x505216f7` | `0x50530805` | 0 | 1 |
+| the create; its stage-table fill | `0x50491699`; `0x504934a6` | `0x50483f0d`; `0x50485f48` | `0x5049272b`; `0x504947a6` | 1 | 1 |
+| the still constructor's stub and body | `0x504a7027`, `0x504a8e07` | `0x5049a01a`, `0x5049bfdb` | `0x504a88f1`, `0x504aa8b2` | 1 | 0 |
+| the create's second step | `0x50493541` | `0x50485fe3` | `0x50494841` | 1 | 1 |
+| rec_ImgPro_ImageParam | `0x50542528` | `0x5051f7c2` | `0x5052e8b2` | 1 | 1 |
+| the other constructors (kind, option, byte +8 1 or bit 19) | `0x5049cb5c`, `0x504953b9`, `0x504953a9` | `0x5048f852`, `0x50487ea9`, `0x50487e99` | `0x5049e129`, `0x50496707`, `0x504966f7` | 0, 0, 0 | 0, 0, 1 |
+| the second step's others (byte +8 1 or bit 19; kind) | `0x504953c2`, `0x5049cd1a` | `0x50487eb2`, `0x5048fa10` | `0x50496710`, `0x5049e2e7` | 0, 0 | 1, 0 |
+| the library's run; the generic kind handler | `0x50492758`; `0x5046d994` | `0x50485182`; `0x5045f338` | `0x504939e0`; `0x5046dba4` | 0 | 0 |
+| TAKE's shot-record fill; takepic | `0x503bba51`; `0x503bcd51` | `0x503bc37e`; `0x503bd6ab` | `0x503c660c`; `0x503c793b` | 0 | 0 |
+| TAKE's exposure-record fill (S-EXIFPRM runs it, 4.3.13) | `0x503bf619` | `0x503bfe9c` | `0x503c9db8` | 1 | 1 |
+| the per-shot EXIF fill (the observers' control) | `0x5042c2d5` | `0x50428252` | `0x50436558` | 1 | 1 |
 
   The release (`0x5054322e`; E146 `0x50520568`, E147 `0x5052f657`) runs once (4.3.9's pin). The format word's helper
   also runs once from another REC function (`0x50551b17`, not read), and the library's format mapper below it once
   more from `0x5054b3fa`, 1 ms earlier. TAKE's fill and takepic do not run even with E143's native TAKE under control
-  camapp 3 with `--take probe --cpu2 native` (X, a scout's probe of the same day, not rerun here). So natively, on
-  the three bodies alike:
-  CreateParam with its helpers, the create with the still constructor and its second step, ImageParam's body and the
-  release; stood in or not reached: the parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot
-  record and takepic (S-EXIFPRM).
+  camapp 3 with `--take probe --cpu2 native` (X, a scout's probe of 2026-11-13, not rerun here). So natively, on the
+  three bodies: CreateParam with its helpers, the create with the constructor the picture mode selects (E143 and E146
+  the still constructor; E147 at COLOR, MONO and ART `0x504966f7`, after the extension's apply, and at position 2 and
+  CRT the still constructor) and its second step, ImageParam's body and the release; stood in or not reached: the
+  parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot record and takepic (S-EXIFPRM, which
+  runs TAKE's exposure-record fill since 2026-11-14).
 - **The request (D).** rec_jpeg_make_image clears the request on its stack (48 bytes at `0x50549b6b`; E146 56 at
   `0x50527c52`, E147 60 at `0x50536e60`). CreateParam writes +0 (the callback) and +4 (the packet), then through its
   helpers the format word +8 (4 bytes, `0x50547cf7`) and the flags +12 (`0x50547e3b`), +34 and +35 (the packet's +299),
@@ -6462,7 +6471,9 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   sends at a change, and in which order). The Player's input `{"type": "card", "action": "remove" | "insert"}` takes
   S-SDCARD's card out (it then answers no command, as an empty slot) or puts it back, and changes the switch through
   S-KEYBITS' bit, which UI_IN decodes natively. X: the shooting screen loses the card's count and movie time (no
-  "No Card" text is drawn) and gets them back after the insertion (803 and 5:25, the same pixels); the insertion takes
+  "No Card" text is drawn, X 2026-10-24; on the tree of 2026-11-14 the removal's screen shows "No Card" with its icon,
+  the card-less start's pixel for pixel, below; which change between made the difference is not read) and gets them
+  back after the insertion (803 and 5:25, the same pixels); the insertion takes
   about 0.8 s of lab time (logsec's 740 ms wait after the card switch). While the card is out S-CARD keeps no picture
   and answers 0 images.
 - **REC_FILE (goal 3, not attempted):** its media writer `0x5054aa70` sends dosfat op 4 (`0x54`, the chain write) over a
@@ -6472,7 +6483,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
   host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card it formats and mounts,
-  4.8.6); what the camera draws without a card ("No Card", the card icon).
+  4.8.6); what the camera draws without a card ("No Card", the card icon; the firmware's own screen without a card
+  is drawn in the lab since 2026-11-14, below).
   (The second slot is modelled since 2026-11-11, 4.8.12: its mount state 8 at the start is what the media manager
   leaves for an empty slot, X, and its switch `0x1518` and card-detect pin follow its card.)
 - **The media status at a removal, and a start with no card (2026-11-14):** the media status setter `0x50aca703`

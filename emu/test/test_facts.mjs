@@ -3,6 +3,7 @@
 //   factsTests  imageBase on synthetic reset heads (the jump decoded, none or two refused) and, for every model of
 //               src/fw/models.mjs whose main block is unpacked, imageBase(block) === its image_base; mergeBoard's
 //               one-level merge, its refusal of a fact given both ways and its UNKNOWN getters, boardOf on every model;
+//               every model's own hand overrides as src/fw/ports.mjs gives them (E125's three pinned callees named);
 //               on every model with both blocks unpacked: resetHead and coreByte (through readFacts) and resLoader
 //               against the values found without them (BOARD_FOUND, LOADER_FOUND), the vectors' page against the port's
 //               level slots, readFacts against the model's src/fw/ports.mjs FACTS (E143: its own facts; a model not
@@ -1034,6 +1035,17 @@ export function factsTests() {
     const open = Object.keys(MODELS[m.port_via]).filter((k) => !OWN.has(k) && !Object.hasOwn(m, k) && !Object.hasOwn(FACTS[code] ?? {}, k));
     ok(!open.length, `${code}: ${m.port_via}'s (port_via) ${open.join(', ')}: neither given in ${code}'s MODELS entry nor read (FACTS)`);
   }
+  // A model's own hand overrides are what src/fw/ports.mjs gives for the addresses the lab names (bin/port.mjs: an
+  // override wins over the map), so a hand pin that the table does not carry, a re-port missing after it, is caught;
+  // E125's three IMG_PRECON callees pinned against c1e2e0c's seed-set move are named so they cannot drop out of the table
+  const hexTo = (o) => (o.to === null ? null : parseInt(o.to, 16) >>> 0);
+  for (const [code, m] of Object.entries(MODELS)) {
+    if (!PORTS[code]) continue;
+    const off = Object.entries(m.overrides ?? {}).filter(([k, o]) => { const v = PORTS[code][parseInt(k, 16) >>> 0]; return v !== undefined && v !== hexTo(o); });
+    ok(!off.length, `${code}: hand overrides src/fw/ports.mjs does not give: ${off.map(([k, o]) => `${k} -> ${o.to} (table ${hx(PORTS[code][parseInt(k, 16) >>> 0])})`).join(', ')}`);
+  }
+  ok(['0x50154704', '0x50152f4c', '0x50152495'].every((k) => MODELS.E125.overrides?.[k] && PORTS.E125?.[parseInt(k, 16)] === hexTo(MODELS.E125.overrides[k])),
+    `E125: the IMG_PRECON callees pinned in the table: ${['0x50154704', '0x50152f4c', '0x50152495'].map((k) => hx(PORTS.E125?.[parseInt(k, 16)])).join(', ')}`);
   // the rules on every model with both blocks unpacked
   for (const [code, m] of Object.entries(MODELS)) {
     const file = path.join(REPO, romPath(m)), resFile = path.join(REPO, resPath(m));

@@ -1015,6 +1015,18 @@ export const MODELS = {
     // mov 787,d0; cmp 1,d1` as E139's 0x50021641 (through E139 0x501729a6, a `mov 1,d0; retf` before it, through E144
     // 0x501729e0, inside it, D). E134 is taken
     port_via: 'E134',
+    // three of the IMG_PRECON init's callees, which src/lab/take.mjs names in comments only (nothing on E125 reads
+    // them): pinned so a re-port's seed set cannot move them again (c1e2e0c's did). E143's call row after the init's
+    // `ret [],4` at 0x502a49e9 is 0x501504c0 [],0, 0x501529dc [],4, 0x5015368b [],0, 0x50154a12 [],4, 0x50150f69
+    // [],4, 0x50154704 [d2,a2],12, 0x50152f4c [],4, then if d0 is 0 0x50152495 [],4; E125's after 0x501fb8ce is
+    // 0x5010499d, 0x50107530, 0x501087df, 0x5010a0f6, 0x50104f54, 0x5010563f, 0x50109de9 [d2,a2],12, 0x50107d07 [],8,
+    // then 0x50106e75 (D). 0x50150f69 (a 10064-byte clear and an allocation) matches neither 0x50104f54 nor 0x5010563f
+    // (two-call stubs) and stays the map's
+    overrides: {
+      '0x50154704': { to: '0x50109de9', why: 'the call row\'s [d2,a2],12 callee: E143\'s `mov 115,d1; mov 128,d0; ...; call` allocation, `mov a0,(G); clr d0; movbu d0,(a0); call; mov (G),a0; mov d0,(4,a0); mov 1,d0; call` is E125\'s 0x50109de9 from its `mov 128,d0` on, the same tail (D; the map gave the stub 0x5010563f, `clr d0; mov d0,(G); call; ret`)' },
+      '0x50152f4c': { to: '0x50107d07', why: 'the callee after the [d2,a2],12 call: E143\'s allocation and store `mov imm,d0; call alloc [d2,d3,a2],28; mov a0,(G); clr d0` has the shape of E125\'s 0x50107d07 `mov 136,d0; call 0x501075b7,[d2,d3,a2],28; mov a0,(G); clr d0` at the same place in the row (D; the map gave 0x50109de9, the row\'s [d2,a2],12 callee)' },
+      '0x50152495': { to: '0x50106e75', why: 'the row\'s conditional callee (d0 0): E143\'s `mov imm,a0; clr d0; mov 4,d1; call ...,[d2,a2],8` is E125\'s 0x50106e75 `mov imm,a0; clr d0; mov 8,d1; call ...,[d2,a2],8` (D; the map gave 0x50106e66, the helper `add 500,d0; mov 1000,d1; ...; divu` that ends just before it, which the init never calls)' },
+    },
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
     extra_tasks: [

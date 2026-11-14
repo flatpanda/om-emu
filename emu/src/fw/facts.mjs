@@ -3862,6 +3862,84 @@ export function recImage(img, kcb, rec) {
   };
 }
 
+// TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps.md
+// 4.1.11, 4.1.12, 4.1.13), read at the E143 functions' places where recFile reads REC_FILE (E143, E146, E147). D on
+// E143 unless tagged; each site is E143's instructions with addresses, displacements and the values read left open
+// (the direct post's first stack store too: no form here is a 32-byte run of the firmware's bytes, bin/pubaudit.mjs;
+// X: E146 and E147 hold every form):
+// - api_post: OlyQeWr's return in the API's direct post (TAKE_API_POST_E143, the call 36 bytes on), through which the
+//   take API's control 0x40 posts TAKE_EXEC {0, 0, control_post, 0}: `mov (24,sp),d0; clr d1; mov imm8,a0; call` at
+//   TAKE_CONTROL_40_E143 (control_post the imm8); take_send: OlyQeWr's return in TAKE's send (TAKE_SEND_E143, 10 on)
+// - func29: TAKE_FUNC's command 29 from its one-shot sender (TAKE_FUNC29_E143): the start-up flag tested, set to 1
+//   (the same byte), the command stored at (12,sp), the parameter's mov imm32 at (16,sp), and the call of TAKE's send
+// - kind_at: the take API's (TAKE_API_E143) default branch `clr d0; mov d0,(44,sp); mov d0,(d8,a2); exthu d2; mov d2,d0;
+//   call`, one in its first TAKE_API_SPAN bytes: the request's command (44,sp) and the packet's kind (+d8) both 0
+// - queue_at: TAKE_MAIN's keep of the packet's event queue `mov (d8,a2),d1; mov d1,(abs32)` (TAKE_PACKET_KEEP_E143);
+//   event: RdyFcsRdy2's post of its module event `mov (abs32),d0; mov imm32,d1; mov 0,a0; call` to TAKE's reply helper
+//   (TAKE_EVENT_POST_E143, TAKE_REPLY_E143) from the word the keep wrote
+// - TAKE_MAIN's state table, loaded at its loop's head (TAKE_MAIN_E143: 15 bytes of frame set-up, then `mov
+//   imm32,a3`; 20 bytes a state, +4 its name, +12 its command table of 8-byte {u16 command, u16, handler} rows ended by
+//   0xffff): Idle's table holds the take-ready and its stop (0, 7), RdyTrig2Wait's the stop and takePicture (7, 11)
+//   (TAKE_COMMANDS); X on E143 and E147: the rows the probe's TAKE_MAIN dispatches (docs/hle-gaps.md 4.1.7)
+// Throws where a form or a command row is missing
+export const TAKE_REQUESTS_E143 = { api_post: 0x503EBE71, take_send: 0x502CE58C, control_post: 5, func29: { command: 29, param: 0x62A3F2BE },
+  kind_at: 8, queue_at: 4, event: 0x04080032 };
+export const TAKE_API_POST_E143 = 0x503EBE46, TAKE_SEND_E143 = 0x502CE57B, TAKE_CONTROL_40_E143 = 0x50417EFD;
+export const TAKE_FUNC29_E143 = 0x503A05FB, TAKE_API_E143 = 0x50417CD9, TAKE_PACKET_KEEP_E143 = 0x503C275C;
+export const TAKE_EVENT_POST_E143 = 0x503C3262, TAKE_REPLY_E143 = 0x502CE5E6, TAKE_MAIN_E143 = 0x503996C3;
+export const TAKE_COMMANDS = { Idle: [0, 7], RdyTrig2Wait: [7, 11] };
+const TAKE_API_SPAN = 0x400, TAKE_STATES = 35, TAKE_STATE_BYTES = 20, TAKE_ROWS_MAX = 64;
+const API_POST_FORM = [0x93, 0x90, 0x10, 0xf1, 0x7c, 0x43, 0x10, 0x70, 0x95, 0x08, 0x42, null, 0xf1, 0x7d, 0x47, 0x0c, 0x71, 0x9d,
+  0x42, 0x1c, 0x51, 0x71, 0x3c, 0x20, 0x18, 0x04, 0xa4, 0xc8, 0x08, 0x85, 0xff, 0xa4, 0xc8, 0x03, 0x75, 0x73, 0xdd, null, null, null, null, 0xf0, 0x30];
+const TAKE_SEND_FORM = [0x83, 0x43, 0x18, 0x46, 0x1c, 0x3c, 0x20, 0x18, 0xf1, 0xd5, 0xdd, null, null, null, null, 0xf0, 0x30];
+const CONTROL_POST_FORM = [0x58, 0x18, 0x04, 0x90, null, 0xdd, null, null, null, null, 0xe0, 0x10];
+const FUNC29_FORM = [0xfc, 0xa8, null, null, null, null, 0xa0, 0x00, 0xc9, null, 0x80, 0x01, 0xfc, 0x82, null, null, null, null,
+  0x80, 0x3f, 0xfc, 0x83, null, null, null, null, 0x80, null, 0x42, 0x0c, 0xfc, 0xcc, null, null, null, null, 0x42, 0x10, 0x00,
+  0x42, 0x08, 0x42, 0x04, 0xfc, 0xac, null, null, null, null, 0x3c, 0x18, 0x50, 0x85, 0x10, 0xfc, 0xdd, 0xff, 0xff, 0xff, 0xff,
+  0xdd, null, null, null, null, 0xc0, 0x30];
+const KIND_FORM = [0x00, 0x42, 0x2c, 0xf8, 0x12, null, 0x1e, 0x88, 0xcd];
+const KEEP_FORM = [0xf8, 0x06, null, 0xfc, 0x85, null, null, null, null];
+const EVENT_FORM = [0xfc, 0xa4, null, null, null, null, 0xfc, 0xcd, null, null, null, null, 0x90, 0x00, 0xdd, null, null, null, null, 0xe0, 0x1c];
+const MAIN_FORM = [0xcf, 0xf0, 0xf8, 0xfe, 0xa8, 0x3c, 0x20, 0x28, 0x43, 0x24, 0x3c, 0x20, 0x2c, 0x43, 0x1c, 0xfc, 0xdf];
+export function takeRequests(img, at, qewr) {
+  const rule = 'takeRequests', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
+  const site = (e143, back, form, what) => {
+    const p = at(e143);
+    if (p === null) throw new Error(`${rule}: ${what} (E143 ${h8(e143)}) is not placed`);
+    const o = p - 0x50000000 - back;
+    if (!bytesAt(img, o, form)) throw new Error(`${rule}: ${what} at ${D(o)} is not E143's form`);
+    return o;
+  };
+  const callTo = (o, to, what) => { const c = callAt(img, o); if (!c || c.to !== to) throw new Error(`${rule}: ${what}'s call at ${D(o)} is not to ${D(to)}`); return o + c.len; };
+  if (qewr === null) throw new Error(`${rule}: OlyQeWr is not placed`);
+  const q = qewr - 0x50000000, post = site(TAKE_API_POST_E143, 0, API_POST_FORM, 'the API\'s direct post'), send = site(TAKE_SEND_E143, 0, TAKE_SEND_FORM, 'TAKE\'s send');
+  const api_post = 0x50000000 + callTo(post + 36, q, 'the API\'s direct post'), take_send = 0x50000000 + callTo(send + 10, q, 'TAKE\'s send');
+  const c40 = site(TAKE_CONTROL_40_E143, 0, CONTROL_POST_FORM, 'the take API\'s control-0x40 post');
+  const f29 = site(TAKE_FUNC29_E143, 0, FUNC29_FORM, 'TAKE_FUNC 29\'s sender');
+  if (u32(img, f29 + 2) !== u32(img, f29 + 14)) throw new Error(`${rule}: TAKE_FUNC 29's sender ${D(f29)} tests ${h8(u32(img, f29 + 2))} and sets ${h8(u32(img, f29 + 14))}`);
+  callTo(f29 + 60, send, 'TAKE_FUNC 29\'s sender');
+  const apiAt = at(TAKE_API_E143);
+  if (apiAt === null) throw new Error(`${rule}: the take API (E143 ${h8(TAKE_API_E143)}) is not placed`);
+  const kind = oneAt(img, KIND_FORM, rule, 'default kind stores in the take API', apiAt - 0x50000000, apiAt - 0x50000000 + TAKE_API_SPAN);
+  if (kind === null) throw new Error(`${rule}: no default kind store in the take API ${h8(apiAt)}'s first 0x${TAKE_API_SPAN.toString(16)} bytes`);
+  const keep = site(TAKE_PACKET_KEEP_E143, 3, KEEP_FORM, 'TAKE_MAIN\'s packet keep'), ev = site(TAKE_EVENT_POST_E143, 14, EVENT_FORM, 'TAKE_MAIN\'s event post');
+  const reply = at(TAKE_REPLY_E143);
+  if (reply === null) throw new Error(`${rule}: TAKE's reply helper (E143 ${h8(TAKE_REPLY_E143)}) is not placed`);
+  callTo(ev + 14, reply - 0x50000000, 'TAKE_MAIN\'s event post');
+  if (u32(img, ev + 2) !== u32(img, keep + 5)) throw new Error(`${rule}: TAKE_MAIN's event post ${D(ev)} reads ${h8(u32(img, ev + 2))}, its packet keep ${D(keep)} writes ${h8(u32(img, keep + 5))}`);
+  const main = site(TAKE_MAIN_E143, 0, MAIN_FORM, 'TAKE_MAIN\'s loop'), table = u32(img, main + 17) - base;
+  const str = (a) => { let s = ''; for (let k = a - base; k >= 0 && k < img.length && img[k] && s.length < 32; k++) s += String.fromCharCode(img[k]); return s; };
+  const rows = (t) => { const out = []; for (let k = 0, p = t - base; k < TAKE_ROWS_MAX && p >= 0 && p + 2 <= img.length; k++, p += 8) { const c = img[p] | img[p + 1] << 8; if (c === 0xffff) return out; out.push(c); } return null; };
+  for (const [name, want] of Object.entries(TAKE_COMMANDS)) {
+    const n = [...Array(TAKE_STATES).keys()].filter((k) => str(u32(img, table + TAKE_STATE_BYTES * k + 4)) === name);
+    if (n.length !== 1) throw new Error(`${rule}: ${n.length} states named ${name} in TAKE_MAIN's table ${h8(table + base)}, want one`);
+    const got = rows(u32(img, table + TAKE_STATE_BYTES * n[0] + 12));
+    if (!got || !want.every((c) => got.includes(c))) throw new Error(`${rule}: TAKE_MAIN's ${name} takes the commands ${got?.join(', ') ?? '(no ended table)'}, not ${want.join(', ')}`);
+  }
+  return { api_post, take_send, control_post: img[c40 + 4], func29: { command: img[f29 + 27], param: u32(img, f29 + 32) },
+    kind_at: img[kind + 5], queue_at: img[keep + 2], event: u32(img, ev + 8) };
+}
+
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
 // reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
@@ -5540,6 +5618,8 @@ export function readPlacedFacts({ img, at }) {
   // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
+  // TAKE's requests as S-MODPOST and S-TAKERDY take them, on the same bodies (E143, E146, E147)
+  if (recF !== undefined) facts.take_requests = takeRequests(img, at, qewr);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

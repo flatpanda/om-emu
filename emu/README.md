@@ -171,8 +171,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   90 degrees), its step waits 500 ms and records the orientation, and the camera turned past 50 degrees of roll has
   the GUI lay the level gauge out for portrait.
 - module requests are answered (S-MODACK; on E143 the application's posts to those queues that bypass the API sender
-  are taken as the module's task would take them, S-MODPOST, `docs/hle-gaps.md` 4.1.11; under `control camapp 3` TAKE's
-  take-ready event follows the answer, S-TAKERDY, 4.1.12), the HLS transaction layer's
+  are taken as the module's task would take them, S-MODPOST, `docs/hle-gaps.md` 4.1.11, and on E146 and E147 the two the
+  lab reaches; under `control camapp 3` TAKE's take-ready event follows the answer on E143, E146 and E147, S-TAKERDY,
+  4.1.12, 4.1.13: `src/fw/facts.mjs` takeRequests reads TAKE's protocol on the latter two), the HLS transaction layer's
   exec succeeds and deletes its request as the
   exec would (S-TRAACK; `docs/hle-gaps.md` 4.4.2, the heap's growth), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them

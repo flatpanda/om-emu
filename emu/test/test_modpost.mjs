@@ -4,7 +4,10 @@
 //   modpostUnits   (no firmware) the rule modpost_entry: each post it lists (eighteen, from the API layer's direct
 //                  senders and 0x503a05fb) matches by its queue, OlyQeWr's return in the sender's wrapper and the whole
 //                  16-byte message; a reply queue, another command, parameter, token, return or queue, a message of
-//                  another length and another body are not taken; the blocked-send guard's report names what
+//                  another length and a body without the rule's reads are not taken; on E146 and E147 (the
+//                  reads src/fw/ports.mjs FACTS holds, src/fw/facts.mjs takeRequests) the take API's control 0x40 and
+//                  TAKE_FUNC 29 by their own returns, queues and parameter, and not E143's nor the senders E143's
+//                  list alone holds; the blocked-send guard's report names what
 //                  S-MODPOST passed on (modpost_note through PlaySession.check_sends); objectNameId on synthetic name
 //                  tables (the id, none, a record outside a run of records, two records)
 //   modpostSession E143 in play. Control camapp 3: the start's TAKE_FUNC command 29 (from 0x503a05fb) is taken, the
@@ -47,10 +50,11 @@ export async function modpostUnits() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { modpost_entry, MODPOST_E143, CamApp } = await import('../src/lab/camapp.mjs');
+  const { modpost_entry, modpost_entries, MODPOST_E143, CamApp } = await import('../src/lab/camapp.mjs');
   const { PlaySession } = await import('../src/lab/play.mjs');
-  const { objectNameId } = await import('../src/fw/facts.mjs');
-  const take = (q, ra, w, queues = QUEUES, onLab = true) => modpost_entry(q, ra, w, queues, onLab)?.[0] ?? null;
+  const { objectNameId, TAKE_REQUESTS_E143 } = await import('../src/fw/facts.mjs');
+  const { FACTS } = await import('../src/fw/ports.mjs');
+  const take = (q, ra, w, queues = QUEUES, entries = modpost_entries(TAKE_REQUESTS_E143, true)) => modpost_entry(q, ra, w, queues, entries)?.[0] ?? null;
   const LISTED = [[TAKE_EXEC, VIA_API_POST, [5, 17, 15, 14, 16, 19, 20]], [TAKE_EXEC, VIA_TAKE_SEND, [14]],
     [TAKE_FUNC, VIA_API_POST, [5, 37, 54]], [ZOOM_EXEC, VIA_API_POST, ZOOM_KINDS.map(([, c]) => c)]];
   const want = [...LISTED.flatMap(([q, ra, cmds]) => cmds.map((c) => [q, ra, [0, 0, c, 0]])), [TAKE_FUNC, VIA_TAKE_SEND, [0, 0, 29, 0x62A3F2BE]]];
@@ -64,7 +68,21 @@ export async function modpostUnits() {
     ['a message of another length', TAKE_EXEC, VIA_API_POST, null], ['ZOOM_EXEC\'s unlisted command', ZOOM_EXEC, VIA_API_POST, [0, 0, ZOOM_UNLISTED, 0]]];
   for (const [what, q, ra, w] of not) ok(take(q, ra, w) === null, `not taken: ${what}`);
   ok(take(TAKE_EXEC, VIA_API_POST, [0, 0, 5, 0], { TAKE_EXEC: 0x5B }) === null, 'not taken: the queue is the body\'s TAKE_EXEC only');
-  ok(take(TAKE_EXEC, VIA_API_POST, [0, 0, 5, 0], QUEUES, false) === null, 'not taken: another body (its senders are not read)');
+  ok(modpost_entries(null, false).length === 0 && take(TAKE_EXEC, VIA_API_POST, [0, 0, 5, 0], QUEUES, modpost_entries(null, false)) === null,
+    'not taken: a body without the rule\'s reads (src/fw/facts.mjs takeRequests)');
+  // E146 and E147: the two posts the lab reaches, by their own queues, wrapper returns and TAKE_FUNC 29's parameter
+  // (src/fw/ports.mjs FACTS: api.queues, take_requests); the other senders of the list are E143's only
+  for (const code of ['E146', 'E147']) {
+    const f = FACTS[code], q = f?.api?.queues ?? {}, tr = f?.take_requests ?? null, es = modpost_entries(tr, false);
+    const own = (name, ra, w) => take(q[name], ra, w, q, es);
+    ok(tr !== null && es.length === 2 && own('TAKE_EXEC', tr.api_post, [0, 0, 5, 0]) === 'TAKE_EXEC' && own('TAKE_FUNC', tr.take_send, [0, 0, 29, tr.func29.param]) === 'TAKE_FUNC'
+      && tr.api_post !== VIA_API_POST && tr.take_send !== VIA_TAKE_SEND && tr.func29.param !== 0x62A3F2BE,
+    `${code}: the take API's control 0x40 (via ${h8(tr?.api_post)}) and TAKE_FUNC 29 (via ${h8(tr?.take_send)}, parameter ${h8(tr?.func29.param)}) taken on TAKE_EXEC ${h8(q.TAKE_EXEC)} and TAKE_FUNC ${h8(q.TAKE_FUNC)}`);
+    const not = [['E143\'s return', own('TAKE_EXEC', VIA_API_POST, [0, 0, 5, 0])], ['E143\'s queue', take(TAKE_EXEC, tr?.api_post, [0, 0, 5, 0], q, es)],
+      ['E143\'s parameter', own('TAKE_FUNC', tr?.take_send, [0, 0, 29, 0x62A3F2BE])], ['an E143-only sender (API 0x20014, kind 1)', own('TAKE_EXEC', tr?.api_post, [0, 0, 17, 0])],
+      ['ZOOM_EXEC', own('ZOOM_EXEC', tr?.api_post, [0, 0, 2, 0])]];
+    ok(not.every(([, x]) => x === null), `${code}: not taken: ${not.filter(([, x]) => x !== null).map(([w]) => w).join(', ') || 'none taken'}`);
+  }
   // the guard's report: what S-MODPOST passed on to the full queue, after the blocked send
   const left = new Map([[TAKE_EXEC, [{ what: 'TAKE_EXEC (90) cmd 19', from: h8(VIA_API_POST), task: 160 }, { what: 'TAKE_EXEC (90) cmd 19', from: h8(VIA_API_POST), task: 160 }]]]);
   const note = (q) => CamApp.prototype.modpost_note.call({ modpost_left: left }, q);

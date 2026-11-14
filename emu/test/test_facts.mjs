@@ -46,7 +46,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
+  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -528,6 +529,19 @@ const REC_IMAGE_FOUND = {
     imgpro: [0x5048CF75, 0x5048C507, 0x5050D1AA], reply: { fn: 0x50525E69, from: 0x5052B302 }, alive: 0, settings: 0x50042360,
     take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]],
     encode: { set_call: 0x5052F03F, set: 0x50492DE6, run: 0x5052E743, result: 0x5052F089, release: 0x5052F657, id: 0, packet: 24 } },
+};
+// TAKE's request protocol (take_requests; src/fw/facts.mjs takeRequests) where recFile reads: E143's as S-MODPOST's
+// and S-TAKERDY's E143 lists use it (src/lab/camapp.mjs MODPOST_E143's API_POST and TAKE_SEND, TAKERDY_E143's event
+// and offsets; D, docs/hle-gaps.md 4.1.11, 4.1.12), E146's and E147's as read in their code by hand (D, 2026-11-13:
+// the API's direct post E146 0x503e8038 / E147 0x503f5d3e calling OlyQeWr, E146's 0x5002c1cb, at +36; TAKE's send E146
+// 0x502e635e / E147 0x502f7c24 at +10; the take API's control 0x40 `mov 5,a0` at E146 0x504137fb / E147 0x5042191a;
+// TAKE_FUNC 29's sender E146 0x5039fb54 / E147 0x503a9c28 with `mov 29,d0` and its parameter's mov imm32; TAKE_MAIN's
+// keep `mov (4,a2),d1` at E146 0x503c2f69 / E147 0x503cce7c and its event's `mov 0x04080032,d1` at E146 0x503c3a52 /
+// E147 0x503cd965; E147's TAKE_MAIN state table 0x605b1510 with E143's commands state by state)
+const TAKE_REQUESTS_FOUND = {
+  E143: TAKE_REQUESTS_E143,
+  E146: { api_post: 0x503E8063, take_send: 0x502E636F, control_post: 5, func29: { command: 29, param: 0x62A6A23A }, kind_at: 8, queue_at: 4, event: 0x04080032 },
+  E147: { api_post: 0x503F5D69, take_send: 0x502F7C35, control_post: 5, func29: { command: 29, param: 0x62A67F9A }, kind_at: 8, queue_at: 4, event: 0x04080032 },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1170,6 +1184,23 @@ export function factsTests() {
       // (36,a2)) and the status test after the parameter set's call made `mov d0,d3` (0x50542c9e: 82 -> 83)
       const kept = refused(0x50549b8e, 0x12, /keeps the create's handle at 0x50549b8d in another form/), set = refused(0x50542c9e, 0x83, /0 times in the set's form/);
       ok(kept === true && set === true, `recImage: the create's handle kept in another form and another test after the set's call refused: ${kept}, ${set}`);
+    }
+    // TAKE's request protocol (take_requests, src/fw/facts.mjs takeRequests) where recFile reads: E143's equals the
+    // values S-MODPOST's and S-TAKERDY's E143 lists use; E146's and E147's as found (docs/hle-gaps.md 4.1.13)
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.take_requests, TAKE_REQUESTS_FOUND[code]), `${code}: take_requests ${hx(placed?.take_requests ?? placed)}, found ${hx(TAKE_REQUESTS_FOUND[code] ?? 'none')}`);
+    // and refuses a form it does not know: E143's image with the event's `mov imm32,d1` made `mov imm32,d0`
+    // (0x503c325b: fc cd -> fc cc) and with RdyTrig2Wait's row of command 11 made 13 (its command table's row, D)
+    if (code === 'E143' && placed?.take_requests) {
+      const refused = (o, v, re) => {
+        const m = run.slice();
+        m[o] = v;
+        try { takeRequests(m, at, at(OLYQEWR_E143)); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const { base } = imageBase(run), u32r = (a) => (run[a - base] | run[a - base + 1] << 8 | run[a - base + 2] << 16 | run[a - base + 3] << 24) >>> 0;
+      const state5 = 0x605BFBC8 + 20 * 5, row11 = (() => { for (let p = u32r(state5 + 12); ; p += 8) if ((run[p - base] | run[p - base + 1] << 8) === 11) return p - base; })();
+      const event = refused(0x503c325b - 0x50000000, 0xcc, /TAKE_MAIN's event post at 0x503c3254 is not E143's form/);
+      const row = refused(row11, 13, /TAKE_MAIN's RdyTrig2Wait takes the commands .* not 7, 11/);
+      ok(event === true && row === true, `takeRequests: the event's load into another register and RdyTrig2Wait without command 11 refused: ${event}, ${row}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

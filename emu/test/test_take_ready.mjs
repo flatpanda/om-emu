@@ -27,7 +27,8 @@
 //                  request the API sender posts to TAKE_EXEC is the take-ready (command 0 of the packet's kind 0: the
 //                  reply, then TAKE's event), the take-picture request (command 11: taken, not answered), a command 0
 //                  of another kind (S-MODACK's status alone, logged) or none of S-TAKERDY's (the stop's command 7
-//                  among them); nothing on another queue or body
+//                  among them); nothing on another queue or on a body without the rule's reads; on E146 and E147
+//                  the same on their own TAKE_EXEC (0x5b) with the reads src/fw/ports.mjs FACTS holds (takeRequests)
 //   takeReadySession  control camapp 3 without the probe (traRoutingSession's configuration, test_camapp.mjs), where
 //                  TAKE_EXEC is S-MODACK's. Once the menu has restarted the through image, three half-press shots in a
 //                  row, the menu, playback and the menu again between and after them: each S1 is event 826 in phase
@@ -233,7 +234,9 @@ export async function takeReadyUnits() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { take_ready_rule, TAKERDY_E143 } = await import('../src/lab/camapp.mjs');
-  const Q = { TAKE_EXEC: 0x5A, TAKE_FUNC: 0x5E }, rule = (q, c, k, queues = Q, lab = true) => take_ready_rule(q, c, k, queues, lab);
+  const { TAKE_REQUESTS_E143 } = await import('../src/fw/facts.mjs');
+  const { FACTS } = await import('../src/fw/ports.mjs');
+  const Q = { TAKE_EXEC: 0x5A, TAKE_FUNC: 0x5E }, rule = (q, c, k, queues = Q, tr = TAKE_REQUESTS_E143) => take_ready_rule(q, c, k, queues, tr);
   ok(TAKERDY_E143.event === TAKE_READY_EVENT && TAKERDY_E143.kind_at === KIND_AT && TAKERDY_E143.queue_at === QUEUE_AT && TAKERDY_E143.take === TAKE_COMMAND,
     `S-TAKERDY's event ${h8(TAKERDY_E143.event)}, the kind at +${TAKERDY_E143.kind_at}, the event's queue at +${TAKERDY_E143.queue_at}, the take-picture command ${TAKERDY_E143.take}`);
   ok(rule(0x5A, 0, 0) === 'ready', `TAKE_EXEC command 0 of kind 0 is the take-ready: ${rule(0x5A, 0, 0)}`);
@@ -244,7 +247,14 @@ export async function takeReadyUnits() {
   ok(others.every((x) => x === null), `the stop (7) and the other commands are not S-TAKERDY's: ${others}`);
   ok(rule(0x5E, 0, 0) === null && rule(0x5E, 11, 0) === null && rule(0x5A, 0, 0, { TAKE_EXEC: 0x80 }) === null && rule(0x80, 0, 0, { TAKE_EXEC: 0x80 }) === 'ready',
     `only the body's TAKE_EXEC: TAKE_FUNC ${rule(0x5E, 0, 0)}, a table with TAKE_EXEC elsewhere ${rule(0x5A, 0, 0, { TAKE_EXEC: 0x80 })} / ${rule(0x80, 0, 0, { TAKE_EXEC: 0x80 })}`);
-  ok(rule(0x5A, 0, 0, Q, false) === null && rule(0x5A, 11, 0, Q, false) === null, `none off E143: ${rule(0x5A, 0, 0, Q, false)}`);
+  ok(rule(0x5A, 0, 0, Q, null) === null && rule(0x5A, 11, 0, Q, null) === null, `none on a body without the rule's reads: ${rule(0x5A, 0, 0, Q, null)}`);
+  // E146's and E147's: their own TAKE_EXEC (src/fw/ports.mjs FACTS: api.queues) and the rule's reads (take_requests)
+  for (const code of ['E146', 'E147']) {
+    const f = FACTS[code], q = f?.api?.queues ?? {}, tr = f?.take_requests ?? null, own = (c, k) => rule(q.TAKE_EXEC, c, k, q, tr);
+    ok(tr !== null && q.TAKE_EXEC === 0x5B && own(0, 0) === 'ready' && own(0, 2) === 'other-kind' && own(11, 0) === 'take' && own(7, 0) === null && rule(0x5A, 0, 0, q, tr) === null
+      && tr.event === TAKERDY_E143.event && tr.kind_at === TAKERDY_E143.kind_at && tr.queue_at === TAKERDY_E143.queue_at,
+    `${code}: TAKE_EXEC ${h8(q.TAKE_EXEC)}: the take-ready ${own(0, 0)}, another kind ${own(0, 2)}, take picture ${own(11, 0)}, the stop ${own(7, 0)}, E143's queue ${rule(0x5A, 0, 0, q, tr)}; the rule's reads ${JSON.stringify(tr)}`);
+  }
   return { checks, bad };
 }
 

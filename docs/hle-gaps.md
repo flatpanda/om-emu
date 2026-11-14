@@ -4338,8 +4338,9 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   bank `+0x800`; target 4, the A53: `0x4000` to the caller's own bank `+0x880`); ISC hardware semaphores `0x97000000`.
   The ISC receive IRQ is 323 (level 4, all cores, handler `0x50039c4d`): bank `+0x800` bit `0x4000`, acked at `+0x804`;
   IRQ 326 writes 1 to the own bank's `+0x81c` and spins (I: a stop request).
-- **Boot jobs:** CPU 2's overlay loader needs flash reads (all segments are already in the lab image, so setting the
-  segment bits `0xa32df1f4` and flags `0xa32df1ad/b6` after the per-segment hook `0x50024eda` is a D-backed shortcut);
+- **Boot jobs:** CPU 2's overlay loader needs flash reads (the lab maps the whole main block before the first
+  instruction, so setting the segment bits `0xa32df1f4` and flags `0xa32df1ad/b6` after the per-segment hook
+  `0x50024eda` is a D-backed shortcut; what the loader leaves and does not load: 4.6.1);
   CPU 3 reads AJ (flash `0x400a0000` -> `0xa34fd280`, 0x20000 bytes) and runs MLS `0x5003e0a1` and pis `0x50040aeb`.
   The settings mirrors' boot load (`0x5000941f` -> `0x5003e0a1`) lies inside BOOT_CPU3's body `0x50009347..0x50009482`
   (D), so a native multi-core boot must keep S-NVRAM's restore consistent with CPU 3's job.
@@ -4376,8 +4377,13 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   `0x98d00144` (cores spec 3.1 step 4). Its overlay segments 1..10 are its own boot job: USTART_L2 `0x50024572` copies
   each one from the flash view (`0x50000020 + offset`) through the flash driver `0x500022c2` (`0x50024e6b`, which
   then sets bit n-1 of `(0xa32df1f8)`), sets the segment's byte flag and posts CREQ `0x50036120(0, 0x50024eda, n)` to
-  CPU 0 (segment 8 to CPU 1, `0x5002480d`). The lab's image already holds every segment (I: the copies matter only to a
-  cold boot).
+  CPU 0 (segment 8 to CPU 1, `0x5002480d`). The lab maps the whole main block at its base instead. Each copy runs only
+  up to the segment's end word, so on the camera the bytes past it are not loaded (caduceus-om3's camera report), and
+  the copies and their order matter to any image with code or data there. The lab sets the copied mask the loader
+  leaves (S-SECLOADED, `emu/FIDELITY-NOTES.md` 7.17). In the loaded-ranges mode (`--loaded`, on by default with a patch
+  overlay on E143, E146 and E147) it fills and guards what the boot does not load or is not shown to load
+  (S-STALERAM, FIDELITY 4.8). It does not model the load order (FIDELITY 7.18; the reset head's copies and the ends it
+  stores: 4.6.3).
 - **Entry and reset state** (`0x50008f01..0x50008f78`): `and 0xf0ff,psw`; `(0x8070)` = 0x30, then 3; `(0x98100808)` =
   16; sp `0x500027fc`, in its local RAM; `jmp` to its run-time copy; the UART mark "2" (`0x50000426`); its IVARs and
   GxICR (`0x5000f068`); a spin while `(0xa3258360)` = 0; the 4 KiB window `0xa1a91000` -> `0x50002000`; the log mark
@@ -4578,7 +4584,7 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   AUD_WAKEUP on CPU 2 (round 1's item 2): 2-4 h. (4) Snapshots and the live debugger with two cores (round 1's item 5;
   the session's MMIO record now holds the machine's trace hook while CPU 2 runs): 1-2 h. (5) The release, the boot
   ring and the start bits need CPU 0's reset path and CPUs 1 and 3 (above). (6) The flash DMA `0x98d00200` would be
-  needed only for a cold boot's loader, which the lab does not run (I).
+  needed only to run the section loader, which the lab does not run (I; S-SECLOADED stands for what it leaves, 4.6.1).
 
 #### 4.6.3 The start tasks and their phases (2026-11-11; D unless tagged, addresses E143's)
 
@@ -4807,6 +4813,13 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
     them `0x02022301` (X). The broker init still follows the lab's store init (H-STOREINIT, the settings-DB init),
     which USTART2 runs right after it (`0x501e9060`, `2_l`): not changed; whether either touches the other's state is
     not read (?).
+  - *The section loader and the reset head's copies.* USTART_L2 copies the segments one by one while the start tasks
+    run; the lab puts the whole main block in DRAM before the first instruction and sets the loader's copied mask at
+    the store's start (S-SECLOADED; the load order is not modelled, `emu/FIDELITY-NOTES.md` 7.17, 7.18). The reset
+    head's own copies take their lengths from ends the head stores itself (D, E147): constants stored to
+    `0x62960794..0x629607a4` at `0x500000eb..0x5000011b` and loaded back at `0x50000126..0x5000018f`. One of them,
+    `0x603a3804` in `0x629607a0` (`0x50000103`), is never loaded. S-STALERAM (FIDELITY 4.8) takes what neither the head
+    nor the loader is shown to copy as not loaded, in the loaded-ranges mode.
   - *The power manager.* Stage 0 runs its init and starts PWR_MAIN before UI_IN's module init runs the port scan
     (stage 1, `1_l`); the lab starts it after the scan (H-PWRSTART's text says so). So the lab's sub-CPU sees `0x88`
     before `0x82 {45}` and `0x12 {5}`, the camera's the other way round. Not changed: the swap is two lines of

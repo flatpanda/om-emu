@@ -3295,6 +3295,12 @@ key, its callback word `(0xa2764448)` being 0 (D), with no effect checked. `bin/
 the EVF (2026-10-23, X); its change task is the static one, run as on E143 (`display.change_task`).
 Since 2026-11-11 its application's Format (after its card choice) and the card out and in run (findings 151 and
 152), and Delete opens the erase dialog, its eraseCurrent native (findings 138 and 140).
+The re-port of 2026-11-13 rebuilt its direct map under a new seed set (`src/lab`'s literals changed) and moved nine
+PORTS entries, all of the IMG_PRECON init's call row that `take.mjs` names (D: E125's row after `0x501fb8ce` against
+E143's after `0x502a49e9`). H-CAMINIT `0x502a49ec` (now `0x501fb8d1`) and the seeds `0x501504c0`, `0x501529dc`,
+`0x5015368b` and `0x50154a12` became right. `0x50154704`, `0x50152f4c` and `0x50152495` became wrong and are pinned
+back in its `overrides` (to `0x50109de9`, `0x50107d07` and `0x50106e75`, checked by `test/test_facts.mjs`).
+`0x50150f69` matches neither candidate. No E125 code reads any of them: `take.mjs`'s `--take` probe is E143's.
 
 **E145 (TG-7).** Ported through E142 (of E142, E140 and E144, only through E142 are the DB init and its flash-save
 return placed). It runs the kernel, display start, settings store, camera application and GUI natively, but its start

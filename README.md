@@ -29,10 +29,19 @@ On the OM-1 (E143), in the interactive player in your browser: the power-on star
 and the Super Control Panel, S1 / S2 and REC with a synthetic scene on the live view, playback of the pictures taken,
 the TFT and the EVF, and the AF beep at a half press, played by the firmware's own sound driver (the sound itself is a
 lab-made one: the camera's own sounds are not in any update). Scripted menu sessions (`emu/bin/nav.mjs`) and a debug API
-(`emu/bin/debug.mjs`: registers, memory, breakpoints, traces) drive the same machine without the page. The player and
-both tools can run the firmware with a patch overlay (`--patch FILE`: byte patches checked against the stock blocks and
-applied in memory, never written; the player's status then shows a patched line), as [emu/README.md](emu/README.md)
-"Patch overlays" describes.
+(`emu/bin/debug.mjs`: registers, memory, breakpoints, traces, calls of firmware functions) drive the same machine
+without the page. The player and both tools can run the firmware with a patch overlay (`--patch FILE`: byte patches
+checked against the stock blocks and applied in memory, never written; the player's status then shows a patched line),
+as [emu/README.md](emu/README.md) "Patch overlays" describes.
+
+Modified firmware can be checked in the lab before it goes on a camera (2026-11-13, the OM-3 first). `--patch` also
+takes the digest-anchored release files of [Caduceus for OM-3](analysis/caduceus-om3/README.md) as published, and
+`--main` a patched main block. The lab then checks the patch against its own assumptions: a lab hook on patched bytes
+stops the session, and the status lists the ported addresses the patch rewrites. Like the camera, it gives DRAM only
+what the boot copies, so code a patch places where the boot does not load stops the session. `emu/bin/card.mjs`
+puts files on a saved card and takes them off, and `emu/bin/session.mjs` runs a whole session headless from a token
+script with expects, one JSON record per step and an exit status. Caduceus v0.29 runs through it to its films, its card
+load and its film's name in the picture's EXIF, with no write to memory.
 
 Other bodies, through ports (as of 2026-11-02):
 

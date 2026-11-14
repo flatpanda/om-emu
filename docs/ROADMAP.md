@@ -36,6 +36,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | The lens natively (E143, E146, E147; the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29, on E146 and E147 too, their driver's addresses read by a rule (`lensDriver`, fact `lens_driver`; 2026-10-29); `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens` (E143, E146, E147), `test_facts`, `golden.json` | hle-gaps.md §4.4.2, §4.4.3 |
 | The AF beep (E143, the default since 2026-11-02) | a half press in focus plays the firmware's own operation sound path: the GUI's changedFocus and playAfSound, playTarget, api_sound, UI_OUT (H-UIOUTSTART), the resource tables loaded from the NAND by USTART_L's loader (H-RESINIT, S-RESNAND), AUD_MAIN and its driver against a TX model of the audio serial port (H-AUDSTART, S-AUDCPU2, S-WM8946, A-AUDIO-1), its PCM on the pages' WebAudio; the AF lock fed at the release stand-in (S-AFLOCK) and the sound a lab-made one (S-SOUNDRES: the OM-1's own sounds are factory data no update carries) | `test_audio` afBeepSession, `test_audiohw`, `test_resnand` | `docs/hle-gaps.md` 4.5 |
+| Verifying modified firmware (E147 first, 2026-11-13) | third-party builds run as published and checked against the lab's assumptions: `--patch` reading caduceus-om3's digest-anchored `om3-patch-1` / `om3-patch-2` files and `--main` a patched block, on play, nav, debug, session and (one model) modelcheck, the browser's Patch option keeping each build's settings apart; the patch audit and hook rule (`src/lab/patchaudit.mjs`, `PatchHooked`, H-PATCHTASK); the section loader's copied mask (S-SECLOADED) and the loaded-ranges mode (`--loaded`, S-STALERAM) over what the boot does not load or is not shown to load; `bin/card.mjs` and `--card-put`; the debug `call` op; the kept state after a native power-off (S-NVRAM counting store B); the creative dial (`creative_dial`, `--creative-dial`) and the dials kept across a power cycle; the EXIF set natively at S2 (H-RECPRECON); the scripted headless session (`bin/session.mjs`, `host/session.mjs` `openSession`) with expects. Caduceus v0.29 runs end to end through `bin/card.mjs` and `bin/session.mjs` with no memory write (X) | `test_patch`, `test_sections`, `test_cardfs`, `test_call`, `test_nvram power`, `test_cdial`, `test_session`, `test_web`, `golden.json` | `emu/README.md` "Patch overlays", "The card's files", "Scripted sessions"; `analysis/caduceus-om3/README.md` section 4 |
 | Multi-model, steps 1-4 and part of 7 | 18 bodies besides E143 have ports; E146, E147, E148, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122, E118 and E120 run the path on the TFT and the EVF, their frames composed, the count probe with INFO's redraw (2026-11-01, E148's card native too; Multi-model below); and every one of them opens, navigates and closes the camera's own menu on the TFT (2026-11-02) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
@@ -768,6 +769,22 @@ it); one lens, the 12-40 at the zoom step nearest the scene's focal length (S-LE
 others, their characteristics are not in the firmware); why the application does not apply a dial turn to the exposure
 compensation (input spec §9).
 
+**Verifying modified firmware (2026-11-13).** What the lab cannot check of a patched build, with its owner
+(`analysis/caduceus-om3/README.md` section 4.4 lists them for the downstream user):
+- Looks on pixels and the capture path below the EXIF fill: development and encode are stand-ins (S-IMGPRO,
+  S-JPEGENC); the HLE plan's TAKE and image-pipeline steps (hle-gaps.md 4.3).
+- The GPU wheel plane (hle-gaps.md 4.12), the boot's load order (`emu/FIDELITY-NOTES.md` 7.18, Full-boot LLE below),
+  timing, cache and watchdog effects (FIDELITY 1, 4.1), and component 2's frames (not loaded).
+- The EXIF exposure fields are S-EXIFPRM's, not the session's (FIDELITY 7.9; hle-gaps.md 4.3.11).
+- The extent of the boot stage before the main block's (what loads the head below `0x60030000`) is not read, so the
+  ranges not shown loaded are guarded as unloaded with a `?` (FIDELITY 4.8); a camera probe of E147's
+  `0x60129000..0x60134000` would settle the class.
+- Scripted sessions (`bin/session.mjs`): no token for exec traces, breakpoints or stopping watchpoints (a headless
+  queue does not block), no call entered mid-function with stop pcs or sp set, `read` capped at 64 KiB per token, no
+  `a15`, EVF or language option.
+- `bin/nav.mjs` on E146 and E147 (Next stops above): its bring-up check stops at start on E147, stock too (X).
+- The exFAT case of the card writer's "S2 leaves the writer's files intact" check has no negative control.
+
 ## Open unknowns and assumptions
 
 Each listed once; the owner document has the evidence.
@@ -875,11 +892,12 @@ output identical to the harness-driven M2-M6 runs. Size: months.
 | GPS location state | a thin accessor on existing state, low value | trace `getGpsLocationState` from the menu / SDK side | `analysis/feature-gap/README.md` step 3 |
 | Lens-gated features (focus stacking, 50 fps SH2) | each gate mapped; a one-site patch un-greys the menu for every lens; untested on a non-listed lens | the open questions of the note (which lenses set the capability bits) | `analysis/lens-gates/README.md` |
 | HSL colour wheel (after fishcu/oly_fw_analysis's PEN-F patch) | studied 2026-10-29: E143 holds the PEN-F's COLOR table and builder call (`0x504f4cfa`), its Color Creator 2 settings are saturation only; no candidate | run E143's own update validator on a repack in emu (the note's follow-up 1), then the E143 HSL map | `analysis/oly-fw-analysis/README.md` |
-| Caduceus for OM-3 (androidfanman/caduceus-om3: films, a colour editor, Button Function and Creative Dial on E147) | third party, released v0.16..v0.29 and camera-tested by its author (their report); studied 2026-11-13: every stock byte and word its build expects matches our E147 block, and its builds run in the E147 lab with one write (the section loader's copied mask) | run each release through the round's patch, loaded-ranges and session tools as a local regression; the capture path for its looks and photo code | `analysis/caduceus-om3/README.md` |
+| Caduceus for OM-3 (androidfanman/caduceus-om3: films, a colour editor, Button Function and Creative Dial on E147) | third party, released v0.16..v0.29 and camera-tested by its author (their report); studied 2026-11-13: every stock byte and word its build expects matches our E147 block. Its release files run in the E147 lab as published, with no memory write: v0.29 through `bin/card.mjs` and `bin/session.mjs` to its film list, its card load at the half press and the film's name in the S2 picture's EXIF, the patch audit listing only GET_STRING and its raised section-6 end word (X; the recipe in the note's section 4.2) | a local regression run of each release through that recipe, pinned by digests in `BLOBS.md`; then the note's follow-ups (row-crossing OSD runs, E147's stills-mode keys, mid-function calls and traces in scripted sessions); looks on pixels wait for the development stages (the note's section 4.4) | `analysis/caduceus-om3/README.md` |
 
 Before any flashing: the offline unpack -> patch -> repack -> checksum loop is done (all six blocks round-trip byte for
-byte; `docs/firmware-container.md`); what remains is whether the camera accepts a no-op image. Nothing has been written
-to a camera. Flashing risks bricking it.
+byte; `docs/firmware-container.md`). For E147, Caduceus for OM-3's releases show the SD updater accepting a changed
+main block with recomputed checksums (their report, since v0.16); for E143 whether the camera accepts a modified image
+is still open. Nothing has been written to a camera from this repository. Flashing risks bricking it.
 
 The menu work helps here directly. For ND128 the menu still shows ND64, so the useful lab check is that selecting that
 entry reaches the patched parameter write at body `0x2d165d` and stores 7. That needs the settings store (M6), since

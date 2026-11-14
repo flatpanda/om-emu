@@ -1197,6 +1197,8 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   reply queue; the other bodies, where S-MODPOST does not apply and their direct posts stay, recorded. The probe's
   camapp 3 workloads stopped at the mode dial's 7 (S-IOEXP), at LV at the card's removal and at an HDMI plug after
   the passes (module 9 reads outside S-TAKEOVER's list), so those inputs are not covered there.
+  (2026-11-13, 4.1.13: on E146 and E147 S-MODPOST takes the two posts the lab reaches, by the rule takeRequests; the
+  other senders of the list are still E143's only.)
 
 #### 4.1.12 The second shot past phase 111 (2026-11-11; D unless tagged, addresses E143's)
 
@@ -1371,6 +1373,78 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
   - The sibling question, not surveyed: which other requests S-MODACK answers with a status alone where the
     module's task sends more (a module event after its reply, as TAKE_MAIN does for the take-ready). On this route
     no stand-in answers once only (X: each take-ready and each stop of the three shots answered).
+  - (2026-11-13) E146 and E147 at this level: 4.1.13.
+
+#### 4.1.13 A still under camapp 3 on E146 and E147 (2026-11-13; D unless tagged, each body's addresses)
+
+4.1.11 and 4.1.12 brought E143's still under `control camapp 3` to TAKE's capture, with S-MODPOST and S-TAKERDY on E143
+alone. This round brings E146 and E147 to the same point: E147's S1 never reached the shooting sequence because the lab
+started the body in movie mode, and both bodies lacked TAKE's request protocol. `emu/test/test_c3take.mjs` (E143 7 of 7,
+E146 7 of 7, E147 9 of 9; X) pins what follows.
+
+- **The symptom (X).** After a menu pass E143's S1 goes to phase 103 and S2 to 106. E147 stayed in phase 101
+  throughout and MENU still opened after the shot, though CapThr's state word read `0x01010202` after the menu's close
+  as E143's does. E146's S1 went to 102 and stayed there, as E143's did before S-TAKERDY.
+- **Where E147's S1 stops (X unless tagged; E143's addresses first).**
+  - S1's code `0x02000100` reaches Com_EvSenderManager on both bodies, and its second table's case (E143
+    `0x50d7798e`, E147 `0x50d93e09`) runs. It goes on to the sequence only when the halfword `0x6035e814` (E147
+    `0x60366e50`, getter `0x50ab3e6b` / `0x50ac7e6e`) is not 0: 2 on E143, 0 on E147. E147's state-4 handler
+    (`0x50c73159`) gets no S1 and its S1 guard caller (`0x50ca80cf`) is never called.
+  - The through start (`0x50ca435e`, E147 `0x50cbf2e4`) sets the halfword to 2 or 1 where the words `0x60364978` or
+    `0x60364974` (E147 `0x6036d0b4`, `0x6036d0b0`) are not 0, else clears it (D). `0x50cb032e` (E147 `0x50cca35a`)
+    fills them from event 974's +40 and +36, which OlyHfwOpeShoot::ctrlRelease (`0x50ad71cb`, E147 `0x50aebd18`)
+    builds from its key_2nd and key_1st (D: its log names releaseGo, takePicture, takeMovie, key_1st, key_2nd and
+    key_movie, E147 key_movie_list). On E143 they are `0x02000100` and `0x02000101`, on E147 0.
+  - CA_MAIN calls ctrlRelease (returns `0x5105834b`, E147 `0x5106f0e7`) with key_1st 2 and key_2nd 3 on E143 and 0 and 0
+    on E147. Its caller (`0x5105816b`, E147 `0x5106ef22`) clears both while `0x5105bdac` (E147 `0x510732f3`) answers 1,
+    which is the application's setting 44 read as 1 (D). key_1st then stays 2 only where setting 49 is 1 (E147
+    `0x51082794`: 0). key_2nd is also 0 where setting 821 reads 0 (`0x51069ae4`: 1 on E147).
+  - Setting 44 is 0 at E143's P and 1 at its mode dial's MOVIE (X). The button-function lookup `0x5104be42` takes its
+    row's +12 column while it is 1 (D). So 44 is the application's movie mode (I: its name is not read).
+  - E147's mode reader reads UI_IN's level of `0x02021909` right after the mode dial's `0x02021901`
+    (`0x5042f4e4..0x5042f536`, D). The lab's idle image started every position switch at its second position
+    (`emu/src/lab/play.mjs` SWITCH_IDLE_POSITION). With E147's `0x1909` at its positions 0 and 1 setting 44 reads 1, at
+    2 it reads 0 and S1 takes the sequence to READY (X).
+- **The lab's part.** MODELS switch_idle names a body's own idle position of a position switch. E147's `0x1909`, its
+  still / movie switch, starts at 2 (`emu/src/fw/models.mjs`). It is not an input of the players. The siblings: position
+  switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not read. E147's
+  other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections, link,
+  patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
+  stills-mode key dispatch (`analysis/caduceus-om3/README.md` follow-up 3) read movie columns in P. Whether this is its
+  cause is not checked: their key table's mode checks name other ids.
+- **TAKE's protocol on E146 and E147: the rule takeRequests (`emu/src/fw/facts.mjs`).** It reads, where recFile reads
+  REC_FILE, the sites S-MODPOST and S-TAKERDY rest on. It starts at the E143 functions' places and takes each site in
+  E143's bytes, with addresses and the values read left open (X: E146 and E147 hold every form):
+  - OlyQeWr's returns in the API's direct post (E146 `0x503e8063`, E147 `0x503f5d69`) and in TAKE's send
+    (`0x502e636f`, `0x502f7c35`);
+  - the take API's control-0x40 command (5) and TAKE_FUNC 29's message (E146's parameter `0x62a6a23a`, E147's
+    `0x62a67f9a`);
+  - the packet's kind (+8: the take API's default branch) and event queue (+4: TAKE_MAIN's keep);
+  - TAKE_MAIN's module event `0x04080032`, posted from the word the keep wrote.
+  - From TAKE_MAIN's state table, loaded at its loop's head: Idle takes the commands 0 and 7 and RdyTrig2Wait 7 and 11,
+    as on E143. E147's whole table was read by hand: the same commands state by state (X).
+  - E147's RdyFcsRdy2 token-13 handler and Com_EvSenderManager's case for `0x04080032` are E143's instruction for
+    instruction (read by hand).
+  - S-TAKERDY takes its event and offsets from the rule on any body that has it. S-MODPOST takes the two posts the lab
+    reaches there; the rest of its list stays E143's, those senders not read elsewhere.
+  - `emu/test/test_facts.mjs` checks the values on the three bodies, and two altered forms are refused. FACTS E146 and
+    E147 were regenerated (`bin/port.mjs E146 E147`, maps from the cache; PORTS unchanged).
+- **Result (X).** On E143, E146 and E147 alike:
+  - after the menu S1 goes 101, 102, 103 on S-TAKERDY's one event;
+  - S1 released alone returns through END_WAIT to 101, and MENU opens the menu;
+  - a full shot goes to 106, its take-picture request taken and not answered, and MENU sets no GUI event;
+  - TAKE_FUNC 29 is taken once (E147 at its first idle step, E143 at the menu's close: the sender runs twice and posts
+    once), and no direct post is left in TAKE_EXEC or TAKE_FUNC.
+  - With S-TAKERDY off (the control) S1 stops in 102 and the take API's control 0x40 at S2 is S-MODPOST's.
+  - E146's and E147's start leave AUD_EXEC's command 2 in its queue, recorded, as before (not TAKE's).
+  - The player lists S-MODPOST and S-TAKERDY on E147 now; no stand-in retires.
+- **Caduceus for OM-3 (X).** Their v0.29 flow (`bin/session.mjs`, camapp 1) passes as before, with no poke, the same
+  EXIF but the date and the same picture's size. Every frame is the same but the Super Control Panel's after the first
+  OK of each session, which differs (what it shows in each mode is not compared); the `call` step's result is the same,
+  its a1 at return (a heap address) not. Their hook sites hit as before in
+  one S1 and S2 under camapp 1 and camapp 3 (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the
+  others 0).
+- **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; setting 44's name.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

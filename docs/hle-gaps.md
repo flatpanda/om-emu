@@ -3803,7 +3803,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   TAKE's state" (4.1.4, 4.8.10). A patch that hooks the per-shot fill inside the EXIF set (a modified firmware's
   photo code in ImageDescription and UserComment, for one) never ran in the lab. This round reads the divide back
   to its operands.
-- **The EXIF set.** TAKE's takepic (`0x503bcd51`) calls the module's wrapper `0x5042992d` (`call 0x5042b50d; ret
+- **The EXIF set.** TAKE's takepic (`0x503bcd51`; the call is in TAKE's third fill `0x503bd1fa`, a function of its
+  own: 4.3.13, corrected 2026-11-14) calls the module's wrapper `0x5042992d` (`call 0x5042b50d; ret
   [],4`) at `0x503bd48e` with a0 the shot's block. The body `0x5042b50d..0x5042cd6f` calls TAKE's arithmetic block
   `0x5039821c` 20 times (`0x5042bb7e..0x5042c0fe`), each with a request on its stack whose +24 .. +36 point at four
   halfwords of the block (the maker notes' white-balance gains, +6342 on). For the request's kind 0
@@ -3861,10 +3862,11 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did not before
   (X).
 - **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1; read in 4.3.13,
-  where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144; the lens flag +37982 and
-  the lens fields; the EXIF set on the E144 family's, recFileInline's and the E118 family's REC versions (no rule reads
-  it there; the E118 family's set divided by zero too, finding 103, whether in the same table is not read); the
-  orientation (4.1.4's plan step 3).
+  where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144 (StlRdy1's exposure
+  request and the strobe sequence's answer, read in 4.3.13); the lens flag +37982 and the lens fields (TAKE's lens
+  fill, read in 4.3.13; not run); the EXIF set on the E144 family's, recFileInline's and the E118 family's REC
+  versions (no rule reads it there; the E118 family's set divided by zero too, finding 103, whether in the same table
+  is not read); the orientation (4.1.4's plan step 3).
 
 #### 4.3.12 The still pipeline's coverage and the constructor's inputs (E143, E146, E147; 2026-11-13; D unless tagged)
 
@@ -4053,7 +4055,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   (11, `0x503c3a13`, with the packet in d1); Standby goes on to StlRdy1 (12; `0x503b0e48` in its own command 11, from its entry's path I). The packet is the requester's (the
   message's parameter): TAKE_MAIN keeps the message's four words at its +44 (`0x50399c1d`), clears its +60, +64 and
   +68, and for commands 11 and 12 calls `0x503b07d9` with its +0, which takepic later takes as the shot's id.
-  1. StlRdy1's entry (`0x503b0fed`) takes an exposure record from TAKE's ring (`0x503baeb6`: four slots of 96 bytes
+  1. StlRdy1's entry (`0x503b0fed`; the function it registers, `0x503b108e`, run once its pending bits are clear)
+     takes an exposure record from TAKE's ring (`0x503baeb6`: four slots of 96 bytes
      at `0x62a4b6d0`), keeps it at the packet's +60 and fills it, `0x503bf619(0x40000000, record)` at `0x503b12f4`:
      +0 flags (setting 49169, 49666), +4 1, +6 setting 41002, +8 41034, +10 41018, +12 41082 (`0x503bf6bd..`), +20
      `0x5039048b()`. E146 and E147 call a fill that takes the record alone (E146 `0x503bfe9c`, E147 `0x503c9db8`,
@@ -4067,16 +4070,28 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
      the settings fields (recImage's take list and 4.3.12's picture mode among them) and TAKE_EXPOSE's shutter
      range, `0x50599812(record + 38166, record + 38168)`, a copy of the halfwords `0x62abd796` and `0x62abd794`,
      which the calculation's `0x50598df9` / `0x50598e13` write from its record's +48 and +50.
-  4. StlTake's entry (`0x503b1e1e`) registers `0x503b2e5d`, which calls takepic `0x503bcd51(0, 0x62a4a358, packet)`
+  4. StlTake's entry (`0x503b1e1e`) writes the shot's key (`0x503baa2d` from `0x503b23dc`: the record's +38532 =
+     TAKE's context +3128 << 16 | the shot counter, setting 25380, which it steps) and registers `0x503b2e5d`, which
+     calls takepic `0x503bcd51(0, 0x62a4a358, packet)`
      and then `0x50597c6d`. takepic finds the shot's record through `0x503afc3e(packet +0)` (the shot table's flag 4),
      copies the exposure record's +6, +8, +10, +56, +58, +60 into +38164 (Tv), +38172, +38178 (Av), +38170, +38176,
-     +38180 (`0x503bcdac..0x503bce38`), Sv +38174 from TAKE's context +3144's +202, +38160 from its +3352, +37992 and
-     +37988 from its +3730 and +3732, +38188, +38200, +38202 and +38196 from settings, +38198 from the AE result
-     `0xc0ba`, runs the lens step `0x5011fcf4` (then the lens flag +37982 bit 12 decides the focal and aperture
-     fields) and calls the EXIF set (`0x503bd48e`, 4.3.11). StlEnd1 / StlEnd2 free the record (`0x503baf23`).
+     +38180 (`0x503bcdac..0x503bce38`), Sv +38174 from TAKE's context +3144's +202, +38188, +38200, +38202 and +38196
+     from settings (41050, 35818, 36442, 50506), +38198 from the AE result `0xc0ba`, +38160 (0 where the record's
+     +4180 has bit 0 clear, else TAKE's context +3352), the white-balance mode +37992 and +37988 (settings 33057 and
+     33073 where the context's +3088 is 1, kept in its +3730 and +3732; else those two) and +6720 (the context's
+     +3144's +204), and returns (`0x503bd134`). Two more fills are functions of their own (corrected 2026-11-14: this
+     item had them inside takepic): the lens fill `0x503bd137`, from StlTake's reply 37 (`0x503b6bd3`): settings 22257,
+     22289 and 22305 into +41032.., the lens step `0x5011fcf4(record, kind, 0)` with the kind from the context's
+     +3114 (3), +3113 (4) or +3122 at 4 (2), else 0, then +38792 (the focal length +4184 / 10 where the lens flag
+     +37982 has bit 12, else setting 37170); and `0x503bd1fa`, run from a function object (`0x503b7e2c`; I: in
+     TAKE_MAIN_CP), which writes +38144, tables of the record (+38224.., +8536.., +38352.., +8588..), +37990 (setting
+     36642 by setting 35425's value) and others, calls the EXIF set (`0x503bd48e`, 4.3.11) and, with the lens flag's
+     bit 12 clear and setting 63825 not 255, writes the focal length and FNumber (+4184, +4192) from settings 37170 and
+     63954 (I: the lens info of a lens without contacts). StlEnd1 / StlEnd2 free the record (`0x503baf23`).
   5. The shot itself: an id of TAKE's shot table (`0x62a494a4`, 116 entries of 32 bytes) is allocated by
-     `0x503af59e` (25 callers; api_rec's `0x5040f482` among them; which one gives a normal still its id is not read,
-     ?): through `0x503af5c9` it takes MM buffers by a kind the settings 7745, 41002, 55058, 34241 and 61633 pick,
+     `0x503af59e` (25 callers; api_rec's `0x5040f482` among them, the one that gives a normal still its id, for the
+     application's CapBuf_TakeBuff: read below, 2026-11-14): through `0x503af5c9` it takes MM buffers by a kind the
+     settings 7745, 41002, 55058, 34241 and 61633 pick,
      the Bayer and thumbnail handles at +2 and +10 (flag 1, `0x503b006b`), the shot record at +20 with its handle at
      +24 (flag 4, `0x503afff1`, MM kind 5376) and the others (flags 8, `0x10`, `0x20`, `0x40`). ImageParam's four
      sources read those handles (4.3.4). StlTake's reply table (24 tokens) carries the capture's events; which one
@@ -4086,7 +4101,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
      +38196, +38160, +38008, +37992, +37988, +37990, +38764, +38775 and others. Of those the shot-record fill writes
      +38008, +38190, +38764 and +38775 from settings; takepic writes +37992, +37988 and +38160 from TAKE's context
      (+3730, +3732, +3352), which TAKE's still states fill and the lab does not run, and +38196, +37990 from settings.
-     So the computation's inputs do not exist without TAKE's context: no step here gives them.
+     So the computation's inputs do not exist without TAKE's context: no step here gives them (each input read to
+     its writer in the second pass, below).
 - **Each step in the lab (X unless tagged; E143, E146, E147 alike unless said).**
 
 | Step | Default session (camapp 1) | Stand-in | Where |
@@ -4097,7 +4113,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 | StlRdy1's exposure record and its fill | native fill on a record of the lab's (since this round) | S-EXIFPRM | `src/lab/rec.mjs` exif_param() |
 | the shot-record fill | its six fields REC_IMAGE reads (4.3.5) and the shutter range (since this round) | S-EXIFPRM | same |
 | takepic | its copy of the exposure record (since this round) and the EXIF set it calls (4.3.11); the rest not run (Sv, TAKE context fields, the lens step) | S-EXIFPRM | same |
-| the shot's id and buffers (TAKE's shot table) | not allocated: HandleTarget 1, ImageParam's sources log `0x25000402` (4.3.4) | S-RECREQ, S-EXIFPRM's block | `src/lab/rec.mjs` |
+| the shot's id and buffers (TAKE's shot table) | allocated and freed through api_rec natively, as the application's CapBuf_TakeBuff does (since 2026-11-14, below; before: none, HandleTarget 1 and ImageParam's sources logging `0x25000402`, 4.3.4) | H-SHOTALLOC | `src/lab/rec.mjs` shot_alloc() |
 | the sensor's readout into the Bayer buffer | none (S-SCENE draws a view frame) | S-SCENE, S-JPEGENC | `src/lab/play.mjs`, `src/lab/rec.mjs` |
 | REC_PREPRO's white-balance gains | not run (0) | S-RECREQ | `src/lab/rec.mjs` |
 
@@ -4127,28 +4143,191 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     the lens flag are takepic's); the other takepic fields above. The files' size and picture are unchanged; only
     the Exif exposure fields move.
 - **Not landed, with the evidence for the next step.**
-  - *The shot's buffers.* TAKE's shot allocation `0x503af59e(0)` runs natively in an E143 session after the start
-    (X, a probe): id 1, flags `0x7d`, Bayer handle 1, thumbnail handle 257, the shot record at an MM address with
-    handle 5377, no error logged. With it HandleTarget would be TAKE's id, the shot's record TAKE's (the lab's block
-    today) and ImageParam's sources would find their handles. Its name would be H-SHOTALLOC (TAKE's allocation run
-    natively at S2, before S-EXIFPRM). Not done: which caller allocates a normal still and with which kind is not
-    read, nor whether E146's and E147's MM answer the same (4.3.12's E147 extension did not); and it changes
-    S-EXIFPRM's block, the HandleTarget and the source logs storageSession pins.
+  - *The shot's buffers.* Landed 2026-11-14 as H-SHOTALLOC (below). The first pass had run TAKE's allocation
+    `0x503af59e(0)` in an E143 probe and left open which caller allocates a normal still and with which kind, and
+    whether E146's and E147's MM answer the same.
   - *The RAW frame.* No sensor readout exists in the lab. Once the Bayer buffer is TAKE's, a declared stand-in could
     fill it, named S-RAWFRAME: a buffer of the geometry the shot's kind gives (the allocation's MM kind), its pixels
     a fill of the lab's that is not a scene; the parameter set and run do not read pixels before the pipeline unit's
     request (4.3.9), so its content matters only past item 4 of `analysis/caduceus-om3/README.md` 4.6. Not done:
     its geometry is not read.
   - *The white-balance gains.* Their inputs include TAKE's context fields the still states fill (item 6); without
-    those the computation divides by zero (4.3.4, X). No step here supports them.
+    those the computation divides by zero (4.3.4, X). No step here supports them (each input and its writer: below).
 - **Sized plan to a development hook (I).** (1) H-SHOTALLOC and the shot's record as TAKE's: days (read the normal
   still's caller and kind on three bodies, re-pin the sources' logs). (2) TAKE_EXPOSE's still request (RdyFcsTake's
   `0x600`) natively, which the lab stopped at a jump to `0x000020fb` in 4.1.8: days to a week. (3) TAKE's still states with their neighbours stood in (the camera driver, BC, the dust filter),
   which fill TAKE's context and so Sv and the white-balance inputs: 1-2 weeks (4.3's estimate). (4) REC_PREPRO's
   white-balance step natively on that record: days after 3. (5) The parameter set natively, then the run up to the
   pipeline unit's request (4.3.9's work pool and stage table): weeks. Every data hook in the set runs only after 5.
-- **Open.** The normal still's allocation caller; the readout's event and unit; what E146's and E147's start screen
-  (GUI state `0x102`) is and whether the camera plans there; TAKE_EXPOSE's `0x600`.
+- **The normal still's shot is the application's take buffer (2026-11-14, second pass; D on E143).** Not TAKE_MAIN's:
+  - TAKE's still states allocate a shot only under context bytes of other modes: StlRdy1's function, after the
+    exposure fill, calls `0x503aa8bf` where `0x62a4b190` is 1, `0x503af59e(8)` (at `0x503b1365`) where `0x62a4b16c` and
+    `0x62a4b16d` are 1, and `0x503ad984` (kind 0, `0x503ad9d9`) where the mode byte `0x62a4af8a` is 4; the sites
+    `0x503b1916` (kind 0, with `0x62a4b190` 1) and `0x503b52e2` (kind 8) are of the same modes. Standby's entry
+    (`0x503b09dd`) copies those bytes from the take's mode record (its +19, +6, +7 and +14; the record is the Rdy
+    states', read below). Otherwise TAKE keeps the request's id: taking command 11 or 12, TAKE_MAIN marks the entry
+    of the packet's +0 in use (`0x503b07d9` from `0x50399c44`: the entry's +26 = 1, or errlog `0x25000409` where its
+    flags are 0, so the shot exists before the request) and clears the mark when it answers (`0x503b080f`).
+  - The packet's +0 is api_rec takePicture's second argument (`0x5040ee43`: `mov a2,(a3)` at `0x5040ef10`), which
+    CapTak_Take's takePicture (`0x50bc876a`) hands on from its own (`0x50bc8ac2`; its log line names the argument
+    `take_handle`). For its mode 0 takePicture sends command 11 with the packet's flags +8 0, bit 5 or bit 12 by its
+    caller's parameters; mode 1 sends command 12, mode 6 command 11 with bit 13 (`0x5040ef23..0x5040efaa`).
+  - The id comes from api_rec's API `0x20019` (`0x5040f43a`). Its one caller is CapBuf_TakeBuff (`0x50b87891`, in the
+    method `0x50b87879`, while the object's handle +16 is 0; the class by its log strings). The API calls TAKE's
+    allocation `0x503af59e` with the kind 1 where setting 49698 reads 2, else 0 (`0x5040f469..0x5040f482`), and
+    answers the id, 0 for TAKE's 255. API `0x2001a` (`0x5040f52e`) hands an id to TAKE's free `0x503af80b`; its
+    callers are CapBuf_TakeBuff's `0x50b84bb8` and `0x50b875c4` (in `0x50b87555`, by the object's +4, +8, +12 and +20;
+    its log line `Free_TakeHandle`; called where the object is deleted, `0x50b84b67`, and from a state setter,
+    `0x50b87cd4`) and two of a sequence object (`0x50c6aeb4`, `0x50c6afb8`). Where in the release sequence
+    CapBuf_TakeBuff allocates and frees is not read (?: its methods are reached through tables, the allocation
+    through the thunks `0x50b88772` and `0x50b8877a`). In the lab neither runs (X: no call of either method through
+    S1 and S2 under camapp 1 or 3).
+  - TAKE's allocation (`0x503af5c9`): the first entry with flags 0 (`0x503affce`: ids 1..115; E146 1..232, E147
+    1..109), 255 for none. Settings adjust the kind: 0 becomes 3 where `0x503b0795` (21489, 61697, 61729 or 33857;
+    or 61729 with 7745 at 1) answers (E146 and E147 read setting 43329 before that helper, and at 1 the kind 0
+    stays: `0x503af69d`, `0x503b992e`); 41002 at `0x8000` with 55058 set gives 3 for 0 or 3, at `0x8001` 0; 34241 at
+    204 or 209 gives 0; 61633 at 1 gives 9 unless 8. By the kind it asks MM
+    (`0x50534a3d(MM kind, &handle)`) for the Bayer buffer (the kind's: 0, or 9984 with setting 59729 set; 2048,
+    1536, 24832, 20224 for 1, 2, 8, 9) and the thumbnail (256; 2304 for kind 1), flag 1 (+2, +10; `0x503b006b`);
+    for kind 3 two buffers of MM kind 0 (flag 8: +6, +8); for kinds 0, 3, 5, 7, 8 and 9 the buffers of MM kinds
+    28160, 28416 and 28672 (flags `0x10`, `0x20`, `0x40`: +12, +14, +16); then the record (MM kind 5376, flag 4: its
+    handle +24, its address +20; `0x503afff1`). A failure frees what it took. The free (`0x503af80b`) logs
+    `0x25000408` for an entry still marked in use, frees each buffer by its flag (MM's `0x50534bbd`), clears two
+    bits of a TAKE status word (`0x62a415a8`) when no entry holds its flag, and calls a hook (`0x62a4a34c`) when set.
+  - Its readers: REC_MAIN's still handler takes HandleTarget from the request and pExifParam from TAKE's lookup of
+    it (`0x5053a339..0x5053a344`, `0x503afc3e`); TAKE's fills and the key's writer start from that lookup;
+    ImageParam's four sources (4.3.4) and REC_PREPRO's white-balance step (`0x5053838c`) look up its buffers.
+  - E146 and E147: api_rec's two functions, TAKE's two and the lookup have E143's forms (X: `src/fw/facts.mjs`
+    takeShot reads them, E146 `0x5040b014`, `0x5040b108`, `0x503af63e`, `0x503af8b1`, `0x503afcfa`; E147
+    `0x5041911b`, `0x5041920f`, `0x503b98cf`, `0x503b9b42`, `0x503b9f81`; `emu/test/test_facts.mjs` against the
+    values read by hand, three altered forms refused). The rest of the chain reads the same on both (D, each
+    function against E143's with addresses and line numbers masked): api_rec's allocation has one caller, a method
+    of E143's form (E146 `0x50b94c56`, E147 `0x50ba0ab5`); takePicture stores its second argument at the packet's +0
+    (E146 `0x5040aa1d`, E147 `0x50418b24`); TAKE_MAIN's intake marks that entry for commands 11 and 12 or logs
+    `0x25000409` (E146 `0x503b0ab7` from `0x50399541`, E147 `0x503bad23` from `0x503a3541`); and StlRdy1's function
+    allocates only under the same context bytes (kind 8 at E146 `0x503b1878`, E147 `0x503bbae4`; the other modes'
+    calls E146 `0x503a9d3d` and `0x503adb79`, E147 `0x503b3ef6` and `0x503b7e0c`).
+  - The take's mode record (D, E143). RdyStart's entry (`0x503c2742`) builds the Rdy states' mode bytes at
+    `0x62a4ce68` from its request (`0x503c28c7`): +2, +3 and +4 the request's flag bits 9, 8 and 13; +0 setting
+    49698; +10 setting 36241 not 0 and +11 setting 37665 not 0 (both 0 where +0 is 2; `0x503c4608`, `0x503c462a`);
+    +6 setting 61633 not 0 (0 with +2 set or with bit 0 of the Rdy word `0x62a4cee0`, the request's flags' low three
+    bits; `0x503c4860`), +7 setting 7729 at 1 with it; +17 setting 7745 not 0 (0 as +6 is, and where +0 is 2;
+    `0x503c464c`); +18 setting 59665; +13 (`0x503c47d0`) 0 where +0 is 2, +2 is set or the Rdy word's bit 0 is, else
+    3 for +6, 4 for +17, 3 for +18 at 1, 2 or 3 or for +10 or +11, else, with setting 33681 at 1, by setting 34225 (1
+    for 0, 4 for 4 or 5), else 0. RdyFcsTake's exit copies them into the record `0x62a4ce80` (`0x503c4509`) and hands
+    it to Standby beside the packet (`0x503c39ff..0x503c3a13`), whose entry copies it into TAKE's context: the bytes
+    +6 and +7 are `0x62a4b16c` and `0x62a4b16d`, +17 is `0x62a4b190`, and +10, +11 and +13 are the context's +3113,
+    +3114 and +3122 (`0x62a4af8a`). So the still states' own allocations are those of settings 61633 with 7729, of
+    7745 and of the mode byte 4. X on E143: the default session's settings read 49698 1 and 7729, 7745, 33681,
+    34225, 36241, 37665, 59665 and 61633 0, and the builder run natively on a request of zeros gives +6, +7, +10,
+    +11, +13 and +17 0 (a probe): none of the three, and the request's id stands.
+- **Landed: H-SHOTALLOC (`src/lab/rec.mjs` shot_alloc() and shot_free(); fact `take_shot`; E143, E146, E147).** At
+  S2's picture, before S-EXIFPRM, the lab runs api_rec's allocation natively, as CapBuf_TakeBuff calls it; the id is
+  the packet's HandleTarget, and the shot's record, by TAKE's own lookup, is the block S-EXIFPRM fills and REC gets
+  as pExifParam (what REC_MAIN's handler does). Once REC_FILE's reply is taken and both REC tasks wait, it runs
+  api_rec's free (I: when the application frees). TAKE's mark of the entry for the take is not set (TAKE_MAIN does
+  not run), and nothing writes the buffers: they hold no sensor image, and a reader of their pixels gets what the
+  lab's DRAM holds there. The E144 family's bodies and the older REC versions keep HandleTarget 1 and a block of the
+  lab's (no rule reads their shot).
+  - X on the three (`emu/test/test_storage.mjs` storageSession, 68 of 68 each; `emu/test/test_shotalloc.mjs`, 86 of 86
+    each): id 1; the entry's flags `0x7d` (the lab's settings make the kind 3: the flag-8 pair too); the handles 1,
+    2, 3, `0x101`, `0x6e01`, `0x6f01`, `0x7001` and the record's `0x1501`; no error logged; after the free the flags
+    0. Over 20 consecutive pictures every picture's entry is byte for byte the first's (the same id, handles and
+    record address) and no entry stays in use; the 20 files are on the card with the firmware's header. Controls:
+    without the free the second picture gets id 2 with other handles and the entries pile up (47 of 86); without
+    H-SHOTALLOC storageSession fails its three checks of it (65 of 68).
+  - The file is unchanged: a default session's first picture is byte for byte the one of the commit before on E143,
+    E146 and E147 (X: the same sha256 of the file read back from the card), and Caduceus v0.29's flow on E147 writes
+    that commit's picture but for the digits of its three dates and the maker notes' (X; the session's clock).
+- **What now runs further (X).** rec_ImgPro_ImageParam's four sources find their handles (TAKE's lookups of id 1 give
+  1, `0x101`, `0x6e01` and `0x7001`) and MM their addresses; the eight error logs of 4.3.4 are gone (the pin: no log
+  from the post to the parameter set's call; on the three bodies). STILL_PATH gains TAKE's allocation and free, once
+  each. The next stop is the one before: the image library's parameter set, let run in an E143 probe (rerun
+  2026-11-14 on H-SHOTALLOC's shot; E146 and E147 not probed), divides by the request's zero gains at `0x505099e0`
+  (fault 6, in the function `0x50509ac9` calls); the missing input is the shot record's +37810..+37816, REC_PREPRO's
+  to fill. With 128 in the four (a probe's value with no source, in the probe only) the set returns and the picture is
+  written, as in 4.3.4's probe; past it comes the run (4.3.9).
+- **The white-balance step on the allocated shot (D, E143 `0x5053823f`; X an E143 probe on H-SHOTALLOC's shot).** Its
+  inputs, who writes each on the camera, and what the lab's record holds:
+
+  | Input | The camera's writer | The lab's record |
+  |---|---|---|
+  | the thumbnail buffer (the work record's +0, MM's address of the shot's thumbnail handle) | TAKE's capture (which unit fills it is not read, ?) | the handle exists since H-SHOTALLOC; its pixels are not written |
+  | the cache key +38532 | StlTake's entry (`0x503baa2d` from `0x503b23dc`): the shot counter, setting 25380, which it steps, under TAKE's context +3128, which it sets at a sequence's first frame (the context's +3088 0) from the timer read `0x50002bf2` | 0 |
+  | +38008 | the shot-record fill (StlRdy2), setting 49169 | written by S-EXIFPRM (3) |
+  | +38190 | the shot-record fill, setting 41082 (`0x503bbee8`); takepic overrides it from its first argument's +18 unless that reads `0x8000` (StlTake passes none) | 0 |
+  | +38775, +38114 | the shot-record fill, settings 30385 and 36417 | 0 |
+  | +38764 | the shot-record fill, from TAKE's own state (4.3.12) | 0 |
+  | +38196 | takepic (StlTake), setting 50506 | 0 |
+  | +37992, +37988 (the mode) | takepic: settings 33057 and 33073 where TAKE's context +3088 is 1 (changed for the record's +37986 and settings 35409, 27665), else the context's +3730 and +3732, its keep of them. +3088 counts the sequence's frames: Standby's entry clears it (`0x503b0b00`), StlTake's entry steps it after the key (`0x503b23ea`), so a single still reads the settings | 0 |
+  | +38160 | takepic: 0 where the record's +4180 has bit 0 clear, else the context's +3352, StlRdy1's copy of its exposure request's +194 (below: 512 or 0 by a word of the strobe module's) | 0 |
+  | +6720 | takepic: the context's +3144's +204, StlRdy1's exposure request's answer (below: setting 50481 handed back) | 0 |
+  | +37990 | TAKE's third fill `0x503bd1fa`, setting 36642 by setting 35425 | 0 |
+  | the preset gains +6342.. | the EXIF set, from IMG_PRECON's table (4.3.11) | written (318, 864, 256, 256; H-RECPRECON) |
+  | +10542, +10546, +10548, +10552, +38210, +41001, +7626, +6140 | not found in TAKE's fills by their offsets (+6140 in a fill of another mode, `0x503bd932`); ? | 0 |
+
+  So six inputs are settings TAKE's own fills read and two exist; the four that pass through TAKE's context (the
+  key's high half, the gate +3088, +38160's source and +6720) are each written by the still states' own code from a
+  timer, a counter, a setting or the strobe module's answer (D, second pass: none is a value only a capture gives);
+  what no fill of TAKE's gives is the thumbnail's pixels and the eight fields of the last row. Run on the lab's
+  record: with the key 0
+  REC's cache answers and the gains stay 0 (as 4.3.4). With a key of the probe's the thumbnail's lookup and MM answer
+  without a log (new), TAKE's computation (`0x50390fcb`) loads the presets (`0x5039104f`) and enters the branch of
+  mode 0 (`0x50392d64`; I: the auto white balance, which is given the thumbnail), where the float multiply
+  (`0x5002b18d`, `udf04`) faults: an operand or a result outside the float unit's range (`docs/om1-udf-spec.md`
+  section 3); which one is not read (?). Nothing gives the gains without the thumbnail's content and TAKE's fills
+  in their order; nothing is landed.
+- **ISO: Sv comes back from the strobe module (D, E143; X a probe).** Sv (+38174) is takepic's copy of TAKE's
+  context +3346 (`0x62a4b06a`, `0x503bcdd9`), the +202 of the exposure request StlRdy1 keeps at the context's +3144.
+  StlRdy1's function ends with `0x503b8126(context, packet)` (`0x503b139d`): it builds the request (`0x503bf8e5`:
+  +0, +2 and +4 the exposure record's Tv, Av and +8, +6 and +8 the shutter range, +16 setting 50522 and +22 setting
+  50481 unless the call's fourth argument gives them (StlRdy1 passes none), +12 setting 50340, +23 setting 49393,
+  +20, +24, +25 and +26 from the context's mode bytes, +28 the shot's record by the lookup), hands it to the strobe
+  sequence's still decision `0x501bc976` (`stb_seq_expose.c` and `stb_seq_flash.c` by the log strings of its
+  neighbours `0x501bd039` and `0x501bd630`; its status at the context's +3140) and for status 0 copies the answer
+  back (`0x503bfaa0`: the request's +184
+  and +182 into the exposure record's Tv and +8, +202 into its +14, +188 into its +32, +194 into the context's
+  +3352). Where the module's mode word `0x62a34c2c` is not 2 the decision's answer is the request's own values
+  (`0x501bd56f`: +184 the Tv, +182 the +4, +188 the +12, +202 the +16, +204 the +22, +205 1, +194 512 or 0 by a
+  word of the module's, +200 from `0x501bea82`). So without a flash mode Sv is setting 50522, which the exposure
+  plan publishes (item 2). X, an E143 probe on H-SHOTALLOC's shot with S-EXIFPRM's exposure record: the call runs to
+  its end with status 0 and gives Sv 1536 (setting 50522; the Tv 2052 back), the request's +204 1 and the context's
+  +3352 0, but logs `0x24000615` twice (`0x501c2227`: the module fetches a property pointer its table does not hold
+  yet, I: its init has not run in the default session). Not landed: the lab would run the strobe module before its
+  init, and the mode word's writer is not read (?). ISO stays 25.
+- **FNumber: the lens fill is within reach (D, E143; X a probe).** TAKE's lens fill `0x503bd137(context, packet, 0)`
+  runs from StlTake's reply 37 (`0x503b6bef`): it finds the record by the packet's +0, which H-SHOTALLOC's shot now
+  answers, and calls the lens step `0x5011fcf4(record, kind, 0)` with the kind from the context's +3114 (3), +3113
+  (4) or +3122 at 4 (2), else 0: the mode bytes above, 0 in the default session (X). In an E143 probe the lens step
+  with kind 0, run natively before the EXIF set, logs nothing, sets the lens flag's bit 12, the focal length 12/1,
+  the maximum aperture 761/256 and the lens name of S-LENSMCU's lens, and the EXIF set then gives FNumber 56/10, the
+  plan's Av (X). Not landed this round: the fill reads the three bytes in TAKE's context, where Standby's entry
+  puts them and the lab runs neither Standby nor the Rdy states' builder; landing it takes a rule for the builder,
+  its two copies and the lens fill on the three bodies, the lens step run on E146 and E147 (X on E143 alone), and
+  the pins of the files' lens fields.
+- **Golden (X, 2026-11-14, the 37 scenario sessions checked by name against `emu/golden.json`; the check and run
+  sessions not run).** keys, the one whose picture goes through REC here, moves in its devices layer after the shot
+  (the instruction counts at which the later interrupts are taken: 259 fewer at the first row that differs; I: the
+  sources' eight error logs gone), its stops, harness and output. 22 more move in their output layer alone, from the
+  session's opening on (a15-open, b7-gate, evf-idle, eye-burn, inputs, pace-wall, play-perf, playback, the three
+  power and the three power-replay sessions, queue, scp-edge, scp-replay, scp-timeout, switch-scp, switch-shoot,
+  tokens, tokens-3b): the Player's list of stand-ins gains H-SHOTALLOC (X: with the name left out of the list each
+  of the 22 is as recorded and keys alone differs). shoot-tft, shoot-evf, the menu, nav, kernel and osd sessions do
+  not move. Every screen is unchanged.
+- **Sized plan to a development hook, revised (I).** (1) done. (1b) TAKE's own fills natively on the allocated shot
+  in place of S-EXIFPRM's copies, in the still states' order and on TAKE's own context: the mode bytes (the Rdy
+  states' builder and its two copies, with Standby's clear of the frame count), StlRdy1's exposure request, the
+  shot-record fill, the key, takepic, the lens fill and the third fill with the EXIF set; each is a function of the
+  context and the packet and starts from the lookup that now answers. Days; it gives FNumber and the lens fields,
+  the white-balance mode and the key, and the six settings inputs. (1c) the strobe sequence's init, so that
+  StlRdy1's request is answered without a log: it gives Sv (ISO), +6720 and +38160; its mode word's writer first.
+  (2) to (5) as above; the white-balance step (4) also needs the thumbnail's content, so a declared S-RAWFRAME
+  comes before it, and the eight inputs no fill of TAKE's writes need their writers read.
+- **Open.** Where CapBuf_TakeBuff allocates and frees in the release sequence; the strobe sequence's mode word
+  `0x62a34c2c` and its init; who writes the white-balance step's +10542, +10546, +10548, +10552, +38210, +41001,
+  +7626 and +6140; which operand the auto white balance's multiply refuses; the buffers' geometry (MM's kinds); the
+  readout's event and unit; what E146's and E147's start screen (GUI state `0x102`) is and whether the camera plans
+  there; TAKE_EXPOSE's `0x600`; E146's and E147's Rdy builder, exposure request and lens fill (read on E143 alone).
 
 ### 4.4 AF, lens and body IS
 

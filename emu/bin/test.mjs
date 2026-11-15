@@ -41,11 +41,12 @@
 // watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop,
 // display options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147
 // with OM_CADUCEUS (test_looks.mjs), its hue and lightness, Blacks and Whites and split toning hooks on their outputs
-// with OM_CADUCEUS (test_lookhooks.mjs), E147's still set-up at each creative-dial position and, with OM_CADUCEUS,
-// Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), TAKE's shot allocated and freed over 20 pictures on
-// E143, E146 and E147 (test_shotalloc.mjs), the still's stage builders called standalone on stock E122, E143 and
-// E147 on a job the test writes, with their read sets (test_stages.mjs, A-STAGEJOB), every caduceus-om3 release
-// against its pins when
+// with OM_CADUCEUS (test_lookhooks.mjs), its Grain's camera route to combiner 1's gain and its halation pass on pixels
+// by calls with OM_CADUCEUS (test_lookcode.mjs), E147's still set-up at each creative-dial position and, with
+// OM_CADUCEUS, Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), TAKE's shot allocated and freed over 20
+// pictures on E143, E146 and E147 (test_shotalloc.mjs), the still's stage builders called standalone on stock E122,
+// E143 and E147 on a job the test writes, with their read sets (test_stages.mjs, A-STAGEJOB), every caduceus-om3
+// release against its pins when
 // OM_CADUCEUS names a checkout
 // (test_caduceus.mjs), a tap on the touch mode icon on E143, E146, E147, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
@@ -782,6 +783,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const r = process.env.OM_CADUCEUS ? spawnSync(process.execPath, [new URL('../test/test_lookhooks.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' }) : null;
   const lines = r ? (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0) : [];
   console.log(`Caduceus look hooks on their outputs: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
+}
+// Caduceus' look code by calls (test_lookcode.mjs): the readers' and the halation definition's units, then, with
+// OM_CADUCEUS, Grain's camera route at its hook sites and the halation pass on frames in the calls' scratch on E147, in a
+// process of its own
+{
+  const { lookcodeUnits } = await import('../test/test_lookcode.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const lu = lookcodeUnits();
+  const r = process.env.OM_CADUCEUS ? spawnSync(process.execPath, [new URL('../test/test_lookcode.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' }) : null;
+  const lines = r ? (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0) : [];
+  console.log(`Caduceus look code by calls: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : r.status === 0 ? 'ok' : 'FAILED'}`);
   [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
 }

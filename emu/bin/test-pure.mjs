@@ -57,9 +57,10 @@
 // the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), its stack captures,
 // dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN reader with a film's
 // values (test_looks.mjs looksUnits), the look hooks' expectations from their source's tables (test_lookhooks.mjs
-// lookhooksUnits), and the caduceus-om3 release pins' checks on made-up folders (test_caduceus.mjs caduceusUnits), and
-// the session's card:out / card:in tokens (test_nocard.mjs nocardUnits), and the still's stage builders' read-set
-// bookkeeping and pins (test_stages.mjs stagesUnits, A-STAGEJOB).
+// lookhooksUnits), the look code's readers and the halation pass's definition (test_lookcode.mjs lookcodeUnits), and
+// the caduceus-om3 release pins' checks on made-up folders (test_caduceus.mjs caduceusUnits), and the session's
+// card:out / card:in tokens (test_nocard.mjs nocardUnits), and the still's stage builders' read-set bookkeeping and
+// pins (test_stages.mjs stagesUnits, A-STAGEJOB).
 // bin/test.mjs runs all of these too, with everything else.
 // Also here and there, the small units: the memory map's rules at addRegion (test_mem.mjs memUnits).
 // What a firmware file is, --main's patches from a .BIN container and the gate's reasons, on made-up bodies
@@ -123,6 +124,7 @@ import { traceUnits } from '../test/test_trace.mjs';
 import { toolsUnits } from '../test/test_tools.mjs';
 import { looksUnits } from '../test/test_looks.mjs';
 import { lookhooksUnits } from '../test/test_lookhooks.mjs';
+import { lookcodeUnits } from '../test/test_lookcode.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
 import { nocardUnits } from '../test/test_nocard.mjs';
 import { stagesUnits } from '../test/test_stages.mjs';
@@ -155,7 +157,7 @@ report('the published site\'s files and the player\'s download command (bin/site
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());
 report('audio port, sound IC and sink (src/dev/audio.mjs, S-WM8946, src/lab/audiohw.mjs)', audioHwUnits());
-report('patch overlays: file shapes, digest-anchored runs, --main, block references, old bytes, overlaps, ranges, digests, the hook rule, the audit, H-PATCHTASK, a patched replay (src/fw/patch.mjs, src/lab/patchaudit.mjs)', patchUnits());
+report('patch overlays: file shapes, digest-anchored runs, --main, block references, old bytes, overlaps, ranges, digests, the hook rule, the audit, H-PATCHTASK, H-PATCHFLUSH, a patched replay (src/fw/patch.mjs, src/lab/patchaudit.mjs)', patchUnits());
 report('the boot\'s section loader: the rules, what the boot loads, the unloaded ranges in the machine (src/fw/sections.mjs, S-STALERAM)', await sectionsUnits());
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
@@ -170,6 +172,7 @@ report('the scripted session\'s traces and stops: tokens, the machine\'s exec pr
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());
 report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals, a film\'s settings and hooked reads (test_looks.mjs)', looksUnits());
 report('a Caduceus film\'s look hooks on their outputs: their source\'s tables, the hue and lightness records, the tone LUT, the split toning tables (test_lookhooks.mjs)', lookhooksUnits());
+report('Caduceus look code by calls: a LOOKS.BIN of the test\'s, their source\'s readers, the halation pass\'s definition on drawn frames (test_lookcode.mjs)', lookcodeUnits());
 report('caduceus-om3 release pins: a changed or missing file, an unpinned folder, an observation that differs (test_caduceus.mjs)', caduceusUnits());
 report('the session\'s card tokens: card:out, card:in and the second slot\'s, the Player input each sends (test_nocard.mjs)', nocardUnits());
 report('the still\'s stage builders: read sets, pins, the three bodies\' tables and the pins that agree between them (test_stages.mjs, A-STAGEJOB)', stagesUnits());

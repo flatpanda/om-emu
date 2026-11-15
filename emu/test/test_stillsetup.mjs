@@ -14,16 +14,34 @@
 //                       over the S2 press counts the .hook_su site (the stub, whose instruction the release replaced:
 //                       it differs from the stock image's) once and the stock set-up it calls once; the picture is a
 //                       JPEG refs/jpeg.mjs decodes, with 'FILM 3 <its name>' in its ImageDescription; no poke and no
-//                       harness input. No Caduceus byte is in this file
+//                       harness input. What their set-up code does there (their firmware/src/xblock.s, D): the same
+//                       trace counts their work-list hook's site once, their set-up entry (the code block's, read
+//                       from their heap block at run time) once after the stock set-up, and the stock texture builder
+//                       never: the shipped film has no Grain (LOOKS.BIN record +51, none of v0.29's or v0.29.1's has).
+//                       Then a second session whose card holds the release's LOOKS.BIN with FILM 3's Grain set to Med
+//                       by the test (test_lookcode.mjs looksWith), the same keys and S2 with a breakpoint at the
+//                       texture builder: the press stops there, after the work-list site and before the set-up (their
+//                       source asks for the texture when the work list is built), called from their code block with
+//                       the still's resource manager (S+10280) and the key block the stock set-up makes for Grainy
+//                       Film (the still parameters' +40 u16 and +44, the stock helper's answer for them, +55, 0), the
+//                       job's key 11 and no texture at job+8324 yet. Let go, the builder does not come back: its
+//                       build is a request to the pipeline unit, whose pages for it the lab has no model of, and the
+//                       session stops at the unit's first write (the YC page 0x9c201000), pinned here as the lab's
+//                       limit, so the store of the texture at job+8324 is not reached. No Caduceus byte is in this file
 //   node emu/test/test_stillsetup.mjs [--session] [--caduceus]     (OM_EMU_MODEL=E147)
 //
 // E147 facts used (D, the stock block; run-time = notation + 0x10021020): the second step's stub 0x50496710 (`call
 // 0x504987bb`, the still set-up), the extension's apply 0x50530805, MM's retry sleep in its allocation 0x50521e52
-// (`call 0x5002c6e5` after a bank found no block), the per-shot EXIF fill 0x50436558
+// (`call 0x5002c6e5` after a bank found no block), the per-shot EXIF fill 0x50436558; the work-list builder's read of
+// the job's key 0x50497d71 (the 8 bytes their work-list hook replaces), the cached texture builder 0x504ac901 (a0 the
+// resource manager, a1 a 6-byte key; the stock set-up calls it at 0x504989d5 for Grainy Film; a miss builds through
+// 0x504ae099, whose request reaches the unit's YC page writer 0x50482e53) and the helper 0x504967db that gives the
+// key's fourth byte
 import fs from 'node:fs';
 import path from 'node:path';
 import { STILL_PATH } from './test_storage.mjs';
 import { readLooks } from './test_looks.mjs';
+import { looksWith, theirBlock, theirLayout } from './test_lookcode.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const tester = () => {
@@ -32,6 +50,7 @@ const tester = () => {
   return { bad, ok: (cond, what) => { checks++; if (!cond) bad.push(what); }, get checks() { return checks; } };
 };
 const SU = 0x50496710, SETUP = 0x504987BB, APPLY = 0x50530805, MM_SLEEP = 0x50521E52, EXIF_FILL = 0x50436558, RT = 0x10021020;
+const WL = 0x50497D71, TXGET = 0x504AC901, TXPF = 0x504967DB;
 const BIT19 = 'the constructor for byte +8 1 or bit 19', STILL = 'the still constructor';
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
 
@@ -101,6 +120,12 @@ export async function caduceusSetupSession() {
   ok(nc.status === 0, `card.mjs new: rc ${nc.status} ${nc.stderr.slice(0, 300)}`);
   const { openSession } = await import('../host/session.mjs');
   const said = [];
+  // their heap block's layout and their code block's entries, from their source at the release's tag (else the tree's)
+  const their = (file) => { const g = spawnSync('git', ['-C', root, 'show', `${rel}:${file}`], { encoding: 'utf8', maxBuffer: 1 << 26 }); return g.status === 0 ? g.stdout : fs.readFileSync(path.join(root, file), 'utf8'); };
+  let Y, B;
+  try { Y = theirLayout(their('firmware/src/editor.ld')); B = theirBlock(their('firmware/src/xblock.s')); } catch (e) { ok(false, e.message); return t; }
+  const le = (hex, off, n) => parseInt((hex.slice(2 * off, 2 * off + 2 * n).match(/../g) ?? ['0']).reverse().join(''), 16) >>> 0;
+  const KEYS = ['ok ok right right right right', 'ok', 'ok ok right', 'ok', 'ok ok right', 'ok'], SHOT = 's1:down s2:down wait:300 s2:up s1:up wait:5000'.split(' ');
   const s = await openSession({ model: 'E147', patch: [patchFile], card: T('card.omsd'), cardPut: [`OM3MOD/LOOKS.BIN=${looksFile}`], nvram: T('nv.json'), out: T('out'), say: (l) => said.push(l) });
   try {
     let failed = null;
@@ -110,12 +135,15 @@ export async function caduceusSetupSession() {
     const site = st(`read:${h8(SU + RT)}:5`).hex ?? '', was = [...stock].map((x) => x.toString(16).padStart(2, '0')).join('');
     ok(site.length === 10 && site !== was, `the .hook_su site ${h8(SU)} holds the release's instruction, not the stock image's: ${site} (stock ${was})`);
     run('s1 wait:1200');
-    for (const keys of ['ok ok right right right right', 'ok', 'ok ok right', 'ok', 'ok ok right', 'ok']) run(keys);
-    st(`trace:${h8(SU)},${h8(SETUP)}`);
+    for (const keys of KEYS) run(keys);
+    const heap = (Y.POOL + le(st(`read:${h8(Y.STATE)}:2`).hex ?? '', 0, 2) - 1) >>> 0, entry = (le(st(`read:${h8(heap + Y.XPTR)}:4`).hex ?? '', 0, 4) + B.entries.xb_su) >>> 0;
+    st(`trace:${[SU, SETUP, WL, TXGET, entry].map(h8).join(',')}`);
     const counts = {};
-    for (const tok of 's1:down s2:down wait:300 s2:up s1:up wait:5000'.split(' ')) for (const [pc, n] of Object.entries(st(tok).hit_counts ?? {})) counts[pc] = (counts[pc] ?? 0) + n;
+    for (const tok of SHOT) for (const [pc, n] of Object.entries(st(tok).hit_counts ?? {})) counts[pc] = (counts[pc] ?? 0) + n;
     st('trace:off');
     ok(counts[h8(SU)] === 1 && counts[h8(SETUP)] === 1, `S2 at COLOR runs the .hook_su site ${h8(SU)} once and the stock set-up ${h8(SETUP)} once: ${JSON.stringify(counts)}`);
+    ok(looks.films[2].record[51] === 0 && counts[h8(WL)] === 1 && counts[h8(entry)] === 1 && counts[h8(TXGET)] === undefined,
+      `a film without Grain (FILM 3's record +51 is ${looks.films[2].record[51]}): their work-list site ${h8(WL)} once, their set-up entry ${h8(entry)} once, the stock texture builder ${h8(TXGET)} never: ${JSON.stringify(counts)}`);
     const want3 = `FILM 3 ${looks.films[2].name}`;
     const ex = st('exif:DCIM/100OMSYS/*.JPG').exif?.ImageDescription ?? '';
     ok(ex.includes(want3), `S2 on FILM 3: ImageDescription ${JSON.stringify(ex)}, want ${JSON.stringify(want3)}`);
@@ -129,6 +157,53 @@ export async function caduceusSetupSession() {
     ok(sum.pokes.length === 0 && sum.harness_inputs.length === 0 && (sum.patch_audit?.hooks ?? []).length === 0,
       `no poke, no harness input, no lab hook on patched bytes: ${JSON.stringify({ pokes: sum.pokes, harness: sum.harness_inputs, audit: sum.patch_audit })}`);
     ok(said.some((l) => /patched firmware: \d+ patches/.test(l)), `the release taken as --patch: ${said[0]}`);
+  }
+  // the same film with Grain: the release's LOOKS.BIN with FILM 3's record +51 set to 2 (Med) by the test
+  try {
+    fs.writeFileSync(T('LOOKS-grain.BIN'), looksWith(fs.readFileSync(looksFile), [[2, 51, 2]]));
+    const nc2 = spawnSync(process.execPath, [path.join(EMU, 'bin/card.mjs'), 'new', T('card2.omsd'), '--model', 'E147'], { encoding: 'utf8', timeout: 120000 });
+    ok(nc2.status === 0, `card.mjs new: rc ${nc2.status} ${nc2.stderr.slice(0, 300)}`);
+    const recs = [], at = {};
+    // at the builder's stop: its key block, the still's parameters, the job, the helper's answer, then let it go
+    const plan = [
+      (r) => { Object.assign(at, Object.fromEntries(Object.entries(r.stopped.regs).map(([k, v]) => [k, Number(v) >>> 0])), { pc: r.stopped.pc }); return `read:${h8(at.a1)}:6`; },
+      () => { at.block = recs.at(-1).hex; return `read:${h8(at.a3 + 40)}:16`; },                    // a3 = S + 4, the still's parameters (their xb_tex)
+      () => { at.params = recs.at(-1).hex; return `read:${h8(at.a2 + 10276)}:8`; },                 // a2 = S
+      () => { at.job = le(recs.at(-1).hex, 0, 4); at.res = le(recs.at(-1).hex, 4, 4); return `read:${h8(at.job + 5352)}:4`; },
+      () => { at.key = le(recs.at(-1).hex, 0, 4); return `read:${h8(at.job + 8324)}:4`; },
+      () => { at.texture = le(recs.at(-1).hex, 0, 4); return `call:${h8(TXPF)}:d0=${le(at.params, 0, 2)},d1=${le(at.params, 15, 1)}`; },
+      () => { at.helper = Number(recs.at(-1).regs?.d0) & 0xff; return 'break:off'; },
+      () => 'resume'];
+    const g = await openSession({ model: 'E147', patch: [patchFile], card: T('card2.omsd'), cardPut: [`OM3MOD/LOOKS.BIN=${T('LOOKS-grain.BIN')}`], nvram: T('nv2.json'), out: T('out2'), say: () => {},
+      onRecord: (r) => recs.push(r), atStop: () => (plan.length ? plan.shift()(recs.at(-1)) : null) });
+    try {
+      let failed = null;
+      const st = (tok) => { if (failed) return {}; const r = g.step(tok); if (!r.ok) { failed = `${tok}: ${r.error}`; ok(false, `the film with Grain: step ${r.step} ${failed}`); } return r; };
+      'wait:1500 s1 wait:1200'.split(' ').forEach(st);
+      for (const keys of KEYS) keys.split(' ').forEach(st);
+      const heap = (Y.POOL + le(st(`read:${h8(Y.STATE)}:2`).hex ?? '', 0, 2) - 1) >>> 0, code = le(st(`read:${h8(heap + Y.XPTR)}:4`).hex ?? '', 0, 4);
+      ok(parseInt(st(`read:${h8(heap + 32 + 53)}:1`).hex ?? '0', 16) === 2, 'the film with Grain: COLOR 1\'s slot holds Grain 2 after FILM 3 is picked');
+      st(`trace:${[SU, SETUP, WL].map(h8).join(',')}`);
+      st(`break:${h8(TXGET)}`);
+      // the shot: the press that reaches the builder ends in the resume's record, where the session stops
+      let last = null;
+      const n0 = recs.length;
+      for (const tok of SHOT) { if (failed) break; last = g.step(tok); if (!last.ok || last.resumed) break; }
+      const before = {};
+      for (const r of recs.slice(n0)) { for (const [pc, n] of Object.entries(r.hit_counts ?? {})) before[pc] = (before[pc] ?? 0) + n; if (r.stopped) break; }
+      ok(at.pc === h8(TXGET) && before[h8(WL)] === 1 && before[h8(SU)] === undefined && before[h8(SETUP)] === undefined,
+        `the film with Grain: S2 reaches the stock texture builder ${h8(TXGET)} after their work-list site and before the set-up: stopped at ${at.pc}, ${JSON.stringify(before)}`);
+      const want = [le(at.params ?? '', 0, 2) & 0xff, le(at.params ?? '', 1, 1), le(at.params ?? '', 4, 1), at.helper, le(at.params ?? '', 15, 1), 0].map((v) => (v ?? 0).toString(16).padStart(2, '0')).join('');
+      ok(at.a0 === at.res && at.res !== 0 && at.block === want && at.mdr >= code && at.mdr < code + 0x10000,
+        `the film with Grain: the builder is called from their code block (return ${h8(at.mdr ?? 0)}, the block at ${h8(code)}) with the still's resource manager ${h8(at.res ?? 0)} (a0 ${h8(at.a0 ?? 0)}) and Grainy Film's key block ${want} (${at.block})`);
+      ok(at.key === 11 && at.texture === 0, `the film with Grain: the job is COLOR's (key ${at.key}) and holds no texture yet (job+8324 ${h8(at.texture ?? 1)})`);
+      ok(last?.resumed && !last.ok && /imgpipe UNKNOWN write 0x9c201014/.test(last.error ?? ''),
+        `the film with Grain: let go, the builder's build stops the session at the pipeline unit's first write (the lab has no model of that page): ${JSON.stringify(last?.resumed)} ${String(last?.error).split('\n').filter((l) => /imgpipe|stopped at/.test(l)).join(' | ').slice(0, 300)}`);
+    } finally {
+      const sum = g.close();
+      ok(sum.pokes.length === 0 && sum.harness_inputs.length === 0, `the film with Grain: no poke and no harness input: ${JSON.stringify({ pokes: sum.pokes, harness: sum.harness_inputs })}`);
+    }
+  } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
   return t;

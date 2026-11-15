@@ -254,10 +254,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   those parameters, runs natively too, after IMG_PRECON's init (H-RECPRECON; `docs/hle-gaps.md` 4.3.11), so a patch that
   hooks it runs at S2. Before it S-EXIFPRM gives the shot's record TAKE's exposure as TAKE's still states make it (its
   exposure record filled natively from the settings the exposure plan publishes, TAKE_EXPOSE's shutter range, takepic's
-  copy; `src/fw/facts.mjs` takeExposure, `docs/hle-gaps.md` 4.3.13): on E143 ExposureTime is the plan's shutter (1/250 s
-  for the default scene), on E146 and E147 the plan's once S1 has left the start screen, where S-EXPOSE does not plan (1
-  s before); ISO (25) and FNumber (0/10) are not filled yet (their sources are read, `docs/hle-gaps.md` 4.3.13). On
-  the same three bodies the picture's shot is first
+  copy; `src/fw/facts.mjs` takeExposure, `docs/hle-gaps.md` 4.3.13): ExposureTime is the plan's shutter for the
+  default scene, 1/250 s on E143 and 1/200 s on E146 and E147 (theirs from the start since their start reaches the
+  shooting screen, below); ISO (25) and FNumber (0/10) are not filled yet (their sources are read, `docs/hle-gaps.md`
+  4.3.13). On the same three bodies the picture's shot is first
   allocated in TAKE's shot table as the application's take buffer is (H-SHOTALLOC: api_rec's allocation natively, and
   its free once the file is recorded; `src/fw/facts.mjs` takeShot, `docs/hle-gaps.md` 4.3.13): the EXIF parameters are
   that shot's record, and REC's image parameters find the shot's Bayer and thumbnail buffers, which hold no sensor
@@ -1092,14 +1092,14 @@ rest of the line.
 | --- | --- |
 | `KEY` (a control id: `s1`, `ok`, `menu`, `right`, `play`, ...) | a press: down, 150 ms, up, then the settle (a display control, `lv` or `eye`, switches the display at its down and has no up: its token is the down and the settle, and `KEY:down`, `KEY:up` and `hold:` of it are refused; until 2026-11-14 its token failed, the player dropping the up) (every wait of a step, these and `wait:MS`, goes to the player as `WAIT` inputs of at most 50 ms, the idle player's slice, below) |
 | `KEY:down`, `KEY:up`, `hold:KEY[:MS]` | one edge; or down, MS (2000) ms, up and the settle |
-| `main_dial:+N`, `sub_dial:-N` | N detents (1 to 8, the player's cap), then the settle; the step sends the player's dial id (`main`, `sub`) |
+| `DIAL:+N`, `DIAL:-N` (`main_dial`, `sub_dial`) | N detents (1 to 8, the player's cap), then the settle; the step sends the player's dial id (`main`, `sub`) |
 | `switch:ID=V`, `switch:ID+N`, `switch:ID-N` | a switch or position switch set to V, or stepped N positions either way (`creative_dial`, `still_movie`, `mode_dial`, `lever`, ...) |
-| `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `OPEN`, ... | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
+| `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `XCALL:...`, `WINDOWS[:...]`, `OPEN`, `CLOSE`, `INTC`, `VSC`, `B2`, `EYE`, `STORE` | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
 | `power:off` | the power lever off: the firmware's own power-off, which saves the kept state |
 | `card:out`, `card:in` (`card:out:2`, `card:in:2`; `:1` names the first slot) | the card taken out of the first slot (the second) while the camera runs, or put back: the player's card input (S-MEDIA); a later `restart` keeps the slot as it is, so after `card:out` it is a power-on without a card (its log records the empty slot, `card_out`, which `--replay` restores) |
 | `restart[:card=FILE]` | a new session in this process on the same `--nvram` file and card (or the card FILE from now on, in the slot); after `power:off` the camera's power-on, the mode dial, creative dial, still / movie switch and (E143) Fn lever where they were (the record's `carried`); without `power:off` before it a battery pull, a fresh start at the idle positions |
 | `shot:FILE.png` | the last published frame of the display shown (`--device`, the eye sensor) as an RGB PNG, the pixels `GET /api/frame` gives; the record's `device` and `size` say which, and its `source` says in words what the picture is (the lab's composite; S-SCENE's drawn scene or black once its live view has been on, no live-view image before, never a sensor image) |
-| `read:ADDR:LEN`, `call:FN[:d0=..,a0=..,limit=N,space=..]` | the debug route's `read` and `call` ops (The debug API); `entry=PC`, `stop=PC` (repeatable) and `frame=MASK/SIZE` make a call into the middle of a function or one that ends at a stop pc |
+| `read:ADDR:LEN`, `call:FN[:d0=..,a0=..,limit=N,space=..]` | the debug route's `read` and `call` ops (The debug API); the call's registers are `d0`..`d3` and `a0`..`a3`, `space=notation\|runtime` says how to read an address outside the image's two ranges; `entry=PC`, `stop=PC` (repeatable) and `frame=MASK/SIZE` make a call into the middle of a function or one that ends at a stop pc |
 | `dump:ADDR:LEN:FILE` | LEN bytes (at most 64 MiB) from ADDR into FILE through the route's `read`, 64 KiB at a time; the record has `file`, `addr`, `len`, `sha256`, and for the ranges the boot does not load or is not shown to load under the loaded-ranges mode `unloaded` (`[{lo, hi, kind}]`) and `fill`: their bytes are S-STALERAM's fill, not anything a camera holds. A read that fails fails the step and writes no file |
 | `call:@FILE` | the `call` op's whole request read from FILE as JSON (`fn`, `space`, `entry`, `stops`, `regs`, `stack`, `frame`, `mem`, `read`, `restore`, `limit`, `scratch`; another field or a refused value is a usage error before the boot); one with `mem` is a poke |
 | `write:ADDR=HEX` | the debug route's `write`: allowed but **a poke**, listed in the summary and named on the last line |

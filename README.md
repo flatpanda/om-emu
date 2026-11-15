@@ -48,6 +48,19 @@ name in the picture's EXIF, with no write to memory. With a local checkout of th
 every Caduceus release against pinned observations, check a film's values where the camera's development takes them
 and check what its hue and lightness, Blacks and Whites and split-toning hooks write, below the pixels.
 
+Since a second round on 2026-11-14, `--main` also takes a `.BIN` container (its main code block alone: the other blocks
+are not read and the block's checksum is not checked), and a patch's own call of the cache flush is answered as the
+stock callers' are (H-PATCHFLUSH). The player's Stand-ins tab has a row for every stand-in a session can report, and
+both pages, the Card panel and a session's `shot:` record say in words what the picture is (the lab's composite, its
+image plane S-SCENE's drawn scene or black, never a sensor image or the camera's development). On the OM-1, OM-1 Mark II
+and OM-3 the picture's shot is allocated in the firmware's own shot table (H-SHOTALLOC), and the OM-1 Mark II and the
+OM-3 run their touch panel and switch between the TFT and the EVF as the OM-1 does. Below the pixels, the image
+library's stage builders (colour, tone, gamma, YC packing, grain and the writer that copies their block to the pipeline
+unit's page) are called standalone on stock PEN-F, OM-1 and OM-3 firmware and pinned with every byte each reads
+(`emu/test/test_stages.mjs`); the job they run on is the test's (A-STAGEJOB), so a pinned value is the builder's answer
+to that job, not a camera's. Caduceus' Grain route is checked by calls down to the texture's gain and its halation pass
+on frames the test draws (`emu/test/test_lookcode.mjs`); a Caduceus film with Grain does not finish S2 in the lab.
+
 Other bodies, through ports (as of 2026-11-02):
 
 | Body | Code | Status |
@@ -108,7 +121,7 @@ firmware rules on every body that is unpacked. The full suite (`node emu/bin/tes
 |---|---|
 | `emu/` | the emulator: `src/` (CPU, devices, machine, the lab, firmware tools), `bin/` (command-line tools), `host/` (node hosts), `web/` (the browser player), `checks/` (with its fixtures), `refs/`, `scenarios/`, `test/` (with the ISA vectors) and `golden.json` (the regression reference) |
 | `docs/` | the firmware and hardware specs, the roadmap, the model survey and the firmware container format |
-| `analysis/` | firmware-patch investigations: [the OM-1 to OM-1 Mark II feature gap](analysis/feature-gap/README.md), [lens-gated features](analysis/lens-gates/README.md), [ND128](analysis/nd128/README.md), [a study of fishcu/oly_fw_analysis](analysis/oly-fw-analysis/README.md), [a study of azqeurio/om-c-firmware](analysis/om-c-firmware/README.md), [a study of androidfanman/caduceus-om3](analysis/caduceus-om3/README.md) |
+| `analysis/` | firmware-patch investigations: [the OM-1 to OM-1 Mark II feature gap](analysis/feature-gap/README.md), [lens-gated features](analysis/lens-gates/README.md), [ND128](analysis/nd128/README.md), [a study of fishcu/oly_fw_analysis](analysis/oly-fw-analysis/README.md), [a study of azqeurio/om-c-firmware](analysis/om-c-firmware/README.md), [a study of androidfanman/caduceus-om3](analysis/caduceus-om3/README.md), [a study of SmilingChaosCloud/olyom-isp-bench](analysis/olyom-isp-bench/README.md) |
 | `artifacts/nd128/` | the ND128 candidate's manifest (patch sites and digests; the image itself is built locally) |
 | `tools/` | `olyfw.py` (a Python container unpacker), `om1_nd128.py` (builds the ND128 candidate), `mn10300dis.sh` (spot disassembly with a locally built `mn10300-objdump`), `omfw_download.sh` (the updater request with curl) |
 | `BLOBS.md`, `BLOBS.sha256` | every large file the lab uses, where it comes from, how to make it, and its digest |

@@ -3444,7 +3444,14 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   `0x9c20001c`, and `0x9c200250` or `0x9c200258`, `0x9c200260`, `0x9c200268`) and registers the request's callback
   in the unit's record (`0x50483474`). The go (`0x5048198b`, or `0x50481bd1` where the second enable word has none
   of `0x00b00000`) starts the unit, and with bit 1 of the third enable word the JPEG codec first (`0x504819e7`,
-  `0x50481c2a`). The unit's own registers and interrupts are not read (?): the lab refuses its first write (4.8.11).
+  `0x50481c2a`). The block's own words, its three unit masks, its set-up, go and end and its interrupt (IRQ 288) are
+  read and modelled as far as the play module's kind 10 request drives them (4.8.13, S-IMGPIPE,
+  `emu/src/dev/imgpipe.mjs`, on the board E143, E146 and E147 share). For kind 0 the unit pages that take the still
+  stages' blocks are read as far as their writers (4.8.13, "The development's pages"); the model keeps no page for
+  them, so a development request's first write to one is a bus error there, and at the go the model refuses any unit
+  masks but the decode's. The other boards have no model of the block. (Corrected 2026-11-14: this said the unit's
+  registers and interrupts were not read and the lab refused its first write, which 4.8.13, written in the same
+  round as this section, had already changed.)
 - **The JPEG codec at `0x99900000` and `0x99901000`.** Its driver lies right before the imgpro unit's
   (`0x5050a282..0x5050a6b2`): the init `0x5050a282` (from the units' init, `0x50481301`), the start
   `0x5050a2ba(request, flags)`, a second start `0x5050a4ad` that takes both quantisation tables from its caller
@@ -7946,6 +7953,9 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   | `+0xb080`, `+0x3a00` | C 1 | the codec's side: MCU counts, the mode |
   | `+0xae00` | C 2 | the codec's stream: its address |
   | `+0xc00..+0xeff` | - | written for every request (`0x50481c53`, `0x50482444`); ? |
+  | `+0x1000` | A 6 | not the decode's: the still stages' block O, copied at O + `0x80` (the development's pages, below) |
+  | `+0xc800` | A 6 | not the decode's: the tables O points at, a word an entry: the RGB gamma tables, the luminance LUT (below) |
+  | `+0x2000` | A 7 | not the decode's: the job's second block, copied at + `0x80` (below); which stage fills it is ? |
 
   The resizer's program is copied from the image's table `0x5063a040` (`0x50482e38`), the same for every request.
   The codec's driver is `0x5050a2ba`: mode 0 is the decode (`+0x1000` = `0x8004`, `+0x100c` = `0x8002`, `+0x1028` =
@@ -7953,6 +7963,53 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   and the Huffman tables (`+0x1200..+0x1800`, `0x5050a606`), as does the start beside it (`0x5050a4ad`, with the
   quantization tables at `+0x1c00` and `+0x1c80`). The codec parses the stream's headers itself (I: the driver gives it
   the file from SOI and no table).
+- **The development's pages (D, 2026-11-14; E143, E147 and the PEN-F; not modelled).** Where the still stages' output
+  goes. The leads are olyom-isp-bench, which calls the PEN-F's page writer on a bank it maps as RAM, and
+  fishcu/oly_fw_analysis, whose probes name the PEN-F pages (`analysis/olyom-isp-bench/README.md`); every address and
+  offset below is read again on om-emu's stock blocks.
+  - *The job record.* The generic handler's body keeps the request's job record C on its stack (188 bytes, cleared at
+    `0x5046d9b4`; E147 192 bytes, in `0x5046dbb6`), and `0x504809ec` (E147 `0x5048118a`) fills it: C+4 the request R,
+    C+8 the register image, C+12 the image's +2832 and C+16 its +7228 (`0x50480a67..0x50480a7e`; E147
+    `0x5048120e..0x50481225`), C+48 R's key (R+8 << 24 | R+9 << 16 | R+10 u16) and C+56 `0xffffffff` (`0x50480aa4`;
+    E147 C+60, `0x5048124f`). For kinds 0 and 15 a request that names a block P at R+1268 (E147 R+1524) gets C+12 = P
+    and C+16 = P + 4396 instead (`0x50480aed..0x50480b24`; E147 `0x5048129a..0x504812db`), and its C+56 (E147 C+60)
+    is what `0x5047fd20` returns (E147 `0x504804be`, read on E147 only): all ones less one bit for each field of R
+    that equals its copy in P, from P+5166 on (I: a mask of what changed since P was built). For those kinds C+48
+    becomes 2 where R's halfword +1496 is 257 (E147 +1756). So the stage list's flags (4.3.12) are all ones on a block
+    of the handler's own; whether a still's request names a block is ?.
+  - *The stages write into it.* The kind's packer (the table at run-time `0x6065aae8`, kind 0 `0x50473bcd`; E147
+    `0x6065cbf4`, `0x50473fad`) calls `0x504ef9af` with C (at `0x50473c29`, after a test of its own, `0x50474035`;
+    E147 `0x504f20f5` at `0x50474009`, after `0x50474420`), which for kinds 0 and 15 and a source format whose bits
+    15..10 are 1 (R's halfword +28, E147 +36) calls the wrapper `0x504f642e` (E147 `0x504f8e1c`): the YC packing
+    `0x504f064b` (E147 `0x504f2d9d`), `0x504f094d` (E147 `0x504f309f`) and the stage list `0x504f5cb0` (E147
+    `0x504f8694`, 4.3.12), each with C in a0. So 4.3.12's output O is C+12: 4,396 bytes ahead of the second block, and
+    inside the register image unless the request brings its own.
+  - *The pages.* The set-up's unit dispatch (`0x50481cd5`, from `0x50481442`; E147 `0x50482505`, from `0x50481c30`)
+    tests mask A (the image's word 0) and takes the pages of the request's pipeline: the first where C+176 is 0, else
+    the second, `0x4000` higher (E147 C+180).
+
+  | Page (second pipeline) | Bit (its test) | Writer [register mask, frame] and its call sites | What it writes |
+  |---|---|---|---|
+  | `+0x1000` (`+0x5000`) | A 6 (`0x50481d7f`; E147 `0x504825af`) | `0x50482623` [f0, 24] at `0x50481d8d`, `0x50481fd5`; E147 `0x50482e53` [f0, 24] at `0x504825bd`, `0x50482805` | O word for word at O + `0x80`, from O+0 to O+1240 in segments chosen by O's word 0 (bits 20, 13..12 and 24) and O+1188's bits 22..16, after 0 to the page's `+0x14` and `+0x18`. The HSL builder's 12 records (O+836, 4.3.12) land at the page's `+0x3c4` with the word after them (O+1124) at `+0x4e4` where bit 24 is clear; with it set only that word is written |
+  | `+0xc800` (`+0x10800`) | A 6, the next call | `0x50482e6f` [f0, 64] at `0x50481d99`, `0x50481fe1`; E147 `0x504836a8` [f0, 56] at `0x504825c9`, `0x50482811` | takes C and writes the tables O points at, a word an entry. The three RGB gamma tables of O+3172..O+3180 (4.3.12; 256 entries, 320 where O+452's bits 26..24 are not 0): to the page's `+0x000` when the three pointers are equal, else to `+0x800`, `+0x1000` and `+0x1800`; O+3184's table to `+0x2000`. The luminance LUT of O+3828 (256 u16) to `+0x2800`. With O+1124 not 0, ten tables of 128 entries from the pointers at O+4344..O+4380 to `+0x2c00`..`+0x3e00`. With O's word 0 bits 13..12 = 1, three tables to pages of their own: 4096 words from O+4384's pointer to `+0x5f000` (`+0x63000`), 256 from O+4388's to `+0x67000` (`+0x67400`), 32 from O+4392's to `+0x67800` (`+0x67880`), beyond the model's `0x25000` bytes. It skips tables under conditions on C+52 and C+148 (E147 C+52, C+56 and C+152) not followed |
+  | `+0x2000` (`+0x6000`) | A 7 (`0x50481d9e`; E147 `0x504825ce`) | `0x504827f1` [b0, 20] at `0x50481dac`, `0x50481ff4`; E147 `0x50483021` [b0, 20] at `0x504825dc`, `0x50482824` | the second block (C+16) at + `0x80`: its +0..+12 and +20..+752, then 1 to the page's `+0x378` |
+
+  E147's first and third writers are E143's instruction for instruction (232 and 36 instructions, the operands equal
+  but for code addresses; X: a compare of the two listings); its table writer reads the same offsets of O and writes
+  the same pages. The dispatch has further pages for other bits of the three masks, not listed here.
+  - *The PEN-F's block is at `0x9e000000`* (E122). Its dispatch `0x50493913` tests the image's word 0: bit 3
+    (`0x5049399d`) for the page `0x9e001800` and bit 16 (`0x504939bc`) for `0x9e005800`, the writer `0x50493fe6`
+    [f0, 24] (at `0x504939ab`, `0x504939cd`). It copies C+12 at + `0x34` (its last two words, +1044 and +1048, at +
+    `0x38`), after 0 to the page's `+0x24` and `+0x28`, and the HSL records from +676 with the word after them, +964,
+    only where that word is not 0 (else that word alone). The table writer `0x504948a4` [f0, 36] (at `0x504939b7`,
+    `0x504939d9`) takes C for `0x9e00a400` and `0x9e00cc00` (not read further), and bits 4 and 17 give C+16 to
+    `0x504941be` [b0, 12] for `0x9e001400` and `0x9e005400`. The PEN-F's C+12 is the image's +524 and its C+16 the
+    image's +5736 (`0x50492921..0x50492936`), so its O is 5,212 bytes.
+  - *Not known, and said here once.* Which unit-mask bits a real development request sets (no kind 0 request has
+    been packed in the lab, 4.3.9; bits 6 and 7 are in none of the decode's masks), what the pages' words mean to the
+    hardware (the field names used for them elsewhere are other projects'; no firmware string read here ties a name
+    to a page), and every pixel operation. A stage's output can therefore be followed to the page and offset it is
+    copied to, and no further.
 - **The protocol (D; X: 5,464 register accesses a request, 5,026 of them the program's copy).** The set-up writes the
   clock words (`0x5048d48a`: `+0x2d8`, `+0x2e8`, `+0x2e0`, `+0x2f4`, then `+0x2f8` = `0x2611` and a wait until its low
   byte reads 0), the masks to `+0x004`, `+0x014`, `+0x01c`, and the units' words. The go (`0x5048198b`): the codec's

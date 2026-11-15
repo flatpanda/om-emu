@@ -881,12 +881,19 @@ window branch (the mapper, the window's cached view and the flush after each row
    set and the run's set-up natively up to the pipeline unit's request: weeks after 1 and 2 (I). With 1 to 3 every data
    hook in the table runs where the camera runs it, and its records, LUTs and tables can be checked against LOOKS.BIN
    on the camera's job, not only on the job the call test writes.
-4. **The pipeline unit at `0x9c200000`**: one kind 0 request makes the developed image and the primary JPEG; its
-   registers and interrupts are not read (?) and the lab refuses its first write (`docs/hle-gaps.md` 4.3.9, D). The
-   firmware gives no evidence of its pixel processing (`docs/hle-gaps.md` 4.3, D), so a model of it is a declared
-   stand-in, and a data look checked on its pixels would check that stand-in, not the camera. Size: months (I).
-   Grainy Film's texture, which their Grain route asks the stock builder for, is built on this unit too (a kind-3
-   request): a film with Grain stops the lab's S2 there (X, above).
+4. **The pipeline unit at `0x9c200000`**: one kind 0 request makes the developed image and the primary JPEG. Its
+   protocol (the unit masks, the set-up, the go, the end's IRQ 288) is read and modelled for the play module's decode
+   only (S-IMGPIPE, `docs/hle-gaps.md` 4.8.13; D and X on E143, whose board E147 shares). The development's pages are
+   read as far as the writers that copy the stages' blocks to them (4.8.13 "The development's pages", D on E143 and
+   E147: the stages' output O goes to the page `+0x1000` at O + `0x80`, the RGB gamma tables and the luminance LUT
+   it points at to `+0xc800`), so a hook's records and tables can be followed to a page and an offset. The lab keeps
+   no page for them: a development request's first write there is a bus error. Which unit-mask bits such a request
+   sets and what the pages' words mean are not known (?), and the firmware gives no evidence of the pixel processing
+   (`docs/hle-gaps.md` 4.3, D), so a model of it is a declared stand-in, and a data look checked on its pixels would
+   check that stand-in, not the camera. Size: months (I). Grainy Film's texture, which their Grain route asks the
+   stock builder for, is built on this unit too (a kind-3 request): a film with Grain stops the lab's S2 at that
+   page's first write (X, above). (Corrected 2026-11-14: this said the unit's registers and interrupts were not
+   read.)
 5. **The JPEG codec at `0x99901000`**: driver and registers read (`docs/hle-gaps.md` 4.3.9, D on E143), fed by the
    unit, no buffer address of its own. Size: days after 4 (I).
 6. **S-IMGPRO's other request kinds**: only kind 14's fills are computed; Jpeg_Result's kind 13 copy is not. Size: days

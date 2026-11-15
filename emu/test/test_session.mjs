@@ -7,7 +7,8 @@
 //                   usage errors (exit 2 before any lab: an unknown option or token, a bad --loaded, --settle -1, a
 //                   malformed --card-put, --main with --patch, a missing --script), and its usage header against
 //                   the grammar token by token: every form it names with an example parseToken takes as that kind,
-//                   every kind parseToken makes named, the switch ids it lists (still_movie among them) controls
+//                   every kind parseToken makes named, every token-shaped word of the header a form with an example,
+//                   the switch ids it lists (still_movie among them) controls; the "not a token" message's switch forms
 //   sessionSession  (the process's model, through bin/session.mjs end to end) E143 (bin/test.mjs's process): a card the
 //                   firmware formatted with a file put by --card-put, read back (expect:card, card-get), the loaded
 //                   mask read and expected, S-SECLOADED, the settings getter called, S1 and S2 with the picture's Exif
@@ -169,6 +170,17 @@ export function sessionUnits() {
   if (/step\(m\[1\]/.test(grammar.slice(g0, g1))) { kinds.add('trace'); kinds.add('break'); }
   const named = new Set(FORMS.map((x) => x[2]));
   ok(kinds.size >= 22 && [...kinds].every((k) => named.has(k)) && [...named].every((k) => kinds.has(k)), `every kind parseToken makes has a form in the header: ${[...kinds].filter((k) => !named.has(k)).join(' ') || 'all'} (${kinds.size} kinds)`);
+  // and from the header's side: every token-shaped word of its token paragraphs (one with ':', '=' or '+' in it,
+  // card-ls, resume) is part of a form above, so a form the header gains needs an example here that the grammar takes;
+  // PROSE: the header's own words that end a clause in a colon
+  const paras = flat.slice(flat.indexOf('The tokens:'), flat.indexOf('Exit 0 when every step passed; 1 '));
+  const PROSE = ['tokens:', 'press:', 'poke:', 'stops:', 'trace:', 'break:'];
+  const words = [...paras.matchAll(/[A-Za-z_!-][^\s,;()]*[:=+][^\s,;()]*|\b(?:card-ls|resume)\b/g)].map((m) => m[0]).filter((w) => !PROSE.includes(w));
+  const strange = words.filter((w) => !FORMS.some(([form]) => form.includes(w.replace(/:$/, ''))));
+  ok(words.length >= 40 && strange.length === 0, `every token-shaped word of the header's token paragraphs is a form checked above: ${strange.join(' ') || 'all'} (${words.length} words)`);
+  // the message for a word that is no token lists the forms as well: the switch's three among them
+  const nt = thrown(() => parseToken('OK'));
+  ok(nt instanceof TokenError && nt.message.includes('switch:ID=V|+N|-N'), `the "not a token" message names the switch's three forms: ${nt?.message.slice(0, 220)}`);
   const ids = /switch:ID-N \(([^)]*)\)/.exec(flat)?.[1].split(',').map((x) => x.trim()).filter((x) => x !== '...') ?? [];
   const rows = new Map(CONTROL_ROWS.map((c) => [c.id, c.kind]));
   ok(ids.includes('still_movie') && ids.length >= 4 && ids.every((x) => ['switch', 'modedial', 'posswitch'].includes(rows.get(x))), `the header's switch ids are position controls: ${ids.map((x) => `${x} (${rows.get(x)})`).join(', ')}`);

@@ -4573,7 +4573,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   power and the three power-replay sessions, queue, scp-edge, scp-replay, scp-timeout, switch-scp, switch-shoot,
   tokens, tokens-3b): the Player's list of stand-ins gains H-SHOTALLOC (X: with the name left out of the list each
   of the 22 is as recorded and keys alone differs). shoot-tft, shoot-evf, the menu, nav, kernel and osd sessions do
-  not move. Every screen is unchanged.
+  not move. Every screen is unchanged. The full check (the check and run sessions too) reported these 23 and no
+  other; with the allocation off (`this.shot = null`) all 23 were the previous recording's on screen, devices and
+  output, and single-session checks bisect the move to the commit that landed H-SHOTALLOC. Re-recorded for those 23
+  sessions with evidence 'firmware' (X, the round's final pass).
 - **Sized plan to a development hook, revised (I).** (1) done. (1b) TAKE's own fills natively on the allocated shot
   in place of S-EXIFPRM's copies, in the still states' order and on TAKE's own context: the mode bytes (the Rdy
   states' builder and its two copies, with Standby's clear of the frame count), StlRdy1's exposure request, the

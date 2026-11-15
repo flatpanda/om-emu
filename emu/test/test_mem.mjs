@@ -4,8 +4,9 @@
 //              mapped; the regions the rules allow keep working (an offset that differs from the base modulo 64 KiB but
 //              not modulo 4, with its bytes and words agreeing; two views of one physical range; a device region inside
 //              a page next to another; a page remapPages cleared). Controls: the same three regions without the fault
-//              are accepted, and the machine's own map (a blank image, with the hdmi, audio and cores options) builds.
-//   node emu/test/test_mem.mjs
+//              are accepted, and the machine's own map (a blank image, with the cores option and, where the body's
+//              board has the fact, the hdmi and audio options) builds.
+//   node emu/test/test_mem.mjs        (OM_EMU_MODEL picks the body whose board's map is built: E143 by default)
 import * as mem from '../src/core/mem.mjs';
 
 const tester = () => {
@@ -71,7 +72,7 @@ export async function memUnits() {
   const { createMachine } = await import('../src/machine.mjs');
   const { BOARD, boardKnows } = await import('../src/fw/board.mjs');
   for (const [what, opts] of [['default', {}], ['hdmi', { hdmi: true }], ['audio', { audio: true }], ['cores', { cores: { second: 2 } }]]) {
-    if (what === 'audio' && !boardKnows('audio')) continue;
+    if ((what === 'hdmi' || what === 'audio') && !boardKnows(what)) continue;       // an option the body's board has no fact for
     const e = thrown(() => createMachine({ rom: new Uint8Array(0x1000), dramBytes: BOARD.dram_size, ...opts }));
     ok(e === null, `the machine's map with ${what}: ${e ? `${e.name}: ${e.message}` : ''}`);
   }

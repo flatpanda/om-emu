@@ -4059,7 +4059,8 @@ export function takeExposure(img, at) {
 }
 
 // TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps.md 4.3.13),
-// read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged. A normal still's shot is not
+// read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged (E146's and E147's callers, intake
+// and still states read against E143's: docs/hle-gaps.md 4.3.13). A normal still's shot is not
 // TAKE_MAIN's to allocate: its still states allocate one only under TAKE context bytes of other modes (StlRdy1
 // 0x503b1365 kind 8, 0x503b1341, 0x503b1391), and keep the take-picture request's own id, the packet's +0, which
 // api_rec's takePicture (0x5040ee43) stores from its second argument. The id is the take buffer the application's

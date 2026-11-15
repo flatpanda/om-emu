@@ -76,7 +76,7 @@
 //               take-buffer allocation (API 0x20019), natively before S-EXIFPRM, which has TAKE's own allocation
 //               pick a free id and take the shot's buffers from MM by the kind the settings give (X on the three:
 //               id 1, the entry's flags 0x7d: the Bayer and thumbnail handles, the shot's record with its handle, and
-//               the four other buffers, no error logged); and its call of api_rec's free (API 0x2001a) natively once
+//               the five other buffers, no error logged); and its call of api_rec's free (API 0x2001a) natively once
 //               REC_FILE's reply is taken and both REC tasks wait again (I: when the application frees it is not
 //               read), which leaves the entry free and MM's handles for the next shot (X: 20 shots, the same id and
 //               handles each). The id is the packet's HandleTarget and its record, by TAKE's own lookup, the block

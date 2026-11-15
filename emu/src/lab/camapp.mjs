@@ -222,6 +222,9 @@ import { FACTS } from '../fw/ports.mjs';
 export const HL_CREATE = A(0x50AB222A), HL_INIT = A(0x50AB22BC), BROKER_INIT = A(0x502A48B6), CA_MAIN = A(0x51049EBB);
 export const HL_MAIN = A(0x50AB2293);
 export const CA_TASK_ENTRIES = [CA_MAIN, HL_MAIN, A(0x50AB83F4), A(0x5108BA1B), A(0x50D9B388), A(0x50ABBF0C)];
+// the application's event task entry of the list above (two static tasks run it, docs/hle-gaps.md 4.4.2): with the GUI
+// task, the tasks a display switch's re-entry and the application's start run on (play.mjs chain_rest)
+export const CA_EVENT_TASK = CA_TASK_ENTRIES[3];
 // S-BOOTDONE: [name, vtable, dispatchEvent], the event classes' vtables (id at +4), the state word of the reactives
 const BOOT_OBJECTS = [['Cab_CameraBase', A(0x60EF0B88), A(0x50D744FC)], ['CtgStl_StillImageShooting', A(0x60EF81D0), A(0x50D97281)]];
 const EV_BOOT_DONE = [A(0x60DCA154), 415], EV_SHOOT_MODE = [A(0x60DCA2BC), 420], RX_STATE = 256, RX_EVENT = 104;
@@ -2006,6 +2009,8 @@ export class CamApp {
     if (this.mdet) this.mdet.tick();                                                // S-TAKEMDET, S-TAKEFRAME's subject bit
     else this.subject?.tick();                                                      // S-SUBJECT
   }
+  // the static tasks with the application's event task entry
+  event_tids() { return [...this.s.lab.nk.tasks()].filter(([, [e]]) => e === CA_EVENT_TASK).map(([t]) => t); }
   take_log() { const out = this.log; this.log = []; if (this.take) for (const [k, d] of this.take.take_log()) out.push([`take ${k}`, d]); return out; }
   status() {
     return { started: this.started, recview_pending: this.timed.some(([, n]) => n === 'END_RECVIEW'), pending: this.timed.map(([, n]) => n),

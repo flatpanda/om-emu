@@ -105,6 +105,10 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // `ui_out`: UI_OUT, the module of the camera's lamps (and on E143 its operation sounds), where the lab runs it
 // (src/lab/play.mjs H-UIOUTSTART: E134, whose file layer asks it for the card's access lamp; E143, whose AF beep is a
 // request to it): init, its init's entry, and task, its static task's entry. A body without it does not run UI_OUT
+// `chain_sleeps`: the body's GUI task and application event tasks sleep inside the chains the lab's steps wait for (the
+// application's start, a display switch's re-entry), so those steps run lab time on while one of them sleeps
+// (src/lab/play.mjs H-CHAINREST): E146 and E147, whose touch driver sleeps 1 ms each time it wakes the controller (D,
+// at each body's entry). A body without it ends those steps at their settle, as E143, whose chains have no sleep
 // `lens_native`: the lens on the mount runs natively, the default (src/lab/lens.mjs with S-LENSMCU; OM_EMU_LENS=stand-in
 // takes S-LENS; docs/hle-gaps.md 4.4.2), on a body whose card's file system runs too; the driver's addresses are read
 // by src/fw/facts.mjs lensDriver (fact lens_driver). A body without it has S-LENS (src/lab/camapp.mjs)
@@ -487,7 +491,11 @@ export const MODELS = {
     // E146's firmware writes was not read)
     board: { family: 'E143', vsc: { unapplied: VSC_UNAPPLIED } },
     vsc_extra: [0x6800, 0x1400],
-    touch: false,
+    // the touch panel runs (no touch: false) since 2026-11-14, as E147's: E143's driver and controller with the close
+    // handed to the touch task (0x501ea754: OlyEvSt of pattern 4 on its flag at 0x501ea77d, OlySmWt without timeout at
+    // 0x501ea78d on the semaphore the task signals at 0x501ea64a; the task's wait has mask 15 at 0x501ea480) and the
+    // wake's 1 ms sleep (0x501eaa94, OlyTaSS at 0x501eaacd), D; X: test/test_touch.mjs, test/test_dispswitch.mjs
+    chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
     // the lens on the mount natively, the default (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3): its driver is E143's
     // but for addresses, the debug log's line numbers and the order of a few instructions (X: its serial layer, init
@@ -592,8 +600,20 @@ export const MODELS = {
     vsc_extra: [0x6800, 0x1400],
     // the feature registers' values E147 writes for its EVF (1024 x 768 panel) where E143's differ (X: the EVF start)
     vsc_features: { 0x428: [0x22], 0x580: [0], 0x584: [0], 0x588: [0], 0x58c: [0], 0x598: [0] },
-    // the touch init starts the touch task itself and both wait for the controller's I2C completion (X): not modelled
-    touch: false,
+    // the touch panel runs (no touch: false) since 2026-11-14: E143's driver and controller (slave 0x70, the power mode
+    // register 0xa5, the 11-byte report at register 2, D; X: a tap on the touch mode icon reaches HFW at its pixel,
+    // test/test_touch.mjs), with two differences (D; docs/hle-gaps.md 4.4.4). Its close (0x501f2327) hands the close to
+    // the touch task, OlyEvSt of pattern 4 on its flag (0x501f2350), and waits without timeout, OlySmWt (0x501f2360),
+    // on a semaphore the task signals after it cleared the open byte (0x501f2186..0x501f2207); E143's close
+    // (0x501e4139) does the work inline, and its task's wait does not take that pattern (mask 11 at 0x501e3eee, E147's
+    // 63 at 0x501f2063). The application's output change closes the panel (called from 0x5042fbdd), so with the
+    // touch task not run its event task did not come back from that wait at the lab's display switch and the screen
+    // was not built again (X: the close's pcs traced through the switch). touch: false dated from the first port
+    // (2026-10-15), whose touch init met a wait on the controller's I2C completion (X then); the touch I2C transport's
+    // places and arguments are read by rules since (facts touch, touch_args) and the start runs through (X now; which
+    // change it was is not bisected). And its wake (0x501f2667) sleeps 1 ms after the power mode write (OlyTaSS at
+    // 0x501f26a0), where E143's (0x501e4459) returns: chain_sleeps
+    chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
     // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3; X: the same
     // compares and frames); LLPSW is bit 6 of group 1 byte 0 in its UI_IN tables (E143's bit 4 of byte 1)

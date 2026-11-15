@@ -15,11 +15,14 @@
 //                (the frames in the driver's order, then the state poll), IRQ 14 attached at level 3 by the lens open,
 //                the driver's record filled from the replies (ID, name, zoom steps, wide and tele, the zoom entries,
 //                the status word, the zoom step S-SCENE's default focal length gives, the aperture), the driver's
-//                35 mm focal lengths derived natively from it (24, 80, 50 mm; E146 and E147 at S-SCENE's default
-//                step, 12 mm: 24, 80, 24), the zoom ring at 40 mm (the state's last step, 80 mm), no error log; on a
-//                body with the touch panel (E143) a touch on the shooting screen forwarded to the GUI by the application
-//                itself, the GUI's two answers taken natively and no lab post (S-TOUCHMAP, S-CAFWD not in use), then OK
-//                opening the Super Control Panel and S1 returning; the lens lock pin switch
+//                35 mm focal lengths derived natively from it (24, 80, 50 mm; E146's and E147's starts end on the
+//                shooting screen too since 2026-11-14, src/lab/play.mjs H-CHAINREST: until then their lens stayed at
+//                its first step, 12 mm), the zoom ring at 40 mm (the state's last step, 80 mm), no error log; a touch
+//                on the shooting screen forwarded to the GUI by the application
+//                itself (from the body's port of E143's forward), the GUI's two answers taken natively and no lab post
+//                (S-TOUCHMAP, S-CAFWD not in use), then OK
+//                opening the Super Control Panel and S1 returning (E146 and E147 too, whose touch panel runs since
+//                2026-11-14); the lens lock pin switch
 //                pressed (fw_121c): the lens detached (the data-valid and attach flags 0, the aperture shown as none),
 //                released: the lens's start again and the flags back
 //   node emu/test/test_lens.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_lens.mjs --session: another body)
@@ -159,8 +162,10 @@ export async function lensSession() {
     `the record's identity: ID ${rd(1100, 6)}, name ${JSON.stringify(name)}, ${rd(1138, 1)} steps, ${u16(1144)}..${u16(1146)} mm`);
   ok(LENS_1240.zoom.every((fl, i) => u16(1164 + 16 * i) === fl && u16(1166 + 16 * i) === LENS_1240.ap[0] && u16(1168 + 16 * i) === LENS_1240.ap[1]), 'the zoom entries: focal length and apertures per step');
   // the zoom step S-SCENE's default focal length gives (25 mm, step 4), which S-EXPOSE turns the ring to on the shooting
-  // screen; E146's and E147's starts end before it (their GUI at 0x102, X), so the lens stays at its first step there
-  const step = lab.state() === 0x0108 ? 4 : 0;
+  // screen, where every start of these bodies ends (E146's and E147's since H-CHAINREST, src/lab/play.mjs: until
+  // 2026-11-14 theirs ended before it, the GUI at 0x102 and the lens at its first step, X)
+  ok(lab.state() === 0x0108, `the start ended on the shooting screen: 0x${lab.state().toString(16)}`);
+  const step = 4;
   ok(lab.sim.u32(rec + 4) === 0x8000 && rd(8, 1)[0] === step && u16(16) === LENS_1240.ap[0], `the state: status 0x${lab.sim.u32(rec + 4).toString(16)}, zoom step ${rd(8, 1)} (want ${step}), aperture ${u16(16)}`);
   const fl = focal.map((a) => lab.sim.u32(a));
   ok(JSON.stringify(fl) === JSON.stringify([24, 80, 2 * LENS_1240.zoom[step]]), `the 35 mm focal lengths the driver derives: ${fl}`);
@@ -182,8 +187,9 @@ export async function lensSession() {
   ok(polls >= 10, `the state poll runs on (about every 100 ms): ${polls} polls`);
   // a touch on the shooting screen: the application forwards it to the GUI itself and takes the GUI's answers (event
   // 35 from PostEventToCA, natively), the lab posts none (no S-TOUCHMAP, S-CAFWD); OK then opens the Super Control
-  // Panel, as with S-LENS. A body whose touch driver the lab does not run (E146, E147: models.mjs touch) has no touch
-  if (s.touch_on) touchChecks(ok, pl, s, lab, used);
+  // Panel, as with S-LENS. The forward's call site is the body's port of E143's (src/lab/play.mjs CAFWD_CALLERS)
+  ok(s.touch_on, 'the touch panel runs in the session');
+  touchChecks(ok, pl, s, lab, used, `0x${A(0x5124f6ae).toString(16)}`);
   // the lock pin switch: pressed, the lens detaches; released, it starts again (its bit the body's: E147's group 1 byte
   // 0 bit 6, E143's byte 1 bit 4)
   pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 1 });
@@ -198,7 +204,7 @@ export async function lensSession() {
   pl.close_session();
   return { checks, bad };
 }
-function touchChecks(ok, pl, s, lab, used) {
+function touchChecks(ok, pl, s, lab, used, caller) {
   ok(s.app_touch && !used.includes('S-TOUCHMAP') && !used.includes('S-CAFWD'), `the application forwards the touches: ${used.filter((x) => /TOUCH|CAFWD/.test(x))}`);
   let seq = 10;
   const input = (inp) => { const q = seq++; pl.apply({ ...inp, t_wall: pl.wall(), seq: q }); return pl.box.pop(q); };
@@ -208,7 +214,7 @@ function touchChecks(ok, pl, s, lab, used) {
   const down = input({ type: 'touch', action: 'down', x: 300, y: 200 }), up = input({ type: 'touch', action: 'up', x: 300, y: 200 });
   s.idle_slice(lab.lab_time() + 300e6);
   const answers = lab.cafwd.slice(c0);
-  ok(answers.length === 2 && answers.every((c) => c.event === 35 && c.caller === '0x5124f6ae') && !down.record.touch_posted.length && !up.record.touch_posted.length,
+  ok(answers.length === 2 && answers.every((c) => c.event === 35 && c.caller === caller) && !down.record.touch_posted.length && !up.record.touch_posted.length,
     `the GUI answers the application's two forwards, the lab posts none: ${JSON.stringify(answers)} ${JSON.stringify([down.record.touch_posted, up.record.touch_posted])}`);
   input({ type: 'key', id: 'ok', action: 'down' });
   input({ type: 'key', id: 'ok', action: 'up' });

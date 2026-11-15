@@ -569,6 +569,7 @@ export class Player {
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
     if (this.session?.resnand && this.session.sound_area === 'S-SOUNDRES') used.push('S-SOUNDRES');   // the lab-made sound area (soundres.mjs)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered
+    if (this.session?.chain_rests) used.push('H-CHAINREST');                               // lab time run on through a chain's sleeps (play.mjs chain_rest)
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0
     const media = this.session?.camapp?.media;

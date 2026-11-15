@@ -746,12 +746,14 @@ export async function storageSession() {
         // shooting values. Tv and Av come from TAKE's exposure record, which S-EXIFPRM fills with TAKE's own fill from
         // the settings store and copies as takepic does, with TAKE_EXPOSE's shutter range (src/fw/facts.mjs
         // takeExposure, docs/hle-gaps.md 4.3.13): on E143 S-EXPOSE's plan published them, Tv 2052 for the default
-        // scene, which the set gives as 1/250 s (X); E146 and E147 start at a GUI state where S-EXPOSE does not plan,
-        // and this shot (S1 and S2 from the start) finds them 0, so ExposureTime is the set's 1 s of Tv 0 there. FNumber stays
+        // scene, which the set gives as 1/250 s (X); E146's and E147's own plan has Tv 1924, which their set gives as
+        // 1/200 s (X). Until 2026-11-14 their start ended at a GUI state where S-EXPOSE does not plan, and this shot
+        // (S1 and S2 from the start) found Tv 0, the set's 1 s; since then it ends on the shooting screen
+        // (src/lab/play.mjs H-CHAINREST). FNumber stays
         // 0/10 (the lens flag +37982 bit 12 is takepic's lens step's, not run)
         if (rec.exif_set()) {
           const used = pl.stand_ins_in_use();
-          const EXPOSURE_TIME = { E143: '[1,250]', E146: '[10,10]', E147: '[10,10]' }[MODEL];
+          const EXPOSURE_TIME = { E143: '[1,250]', E146: '[1,200]', E147: '[1,200]' }[MODEL];
           const want = `[350,1] [350,1] [0,100] ${EXPOSURE_TIME} [0,10]`;
           const tags = [[0x011A, 'ifd0'], [0x011B, 'ifd0'], [0xA404, 'exif'], [0x829A, 'exif'], [0x829D, 'exif']].map(([k, d]) => JSON.stringify(x?.[d]?.get(k)));
           ok(used.includes('H-RECPRECON') && rec.precon_init && rec.exif_sets === 1 && setRuns.length === 1, `the EXIF set ran natively once, after H-RECPRECON (${used.filter((n) => /PRECON|EXIF/.test(n)).join(' ')}): ${rec.exif_sets} by the lab's count, ${setRuns.length} seen at its entry 0x${rec.R.exif.set.toString(16)}`);

@@ -172,6 +172,8 @@ export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], 
 export const TOUCH_MESSAGE = 0x9100;
 // M10B display switches: the GUI-busy note, H-EYESTATE / H-STOREFIRST addresses
 export const GUI_BUSY_NOTE = 'e.g. Level Adjust -> Adjust: 0x5004ad13 sleeps for about 1 s while it takes 12 sensor samples';
+// H-CHAINREST's slice and bound of lab time (PlaySession.chain_rest)
+export const CHAIN_SLICE_NS = 1000000, CHAIN_LIMIT_NS = 200000000;
 export const EYE_SET = A(0x50050EFD), EYE_STATE = { evf: 2, tft: 1 }, EYE_WORD = A(0xA32C1F44), EYE_CALLBACK = A(0xA32C1F48), EYE_TIMER = A(0xA32C1F4C);
 // the property the eye callback's registration reads for the EVF's burn-in timer (docs/om1-vsc-spec.md section 9 item
 // 10: armed only at 0) and, under control camapp 3, the one at whose 0 the application's eye handler asks for no
@@ -1134,6 +1136,7 @@ export class PlaySession extends N.NavSession {
     this.a15_frames = 0;
     this.a15_last = null;
     this.switches = 0;
+    this.chain_rests = 0;          // the steps H-CHAINREST ran lab time in (chain_rest)
     this.scene = null;             // S-SCENE, once a scene input turns the live view on
     this.lv = null;                // the live view's attach: { device, address, key }
     this.through_off = false;      // S-THROUGH: the application stopped its through image (the menu)
@@ -1307,7 +1310,9 @@ export class PlaySession extends N.NavSession {
     this.camapp = new CamApp(this);
     this.camapp.start();
     lab.gui_adopt();                                 // H-GUIBYAPP
-    this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status() });
+    const chain = this.chain_rest('S-CAMAPP start');   // H-CHAINREST: the start's sleeps
+    if (chain.slices) this.camapp.expose();            // S-EXPOSE: the plan on the screen the start reached
+    this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status(), ...(chain.slices ? { chain_rest: chain } : {}) });
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
   }
   // H-DPCINIT: the deferred calls' init (fact 'dpc.init', src/fw/facts.mjs deferredCalls), which the boot head runs
@@ -2043,6 +2048,40 @@ export class PlaySession extends N.NavSession {
     }
     return null;
   }
+  // The GUI task and the camera application's event tasks that are in the kernel's timeout queue now (dly_tsk or a
+  // timed wait): the tasks a display switch's re-entry and the application's start run on.
+  chain_sleepers() {
+    const lab = this.lab, timed = lab.nk.timed_waiters();
+    return [lab.gui_tid, ...(this.camapp?.event_tids() ?? [])].filter((t) => t !== null && timed.includes(t));
+  }
+  // H-CHAINREST (a body of src/fw/models.mjs chain_sleeps: E146, E147): inside a step whose post-condition is the end
+  // of a chain those tasks run (the display switch's re-entry, the application's start), lab time runs on in
+  // CHAIN_SLICE_NS slices while one of them sleeps, the stand-ins' replies delivered after each slice as after an input
+  // (camapp.pump: S-DISPQ's, S-MODACK's), at most CHAIN_LIMIT_NS. A settle runs the firmware at one lab time, so a
+  // chain with a sleep in it is not at its end when the settle returns: E146's and E147's touch driver sleeps 1 ms
+  // after it wakes the controller, at the end of the panel's open, of its close and of each set of the gesture mask
+  // (D: the OlyTaSS after the write of the controller's power mode register, which E143's wake does not have; the
+  // addresses are in src/fw/models.mjs and docs/hle-gaps.md 4.4.4), so their TFT start ended at the power-on state
+  // with no frame and their switch to the TFT before the re-entry (X). Returns {ns, slices, asleep: the tasks still
+  // asleep at the bound}; a body without chain_sleeps, and a chain none of the tasks sleeps in, gets no lab time
+  // (slices 0). The mutant no-chain-rest leaves it out (test/test_dispswitch.mjs's control).
+  chain_rest(label) {
+    const lab = this.lab, t0 = lab.lab_time();
+    let slices = 0;
+    if (!MODEL_INFO.chain_sleeps || this.opts.mutant === 'no-chain-rest') return { ns: 0, slices, asleep: [] };
+    while (this.chain_sleepers().length && lab.lab_time() - t0 < CHAIN_LIMIT_NS) {
+      try {
+        lab.lt.elapse_until(lab.lab_time() + CHAIN_SLICE_NS, () => lab.lab_time(), (t) => lab.run_to_event(t), (this.settle_hooks ?? N.STEP_HOOKS) + N.WAIT_HOOKS_PER_MS);
+      } catch (e) {
+        if (e instanceof FirmwareError) throw new N.NavError(`${label}: H-CHAINREST: ${e.message.slice(0, 600)}\n` + this.diagnose());
+        throw e;
+      }
+      this.camapp?.pump();
+      slices += 1;
+    }
+    if (slices) this.chain_rests += 1;
+    return { ns: lab.lab_time() - t0, slices, asleep: this.chain_sleepers() };
+  }
   // SWITCH (M10B): DISPLAY cmd 2 OPEN of want, H-RESEND, H-EYESTATE, H-CONNECT 131 with the sender's lOutput, then the
   // post-conditions; the camera application ends and re-enters the screen itself (with S-OUTDISP).
   live_switch(want, cause) {
@@ -2071,6 +2110,7 @@ export class PlaySession extends N.NavSession {
     this.device = want;
     const np0 = lab.panels.length;
     const info = this.connect(want);
+    const chain = this.chain_rest(`SWITCH:${want}`);              // H-CHAINREST: the re-entry's sleeps
     const on_connect = lab.panels.slice(np0).map(([, p]) => p);
     lab.harvest();
     const engine = lab.exec_history.length - e0;
@@ -2079,7 +2119,12 @@ export class PlaySession extends N.NavSession {
     const problems = [];
     const panel1 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
     const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state()) : lab.state() === state0 && panel1 === panel0;
-    if (!same) problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not the screen the switch left (${h4(state0)} panel ${panel0})`);
+    if (!same) {
+      problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not the screen the switch left (${h4(state0)} panel ${panel0})` +
+        (chain.asleep.length ? `; task(s) ${show(chain.asleep)} still sleep after ${Math.round(chain.ns / 1e6)} ms of lab time (H-CHAINREST's bound)` : '') +
+        // E146's and E147's touch close hands over to the touch task and waits for it (src/fw/models.mjs)
+        (!this.touch_on && D.HAS_TOUCH ? '; the touch task does not run (touch off): where the touch driver\'s close waits for it (E146, E147), the application\'s event task stays in that close and the screen is not built again; run with the touch on' : ''));
+    }
     // the module-9 reads a switch may make: ChangeOutline's first (S-TAKEOVER's state 2 ends it there, X) and the
     // application's; under control camapp 3, where the components write the state themselves (0x50ca4ae1), also
     // the second reads that state 0 reaches (MODULE9_SECOND_READS), not the other readers of the session's
@@ -2096,7 +2141,8 @@ export class PlaySession extends N.NavSession {
     const ctrl3 = {};
     for (const d of Object.keys(D.DEVICE)) ctrl3[d] = lab.vsc.bank(D.DEVICE[d].channel, true).get('CTRL3') ?? null;
     const rec = { cause, connect: info, layout_before: layout0, layout_after: layout, module9_reads: reads.map(h8), eye, engine, problems,
-      panels_on_connect: on_connect, ctrl3, resend: sends.map(([c, d, r]) => [c, bytesHex(d), h8(r)]) };
+      panels_on_connect: on_connect, ctrl3, resend: sends.map(([c, d, r]) => [c, bytesHex(d), h8(r)]),
+      ...(chain.slices ? { chain_rest: chain } : {}) };
     const indices = [CONNECT_INDEX];
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
   }

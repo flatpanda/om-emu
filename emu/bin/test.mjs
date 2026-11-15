@@ -35,7 +35,8 @@
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
-// refused on E143 and moved on E147 (test_smswitch.mjs), the scripted session through
+// refused on E143 and moved on E147 (test_smswitch.mjs), the display switch both ways with a shot on each display and
+// the TFT's frame at idle on E146 and E147 (test_dispswitch.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
 // watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop,
 // display options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147
@@ -43,7 +44,7 @@
 // with OM_CADUCEUS (test_lookhooks.mjs), E147's still set-up at each creative-dial position and, with OM_CADUCEUS,
 // Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), every caduceus-om3 release against its pins when
 // OM_CADUCEUS names a checkout
-// (test_caduceus.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// (test_caduceus.mjs), a tap on the touch mode icon on E143, E146, E147, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -612,9 +613,9 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...er.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += er.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here and the E144
-// and E118 families' bodies with a touch panel each in a process of its own, four at a time (there, on a body with
-// an EVF, also the taps with the EVF active)
+// touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here, E146, E147 and
+// the E144 and E118 families' bodies with a touch panel each in a process of its own, four at a time (on the
+// families' bodies with an EVF, also the taps with the EVF active)
 {
   const { touchSession, TOUCH_BODIES } = await import('../test/test_touch.mjs');
   const { spawn } = await import('node:child_process');
@@ -705,6 +706,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`still / movie switch: E143 ${sm.checks - sm.bad.length}/${sm.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...sm.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += sm.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the display switch and the TFT's frame at idle on the bodies whose touch driver hands its close to the touch task
+// and sleeps in its wake (test_dispswitch.mjs, H-CHAINREST): E146 and E147 each in a process of its own, through
+// bin/session.mjs with the controls (the touch task not run, no chain rest); E143 here, which gets no lab time from it
+{
+  const { dispswitchSession } = await import('../test/test_dispswitch.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const ds = await dispswitchSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_dispswitch.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`display switch and idle frame: E143 ${ds.checks - ds.bad.length}/${ds.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...ds.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += ds.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the scripted session (bin/session.mjs, host/session.mjs): its units, then whole runs through the command line on
 // E143 here and on E147 (a synthetic om3-patch-2 file) in a process of its own

@@ -26,7 +26,7 @@ import zlib from 'node:zlib';
 // the clock warning E137, E142, E140, E125, E130 and E133 show at their start; the icon at the left edge, a tap
 // there cycles it, X: the frames after)
 export const TOUCH_ICON = {
-  E143: [35, 465], E148: [30, 372], E144: [40, 333], E139: [40, 333], E134: [40, 333], E137: [40, 333], E142: [40, 333],
+  E143: [35, 465], E146: [35, 465], E147: [35, 465], E148: [30, 372], E144: [40, 333], E139: [40, 333], E134: [40, 333], E137: [40, 333], E142: [40, 333],
   E140: [40, 333], E125: [40, 333], E130: [40, 333], E133: [40, 333], E118: [40, 333], E120: [40, 333], E122: [40, 333],
 };
 // a cell of the super control panel OK opens, the pixel the test taps (X: the panel's frame; the tap selects the AF

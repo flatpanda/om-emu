@@ -532,6 +532,7 @@ export class Player {
     if (this.session?.lab?.sections_copied) used.push('S-SECLOADED');                      // the boot's sections copied (menu.mjs)
     if (this.session?.lab?.sim?.loads) used.push('S-STALERAM');                            // the loaded-ranges mode (sim.mjs)
     if (this.patch_tasks.size || this.session?.lab?.lt?.patch_tasks?.length) used.push('H-PATCHTASK');   // a task a patch overlay made started (kernel.mjs), in any session
+    if (this.session?.lab?.patch_flushes?.length) used.push('H-PATCHFLUSH');                // a patch overlay's own cache flush answered (menu.mjs K-CFLUSH)
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)

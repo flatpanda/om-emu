@@ -229,6 +229,7 @@ export class MenuLab extends T.TextDisplayLab {
     this.seed = new Map(opts.seed ?? []);
     this.prop_sites = [...PROP_GUI_SITES, ...(store === 'native' ? STORE_PROP_SITES : []), ...(MODEL_INFO.prop_sites ?? [])];
     this.store_log = { phases: [], persist: [], scpu_waits: [], scpu_requests: [], scpu_replies: [], scpu_frames: [], cflush: new Map(), crt134d: [], flash_save: [], dial: null };
+    this.patch_flushes = [];            // H-PATCHFLUSH: the return addresses (disassembly notation) of a patch's own cache flushes
     this.key_mode_wanted = opts.key_mode ?? 'refuse';
     this.settings_log = [];
     this.language_changes = [];
@@ -895,10 +896,15 @@ export class MenuLab extends T.TextDisplayLab {
     }
     return out;
   }
+  // A caller on bytes a patch overlay changed (src/lab/patchaudit.mjs) is answered too: no stock caller's code is
+  // there, so it is the patch's own flush, not a stock flow the lab has not read (H-PATCHFLUSH, listed in
+  // patch_flushes by its return address)
   _k_cflush(hle, r) {
-    if (disasm(r.mdr) !== K_CFLUSH_RETURN && !knob('cflush_returns', []).includes(disasm(r.mdr))
-      && !(this.env.nvram && disasm(r.mdr) === STORE_SAVE_CFLUSH_RETURN)) throw new MenuError(`K-CFLUSH: 0x5004e68a called from ${where(r.mdr)}; only 0x50040863 (return ${h8(K_CFLUSH_RETURN)}) is listed`);
     const k = disasm(r.mdr);
+    if (k !== K_CFLUSH_RETURN && !knob('cflush_returns', []).includes(k) && !(this.env.nvram && k === STORE_SAVE_CFLUSH_RETURN)) {
+      if (this.patch?.code(r.mdr) == null) throw new MenuError(`K-CFLUSH: 0x5004e68a called from ${where(r.mdr)}; only 0x50040863 (return ${h8(K_CFLUSH_RETURN)}) is listed`);
+      if (!this.patch_flushes.includes(k)) this.patch_flushes.push(k);
+    }
     this.store_log.cflush.set(k, (this.store_log.cflush.get(k) ?? 0) + 1);
     hle.finish(r);
   }

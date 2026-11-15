@@ -16,7 +16,8 @@
 //                 pass-through observer let be and left out of the audit, the audit's hooks, ports, facts and line, a
 //                 word fact checked over its 4 bytes, the changed bytes in the gaps the boot does not load and none
 //                 beside them); H-PATCHTASK in the kernel's task
-//                 guard (src/lab/kernel.mjs) on a made-up kernel, with its negative controls; the patched build's
+//                 guard (src/lab/kernel.mjs) on a made-up kernel, with its negative controls; H-PATCHFLUSH in the
+//                 cache flush's caller guard (src/lab/menu.mjs) on a made-up lab, with its own; the patched build's
 //                 default S-NVRAM file (host/nvram.mjs)
 //   patchSession  (E143's blocks) a patch file the test writes: 16 bytes of the main block's 0xFF tail padding
 //                 (0x1ffff00, never run: the code ends at 0x1a70c3b) changed and 8 bytes of the resource block's index
@@ -48,6 +49,7 @@ import { createHash } from '../src/util/sha256.mjs';
 import { replayPatchRefusal } from '../src/lab/player.mjs';
 import { PatchRanges, PatchHooked, auditTables, auditLine, unloadedRuns, unloadedLine, factLeaves } from '../src/lab/patchaudit.mjs';
 import { LabTask } from '../src/lab/kernel.mjs';
+import { MenuLab, K_CFLUSH_RETURN } from '../src/lab/menu.mjs';
 import { IMAGE_BASE } from '../src/fw/model.mjs';
 import { nvramChoice } from '../host/nvram.mjs';
 
@@ -291,6 +293,21 @@ export function patchUnits() {
   const m1 = guard(lt, IMAGE_BASE + 0x200), m2 = guard(new LabTask(fake(null)), IMAGE_BASE + 0x104);
   ok(/kernel would start firmware task entry 0x50000200 \(exinf 0x5\): not modelled/.test(m1 ?? '') && /0x50000104 .*not modelled/.test(m2 ?? '') && lt.patch_tasks.length === 1,
     `the guard refuses an entry beside the patched bytes (${m1}) and any entry without an overlay (${m2})`);
+
+  // H-PATCHFLUSH: the cache flush's caller guard (src/lab/menu.mjs MenuLab._k_cflush) on a made-up lab: a return
+  // address on patched bytes is answered and listed, once; a caller beside them, or any unlisted caller without an
+  // overlay, is refused as before; the listed stock caller is answered and not listed
+  const flab = (patch) => ({ patch, patch_flushes: [], env: {}, store_log: { cflush: new Map() } });
+  const fl = flab(new PatchRanges([[0x100, 8]], timage, IMAGE_BASE)), answered = [];
+  const flush = (lab, mdr) => { try { MenuLab.prototype._k_cflush.call(lab, { finish: (r) => answered.push(r.mdr) }, { mdr }); return null; } catch (e) { return e.message; } };
+  const f1 = flush(fl, IMAGE_BASE + 0x104), f2 = flush(fl, IMAGE_BASE + 0x104);
+  ok(f1 === null && f2 === null && JSON.stringify(fl.patch_flushes) === JSON.stringify([0x50000104]) && answered.length === 2 && fl.store_log.cflush.get(0x50000104) === 2,
+    `H-PATCHFLUSH: the patch's own flush is answered, listed once: ${f1} ${f2} ${JSON.stringify(fl.patch_flushes)}`);
+  const f3 = flush(fl, IMAGE_BASE + 0x200), f4 = flush(flab(null), IMAGE_BASE + 0x104);
+  ok(/K-CFLUSH: .* called from .*0x50000200.*listed/.test(f3 ?? '') && /K-CFLUSH: .* called from .*0x50000104.*listed/.test(f4 ?? '') && answered.length === 2 && fl.patch_flushes.length === 1,
+    `the guard refuses a caller beside the patched bytes (${f3}) and an unlisted caller without an overlay (${f4})`);
+  const f5 = flush(fl, K_CFLUSH_RETURN - 0x50000000 + IMAGE_BASE);
+  ok(f5 === null && answered.length === 3 && fl.patch_flushes.length === 1, `the listed stock caller is answered and is not the patch's: ${f5} ${JSON.stringify(fl.patch_flushes)}`);
 
   // the default S-NVRAM file of patched firmware: the build's own (host/nvram.mjs)
   const nb = nvramChoice({ arg: null, env: null, model: 'E147', build: 'ab'.repeat(32) }), ns = nvramChoice({ arg: null, env: null, model: 'E147' });

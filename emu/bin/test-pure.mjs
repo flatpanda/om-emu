@@ -58,7 +58,8 @@
 // dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN reader with a film's
 // values (test_looks.mjs looksUnits), the look hooks' expectations from their source's tables (test_lookhooks.mjs
 // lookhooksUnits), and the caduceus-om3 release pins' checks on made-up folders (test_caduceus.mjs caduceusUnits), and
-// the session's card:out / card:in tokens (test_nocard.mjs nocardUnits).
+// the session's card:out / card:in tokens (test_nocard.mjs nocardUnits), and the still's stage builders' read-set
+// bookkeeping and pins (test_stages.mjs stagesUnits, A-STAGEJOB).
 // bin/test.mjs runs all of these too, with everything else.
 // Also here and there, the small units: the memory map's rules at addRegion (test_mem.mjs memUnits).
 // What a firmware file is, --main's patches from a .BIN container and the gate's reasons, on made-up bodies
@@ -124,6 +125,7 @@ import { looksUnits } from '../test/test_looks.mjs';
 import { lookhooksUnits } from '../test/test_lookhooks.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
 import { nocardUnits } from '../test/test_nocard.mjs';
+import { stagesUnits } from '../test/test_stages.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -170,6 +172,7 @@ report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals,
 report('a Caduceus film\'s look hooks on their outputs: their source\'s tables, the hue and lightness records, the tone LUT, the split toning tables (test_lookhooks.mjs)', lookhooksUnits());
 report('caduceus-om3 release pins: a changed or missing file, an unpinned folder, an observation that differs (test_caduceus.mjs)', caduceusUnits());
 report('the session\'s card tokens: card:out, card:in and the second slot\'s, the Player input each sends (test_nocard.mjs)', nocardUnits());
+report('the still\'s stage builders: read sets, pins, the three bodies\' tables and the pins that agree between them (test_stages.mjs, A-STAGEJOB)', stagesUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());

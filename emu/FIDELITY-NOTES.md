@@ -580,6 +580,16 @@ The shot (H-SHOTALLOC; E143, E146, E147; `docs/hle-gaps.md` 4.3.13, since 2026-1
 
 **Confidence:** high
 
+### 8.2 The still's stage builders are checked on a job the test writes (A-STAGEJOB)
+
+**Where:** `emu/test/test_stages.mjs`, `emu/test/fixtures/stages.json`, `emu/src/lab/playui.mjs` (`STAND_INS`), `docs/hle-gaps.md` 4.3.12
+
+**Emulator:** The lab has no camera-side development job: the image library's parameter set and run are stood in (S-JPEGENC), so nothing in a session builds the job the still's stage list works on. `test_stages.mjs` calls the stage list and its builders standalone on stock E122, E143 and E147 through the debug `call` op, on a job it writes into the call's scratch: a context, a request and two output blocks, zero but for the blocks' pointers, the picture-mode key (in the context and in the request's format word), the flags word with every bit set, an image size (5184 x 3888, twice) and each row's own inputs (the sensitivity word, sharpness, the grain level and a sample's address, the saturation set). That job is the named assumption A-STAGEJOB. The values the test pins (the YC block's coring and gain by sharpness and sensitivity, the grain gain by level, the six-axis sets, the chroma words, the HSL records, the tone LUTs' addresses, the gamma curve, the stage list's block, the words the register writer copies to the unit's page) are the builders' answers to it.
+
+**Expected / concern:** A camera's job is unknown, and the builders read bytes the test's job leaves zero: 66 bytes for the stage list on E122, 97 on E143 and 117 on E147, and a sweep found that 43, 34 and 37 of them change an output or fault the call when set to 1, 2 or 128 (X, 2026-11-14; `docs/hle-gaps.md` 4.3.12 lists them). One is pinned per body as a control: with request byte +1073 (E122), +1665 (E143) or +1925 (E147) set, the same sharpening job gives gain 70 for 37, or 416 for 122. Which flags a camera sets, and whether its request is zero where the test's is, is not read. So none of the pinned numbers may be cited as "the camera's value"; each is "stock firmware's builder on this job". What the test does establish: the builders run on the lab's CPU core and call op as pinned (a regression of both); every job byte a call reads is one the test wrote or one on the pinned read-while-zero list of that builder and body; outside the job, the call's stack and the image the calls touch nothing but the two pinned exceptions (the grain builder's read of address 0 without its sample pointer, and its counter word, whose increment survives the call's restore); nothing writes into the image. Reads of the image are not traced by the test (a one-off trace found every image byte the rows read equal to the stock block's, X). A real job from a camera would turn these rows into the camera's values; none exists here.
+
+**Confidence:** high (that the values are the stock builders' answers to this job); none claimed for a camera's values
+
 ## 9. Host differences (node vs browser)
 
 ### 9.1 Behaviour differs between hosts

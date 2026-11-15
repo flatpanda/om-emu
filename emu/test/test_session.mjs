@@ -5,7 +5,9 @@
 //                   negative control (gui = and ~, mem = and !=, card, standin, exif = and ~), the Exif fields by
 //                   name (UserComment after its character code), the parser's rest positional, and bin/session.mjs's
 //                   usage errors (exit 2 before any lab: an unknown option or token, a bad --loaded, --settle -1, a
-//                   malformed --card-put, --main with --patch, a missing --script)
+//                   malformed --card-put, --main with --patch, a missing --script), and its usage header against
+//                   the grammar token by token: every form it names with an example parseToken takes as that kind,
+//                   every kind parseToken makes named, the switch ids it lists (still_movie among them) controls
 //   sessionSession  (the process's model, through bin/session.mjs end to end) E143 (bin/test.mjs's process): a card the
 //                   firmware formatted with a file put by --card-put, read back (expect:card, card-get), the loaded
 //                   mask read and expected, S-SECLOADED, the settings getter called, S1 and S2 with the picture's Exif
@@ -36,6 +38,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { splitScript, parseToken, stepInputs, expectFails, exifFields, TokenError, PRESS_MS, SETTLE_MS, WAIT_SLICE_MS } from '../host/session.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
+import { CONTROL_ROWS } from '../src/lab/playui.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const BIN = path.join(EMU, 'bin/session.mjs');
@@ -134,6 +137,41 @@ export function sessionUnits() {
     const r = cli(args, { timeout: 30000 });
     ok(r.rc === 2 && re.test(r.err) && !r.lines.length, `usage ${what}: rc ${r.rc} ${r.err.slice(0, 200)}`);
   }
+  // bin/session.mjs's usage header against the grammar, token by token: every form the header names, as it writes it,
+  // with an example parseToken takes as the kind the form stands for; every kind parseToken makes is named by a form;
+  // the switch ids the header lists are controls a switch token takes (still_movie among them)
+  const head = fs.readFileSync(BIN, 'utf8').split('\nimport ')[0];
+  const FORMS = [
+    ['KEY (a press', 'ok', 'press'], ['KEY:down', 's2:down', 'edge'], ['KEY:up', 's2:up', 'edge'], ['hold:KEY[:MS]', 'hold:menu', 'hold'], ['hold:KEY[:MS]', 'hold:ok:500', 'hold'],
+    ['main_dial:+N', 'main_dial:+3', 'dial'], ['sub_dial:-N', 'sub_dial:-2', 'dial'], ['wait:MS', 'wait:1500', 'wait'],
+    ['WAIT:MS', 'WAIT:20', 'token'], ['EV:...', 'EV:1', 'token'], ['SET:id=v', 'SET:24=3', 'token'], ['GET:id', 'GET:24', 'token'],
+    ['switch:ID=V', 'switch:creative_dial=3', 'switch'], ['switch:ID+N', 'switch:mode_dial+1', 'switch'], ['switch:ID-N', 'switch:mode_dial-1', 'switch'],
+    ['power:off', 'power:off', 'power'], ['restart[:card=FILE]', 'restart', 'restart'], ['restart[:card=FILE]', 'restart:card=b.omsd', 'restart'],
+    ['shot:FILE.png', 'shot:a.png', 'shot'], ['read:ADDR:LEN', 'read:0x10:4', 'read'], ['dump:ADDR:LEN:FILE', 'dump:0x10:4:d.bin', 'dump'], ['write:ADDR=HEX', 'write:0x10=00ff', 'write'],
+    ['call:FN[:d0=..,a0=..,limit=N]', 'call:0x10:d0=1,a0=2,limit=5', 'call'], ['entry=PC', 'call:0x10:entry=0x12', 'call'], ['stop=PC...', 'call:0x10:stop=0x12,stop=0x14', 'call'],
+    ['frame=MASK/SIZE', 'call:0x10:frame=0xf0/20', 'call'], ['space=notation|runtime', 'call:0x10:space=runtime', 'call'], ['call:@FILE', 'call:@q.json', 'call'],
+    ['card-ls', 'card-ls', 'card-ls'], ['card-get:DOS/PATH=LOCAL', 'card-get:DCIM/X.JPG=x.jpg', 'card-get'], ['exif:DOS/PATH', 'exif:DCIM/X.JPG', 'exif'],
+    ['expect:gui=NAME (or ~TEXT)', 'expect:gui=SS_MENU/ID_ST_MENU', 'expect'], ['expect:gui=NAME (or ~TEXT)', 'expect:gui~MENU', 'expect'],
+    ['expect:mem:ADDR=HEX (or', 'expect:mem:0x20=ff03', 'expect'], ['!=HEX)', 'expect:mem:0x20!=ff03', 'expect'], ['expect:card:DOS/PATH', 'expect:card:DCIM/X.JPG', 'expect'],
+    ['expect:standin:NAME', 'expect:standin:S-CARD', 'expect'], ['expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT)', 'expect:exif:DCIM/X.JPG:Model=OM-3', 'expect'],
+    ['expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT)', 'expect:exif:DCIM/X.JPG:Model~OM', 'expect'],
+    ['trace:PC[,PC...][:stack=N]', 'trace:0x50436558,0x60457578:stack=4', 'trace'], ['trace:mem:ADDR:LEN[:r|w|rw]', 'trace:mem:0x10:4:rw', 'trace'], ['trace:off', 'trace:off', 'trace'],
+    ['break:PC[,PC...]', 'break:0x50436558', 'break'], ['break:mem:ADDR:LEN[:r|w|rw]', 'break:mem:0x10:4', 'break'], ['break:off', 'break:off', 'break'], ['until resume', 'resume', 'resume'],
+    ['card:out', 'card:out', 'card'], ['card:in', 'card:in', 'card'], ['card:out:2', 'card:out:2', 'card'], ['card:in:2', 'card:in:2', 'card'],
+  ];
+  const flat = head.replace(/\n\/\/ ?/g, ' ');       // the header's lines joined: a form may run over a line's end
+  for (const [form, example, kind] of FORMS) {
+    const st = thrown(() => parseToken(example)) ?? parseToken(example);
+    ok(flat.includes(form) && st.kind === kind, `the usage header's ${JSON.stringify(form)}: ${flat.includes(form) ? 'named' : 'NOT in the header'}; ${example} parses as ${st.kind ?? st.message}, want ${kind}`);
+  }
+  const grammar = fs.readFileSync(path.join(EMU, 'host/session.mjs'), 'utf8'), g0 = grammar.indexOf('export function parseToken(t) {'), g1 = grammar.indexOf('\n}\n', g0);
+  const kinds = new Set([...grammar.slice(g0, g1).matchAll(/step\('([a-z-]+)'/g)].map((m) => m[1]));
+  if (/step\(m\[1\]/.test(grammar.slice(g0, g1))) { kinds.add('trace'); kinds.add('break'); }
+  const named = new Set(FORMS.map((x) => x[2]));
+  ok(kinds.size >= 22 && [...kinds].every((k) => named.has(k)) && [...named].every((k) => kinds.has(k)), `every kind parseToken makes has a form in the header: ${[...kinds].filter((k) => !named.has(k)).join(' ') || 'all'} (${kinds.size} kinds)`);
+  const ids = /switch:ID-N \(([^)]*)\)/.exec(flat)?.[1].split(',').map((x) => x.trim()).filter((x) => x !== '...') ?? [];
+  const rows = new Map(CONTROL_ROWS.map((c) => [c.id, c.kind]));
+  ok(ids.includes('still_movie') && ids.length >= 4 && ids.every((x) => ['switch', 'modedial', 'posswitch'].includes(rows.get(x))), `the header's switch ids are position controls: ${ids.map((x) => `${x} (${rows.get(x)})`).join(', ')}`);
   return t;
 }
 

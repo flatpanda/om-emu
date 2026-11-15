@@ -26,8 +26,9 @@
 //                       Film (the still parameters' +40 u16 and +44, the stock helper's answer for them, +55, 0), the
 //                       job's key 11 and no texture at job+8324 yet. Let go, the builder does not come back: its
 //                       build is a request to the pipeline unit, whose pages for it the lab has no model of, and the
-//                       session stops at the unit's first write (the YC page 0x9c201000), pinned here as the lab's
-//                       limit, so the store of the texture at job+8324 is not reached. No Caduceus byte is in this file
+//                       session stops at the unit's first write (the page 0x9c201000, which takes the stages' output
+//                       block), pinned here as the lab's limit, so the store of the texture at job+8324 is not
+//                       reached. No Caduceus byte is in this file
 //   node emu/test/test_stillsetup.mjs [--session] [--caduceus]     (OM_EMU_MODEL=E147)
 //
 // E147 facts used (D, the stock block; run-time = notation + 0x10021020): the second step's stub 0x50496710 (`call
@@ -35,7 +36,7 @@
 // (`call 0x5002c6e5` after a bank found no block), the per-shot EXIF fill 0x50436558; the work-list builder's read of
 // the job's key 0x50497d71 (the 8 bytes their work-list hook replaces), the cached texture builder 0x504ac901 (a0 the
 // resource manager, a1 a 6-byte key; the stock set-up calls it at 0x504989d5 for Grainy Film; a miss builds through
-// 0x504ae099, whose request reaches the unit's YC page writer 0x50482e53) and the helper 0x504967db that gives the
+// 0x504ae099, whose request reaches the unit's register writer 0x50482e53) and the helper 0x504967db that gives the
 // key's fourth byte
 import fs from 'node:fs';
 import path from 'node:path';

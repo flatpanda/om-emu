@@ -776,15 +776,15 @@ earlier build; and "Grainy Film's grain path" gives the builder a 7-byte block w
 block of the three other builders the set-up calls (at `0x5049883a`, `0x5049889c` and `0x50498916`), where the block
 made at `0x504989a6` has 6 bytes and no such byte (D), as their `xb_tex` makes it. Let go, the builder does not come
 back in the lab: nothing is cached, so it builds (`0x504ae099`, the place their notes leave open), and the build is a
-kind-3 request with stage `0xf002` to the pipeline unit, which stops the session at the unit's YC page
-(`om1.imgpipe UNKNOWN write 0x9c201014`, at `0x50482e5c`; `docs/hle-gaps.md` 4.3.12). So in the lab **a film with
-Grain does not finish S2**, at any level (X, Low and Med), the test pins that as the lab's limit, and the store of
-the texture at job+8324 is not reached.
+kind-3 request with stage `0xf002` to the pipeline unit, which stops the session at the page that takes the stages'
+output block (`om1.imgpipe UNKNOWN write 0x9c201014`, at `0x50482e5c`; `docs/hle-gaps.md` 4.3.12). So in the lab **a
+film with Grain does not finish S2**, at any level (X, Low and Med), the test pins that as the lab's limit, and the
+store of the texture at job+8324 is not reached.
 
 *The route at its sites, by calls* (`emu/test/test_lookcode.mjs`, with `OM_CADUCEUS`; 68 checks on v0.29 and v0.29.1,
 about 30 s). The job is written into each call's scratch from the stock code's reads (`docs/hle-gaps.md` 4.3.12, D):
 the still's context S with its parameters' key 11 and flags `0x1000` (as the lab's COLOR still has them, X), the job
-with key 11, the request R (key 11, output `0x1000`, kind 0, no effect) with its context C and configuration block,
+with key 11, the request R (key 11, output `0x1000`, kind 0, no effect) with its context C and register image,
 and, where a film asked for one, a texture object of the test's (19 patterned words) at job+8324. Everything else in
 the job is 0: these are the hooks on that job, not the camera's values. Five calls a film, on the blank camera and
 after FILM 20, 1, 2, 3 and 4 are picked, FILM 1, 2 and 3 with Grain Low, Med and High:

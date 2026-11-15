@@ -54,10 +54,10 @@
 // that u16 and the byte at +55, that byte, 0) is what the stock set-up 0x504987bb calls at 0x504989d5 for Grainy Film;
 // a miss builds through 0x504ae099. The request configuration 0x504745cd (frame [d2,a2],12; a2 = the address of the
 // context's pointer) calls the combiner selector 0x5050bf19 at 0x504745d1 with a0 = the context C (C+4 the request R,
-// C+8 the configuration block, C+48 the key). The stock attach 0x5049b0af (a0 = S, a1 = R) copies 19 words from the
+// C+8 the register image, C+48 the key). The stock attach 0x5049b0af (a0 = S, a1 = R) copies 19 words from the
 // texture object (the word at job+8324) +8 to R+780 for a request of kind 0 (R+16), adds the object's +108 masked by
 // job+8312 to the first two, and sets R+12 = 0x0100. The combiner set-up 0x504e3b0b (frame [d2,d3,a2,a3],28) calls the
-// selector at 0x504e3b3d and fills the register image at the configuration block's +7988: its default case writes
+// selector at 0x504e3b3d and fills the register image (C+8) from its +7988: its default case writes
 // +4 = 0x00200000, +96 = 0x04000400, +100 = 1024, +148 = 0x04000400; combiner 1's +4 = 0x00200001, +8 = 3822,
 // +96 = 1024, +100 = 0, +148 = 1024 and at 0x504e43ac +152 = 0 before its ret (the 7 bytes their last hook replaces).
 // The stock firmware's own grain is elsewhere in the same set-up: the level is the request's byte +1751 (1..3), the gain
@@ -275,7 +275,7 @@ export function lookcodeUnits() {
 const WLB = 0x50497cd7, WL = 0x50497d71, WL_BACK = 0x50497d79, TXGET = 0x504ac901, TXPF = 0x504967db, CGET = 0x50042360, RT = 0x10021020;
 const WINREG = 0x98100058, CFG_FN = 0x504745cd, CL = 0x504745d1, CL_BACK = 0x504745d8, COMB = 0x504e3b0b, SEL2 = 0x504e3b3d, C1E = 0x504e43ac, WINMAP_FLUSH_RETURN = 0x50050030;
 // the job in the calls' scratch: the still's context S, its job, the request R with its context C (PC holds C's
-// address), the configuration block, a texture object and a word for the resource manager
+// address), the register image, a texture object and a word for the resource manager
 const JOB = 0x3000, C = 0x5700, PC = 0x57f0, R = 0x5800, CFG = 0x6000, TEX = 0x8100, RES = 0x8200, SIZE = 0x8300, IMG = 7988;
 const GF2 = 0x01020068;                            // Grainy Film II's key (the stock selector's and work list's)
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;

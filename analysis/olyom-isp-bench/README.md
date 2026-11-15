@@ -137,7 +137,7 @@ Not looked at: the E-P7 project its README also names (not read for this note; n
 
 - The PEN-F's seven entry points with their call sites, masks and frames (section 1), and the family on E143 and
   E147 (`docs/hle-gaps.md` 4.3.12 and 4.8.13 for the stage list, the YC packing, the job record and the wrapper that
-  calls them; the per-stage table is the stage tests' to own).
+  calls them; the per-stage table, its read sets and values are 4.3.12's, pinned by `emu/test/test_stages.mjs`).
 - The job record: what the generic handler writes into it on E122, E143 and E147, that the stages' output block lies
   inside the register image, and the pages its parts are copied to with their writers (4.8.13 "The development's
   pages"). The bench's own layout (the record's +12 = the parameter block's +524) is the PEN-F firmware's.
@@ -175,7 +175,8 @@ lab can run it").
    2026-11-14).
 4. `emu/web/play.html`'s Card panel says a picture's file is S-RECFILE's. On E143, E146 and E147 REC_FILE runs
    natively and the stream is S-JPEGENC's (`emu/src/lab/playui.mjs` STAND_INS). Found by the study; not changed in
-   this pass, which touches documents only.
+   this pass, which touched documents only; fixed since (the Card panel now takes its sentence from
+   `emu/src/lab/sources.mjs`, which names S-JPEGENC on those bodies).
 
 ## 6. Open questions
 
@@ -192,14 +193,19 @@ lab can run it").
 1. **Stock stage baselines through the `call` op** on E122, E143 and E147: the stage functions on a job the test
    writes, the job a named assumption with its read set pinned, expectations from om-emu's own runs. Size: days.
    Payoff: a patch's stage output has "what stock gives" beside it; a regression on the core and the `call` op.
+   Made 2026-11-14: `emu/test/test_stages.mjs` (twelve builders, `docs/hle-gaps.md` 4.3.12).
 2. **A camera's job** (`docs/hle-gaps.md` section 8). Size: minutes to ask, a day to digest; it depends on a third
    party. Payoff: the stage checks stop resting on an assumed job.
 3. **Grain on E147 at the stage level**, for Caduceus for OM-3: read the grain builder's job fields first. Size:
-   days; the path to its second hook point is not known. Payoff: one more look checked below the pixels.
+   days; the path to its second hook point is not known. Payoff: one more look checked below the pixels. Partly made
+   2026-11-14: the stock grain builder's fields and outputs are in 4.3.12's stage rows, and Caduceus' Grain route is
+   checked by calls down to combiner 1's gain (`emu/test/test_lookcode.mjs`); a film with Grain still stops the lab's
+   S2 at the texture's build on the unit (`analysis/caduceus-om3/README.md` 4.6).
 4. **The picture's caption in the player** (section 5 item 4), and the firmware's own values beside the lab's pixels.
-   Size: hours.
+   Size: hours. The caption is made (2026-11-14, `emu/src/lab/sources.mjs`); the firmware's values beside it are not.
 5. **The remaining page writers**, block offset to page offset, when a development device for the unit is planned.
    Size: days. Payoff: a write set for that device; for look checks it adds little, since the first writer copies
    words unchanged.
 6. **A firmware gate that returns a verdict**, and a container `.BIN` as `--main`'s input. Size: hours each.
-   Payoff: small today.
+   Payoff: small today. Made 2026-11-14 (`emu/src/fw/identify.mjs`; `--main` takes a `.BIN`, Patch overlays in
+   `emu/README.md`).

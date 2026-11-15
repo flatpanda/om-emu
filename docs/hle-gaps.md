@@ -4037,18 +4037,19 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
 - **E147's stage list and its job (D, 2026-11-14; X where tagged).** The stage list `0x504f8694` (`ret
   [d2,d3,a2,a3],48`) takes the job context C in a0: C+4 is the request R, C+12 the output O, C+48 the RGB gamma
-  stage's key, C+60 flags. Its second call is the RGB gamma stage `0x504f5ab9` (at `0x504f86dd`, frame 16), which copies
-  one picture-mode curve to O+1252, O+1892 and O+2532 (256 u16 of 12 bits and 64 fine entries each) and points
-  O+3172..O+3180 at them (X: a COLOR request gives three equal tables). On the still path it then calls the COLOR stage
-  `0x504f7553` (frame 28), the luminance-LUT builder `0x504f7d92` at `0x504f87b0` and the tone step `0x504f7f84` at
-  `0x504f87b7` (`mov d3,a0` and the call). The COLOR stage reaches the HSL builder when R+1568 = 0, R+12 != 61453
-  and R's key (R+8 << 24 | R+9 << 16 | R+10 u16) is 11, with d1 = O and a1 = R + 1739. The builder writes 12
-  records of 24 bytes from O+836, each u16 at +18 and +22 from its own table (0 in all 12, X). The LUT builder
-  acts only when R+1568 is set (an art override's LUT) or C+60 has a bit of `0x4134063e`. It then writes the LUT's
-  address to O+3828: its own build at O+3832, or the default LUT `0x6068cd08` (run-time) when the build gives none
-  (X, on a job with no other inputs). Which bits of C+60 the camera sets is not read (?). With this job in a call's scratch,
-  `emu/test/test_lookhooks.mjs` runs those stages through `host/session.mjs` and checks Caduceus' hooks on their
-  outputs (`analysis/caduceus-om3/README.md` 4.6).
+  stage's key, C+60 flags (4.8.13 has the whole record). Its second call is the RGB gamma stage `0x504f5ab9` (at
+  `0x504f86dd`, frame 16), which copies one picture-mode curve to O+1252, O+1892 and O+2532 (256 u16 of 12 bits and 64
+  fine entries each) and points O+3172..O+3180 at them (X: a COLOR request gives three equal tables). On the still
+  path it then calls the COLOR stage `0x504f7553` (frame 28), the luminance-LUT builder `0x504f7d92` at `0x504f87b0`
+  and the tone step `0x504f7f84` at `0x504f87b7` (`mov d3,a0` and the call). The COLOR stage reaches the HSL builder
+  when R+1568 = 0, R+12 != 61453 and R's key (R+8 << 24 | R+9 << 16 | R+10 u16) is 11, with d1 = O and a1 = R + 1739.
+  The builder writes 12 records of 24 bytes from O+836, each u16 at +18 and +22 from its own table (0 in all 12, X).
+  The LUT builder acts only when R+1568 is set (an art override's LUT) or C+60 has a bit of `0x4134063e`. It then
+  writes the LUT's address to O+3828: its own build at O+3832, or the default LUT `0x6068cd08` (run-time) when the
+  build gives none (X, on a job with no other inputs). C+60 is all ones on a register image of the generic handler's
+  own (4.8.13, "The development's pages"); whether a still's request names its own block, and so which bits the stages
+  get, is ?. With this job in a call's scratch, `emu/test/test_lookhooks.mjs` runs those stages through
+  `host/session.mjs` and checks Caduceus' hooks on their outputs (`analysis/caduceus-om3/README.md` 4.6).
 - **The still's stage builders on E122, E143 and E147 (D, 2026-11-14; X where tagged).** The stage list and the
   builders around it are one family on the three bodies: the list takes the job context C in a0 and hands it to each
   stage; its caller runs the YC packing builder two calls before it (12 bytes before the list's call on the three),
@@ -4080,9 +4081,12 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   the stages above and a second group of small functions (the two read on PEN-F, `0x504d6c46` and `0x504d6d1e`, store
   the default LUT's address and set a flag bit; the group is not in the table).
   - **The job (D).** Every stage reads C+4 (the request R) and C+12 (the output block O); the grain builder reads C+8
-    (a second block G) and writes there; C+48 is the picture-mode key the stages compare (11, 12, 2000.., the art keys
-    `0x01010070`..), and R+8..+11 the request's format word with the key again (above). The fields the rows below set,
-    with what shows them:
+    (G, the register image: 4.8.13 has the record's fields and that O is the image's +2832 on E143 and E147, +524 on
+    PEN-F, unless the request brings its own block) and writes there. The test's job keeps G and O apart; no row
+    writes where they would meet (O's writes end at O+4383, the image's +7215, PEN-F's at O+5211, the image's +5735;
+    the grain builder writes from G+7988, PEN-F G+6056). C+48 is the picture-mode key the stages compare (11, 12,
+    2000.., the art keys `0x01010070`..), and R+8..+11 the request's format word with the key again (above). The
+    fields the rows below set, with what shows them:
 
     | Field (the name I) | E122 | E143 | E147 | Evidence |
     |---|---|---|---|---|
@@ -4126,13 +4130,14 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   - **The register writer copies O to the unit's page (D; X).** The unit's set-up loads `mov (12,a3),a1` and a page
     address before each call: `0x9c201000` and `0x9c205000` on E143 (`0x50481d87`, `0x50481fcf`) and E147
     (`0x504825b7`, `0x504827ff`), each under `btst 64,d3`; `0x9e001800` and `0x9e005800` on PEN-F (`0x504939a5`,
-    `0x504939c7`, under bits 3 and 16). That a3 is the stages' C is I (its +12 is copied the same way; nothing else of
-    it is read here). The writer clears two words of the page (+20 and +24; PEN-F +36 and +40) and copies O word for
-    word from page + 128 (PEN-F page + 52), in segments some of which a bit of O's first words gates (not read
-    through). X: on the block the packing and the stage list fill, every other word it writes equals O's word 128
-    (PEN-F 52) below it: 207 words on E143 and E147 (the packed word at page + 136, record 0's S word at page + 984),
-    216 on PEN-F (page + 64 and + 748). So O is the page's image, and a look's value in O is the value the unit's
-    register gets; what the unit does with it is not in the firmware (4.3.9).
+    `0x504939c7`, under bits 3 and 16). That a3 is the stages' C is read in 4.8.13 ("The development's pages": the
+    kind's packer hands C to the wrapper of the YC packing and the stage list, and the set-up's dispatch picks the
+    pages by C+176). The writer clears two words of the page (+20 and +24; PEN-F +36 and +40) and copies O word for
+    word from page + 128 (PEN-F page + 52), in segments some of which a bit of O's first words gates (4.8.13 lists the
+    bits). X: on the block the packing and the stage list fill, every other word it writes equals O's word 128 (PEN-F
+    52) below it: 207 words on E143 and E147 (the packed word at page + 136, record 0's S word at page + 984), 216 on
+    PEN-F (page + 64 and + 748). So O is the page's image, and a look's value in O is the value the unit's register
+    gets; what the unit does with it is not in the firmware (4.3.9).
   - **What a call reads and writes (X, `emu/test/test_stages.mjs`, 2026-11-14).** Each builder was called alone by the
     call op on a job in the call's scratch (A-STAGEJOB, `emu/FIDELITY-NOTES.md` 8.2: zero but for the blocks'
     pointers, the key 11 or the row's, the flags word all ones, a size of 5184 x 3888 twice and the row's own fields),
@@ -4242,9 +4247,9 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     its R is the create's copy of rec_jpeg_make_image's request at all offsets is ?. Who calls the stage list's
     caller, the grain builder and the tone wrapper's second site was not read. The list's first call on E143 and E147
     and second on PEN-F (I, the leads': the matrix stage), the stage `0x504f6c51` before COLOR and the last one
-    (`0x504f4c0d`) are not in the table. The writer's gated segments and the pages of the other writers the set-up
-    calls are not read. `node emu/test/test_stages.mjs --json` prints every row with its entry, fields, outputs and
-    read set (`emu/README.md`, The still's stage builders).
+    (`0x504f4c0d`) are not in the table. The writer's segments and the table and second-block writers are 4.8.13's
+    ("The development's pages"), read there as far as their pages. `node emu/test/test_stages.mjs --json` prints every
+    row with its entry, fields, outputs and read set (`emu/README.md`, The still's stage builders).
 - **E147's grain: the texture, the selector and the combiner set-up (D, 2026-11-14; X where tagged).** Three
   stock pieces carry film grain on E147; Caduceus for OM-3's Grain route hooks all three (their source), which is how
   they were found and why they are read here.
@@ -4256,13 +4261,13 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   object; a miss takes a free one and builds it through `0x504ae099` (their notes left the build's place open). The
   build is a request of kind 3 with stage `0xf002` (R+16, R+12) to the pipeline unit (X: a trace through Caduceus
   v0.29's S2 on a film whose Grain the test set; the configuration `0x504745cd` runs for it, then the unit's set-up
-  calls the YC page writer `0x50482e53` with the page `0x9c201000`). S-IMGPIPE has no model of that page, so the
-  session stops at the write of `0x9c201014` (`0x50482e5c`): a still that needs a new texture does not finish in
-  the lab, stock Grainy Film included (I for stock: its Art Filter was not selected in a session). The object goes to
-  job+8324 (the job is the word at S+10276; its key at job+5352), the stock clean-up `0x50498cb9` reads it there (X),
-  and the attach `0x5049b0af` (a0 = S, a1 = the request R) copies the object's 19 words from +8 to R+780 for a
-  request of kind 0 (to R+96 for kind 3), adds the object's +108 masked by job+8312 to the first two as a 64-bit
-  address, and sets R+12 = `0x0100` (X on an object the test wrote).
+  calls the register writer `0x50482e53` (the stage builders' table above) with the page `0x9c201000`, which takes O,
+  4.8.13). S-IMGPIPE has no model of that page, so the session stops at the write of `0x9c201014` (`0x50482e5c`): a
+  still that needs a new texture does not finish in the lab, stock Grainy Film included (I for stock: its Art Filter
+  was not selected in a session). The object goes to job+8324 (the job is the word at S+10276; its key at job+5352),
+  the stock clean-up `0x50498cb9` reads it there (X), and the attach `0x5049b0af` (a0 = S, a1 = the request R) copies
+  the object's 19 words from +8 to R+780 for a request of kind 0 (to R+96 for kind 3), adds the object's +108 masked
+  by job+8312 to the first two as a 64-bit address, and sets R+12 = `0x0100` (X on an object the test wrote).
   *The selector* `0x5050bf19` (a0 = the context C; C+4 the request R, C+48 the key) answers the combiner: for a
   request of kind 3 by its stage (`0xf00f`, `0xf010`, `0xf011`, `0xb004` give 18, 19, 20, 27), else by the key through
   a table of handlers at `0x606dc4dc` (run-time; 16 entries of {key - 11, handler}, looked up from index (key - 11)
@@ -4270,20 +4275,21 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `0x01010068` and `0x01020068` (Grainy Film I and II, as their notes name them), answers 1 for stage `0x0100`; the
   handler `0x5050c01d`, the entry of key 12, answers 31 for stage `0x0901` and 32 for `0x0902`. It is called at
   `0x504745d1` by the request configuration `0x504745cd` and again at `0x504e3b3d` by the combiner set-up.
-  *The combiner set-up* `0x504e3b0b` (frame [d2,d3,a2,a3],28; a0 = C) fills the register image at the configuration
-  block's +7988 (C+8) through a table of cases at `0x606cc794` (run-time; {combiner, handler} at index combiner & 63).
-  The default case `0x504e46cf` writes +4 = `0x00200000`, +92 = `0x2a0000`, +96 = `0x04000400`, +100 = 1024 and,
-  through `0x504e37f1`, +144 = `0x2a1500`, +148 = `0x04000400`, +152 = 1024 (X on a COLOR job in a call's scratch).
-  Combiner 1's `0x504e3b70` writes +4 = `0x00200001`, +8 = 3822, +92 and +144 = `0x2a0000`, +96 = 1024, +100 = 0,
-  +148 = 1024, +152 = 0 (X under Grainy Film II's key `0x01020068` with stage `0x0100`). The stock grain's level,
-  gain and seed are in two other cases (D only): combiner 31's `0x504e3fb2` takes the level from the request's byte
-  +1751 (1..3), stores the u16 at `0x60667dc2 - 2 + 2 x level` (110, 300, 600) at +148 and a seed at +188, bit 31
-  with a u16 sample read through the pointer at the request's +628; combiner 32's `0x504e4080` takes the gain from
-  `0x60667dc8` (50, 75, 100) and the seed from the counter `0xa32ed0c4`, which it increments. A level outside 1..3
-  leaves the gain 0. With a job in a call's scratch, `emu/test/test_lookcode.mjs` enters the work-list builder
-  `0x50497cd7` at `0x50497d71` (S at (4,sp), d3 the address of S+10276), the configuration at its selector call and
-  the combiner set-up whole, and checks Caduceus' Grain down to the texture's gain at +148
-  (`analysis/caduceus-om3/README.md` 4.6).
+  *The combiner set-up* `0x504e3b0b` (frame [d2,d3,a2,a3],28; a0 = C) is the stage builders' grain builder (the table
+  above). It fills the register image (C+8) from its +7988 through a table of cases at `0x606cc794` (run-time;
+  {combiner, handler} at index combiner & 63). The default case `0x504e46cf` writes +4 = `0x00200000`, +92 =
+  `0x2a0000`, +96 = `0x04000400`, +100 = 1024 and, through `0x504e37f1`, +144 = `0x2a1500`, +148 = `0x04000400`, +152
+  = 1024 (X on a COLOR job in a call's scratch). Combiner 1's `0x504e3b70` writes +4 = `0x00200001`, +8 = 3822, +92
+  and +144 = `0x2a0000`, +96 = 1024, +100 = 0, +148 = 1024, +152 = 0 (X under Grainy Film II's key `0x01020068` with
+  stage `0x0100`). The stock grain's level, gain and seed are in two other cases (D; X for both through the grain
+  builder's rows above, the gains and the seed at G+8136 and G+8176, the counter incremented): combiner 31's
+  `0x504e3fb2` takes the level from the request's byte +1751 (1..3), stores the u16 at `0x60667dc2 - 2 + 2 x level`
+  (110, 300, 600) at +148 and a seed at +188, bit 31 with a u16 sample read through the pointer at the request's +628;
+  combiner 32's `0x504e4080` takes the gain from `0x60667dc8` (50, 75, 100) and the seed from the counter
+  `0xa32ed0c4`, which it increments. A level outside 1..3 leaves the gain 0. With a job in a call's scratch,
+  `emu/test/test_lookcode.mjs` enters the work-list builder `0x50497cd7` at `0x50497d71` (S at (4,sp), d3 the address
+  of S+10276), the configuration at its selector call and the combiner set-up whole, and checks Caduceus' Grain down
+  to the texture's gain at +148 (`analysis/caduceus-om3/README.md` 4.6).
 - **Open.** What the set-up and the constructor `0x504966f7` build (stages, not read); the run (4.3.9); TAKE's other
   fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
   written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still
@@ -7993,7 +7999,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
 
   | Page (second pipeline) | Bit (its test) | Writer [register mask, frame] and its call sites | What it writes |
   |---|---|---|---|
-  | `+0x1000` (`+0x5000`) | A 6 (`0x50481d7f`; E147 `0x504825af`) | `0x50482623` [f0, 24] at `0x50481d8d`, `0x50481fd5`; E147 `0x50482e53` [f0, 24] at `0x504825bd`, `0x50482805` | O word for word at O + `0x80`, from O+0 to O+1240 in segments chosen by O's word 0 (bits 20, 13..12 and 24) and O+1188's bits 22..16, after 0 to the page's `+0x14` and `+0x18`. The HSL builder's 12 records (O+836, 4.3.12) land at the page's `+0x3c4` with the word after them (O+1124) at `+0x4e4` where bit 24 is clear; with it set only that word is written |
+  | `+0x1000` (`+0x5000`) | A 6 (`0x50481d7f`; E147 `0x504825af`) | `0x50482623` [f0, 24] at `0x50481d8d`, `0x50481fd5`; E147 `0x50482e53` [f0, 24] at `0x504825bd`, `0x50482805` | O word for word at the page's `+0x80`, from O+0 to O+1240 in segments chosen by O's word 0 (bits 20, 13..12 and 24) and O+1188's bits 22..16, after 0 to the page's `+0x14` and `+0x18`. The HSL builder's 12 records (O+836, 4.3.12) land at the page's `+0x3c4` with the word after them (O+1124) at `+0x4e4` where bit 24 is clear; with it set only that word is written |
   | `+0xc800` (`+0x10800`) | A 6, the next call | `0x50482e6f` [f0, 64] at `0x50481d99`, `0x50481fe1`; E147 `0x504836a8` [f0, 56] at `0x504825c9`, `0x50482811` | takes C and writes the tables O points at, a word an entry. The three RGB gamma tables of O+3172..O+3180 (4.3.12; 256 entries, 320 where O+452's bits 26..24 are not 0): to the page's `+0x000` when the three pointers are equal, else to `+0x800`, `+0x1000` and `+0x1800`; O+3184's table to `+0x2000`. The luminance LUT of O+3828 (256 u16) to `+0x2800`. With O+1124 not 0, ten tables of 128 entries from the pointers at O+4344..O+4380 to `+0x2c00`..`+0x3e00`. With O's word 0 bits 13..12 = 1, three tables to pages of their own: 4096 words from O+4384's pointer to `+0x5f000` (`+0x63000`), 256 from O+4388's to `+0x67000` (`+0x67400`), 32 from O+4392's to `+0x67800` (`+0x67880`), beyond the model's `0x25000` bytes. It skips tables under conditions on C+52 and C+148 (E147 C+52, C+56 and C+152) not followed |
   | `+0x2000` (`+0x6000`) | A 7 (`0x50481d9e`; E147 `0x504825ce`) | `0x504827f1` [b0, 20] at `0x50481dac`, `0x50481ff4`; E147 `0x50483021` [b0, 20] at `0x504825dc`, `0x50482824` | the second block (C+16) at + `0x80`: its +0..+12 and +20..+752, then 1 to the page's `+0x378` |
 

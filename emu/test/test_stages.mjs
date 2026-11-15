@@ -38,11 +38,12 @@
 //             reason in the commit message; never to make a failure pass)
 //
 // Facts used (D, the stock blocks, each entry a CALL target with the one frame its call sites give; notation). The
-// job context C (a0 of every stage): C+4 the request R, C+8 a second output block G, C+12 the output block O, C+48 the
-// picture-mode key, C+56 (E147 C+60) a flags word the stages test. R+8..+11 is the request's format word (byte, byte,
-// halfword: the key again, 4.3.12). The PEN-F entries and the fields' meanings (mode, sensitivity, sharpness, grain
-// level) are leads from olyom-isp-bench (src/native.js), which takes them from fishcu/oly_fw_analysis' probes; every
-// address and offset here was read again in the three bodies' blocks, and the names stay I.
+// job context C (a0 of every stage): C+4 the request R, C+8 the register image G (docs/hle-gaps.md 4.8.13; a block of
+// its own in this job), C+12 the output block O, C+48 the picture-mode key, C+56 (E147 C+60) a flags word the stages
+// test. R+8..+11 is the request's format word (byte, byte, halfword: the key again, 4.3.12). The PEN-F entries and
+// the fields' meanings (mode, sensitivity, sharpness, grain level) are leads from olyom-isp-bench (src/native.js),
+// which takes them from fishcu/oly_fw_analysis' probes; every address and offset here was read again in the three
+// bodies' blocks, and the names stay I.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';

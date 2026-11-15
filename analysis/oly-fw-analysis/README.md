@@ -154,7 +154,9 @@ Their decoder is an independent implementation of the scheme in `docs/firmware-c
   kind 3 is 624 bytes) and sixteen 52-byte operation records; COLOR is one development request, creative MONO three
   outer entries and four requests; a list of the per-unit builders (matrix, six-axis hue/saturation, gamma, chroma,
   twelve-sector HSL, tone, sharpening, grain). This is the kind of parameter-block map `docs/hle-gaps.md` 4.3's seam
-  C2 step needs; the E143 counterparts are not located (?).
+  C2 step needs; the E143 and E147 counterparts are located since 2026-11-14 (`docs/hle-gaps.md` 4.3.12, "The
+  still's stage builders on E122, E143 and E147": each builder's entry, frame and call sites on the three bodies;
+  the matrix builder, by the lead alone the list's first call, is not in that table).
 - **ORF metadata:** their CMIO P (tag `0x0635`, 5,764 bytes) and T (`0x0636`, 119,360 bytes) blocks carry the HSL
   coefficients and a 3,028-byte base table; the lab writes no firmware-developed ORF, so this is reference only.
 

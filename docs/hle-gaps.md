@@ -4027,7 +4027,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
 - **E147's stage list and its job (D, 2026-11-14; X where tagged).** The stage list `0x504f8694` (`ret
   [d2,d3,a2,a3],48`) takes the job context C in a0: C+4 is the request R, C+12 the output O, C+48 the RGB gamma
-  stage's key, C+60 flags. It first calls the RGB gamma stage `0x504f5ab9` (at `0x504f86dd`, frame 16), which copies
+  stage's key, C+60 flags. Its second call is the RGB gamma stage `0x504f5ab9` (at `0x504f86dd`, frame 16), which copies
   one picture-mode curve to O+1252, O+1892 and O+2532 (256 u16 of 12 bits and 64 fine entries each) and points
   O+3172..O+3180 at them (X: a COLOR request gives three equal tables). On the still path it then calls the COLOR stage
   `0x504f7553` (frame 28), the luminance-LUT builder `0x504f7d92` at `0x504f87b0` and the tone step `0x504f7f84` at
@@ -4039,6 +4039,202 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   (X, on a job with no other inputs). Which bits of C+60 the camera sets is not read (?). With this job in a call's scratch,
   `emu/test/test_lookhooks.mjs` runs those stages through `host/session.mjs` and checks Caduceus' hooks on their
   outputs (`analysis/caduceus-om3/README.md` 4.6).
+- **The still's stage builders on E122, E143 and E147 (D, 2026-11-14; X where tagged).** The stage list and the
+  builders around it are one family on the three bodies: the list takes the job context C in a0 and hands it to each
+  stage; its caller runs the YC packing builder two calls before it (12 bytes before the list's call on the three),
+  and the pipeline unit's set-up hands the output block to the register writer. Leads: olyom-isp-bench
+  (`src/native.js`: the PEN-F entries and a way to call them) and, through it, fishcu/oly_fw_analysis' probes (what
+  the fields mean). Every address below was read again in the stock blocks with `tools/mn10300dis.sh` and a scan of
+  every CALL's target (the scan `emu/src/lab/hle.mjs` callFrames makes): each entry is the target of the call sites
+  named and of no other call, with the one frame given, and the call op takes that frame from them (X). The builders'
+  and the fields' names are I. The luminance-LUT builder's and the tone step's sites above (`0x504f87b0`,
+  `0x504f87b7`) are the `mov d3,a0` before each call.
+
+  | Builder | E122: entry [mask, frame]; call sites | E143 | E147 | E143's against E147's |
+  |---|---|---|---|---|
+  | the stage list | `0x504d7523` [f0, 40]; `0x504d78d6`, `0x504d78f2` | `0x504f5cb0` [f0, 48]; `0x504f643b`, `0x504f6456` | `0x504f8694` [f0, 48]; `0x504f8e29`, `0x504f8e44` | 123 instructions; 8 field offsets and the COLOR stage's frame differ |
+  | the RGB gamma stage | `0x504d5063` [f0, 216]; `0x504d7568` | `0x504f32a8` [f0, 16]; `0x504f5cf9` | `0x504f5ab9` [f0, 16]; `0x504f86dd` | other code |
+  | the six-axis colour builder | `0x504d45be` [f0, 100]; `0x504d75b5` | `0x504f26e6` [f0, 128]; `0x504f5d00` | `0x504f4e44` [f0, 128]; `0x504f86e4` | other code |
+  | the COLOR stage | `0x504d645f` [f0, 20]; `0x504d75c3` | `0x504f4c73` [f0, 20]; `0x504f5dc7` | `0x504f7553` [f0, 28]; `0x504f87ab` | other code (96 and 110 instructions: E147 tests C+52 through a helper, four calls of `0x5002b774`) |
+  | its HSL builder | `0x504d6252` [f0, 96]; `0x504d64e6` | `0x504f4a81` [f0, 96]; `0x504f4cfa` | `0x504f7361` [f0, 96]; `0x504f75f5` | 217 instructions (PEN-F's 226), one table address differs |
+  | the luminance-LUT builder | `0x504d6c56` [f0, 28]; `0x504d75ca` | `0x504f5414` [f0, 176]; `0x504f5dce` | `0x504f7d92` [f0, 176]; `0x504f87b2` | 178 instructions, 6 operands differ |
+  | the tone selector's wrapper (the selector: `0x504d65c5`, `0x504f4dbe`, `0x504f76d4`, [f0, 24], called by the wrapper alone) | `0x504d6bf8` [b0, 20]; `0x504c6402`, `0x504d6c92` | `0x504f530e` [0, 4]; `0x504db589`, `0x504f5454` | `0x504f7c8c` [0, 4]; `0x504dd519`, `0x504f7dd2` | the wrappers the same; the selectors other code |
+  | the tone step | `0x504d6d30` [f0, 76]; `0x504d75d1` | `0x504f5606` [f0, 56]; `0x504f5dd5` | `0x504f7f84` [f0, 56]; `0x504f87b9` | other code |
+  | the chroma control | `0x504d73d1` [b0, 20]; `0x504d75d8` | `0x504f5b88` [b0, 20]; `0x504f5ddc` | `0x504f856c` [b0, 20]; `0x504f87c0` | 37 instructions, 2 operands differ |
+  | the YC packing builder (its helper: `0x504d23e5` [f0, 80], `0x504efef0` and `0x504f2636` [f0, 88]) | `0x504d2b81` [f0, 24]; `0x504d78ca` | `0x504f064b` [f0, 32]; `0x504f642f` | `0x504f2d9d` [f0, 32]; `0x504f8e1d` | 242 instructions, 3 operands differ |
+  | the grain builder | `0x504c929a` [f0, 20]; `0x504c8f63` | `0x504e1981` [f0, 20]; `0x504e15cf` | `0x504e3b0b` [f0, 28]; `0x504e3759` | other code |
+  | the register writer | `0x50493fe6` [f0, 24]; `0x504939ab`, `0x504939cd` | `0x50482623` [f0, 24]; `0x50481d8d`, `0x50481fd5` | `0x50482e53` [f0, 24]; `0x504825bd`, `0x50482805` | 231 instructions, none differs |
+
+  PEN-F's list is the same family in another arrangement: it opens with a call of `0x504d318c`, and the six-axis
+  builder is in its tail group, after the test (`0x504d1a44`; E143 `0x504efacc`, E147 `0x504f2212`) that picks between
+  the stages above and a second group of small functions (the two read on PEN-F, `0x504d6c46` and `0x504d6d1e`, store
+  the default LUT's address and set a flag bit; the group is not in the table).
+  - **The job (D).** Every stage reads C+4 (the request R) and C+12 (the output block O); the grain builder reads C+8
+    (a second block G) and writes there; C+48 is the picture-mode key the stages compare (11, 12, 2000.., the art keys
+    `0x01010070`..), and R+8..+11 the request's format word with the key again (above). The fields the rows below set,
+    with what shows them:
+
+    | Field (the name I) | E122 | E143 | E147 | Evidence |
+    |---|---|---|---|---|
+    | the flags word the stages test | C+56 | C+56 | C+60 | D: the LUT builder's `btst` (`0x02e8063e` on PEN-F, `0x4134063e`), the COLOR stage's; which bits a camera sets is ? |
+    | an override's pointer (0: none) | R+960 | R+1308 | R+1568 | D: the COLOR stage and the LUT builder test it first; the six-axis builder and the gamma stage read it |
+    | an image size, four halfwords | R+996 | R+1400 | R+1660 | X: the gamma stage divides by them; a job without them ends in fault 6 |
+    | the saturation set, 12 bytes | R+1076 | R+1479 | R+1739 | D: a1 of the HSL builder's call |
+    | the sensitivity word | R+1038 | R+1442 | R+1702 | D on PEN-F (looked up in an ascending table of 11 breakpoints, `0x504d27aa..0x504d27da`); X on the three: it moves the coring and the gain |
+    | sharpness, a signed byte | R+1058 | R+1464 | R+1724 | D: the index rule below |
+    | the grain level | R+1088 | R+1491 | R+1751 | X: 1, 2, 3 give the gain 110, 300, 600 on the three |
+    | the grain's sample pointer | R+212 | R+532 | R+628 | X: the halfword it names is the seed word's low half; 0 there is read as address 0 |
+    | a byte that changes the packing | R+1073 | R+1665 | R+1925 | D on E143 and E147: it selects the second sharpness table (below); X on PEN-F |
+
+    From E143 to E147 every request offset E143's builders read from +1296 up is 260 higher (X, the read sets below;
+    E147's gamma stage also reads R+1524..+1531, which has no counterpart in E143's reads); below it the shifts differ
+    (+28 is +36, the words at +84, +212 and +340 are pairs at +96, +248 and +400, the grain's +532 is +628 and its
+    three halfwords from +542 are 104 higher). PEN-F's offsets do not follow one shift.
+  - **The COLOR stage and the LUT builder (D).** On the three the COLOR stage reaches the HSL builder when the
+    override pointer is 0, R+12 is not 61453 and the key is 11, with d1 = O, a1 the saturation set, a0 the HSL table
+    (run-time `0x60622d74`, `0x606b3d58`, `0x606ba608`) and d0 its halfword at +3024 (4095, X). The builder writes 12
+    records of 24 bytes from O+676 (PEN-F) or O+836, an enable word after them and ten pointers into its table at
+    O+5172 (PEN-F) or O+4344 (X). The LUT builder writes the tone LUT's address to O+4656 (PEN-F) or O+3828: an
+    override's when the pointer is set, else, with a tested flag set, what the tone selector's wrapper returns for the
+    buffer at O+4660 or O+3832, which is the default LUT (run-time `0x605fdd38`, `0x60686ad8`, `0x6068cd08`) where the
+    selector returns 0.
+  - **The sharpness index rule (D; X the effect).** The packing's helper ends in the same rule on the three (PEN-F
+    `0x504d2ac9..0x504d2b7e`, E143 `0x504f0566..0x504f0648`, E147 `0x504f2cac..0x504f2d9a`): a class 0..5 chosen by
+    the key, a base from a table of 6 bytes (run-time `0x60619ad2`, `0x606a6f36`, `0x606ad7e6`: 6, 5, 4, 4, 6, 7; a
+    second, 5, 5, 4, 4, 5, 6, six bytes on, when three flags are set), index = clamp(base + sharpness, 0, 10), and
+    gain = min(top, (LUT[index] x K) >> 8), scaled by a second factor the same way; K and the factor are worked out
+    before it (K follows the sensitivity word, X). For the keys 2000 (E143 2000..2002, E147 2000..2004) the index is
+    sharpness alone on PEN-F and sharpness + 4 on the others. PEN-F's LUT is 11 halfwords at `0x60619ade`: 64, 96,
+    128, 160, 208, 256 x 6, and its gain a byte (top 255). E143 and E147 read another table by default (`0x606a6f42`,
+    `0x606ad7f2`: 0, 16, 64, 112, 184, 256 x 6), PEN-F's values (`0x606a70fc`, `0x606ad9ac`) only when R+1664 or
+    R+1665 (E147 R+1924, R+1925) is set, and their gain is a halfword (top 1023). So at the base index the tables are
+    flat: with the key 11 (base 5, X by the ratios) sharpness 0, +1 and +2 give one gain, and -1 and -2 give 208 / 256
+    and 160 / 256 of it on PEN-F (30 and 23 of 37, X), 184 / 256 and 112 / 256 on E143 and E147 (87 and 53 of 122, X).
+    The packing stores control, coring and gain as one word (PEN-F O+12, three bytes; E143 and E147 O+8, the gain 10
+    bits wide), a limit pair after it (`0x01800090` by default: 144 and 384; other constants for the art keys) and
+    twelve words built from image tables (each the halfwords 0 and 64, X).
+  - **The register writer copies O to the unit's page (D; X).** The unit's set-up loads `mov (12,a3),a1` and a page
+    address before each call: `0x9c201000` and `0x9c205000` on E143 (`0x50481d87`, `0x50481fcf`) and E147
+    (`0x504825b7`, `0x504827ff`), each under `btst 64,d3`; `0x9e001800` and `0x9e005800` on PEN-F (`0x504939a5`,
+    `0x504939c7`, under bits 3 and 16). That a3 is the stages' C is I (its +12 is copied the same way; nothing else of
+    it is read here). The writer clears two words of the page (+20 and +24; PEN-F +36 and +40) and copies O word for
+    word from page + 128 (PEN-F page + 52), in segments some of which a bit of O's first words gates (not read
+    through). X: on the block the packing and the stage list fill, every other word it writes equals O's word 128
+    (PEN-F 52) below it: 207 words on E143 and E147 (the packed word at page + 136, record 0's S word at page + 984),
+    216 on PEN-F (page + 64 and + 748). So O is the page's image, and a look's value in O is the value the unit's
+    register gets; what the unit does with it is not in the firmware (4.3.9).
+  - **What a call reads and writes (X, `emu/test/test_stages.mjs`, 2026-11-14).** Each builder was called alone by the
+    call op on a job in the call's scratch (A-STAGEJOB, `emu/FIDELITY-NOTES.md` 8.2: zero but for the blocks'
+    pointers, the key 11 or the row's, the flags word all ones, a size of 5184 x 3888 twice and the row's own fields),
+    with `trace:mem` on the scratch and on all memory outside it but the harness's own 2 MiB and the image's reads;
+    the largest call made 1,345 hits and none was dropped. Job bytes read before the call itself wrote them, and the
+    bytes written (O, G and C; P is the test's page):
+
+    | Builder | Body | Job bytes read | Bytes written |
+    |---|---|---|---|
+    | the stage list | E122 | C+4..+7, +12..+15, +48..+59; R+0..+3, +8..+16, +28..+29, +84..+87, +924..+927, +948..+951, +960..+963, +996..+1003, +1022..+1027, +1030..+1035, +1038..+1039, +1044..+1045, +1059..+1061, +1063..+1066, +1071..+1072, +1076..+1087, +1092..+1093; O+4..+11 | O+4..+11, +68..+327, +676..+967, +1052..+1059, +2084..+3107, +4644..+4659, +5172..+5211 |
+    | the stage list | E143 | C+4..+7, +12..+15, +48..+51, +56..+59; R+0..+3, +8..+16, +28..+29, +84..+87, +212..+215, +340..+343, +1296..+1299, +1308..+1311, +1325, +1327, +1400..+1407, +1424..+1443, +1456, +1465..+1467, +1469..+1472, +1479..+1490, +1494..+1497, +1663, +1676, +1680..+1681; O+0..+7, +184..+187, +452..+467 | C+52..+55; O+0..+7, +64..+163, +184..+387, +452..+467, +836..+1127, +1216..+1219, +1240..+1243, +1252..+3187, +3828..+3831, +4344..+4383 |
+    | the stage list | E147 | C+4..+7, +12..+15, +48..+51, +60..+63; R+0..+3, +8..+16, +36..+37, +96..+103, +248..+255, +400..+407, +1524..+1531, +1556..+1559, +1568..+1571, +1585, +1587, +1660..+1667, +1684..+1703, +1716, +1725..+1727, +1729..+1732, +1739..+1750, +1754..+1757, +1923, +1936, +1940..+1941; O+0..+7, +184..+187, +452..+467 | C+52..+59; O+0..+7, +64..+163, +184..+387, +452..+467, +836..+1127, +1216..+1219, +1240..+1243, +1252..+3187, +3828..+3831, +4344..+4383 |
+    | the RGB gamma stage | E122 | C+4..+7, +12..+15, +48..+51; R+8..+11, +14..+16, +28..+29, +924..+927, +960..+963, +996..+1003, +1044, +1060, +1071..+1072, +1092..+1093; O+4..+11 | O+4..+11, +136..+327, +1052..+1059, +2084..+3107, +4644..+4655 |
+    | the RGB gamma stage | E143 | C+4..+7, +12..+15, +48..+51; R+8..+11, +14..+16, +28..+29, +1308..+1311, +1327, +1400..+1407, +1456, +1466, +1496..+1497, +1663, +1676; O+0..+7, +452..+467 | C+52..+55; O+0..+7, +188..+387, +452..+467, +1252..+3183 |
+    | the RGB gamma stage | E147 | C+4..+7, +12..+15, +48..+51; R+8..+11, +14..+16, +36..+37, +1524..+1531, +1568..+1571, +1587, +1660..+1667, +1716, +1726, +1756..+1757, +1923, +1936; O+0..+7, +452..+467 | C+52..+59; O+0..+7, +188..+387, +452..+467, +1252..+3183 |
+    | the six-axis colour builder | E122 | C+4..+7, +12..+15, +48..+51, +56..+59; R+8, +960..+963, +1063, +1071..+1072 | O+108..+131 |
+    | the six-axis colour builder | E143 | C+4..+7, +12..+15, +48..+51, +56..+59; R+8, +12..+13, +1308..+1311, +1327, +1469, +1663 | O+132..+159 |
+    | the six-axis colour builder | E147 | C+4..+7, +12..+15, +48..+51, +60..+63; R+8, +12..+13, +1568..+1571, +1587, +1729, +1923 | O+132..+159 |
+    | the COLOR stage | E122 | C+4..+7, +12..+15, +52..+59; R+8..+13, +960..+963, +1076..+1087; O+8..+11 | O+8..+11, +676..+967, +5172..+5211 |
+    | the COLOR stage | E143 | C+4..+7, +12..+15, +52..+59; R+8..+13, +1308..+1311, +1479..+1490 | O+836..+1127, +4344..+4383 |
+    | the COLOR stage | E147 | C+4..+7, +12..+15, +52..+63; R+8..+13, +1568..+1571, +1739..+1750 | O+836..+1127, +4344..+4383 |
+    | its HSL builder | E122 | R+1076..+1087; O+8..+11 | O+8..+11, +676..+967, +5172..+5211 |
+    | its HSL builder | E143 | R+1479..+1490 | O+836..+1127, +4344..+4383 |
+    | its HSL builder | E147 | R+1739..+1750 | O+836..+1127, +4344..+4383 |
+    | the luminance-LUT builder | E122 | C+4..+7, +12..+15, +56..+59; R+8..+16, +28..+29, +948..+951, +960..+963, +1038..+1039, +1059..+1060, +1071..+1072, +1092..+1093 | O+4656..+4659 |
+    | the luminance-LUT builder | E143 | C+4..+7, +12..+15, +56..+59; R+8..+13, +16, +28..+29, +1296..+1299, +1308..+1311, +1327, +1465..+1466, +1494..+1497, +1663, +1680; O+0..+3 | O+0..+3, +3184..+3187, +3828..+3831 |
+    | the luminance-LUT builder | E147 | C+4..+7, +12..+15, +60..+63; R+8..+13, +16, +36..+37, +1556..+1559, +1568..+1571, +1587, +1725..+1726, +1754..+1757, +1923, +1940; O+0..+3 | O+0..+3, +3184..+3187, +3828..+3831 |
+    | the tone selector's wrapper | E122 | R+8..+16, +28..+29, +1038..+1039, +1059..+1060, +1071..+1072, +1092..+1093; M+16 | none |
+    | the tone selector's wrapper | E143 | R+8..+13, +16, +28..+29, +1327, +1465..+1466, +1496..+1497, +1663, +1680 | none |
+    | the tone selector's wrapper | E147 | R+8..+13, +16, +36..+37, +1587, +1725..+1726, +1756..+1757, +1923, +1940 | none |
+    | the tone step | E122 | C+4..+7, +12..+15, +48..+51, +56..+59; R+12..+15, +1038..+1039, +1045, +1063, +1071..+1072; O+8..+11 | O+8..+11, +68..+75 |
+    | the tone step | E143 | C+4..+7, +12..+15, +48..+51, +56..+59; R+12..+15, +1325, +1327, +1442..+1443, +1663; O+4..+7 | O+4..+7, +64..+71 |
+    | the tone step | E147 | C+4..+7, +12..+15, +48..+51, +60..+63; R+12..+15, +1585, +1587, +1702..+1703, +1923; O+4..+7 | O+4..+7, +64..+71 |
+    | the chroma control | E122 | C+4..+7, +12..+15, +48..+51, +56..+59; R+12..+15, +1063..+1064, +1066 | O+76..+79 |
+    | the chroma control | E143 | C+4..+7, +12..+15, +48..+51, +56..+59; R+12..+15, +1469..+1470, +1472 | O+72..+87 |
+    | the chroma control | E147 | C+4..+7, +12..+15, +48..+51, +60..+63; R+12..+15, +1729..+1730, +1732 | O+72..+87 |
+    | the YC packing builder | E122 | C+4..+7, +12..+15, +48..+51, +99; R+8, +12..+15, +84..+87, +1038..+1039, +1045, +1058, +1062, +1071..+1073, +1092..+1093, +1117; O+8..+11 | O+8..+67 |
+    | the YC packing builder | E143 | C+4..+7, +12..+15, +48..+51, +147; R+8, +12..+15, +84..+87, +212..+215, +340..+343, +1325, +1327, +1442..+1443, +1464, +1468, +1496..+1498, +1662..+1665; O+4..+7 | O+4..+63 |
+    | the YC packing builder | E147 | C+4..+7, +12..+15, +48..+51, +151; R+8, +12..+15, +96..+103, +248..+255, +400..+407, +1585, +1587, +1702..+1703, +1724, +1728, +1756..+1758, +1922..+1925; O+4..+7 | O+4..+63 |
+    | the grain builder | E122 | C+4..+11, +48..+51; R+12..+13, +16, +212..+215, +222..+223, +226..+227, +232..+233, +1088, +1112; M+0..+1 | G+6056..+6067, +6108..+6215 |
+    | the grain builder | E143 | C+4..+11, +48..+51; R+12..+13, +16, +532..+535, +542..+543, +546..+547, +552..+553, +1491; M+0..+1 | G+7988..+7999, +8064..+8111, +8116..+8163, +8168..+8187 |
+    | the grain builder | E147 | C+4..+11, +48..+51; R+12..+13, +16, +628..+631, +646..+647, +650..+651, +656..+657, +1751; M+0..+1 | G+7988..+7999, +8064..+8111, +8116..+8163, +8168..+8187 |
+    | the register writer | E122 | O+0..+491, +676..+1039, +1044..+1051 | P+36..+43, +52..+543, +728..+1091, +1100..+1107 |
+    | the register writer | E143 | O+0..+467, +836..+1195 | P+20..+27, +128..+595, +964..+1323 |
+    | the register writer | E147 | O+0..+467, +836..+1195 | P+20..+27, +128..+595, +964..+1323 |
+
+    The test pins, per builder and body, which of those bytes its job leaves 0 (`emu/test/fixtures/stages.json`
+    `zero`): for the stage list 66 on PEN-F, 97 on E143 and 117 on E147; for the YC packing 21, 31 and 43. Outside the
+    job, its stack and the image the calls touch nothing, with two exceptions, both the grain builder's: without its
+    sample pointer it reads address 0 (2 bytes) and returns, and with R+12 = `0x902` it reads and increments a word of
+    its own (`0xa1c63108` on PEN-F, `0xa32f12dc` on E143, `0xa32ed0c4` on E147), which the next call finds
+    incremented: the call op's restore puts back the scratch and the registers, not memory the function wrote
+    elsewhere (as `emu/README.md` says of the call op: what the function did stays). No call writes into the image,
+    and every image byte the rows' calls read as data (3,686 reads on PEN-F, all in `0x605fbd8c..0x606315d9`, 6,874 on
+    E143, 6,930 on E147) holds the stock block's byte after the lab's boot (a one-off trace of the image's reads
+    against the file, not part of the test; the HSL builder in it through the COLOR stage, the chained rows left out:
+    they repeat earlier calls, and the register writer has no image operand and no call, D).
+  - **Values seen (X, the same rows; the builder's answer to that job, not a camera's value).**
+
+    | Output | E122 | E143 | E147 |
+    |---|---|---|---|
+    | YC packing, key 11, sensitivity word 1280, sharpness -2, -1, 0, +1, +2: coring; gain | 7; 23, 30, 37, 37, 37 (544 instructions each) | 0; 53, 87, 122, 122, 122 (708) | as E143 (741) |
+    | the same at 2560 | 12; 17, 22, 28, 28, 28 | 6; 52, 86, 120, 120, 120 | as E143 |
+    | the same at 3840 | 60; 3, 4, 6, 6, 6 | 8; 52, 86, 120, 120, 120 | as E143 |
+    | the control byte, the limit pair, the twelve pairs | 0; 144, 384; {0, 64} | the same | the same |
+    | the same job with the byte R+1073 / R+1665 / R+1925 = 1 | coring 0, gain 70 | coring 0, gain 416 | as E143 |
+    | grain, key 12, R+12 = `0x901`, level 1, 2, 3: the gain word | 110, 300, 600 at G+6168 | the same at G+8136 | as E143 |
+    | the seed word with a sample `0x1234` | `0x80001234` at G+6204 | the same at G+8176 | as E143 |
+    | six-axis, 12 signed halfwords, keys 11, 12 and 2 | all 0, at O+108 | 10, -5, 10, 0, 0, 0, -1, 8, 0, -5, 0, 0 at O+132 | as E143 |
+    | key 1 | 18, 4, 24, 0, 8, 8, 0, 2, 4, -1, -6, 0 | 28, -1, 34, 0, 8, 8, -1, 10, 4, -6, -6, 0 | as E143 |
+    | key 3 | -22, 4, -16, 0, 4, -8, 3, 0, -3, 9, 8, 10 | -12, -1, -6, 0, 4, -8, 2, 8, -3, 4, 8, 10 | as E143 |
+    | key 4 | 14, 0, 0, 5, 0, 0, -1, 0, 2, -2, 0, 0 | 24, -5, 10, 5, 0, 0, -2, 8, 2, -7, 0, 0 | as E143 |
+    | chroma control, key 12 (0 for 11, 1, 2, 3, 4) | `0x00808001` at O+76 | 1, then `0x02000200` three times, at O+72 | as E143 |
+    | tone LUT for keys 11, 12, 1, 2: address; entries 0, 1, 64, 128, 192, 255 | `0x605fdd38`; 0, 4, 257, 514, 770, 1023 | `0x60686ad8`; 0, 4, 256, 512, 768, 1023 | `0x6068cd08`; as E143 |
+    | key 3 | `0x6060ad42`; 0, 5, 273, 510, 750, 1023 | `0x606870d8`; the same 512 bytes | `0x6068d308`; the same |
+    | key 4 | `0x6060c142`; 0, 5, 305, 566, 802, 1023 | `0x606886d8`; the same 512 bytes | `0x6068e908`; the same |
+    | HSL records: the S word of record 0 for a first saturation value 0, 5, 7 | 0, 225, 315 (45 a step); the 288 bytes the same on the three | | |
+    | the S words for a set of all 3 | 135, 135, 134, 139, 168, 145, 135, 144, 119, 139, 224, 239 on the three | | |
+    | the HSL builder alone; the COLOR stage | 1,550; 1,588 instructions | 1,552; 1,590 | 1,552; 1,594 |
+    | gamma stage, keys 11 and 12 | three pointers at O+4644 to one curve in the image (`0x605fdf38`), 10 bits: 0, 20, 648, 865, 1023 at 0, 1, 64, 128, 255 | the curve copied to O+1252, O+1892 and O+2532 (256 halfwords and 64 fine ones each), 12 bits: 0, 78, 2404, 3308, 4095; pointers at O+3172 | as E143 |
+    | LUT builder, keys 11 and 12 | the tone LUT's address at O+4656 | at O+3828 | at O+3828 |
+    | tone step, keys 11 and 12 | `0x14d00814`, `0x003800d0` at O+68 | the same at O+64 | the same at O+64 |
+    | stage list, key 11, from its entry to its return | 7,951 instructions | 13,864 | 14,037 |
+
+    In the stage list's block the six-axis set, the chroma words, the HSL records, the gamma curve and the LUT's
+    address are the ones each builder gives alone (X).
+  - **Bytes the job leaves 0 that change an output (X, a sweep of 2026-11-14 over the rows' read-while-zero bytes with
+    the values 1, 2 and 128; not part of the test, which pins one per body).** YC packing: PEN-F C+99, R+14,
+    R+84..+87, R+1072, R+1073; E143 C+147, R+14, R+1327, R+1662, R+1664, R+1665; E147 C+151, R+14 and E143's others
+    260 higher. Six-axis, key 11: PEN-F R+1071, R+1072; E143 R+1327, R+1469, R+1663 (E147 + 260); for key 1 also the
+    override pointer. Chroma: R+1064 and, for key 12, R+1066 (E143 R+1470, R+1472; E147 + 260). Tone selector: PEN-F
+    R+1039, R+1059, R+1060; E143 R+1465, R+1466, R+1680 (E147 + 260). Tone step: R+14 and PEN-F R+1072, E143 R+1327
+    (E147 R+1587). Grain: PEN-F R+232..+233 and R+1112; E143 R+552..+553; E147 R+656..+657. COLOR stage: the override
+    pointer, and C+52 (a pointer: a fault when set). LUT builder: the override pointer, a second pointer (PEN-F R+948,
+    E143 R+1296, E147 R+1556) and the tone selector's bytes. Gamma stage: R+14 (PEN-F), the pointers at R+924 (PEN-F)
+    and R+1524 (E147; a fault when set), the override pointer, PEN-F R+1044, R+1060, R+1071, R+1072, E143 R+1456 and
+    R+1663 (E147 + 260). The stage list: 43 of its 66 bytes on PEN-F, 34 of 97 on E143, 37 of 117 on E147, R+0..+3
+    among them (a callback, D: when not 0 the word is called, `calls (a3)`, with R+4's word in a1, PEN-F
+    `0x50492182`, E147 `0x504808bb`; any value set there faults). What a camera holds in any of them is ?.
+  - **Where the bodies differ in kind.** PEN-F's gamma stage points at a 10-bit curve in the image where E143 and E147
+    copy a 12-bit one into O three times; its packed gain is a byte against 10 bits, from another default sharpness
+    table; its chroma control writes one word against four; its six-axis sets for the keys 1, 3 and 4 are E143's and
+    E147's minus those bodies' set for the key 11 (X; why is ?: a body's constant or an answer to the zero job). E143
+    and E147 give the same value in every row but the instruction counts and the addresses of image tables (the tone
+    LUTs', the HSL table's in the builder's ten pointers).
+  - **Limits.** The job is the test's (A-STAGEJOB): what a camera's request holds, which flags it sets, and whether
+    its R is the create's copy of rec_jpeg_make_image's request at all offsets is ?. Who calls the stage list's
+    caller, the grain builder and the tone wrapper's second site was not read. The list's first call on E143 and E147
+    and second on PEN-F (I, the leads': the matrix stage), the stage `0x504f6c51` before COLOR and the last one
+    (`0x504f4c0d`) are not in the table. The writer's gated segments and the pages of the other writers the set-up
+    calls are not read. `node emu/test/test_stages.mjs --json` prints every row with its entry, fields, outputs and
+    read set (`emu/README.md`, The still's stage builders).
 - **Open.** What the set-up and the constructor `0x504966f7` build (stages, not read); the run (4.3.9); TAKE's other
   fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
   written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still

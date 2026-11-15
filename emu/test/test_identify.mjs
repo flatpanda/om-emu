@@ -15,7 +15,7 @@
 //                    another version's container refused by name. The lab's gate (labFirmware, the run's model): a
 //                    container of nobody's, bytes of no container and a container with the model's own head around
 //                    another main block are refused as before, each now naming what the file is; a reader's own
-//                    failure (the browser's NotReadableError) passes through as it came
+//                    failure (the browser's NotReadableError, a plain Error, a TypeError) passes through as it came
 //   identifyFiles    (the .BINs and unpacked blocks at hand; a body without either is a counted skip) each MODELS
 //                    body's .BIN is its 'stock' container with the checksum 0 and its unpacked block its 'stock' block:
 //                    the head rule (model field: the body's digits and 0; version field: the .BIN name's digits)
@@ -164,6 +164,13 @@ export async function identifyUnits() {
   let g3 = null;
   try { await labFirmware(async () => { throw dom; }, 5000, createHash); } catch (e) { g3 = e; }
   ok(g3 === dom && g3.message === 'The requested file could not be read', `the gate on a reader that fails with a DOMException: ${g3?.name}: ${g3?.message}`);
+  // and so is one whose message could be written (node's fs errors are plain Errors), and a TypeError: only the
+  // container's refusals (ContainerRefused) are told what the file is
+  for (const err of [new Error('x'), new TypeError('x')]) {
+    let g = null;
+    try { await labFirmware(async () => { throw err; }, 5000, createHash); } catch (e) { g = e; }
+    ok(g === err && g.message === 'x' && !('id' in g), `the gate on a reader that fails with a ${err.name}: ${g?.name}: ${g?.message}`);
+  }
   // a container with the run's model's own head, the release's layout and a main block of zeros (no firmware byte)
   const rel = releaseHead(MODEL), zeros = new Uint8Array(MODEL_INFO.rom_len), own = { model: rel.model, ver: rel.ver };
   for (const cks of [true, false]) {

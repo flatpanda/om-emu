@@ -10,6 +10,9 @@
 export const PERM = [1, 3, 0, 2, 6, 4, 7, 5, 11, 10, 9, 8, 13, 14, 12, 15];
 export const TYPES = ['OE', 'OM', 'OA', 'OL'];
 const hex = (v, n) => v.toString(16).padStart(n, '0');
+// What the container refuses (a block missing, a body that overruns the file, a checksum), told apart by type from a
+// reader's own failure, which passes through as it came (src/fw/labfw.mjs)
+export class ContainerRefused extends Error {}
 
 export function parseHead(u8, off = 0) {
   const dv = new DataView(u8.buffer, u8.byteOffset + off, 32);
@@ -86,7 +89,7 @@ export function walkBytes(u8) {
 // One walked block: the body as stored and descrambled, the checksum total and whether it is 0 (olyfw.walk's fields).
 // decodeBlock: from its bytes all (head, body, tail), read or sliced by the caller.
 export function decodeBlock(all, b) {
-  if (b.error) throw new Error(`block at 0x${hex(b.off, 8)}: ${b.error}`);
+  if (b.error) throw new ContainerRefused(`block at 0x${hex(b.off, 8)}: ${b.error}`);
   const head = all.subarray(0, 32), body = all.subarray(32, 32 + b.len), tail = all.subarray(32 + b.len, 64 + b.len);
   const scrambled = b.flags !== 0;
   const data = scrambled ? descramble(body) : body.slice();
@@ -94,7 +97,7 @@ export function decodeBlock(all, b) {
   return { data, scrambled, cksum_tot: total, cksum_ok: total === 0, tail_cks: parseHead(tail, 0).cks };
 }
 export async function readBlock(read, b) {
-  if (b.error) throw new Error(`block at 0x${hex(b.off, 8)}: ${b.error}`);
+  if (b.error) throw new ContainerRefused(`block at 0x${hex(b.off, 8)}: ${b.error}`);
   return decodeBlock(await read(b.off, 64 + b.len), b);
 }
 
@@ -109,10 +112,10 @@ export async function labBlocks(read, size, { onBlock = null } = {}) {
   const { blocks } = await walk(read, size);
   const get = async (flags) => {
     const b = blocks.find((x) => x.typ === 'OE' && x.flags === flags);
-    if (!b) throw new Error(`no OE block with flags 0x${hex(flags, 4)} in the .BIN (${blocks.length} blocks)`);
+    if (!b) throw new ContainerRefused(`no OE block with flags 0x${hex(flags, 4)} in the .BIN (${blocks.length} blocks)`);
     const t0 = performance.now();
     const r = await readBlock(read, b);
-    if (!r.cksum_ok) throw new Error(`OE block 0x${hex(flags, 4)} at 0x${hex(b.off, 8)}: checksum total 0x${hex(r.cksum_tot, 8)}, not 0 (a damaged or altered .BIN)`);
+    if (!r.cksum_ok) throw new ContainerRefused(`OE block 0x${hex(flags, 4)} at 0x${hex(b.off, 8)}: checksum total 0x${hex(r.cksum_tot, 8)}, not 0 (a damaged or altered .BIN)`);
     if (onBlock) onBlock(flags, performance.now() - t0);
     return { block: b, data: r.data };
   };

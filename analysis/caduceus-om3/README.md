@@ -670,8 +670,8 @@ their hooks read the slot.
 | Split toning, Tone Balance (+53..+56, +58) | `st_run`, the tone hook's exit: the job's R, G and B gamma tables (+1252, +1892, +2532; 256 + 64 entries, 12-bit) bent in place | data: tables | no (I, below); checked on its outputs by a call (below) |
 | WB shift A-B, G-M (+36..+38) | `wb_get` at the 21 call sites of the capture-safe getter `0x50042360` with the WB fine-tune keys (34041, 38521 and the Auto WB ones): 14 in the EXIF set's body `0x50435773..0x50436ffd`, `0x50442192` / `0x504421a5`, `0x504666a3` / `0x504666b8` and three at `0x518c5610..0x518c563c`; the camera's value plus the shift, clamped to -7..7 | data: a setting's value | the EXIF set's: yes, twice at S2 (the A-B and G-M reads it stores at the shot's +37734 and +37736, D); the others: no |
 | Sharp, NR, VigFix (+52, +49, +50) | `s_nr` -> `xb_nr` at `0x503c665f` (Sharpness, key 33049), `0x503a7018` and `0x503c6871` (Noise Filter, 38681) and seven Shading Comp. reads (`0x8c21`) | data: a setting's value | the EXIF set's Shading Comp. read (`0x50436e63`): once at S2; the others: no |
-| Grain (+51) | the camera route: Grainy Film's texture and combiner 1's gains on a COLOR job, at `0x50496710` (still set-up), `0x50497d71` (work list), `0x504745d1` (request configuration), `0x504e3b3d` and `0x504e43ac` (combiner set-up); the CPU route (`xb_gs`, a luma pass row by row) with Glow or an Art Effect | data; the CPU route code on pixels | the still set-up's (`.hook_su`): once per S2 at COLOR since 2026-11-14 (X, `emu/test/test_stillsetup.mjs`), what it builds not checked; the others: no |
-| Glow / Clarity (+47), Halation (+57) | `jmp s_cap` at `0x50534e30` in the Art Effect converter `0x50534e27` (Soft Focus job flags), `s_wt` at `0x504e38a1` (the blend weight); halation: `hl_run`, a CPU pass on the YCbCr image after the Soft Focus blend | data, then the pipeline unit's passes; halation code on pixels | the converter: once at S2, and their code took its stock exit before reading the film (which of its two tests sent it there is not read, ?); the weight and `hl_run`: no |
+| Grain (+51) | the camera route: Grainy Film's texture and combiner 1's gains on a COLOR job, at `0x50496710` (still set-up), `0x50497d71` (work list), `0x504745d1` (request configuration), `0x504e3b3d` and `0x504e43ac` (combiner set-up); the CPU route (`xb_gs`, a luma pass row by row) with Glow or an Art Effect | data; the CPU route code on pixels | a film without Grain: the work-list site and the still set-up's (`.hook_su`) once per S2 at COLOR, no texture asked for (X, `emu/test/test_stillsetup.mjs`); a film with Grain: the work-list hook asks the stock texture builder, whose build stops the session at the pipeline unit (X, below); the request configuration: once, for the texture's own build request, and the combiner set-up: no; the camera route checked at its sites by calls, down to the texture's gain (below); the CPU route: no |
+| Glow / Clarity (+47), Halation (+57) | `jmp s_cap` at `0x50534e30` in the Art Effect converter `0x50534e27` (Soft Focus job flags), `s_wt` at `0x504e38a1` (the blend weight); halation: `hl_run`, a CPU pass on the YCbCr image after the Soft Focus blend | data, then the pipeline unit's passes; halation code on pixels | the converter: once at S2, and their code took its stock exit before reading the film (which of its two tests sent it there is not read, ?); the weight and `hl_run`: no; `hl_run` checked on pixels by a call (below) |
 | White frames (Art Effect Frame) | job flag `0x8000` and the frame layers of container component 2 | data | no: the Art Effect reads 0 in v0.29 (`XB_ART 0`, D) and the lab does not load component 2 |
 | Live view | `s_lv` at `0x5044a89b` (the live view's development request) | data | no: the live view is S-SCENE's |
 
@@ -746,10 +746,117 @@ colour taken as r instead of their order fails all 4. A wrong look in a future r
 LUT index or channel entry with the lab's value and LOOKS.BIN's. A hook that is not reached shows as a stock output
 where the film has values.
 
-Not checked: halation (`hl_run`). No film of v0.29 or v0.29.1 sets it (record +57 is 0 in all 20, X). It also runs
-on an image buffer through the bus window (`WINMAP`, the lock, `FLUSH`), which the lab has not been shown to serve.
-Grain and glow are also not checked: their data goes to the combiner and the Art Effect job, not a stage output read
-here.
+Not checked there: halation, Grain and glow. Their data goes to the combiner and the Art Effect job, or acts as code on
+pixels, not on a stage output read there. Grain's camera route and halation are checked by calls of their own (next);
+glow (the Soft Focus job flags and the blend weight) is not checked.
+
+**Grain's camera route and the halation pass, by calls (X, 2026-11-14).** No film of v0.29 or v0.29.1 sets Grain
+(record +51) or Halation (+57): both are 0 in all 20 records of both releases (X). So a check driven by a shipped film
+shows only "off", and the films used here are the release's with those bytes set by the test, a `LOOKS.BIN` their
+format defines (the CRC recomputed), put on the card as any other.
+
+*What their set-up code does at S2* (`emu/test/test_stillsetup.mjs --caduceus`, 15 checks on v0.29 and v0.29.1;
+traces and one breakpoint through `host/session.mjs`; the same seen with `trace:`, `trace:mem:`, `break:` and `read:`
+through `bin/session.mjs` on both releases, by hand). With the shipped FILM 3 (no Grain) the S2 press runs their
+work-list hook's site `0x50497d71` once, the `.hook_su` site and the stock set-up `0x504987bb` once each, their set-up
+entry (the code block's +112, the block's address read from their heap block) once, called from their stub after the
+stock set-up returns, and the stock texture builder `0x504ac901` and attach `0x5049b0af` never. A watch on job+8324
+over the press sees three accesses (by hand): a stock store of 0 (`0x50492868`, among the job's other fields), one
+read by their code (0) and one by the stock clean-up `0x50498cb9` (at `0x50498cc1`). So **without Grain their set-up
+code writes nothing into the job**; the one stock function it calls is the settings getter, for the effective COLOR
+profile (D, their `xb_slot`). With FILM 3's Grain set to Med the press stops at a breakpoint on the builder: reached
+from their code block, after the work-list site and before the set-up, with a0 the still's resource manager (the
+word at S+10280) and the 6-byte key `00 10 00 01 00 00`, which is the block the stock set-up makes for Grainy Film at
+`0x504989a6` (the still parameters' u16 at +40 and byte at +44, the stock helper `0x504967db`'s answer, the byte at
++55, 0; D on both sides; their code calls the helper itself, X); the job's key is 11 and job+8324 still 0. This
+agrees with their `xblock.s` (`xb_wl`, `xb_tex`, `xb_su`): since their ft8b the texture is asked for when the work
+list is built, and the set-up's entry only marks a texture made earlier. Two places of their `research/NOTES.md`
+differ from it and from the stock code: the ft1 paragraph, which has the set-up make the texture, describes the
+earlier build; and "Grainy Film's grain path" gives the builder a 7-byte block with the byte at (20,sp), which is the
+block of the three other builders the set-up calls (at `0x5049883a`, `0x5049889c` and `0x50498916`), where the block
+made at `0x504989a6` has 6 bytes and no such byte (D), as their `xb_tex` makes it. Let go, the builder does not come
+back in the lab: nothing is cached, so it builds (`0x504ae099`, the place their notes leave open), and the build is a
+kind-3 request with stage `0xf002` to the pipeline unit, which stops the session at the unit's YC page
+(`om1.imgpipe UNKNOWN write 0x9c201014`, at `0x50482e5c`; `docs/hle-gaps.md` 4.3.12). So in the lab **a film with
+Grain does not finish S2**, at any level (X, Low and Med), the test pins that as the lab's limit, and the store of
+the texture at job+8324 is not reached.
+
+*The route at its sites, by calls* (`emu/test/test_lookcode.mjs`, with `OM_CADUCEUS`; 68 checks on v0.29 and v0.29.1,
+about 30 s). The job is written into each call's scratch from the stock code's reads (`docs/hle-gaps.md` 4.3.12, D):
+the still's context S with its parameters' key 11 and flags `0x1000` (as the lab's COLOR still has them, X), the job
+with key 11, the request R (key 11, output `0x1000`, kind 0, no effect) with its context C and configuration block,
+and, where a film asked for one, a texture object of the test's (19 patterned words) at job+8324. Everything else in
+the job is 0: these are the hooks on that job, not the camera's values. Five calls a film, on the blank camera and
+after FILM 20, 1, 2, 3 and 4 are picked, FILM 1, 2 and 3 with Grain Low, Med and High:
+
+- the work-list builder `0x50497cd7` entered at their hook, stopped where it jumps back (`0x50497d79`) or at the
+  texture builder: without Grain the job's key 11 is kept and no texture asked for; with Grain the builder is reached
+  with the job's resource manager and the key block above. The same site on a job that already holds a texture
+  object: with Grain the list is picked by Grainy Film II's key `0x01020068` (the job's own key stays 11) and no
+  texture is asked for again; without Grain the pick stays 11;
+- their set-up entry (as their stub calls it), which takes the texture object as made, then the request
+  configuration `0x504745cd` entered at its selector call `0x504745d1`, their hook: with Grain the answer is combiner
+  1, the request's stage is `0x0100` and its +780 holds the object's 19 words (the stock attach `0x5049b0af`, run by
+  their code); without it the stock selector's answer (0) and an untouched request;
+- the combiner set-up `0x504e3b0b` whole. Without Grain its register image is the default case's, as on the blank
+  camera (+4 `0x00200000`, +96 `0x04000400`, +100 1024, +148 `0x04000400`). With Grain it is combiner 1's (+4
+  `0x00200001`, +8 3822, +152 0) with COLOR's chroma gains put back (+96 `0x04000400`, +100 1024) and the texture's
+  gain at +148 and the Y offset in the low half of +180, each the film's Grain level's entry (Low, Med, High) of the
+  two tables of their `xblock.s` (`xb_tgain`, `xb_tbias`, read at the release's tag at run time; their values are
+  not copied here): three rising gains and three falling offsets.
+
+Controls: the three levels give three rising gains and FILM 4, without Grain, the default image again; the stock
+combiner 1, reached with Grainy Film II's key on a job of no film, has gain 1024 and chroma gains 1024 and 0, which no
+level's image has; the four sites hold the release's instructions. Mutants (X, by hand): the gain taken from the
+next level's entry fails all three films; the card's file without the Grain bytes fails the control; the second
+work-list call made on a job without the texture fails the three films' list key; the still set-up test with the
+film left as shipped fails 5 of 15, and with the first session's film given Grain it stops at the unit. What this
+shows: a film's Grain reaches the register image's gain where their hooks sit, through the stock selector, attach
+and set-up. What it does not show: the texture itself, the request the camera builds, or the pixels. The calls leave
+their state bytes in the code block (the texture flag, the request and the context they remember) as the last call
+set them, pointing into a scratch that is given back, so no shot is taken in that session. The stock grain (key 12's
+requests with stage `0x0901` or `0x0902`: the level byte +1751, the gain tables behind combiners 31 and 32, the seed
+at +188) is read in `docs/hle-gaps.md` 4.3.12 and not run here.
+
+*Halation on pixels.* `hl_run` (`0x50f6d3fc` in v0.29 and v0.29.1, found at run time as the one call with its frame
+in their code block) is called on YCbYCr 4:2:2 frames the test draws into the call's scratch, with a buffer record
+of their layout (the bus address, the format `0x0c02`, the row pitch, width and height) and the level in d0. The
+expectation is their pass's definition, `research/halation/model.py`'s steps written anew in the test with the
+numbers of `firmware/halation.py` at the release's tag: their code against their own model. The lab's frame equals
+it byte for byte on a frame with a bright spot at levels 1 and 5 (1984 x 64 pixels: 27,902 and 45,687 of 253,952 bytes
+changed), with rows wider than the frame at level 3, on a frame of four cell rows with a spot in its corner at level
+5 (448 x 256: 88,491 bytes changed, the glow fading from cell row to cell row), on a frame too bright (their coverage
+rule leaves it alone) and a dark one (no glow), and levels 0 and 6 return at once. The same definition equals their
+Python model on 40 frame and level pairs (X, by hand, their `model.py` under numpy). Controls: the frame is not the
+definition's at another level; level 5 changes more than level 1; mutants (X, by hand): Cb's and Cr's tints swapped
+in the expectation fail the four glowing frames, the call made at another level than the expectation fails its
+frame, and the definition taking the nearer cell row instead of interpolating between two fails the frame of four
+cell rows alone.
+
+What the call needed, and what it does not reach (X unless tagged). The image sits in main DRAM (the scratch), which
+their `hl_open` uses directly (bus `0xa0000000..0xb7ffffff`). The allocations work inside a call: the pass takes
+three blocks (their source; its header comment still says two) from the firmware's allocator for the uncached pools
+(`0x50003048`, freed by `0x5000307a`), which the lab does not stand in for (S-HEAP is the other allocator's,
+`0x50002fc6`) and which runs as it is on the pools as the session left them; a call stopped at each shows the pass
+reaches these two and never the other. The firmware's lock and unlock (`0x50054f53`, `0x50054f9c`) run as they are
+too; in the lab the lock takes only its interrupt-mask half: its other half (the call of `0x50010501`; "no task
+switch" in their source's words) runs when the word at `0x97f006fc` is `0x77777777` (D), and that word is 0 in the
+lab. The pass begins with the firmware's cache flush, which the
+lab answers at once for the stock callers it lists and refused for theirs; the lab now answers a flush called from
+patched bytes too (H-PATCHFLUSH, `emu/FIDELITY-NOTES.md` 7.16: no stock caller's code is there, and the lab has no
+caches), without which the call on the first frame ended at that flush, 766 instructions in.
+
+The bus window does not work inside a call, in three places. (1) A buffer outside main DRAM and outside the window's
+present segment, as the camera's image buffers are (their notes give a still's texture at bus `0x4dfd4400`), goes
+through the firmware's window mapper `0x5004fff8`, which flushes the cache itself (return `0x50050030`), a stock
+caller the lab does not list: the call is refused there, which the test keeps as a control. (2) With that flush
+answered (a trial change, not kept), the mapper's next step reads the window's second register `0x9810004c` (at
+`0x5005003e`), which the lab's window device does not have (it models `0x98100058` alone): a bus error. What that
+register is has not been read (?), so the mapper's caller is not listed. (3) A buffer in the window's present
+segment (`0xb8000000..0xbfffffff` after the boot) needs no mapper, but their pass reads its rows through the
+window's cached view, `0x40000000` below the window (their source: `0x78000000..0x7fffffff`), which the lab does not
+map: an access fault, the test's second control. So the pass's arithmetic and its direct branch are checked; the
+window branch (the mapper, the window's cached view and the flush after each row) is not.
 
 **What stands between the hook sites and the JPEG**, in the camera's order (I for the order):
 
@@ -778,15 +885,17 @@ here.
    registers and interrupts are not read (?) and the lab refuses its first write (`docs/hle-gaps.md` 4.3.9, D). The
    firmware gives no evidence of its pixel processing (`docs/hle-gaps.md` 4.3, D), so a model of it is a declared
    stand-in, and a data look checked on its pixels would check that stand-in, not the camera. Size: months (I).
+   Grainy Film's texture, which their Grain route asks the stock builder for, is built on this unit too (a kind-3
+   request): a film with Grain stops the lab's S2 there (X, above).
 5. **The JPEG codec at `0x99901000`**: driver and registers read (`docs/hle-gaps.md` 4.3.9, D on E143), fed by the
    unit, no buffer address of its own. Size: days after 4 (I).
 6. **S-IMGPRO's other request kinds**: only kind 14's fills are computed; Jpeg_Result's kind 13 copy is not. Size: days
    (I).
 7. **The CPU passes on pixels** (`hl_run`, `xb_gs`): they would run on the lab's CPU once a developed image is in
-   memory after the Soft Focus blend, so they wait on 3 and 4 (I). A call of `hl_run` on an image put in the call's
-   scratch would test halation's code on pixels before that, at their address and with a buffer record and bus window
-   of their layout; not tried: it works through the bus window (`WINMAP`, the lock, `FLUSH`), which the lab has not
-   been shown to serve, and no film of v0.29 or v0.29.1 sets halation (above).
+   memory after the Soft Focus blend, so they wait on 3 and 4 (I). Before that, `hl_run` called on a frame in a call's
+   scratch gives their definition's frame byte for byte (X, above); a buffer where the camera keeps the image goes
+   through the bus window, which a call does not get through (the mapper's own cache flush and second register, the
+   window's cached view; above), and the CPU grain (`xb_gs`'s luma pass) is not tried.
 8. **Container component 2** (the white frames' layers): not loaded (`frames` not applied, 4.1). Size: days (I); the
    blend itself is the unit's.
 

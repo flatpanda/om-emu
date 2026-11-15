@@ -4235,10 +4235,50 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     (`0x504f4c0d`) are not in the table. The writer's gated segments and the pages of the other writers the set-up
     calls are not read. `node emu/test/test_stages.mjs --json` prints every row with its entry, fields, outputs and
     read set (`emu/README.md`, The still's stage builders).
+- **E147's grain: the texture, the selector and the combiner set-up (D, 2026-11-14; X where tagged).** Three
+  stock pieces carry film grain on E147; Caduceus for OM-3's Grain route hooks all three (their source), which is how
+  they were found and why they are read here.
+  *The texture.* The still set-up `0x504987bb` asks the cached texture builder `0x504ac901` for Grainy Film's texture
+  at `0x504989d5`: a0 = the resource manager (the word at S+10280, S the still's context), a1 = a 6-byte key made at
+  `0x504989a6..0x504989cc` (the still parameters' u16 at +40 and byte at +44, the answer of `0x504967db` for that u16
+  and the byte at +55, that byte, 0). The builder keeps four objects of 116 bytes at `0xa32e94b8` (run-time): the key
+  at +0, a use count at +112, a state byte at +114 (1 being built, 2 ready). A match raises the count and returns the
+  object; a miss takes a free one and builds it through `0x504ae099` (their notes left the build's place open). The
+  build is a request of kind 3 with stage `0xf002` (R+16, R+12) to the pipeline unit (X: a trace through Caduceus
+  v0.29's S2 on a film whose Grain the test set; the configuration `0x504745cd` runs for it, then the unit's set-up
+  calls the YC page writer `0x50482e53` with the page `0x9c201000`). S-IMGPIPE has no model of that page, so the
+  session stops at the write of `0x9c201014` (`0x50482e5c`): a still that needs a new texture does not finish in
+  the lab, stock Grainy Film included (I for stock: its Art Filter was not selected in a session). The object goes to
+  job+8324 (the job is the word at S+10276; its key at job+5352), the stock clean-up `0x50498cb9` reads it there (X),
+  and the attach `0x5049b0af` (a0 = S, a1 = the request R) copies the object's 19 words from +8 to R+780 for a
+  request of kind 0 (to R+96 for kind 3), adds the object's +108 masked by job+8312 to the first two as a 64-bit
+  address, and sets R+12 = `0x0100` (X on an object the test wrote).
+  *The selector* `0x5050bf19` (a0 = the context C; C+4 the request R, C+48 the key) answers the combiner: for a
+  request of kind 3 by its stage (`0xf00f`, `0xf010`, `0xf011`, `0xb004` give 18, 19, 20, 27), else by the key through
+  a table of handlers at `0x606dc4dc` (run-time; 16 entries of {key - 11, handler}, looked up from index (key - 11)
+  & 15; keys below 12 and above `0x0102007b` take the default path). The handler `0x5050bfa6`, the entry of the keys
+  `0x01010068` and `0x01020068` (Grainy Film I and II, as their notes name them), answers 1 for stage `0x0100`; the
+  handler `0x5050c01d`, the entry of key 12, answers 31 for stage `0x0901` and 32 for `0x0902`. It is called at
+  `0x504745d1` by the request configuration `0x504745cd` and again at `0x504e3b3d` by the combiner set-up.
+  *The combiner set-up* `0x504e3b0b` (frame [d2,d3,a2,a3],28; a0 = C) fills the register image at the configuration
+  block's +7988 (C+8) through a table of cases at `0x606cc794` (run-time; {combiner, handler} at index combiner & 63).
+  The default case `0x504e46cf` writes +4 = `0x00200000`, +92 = `0x2a0000`, +96 = `0x04000400`, +100 = 1024 and,
+  through `0x504e37f1`, +144 = `0x2a1500`, +148 = `0x04000400`, +152 = 1024 (X on a COLOR job in a call's scratch).
+  Combiner 1's `0x504e3b70` writes +4 = `0x00200001`, +8 = 3822, +92 and +144 = `0x2a0000`, +96 = 1024, +100 = 0,
+  +148 = 1024, +152 = 0 (X under Grainy Film II's key `0x01020068` with stage `0x0100`). The stock grain's level,
+  gain and seed are in two other cases (D only): combiner 31's `0x504e3fb2` takes the level from the request's byte
+  +1751 (1..3), stores the u16 at `0x60667dc2 - 2 + 2 x level` (110, 300, 600) at +148 and a seed at +188, bit 31
+  with a u16 sample read through the pointer at the request's +628; combiner 32's `0x504e4080` takes the gain from
+  `0x60667dc8` (50, 75, 100) and the seed from the counter `0xa32ed0c4`, which it increments. A level outside 1..3
+  leaves the gain 0. With a job in a call's scratch, `emu/test/test_lookcode.mjs` enters the work-list builder
+  `0x50497cd7` at `0x50497d71` (S at (4,sp), d3 the address of S+10276), the configuration at its selector call and
+  the combiner set-up whole, and checks Caduceus' Grain down to the texture's gain at +148
+  (`analysis/caduceus-om3/README.md` 4.6).
 - **Open.** What the set-up and the constructor `0x504966f7` build (stages, not read); the run (4.3.9); TAKE's other
   fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
   written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still
-  have Command 0 (their dumps' Command not read).
+  have Command 0 (their dumps' Command not read). The texture's build `0x504ae099` and the unit's pages for a kind-3
+  request (above); who sets the stages `0x0901` and `0x0902` and the level byte +1751 on a key-12 request.
 
 #### 4.3.13 TAKE's shot up to REC's request (E143, E146, E147; 2026-11-14; D unless tagged, E143's addresses)
 

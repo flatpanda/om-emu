@@ -32,6 +32,8 @@ export class SioError extends FirmwareError {}
 
 // the devices a body's PER_SIO channels can have (src/fw/models.mjs sio_devices: [{channel, device}])
 const DEVICES = { charger: () => new IntCharger() };
+// the label of every device the lab has (a session with PER_SIO's devices reports its own devices' labels)
+export const sioDeviceLabels = () => Object.values(DEVICES).map((make) => make().label);
 const RESTART_MAX = 8;                    // positions a restart list may give (the charger's has 1, D)
 
 // A transfer's bytes as IIC segments: split before each restart position (cuts, ascending, inside the transfer), each

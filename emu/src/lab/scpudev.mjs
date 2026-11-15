@@ -107,6 +107,7 @@ import { FirmwareError } from './hle.mjs';
 import { bytesHex } from '../util/bytes.mjs';
 
 export class ScpuError extends FirmwareError {}
+export const SCPUDEV_LABELS = ['S-SCPUDEV', 'A-SCPUDEV-1'];     // the labels a session with the sub-CPU's model reports
 
 export const DATE_BYTES = 9, RX_BYTES = 10, CONTEXT_BYTES = 20;
 export const SET_DATE = 0x01, GET_DATE = 0x81, WRITE_WORD = 0x06, READ_WORD = 0x86, SYSCTRL = 0x85, POLL = 0x8f, CHUNK = 0x0f, GIO_WRITE = 0x02;
@@ -221,7 +222,7 @@ export class ScpuDev {
     this.takesSources = sources;
     for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE, PWR_SOURCES].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
     this.quiet = new Set(quiet);
-    this.labels = ['S-SCPUDEV', 'A-SCPUDEV-1'];   // what the session's stand-ins name (player.mjs)
+    this.labels = SCPUDEV_LABELS;   // what the session's stand-ins name (player.mjs)
     this.lines = null;
     this.state = S.IDLE;
     this.out = { ready: 1, message: 1 };     // the levels of PC3 and PC2: running, idle, no message

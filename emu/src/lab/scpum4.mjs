@@ -64,6 +64,7 @@ const concat = (parts) => { const out = new Uint8Array(parts.reduce((n, p) => n 
 
 // A-SCPUM4-1's clock: lab time (ns) against the sub-CPU's (seconds), from the pair at which the link was made, and the
 // end of the answer windows opened so far
+export const SCPUM4_LABELS = ['S-SCPUBOARD', 'A-SCPUM4-1', 'A-SCPUM4-2', 'A-SCPUM4-3'];   // the labels a session on the SCPU's own firmware reports
 export class LeadClock {
   constructor(labNs, scpuS) { this.lab0 = labNs; this.scpu0 = scpuS; this.answerBy = scpuS; }
   // the sub-CPU's time that lab time `ns` stands for: it has run to there before it takes an input of that time
@@ -138,7 +139,7 @@ export class ScpuM4 {
     this.pins = lle.pins;
     this.gate = lle.gate;
     if (!(this.gate >= SRAM && this.gate < SRAM + SRAM_SIZE)) throw new ScpuError(`SCPU-M4: the gate byte 0x${(this.gate >>> 0).toString(16)} is not in the sub-CPU's SRAM`);
-    this.labels = ['S-SCPUBOARD', 'A-SCPUM4-1', 'A-SCPUM4-2', 'A-SCPUM4-3'];   // what the session's stand-ins name (player.mjs)
+    this.labels = SCPUM4_LABELS;   // what the session's stand-ins name (player.mjs)
     this.m = new Stm32l4(image, { ...board, drive: { ...SCAN_IDLE, ...(board.drive ?? {}) } });
     this.spi = this.m.spi2;
     this.lineAt = new Map(LINES.map((line) => [pinOf(this.pins[line]).join(':'), line]));

@@ -55,15 +55,33 @@
 // The host calls notify() after every published status, frame and sound and when the Player stops,
 // and onFrame(w, h, raw, meta) from the Player's env.onFrame, which keeps the newest composite for /api/frame.
 // Worker-safe.
-import { controlsDoc, screensDoc } from './playui.mjs';
+import { controlsDoc, screensDoc, STAND_INS } from './playui.mjs';
+import { CAMAPP_STAND_INS } from './camapp.mjs';
 import { jsonType } from './player.mjs';
 import { CONTROLS, apply_uiin_layout } from './play.mjs';
 import { decimalInt, decimalNumber } from '../util/parse.mjs';
 import { base64Bytes } from '../util/bytes.mjs';
-import { MODEL } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO } from '../fw/model.mjs';
 import { MODELS } from '../fw/models.mjs';
 import { modelDoc } from '../fw/modeldoc.mjs';
 import { audioDoc } from './audio.mjs';
+
+// /api/screens' stand_ins, the page's Stand-ins tab: a row for every label a session can report in use
+// (player.mjs stand_ins_in_use; test/test_standins.mjs checks it): playui.mjs STAND_INS, the camera application's
+// rows (camapp.mjs CAMAPP_STAND_INS; a label in both keeps STAND_INS's text, the one the page showed) and the model's
+// own stand-ins by name (modelStandInRows).
+export function standInRows(info = MODEL_INFO) {
+  return { ...CAMAPP_STAND_INS, ...STAND_INS, ...modelStandInRows(info) };
+}
+// A MODELS entry's own stand-ins as rows (src/fw/models.mjs return_stubs: [function, d0, name, why]; call_skips: [call
+// site or fact path, name, why]; src/lab/play.mjs installs them): the entry's own reason, with what the lab does there
+export function modelStandInRows(info) {
+  const at = (a) => (typeof a === 'string' ? `the call the fact ${a} names` : `0x${(a >>> 0).toString(16).padStart(8, '0')}`);
+  const rows = {};
+  for (const [fn, d0, name, why] of info.return_stubs ?? []) rows[name] = `(this model's own, src/fw/models.mjs return_stubs) the function ${at(fn)} is not run and returns ${d0}: ${why}`;
+  for (const [site, name, why] of info.call_skips ?? []) rows[name] = `(this model's own, src/fw/models.mjs call_skips) ${at(site)} is stepped over: ${why}`;
+  return rows;
+}
 
 const enc = new TextEncoder();
 const utf8 = new TextDecoder('utf-8', { fatal: true });      // a leading byte order mark is skipped
@@ -180,7 +198,7 @@ export class PlayApi {
     const no = this.allowed(req, path, args);
     if (no) return no;
     if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables, this.posswitchRows()));
-    if (path === '/api/screens') return this.send(200, screensDoc());
+    if (path === '/api/screens') return this.send(200, { ...screensDoc(), stand_ins: standInRows() });
     if (path === '/api/status') {
       const after = intArg(args, 'after');
       if (after === null) return this.send(400, { error: 'after' });

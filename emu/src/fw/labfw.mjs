@@ -37,11 +37,15 @@ export function checkFirmware(rom_sha256, res_sha256) {
 // {rom, res (the prefix), rom_sha256, res_sha256, res_full (the whole resource block's length)}, or throws (a damaged
 // container, a block missing, a checksum, a cut, WrongFirmware). The main code block is checked before the prefix is cut.
 // A file refused before its digest is known (no container, a block missing, a checksum) is refused with the same
-// error, its message followed by what the file is (identifyFirmware; e.id); what is accepted does not change.
+// error, its message followed by what the file is (identifyFirmware; e.id); what is accepted does not change, and a
+// reader's own failure passes unchanged.
 export async function labFirmware(read, size, createHash, { onBlock = null } = {}) {
   const hex = (b) => createHash('sha256').update(b).digest('hex');
   let unpacked;
   try { unpacked = await labBlocks(read, size, { onBlock }); } catch (e) {
+    // labBlocks' refusals are Errors with a message of their own. A reader's failure whose message cannot be written
+    // (the browser's NotReadableError: a DOMException's message is its prototype's getter) is thrown as it came
+    if (!(e instanceof Error) || !Object.getOwnPropertyDescriptor(e, 'message')?.writable) throw e;
     const id = await identifyFirmware(read, size, createHash);
     e.message += `; this file is ${id.reason}${overlayHint(id)}`;
     e.id = id;

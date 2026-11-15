@@ -14,7 +14,8 @@
 //                    line; the stock container refused as the stock block is; another body's container or stock block,
 //                    another version's container refused by name. The lab's gate (labFirmware, the run's model): a
 //                    container of nobody's, bytes of no container and a container with the model's own head around
-//                    another main block are refused as before, each now naming what the file is
+//                    another main block are refused as before, each now naming what the file is; a reader's own
+//                    failure (the browser's NotReadableError) passes through as it came
 //   identifyFiles    (the .BINs and unpacked blocks at hand; a body without either is a counted skip) each MODELS
 //                    body's .BIN is its 'stock' container with the checksum 0 and its unpacked block its 'stock' block:
 //                    the head rule (model field: the body's digits and 0; version field: the .BIN name's digits)
@@ -157,6 +158,12 @@ export async function identifyUnits() {
     g1.message.endsWith(`${MODEL_INFO.bin}: choose that .BIN`) && g1.id.status === 'unknown', `the gate on a container of nobody's: ${g1?.message}`);
   const g2 = await gate(random(1000, 6));
   ok(g2 instanceof Error && !(g2 instanceof WrongFirmware) && /^no OE block with flags 0x0100 in the \.BIN \(0 blocks\); this file is 1000 bytes that start with no container head/.test(g2.message), `the gate on bytes of no container: ${g2?.message}`);
+  // a reader's own failure is thrown as it came: the browser's NotReadableError, whose message no one can write (the
+  // gate must not turn it into a TypeError by adding to it)
+  const dom = new DOMException('The requested file could not be read', 'NotReadableError');
+  let g3 = null;
+  try { await labFirmware(async () => { throw dom; }, 5000, createHash); } catch (e) { g3 = e; }
+  ok(g3 === dom && g3.message === 'The requested file could not be read', `the gate on a reader that fails with a DOMException: ${g3?.name}: ${g3?.message}`);
   // a container with the run's model's own head, the release's layout and a main block of zeros (no firmware byte)
   const rel = releaseHead(MODEL), zeros = new Uint8Array(MODEL_INFO.rom_len), own = { model: rel.model, ver: rel.ver };
   for (const cks of [true, false]) {

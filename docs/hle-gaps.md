@@ -2816,9 +2816,10 @@ traRoutingSession, below).
     _Src_ThumbICam2 (`0x505494f5`; REC's trace ids 130..133). Each asks TAKE for the HandleTarget's (+116) buffer
     handle (`0x503af9de`, `0x503afb12`, `0x503afb5d`, `0x503afbf3`: an id 1..115 whose entry at `0x62a494a4 + 32 n`
     has the lookup's flag, masks 1, 1, 0x10 and 0x40, gives a halfword of it, any other logs `0x25000402` and gives 0)
-    and MM's `0x50534dd1` for its address. In the lab shot 1's entry has none of the flags (I: TAKE, which does not
-    run, fills it): each lookup logs `0x25000402` and MM logs `0x08010004` for handle 0 (X: four pairs a shot, the only
-    logs from the post to the set's call; the record's errlog, which storageSession pins).
+    and MM's `0x50534dd1` for its address. In the lab shot 1's entry had none of the flags until 2026-11-14 (TAKE's
+    allocation, which the lab did not run, sets them): each lookup logged `0x25000402` and MM `0x08010004` for handle 0
+    (X: four pairs a shot, the only logs from the post to the set's call). Since then the four sources find their
+    buffers in the shot H-SHOTALLOC allocates and log nothing (4.3.13; storageSession pins the empty errlog).
   - In keys (golden) the native steps add 18,866 instructions, 97 stops (28 get_tid, 20 memset, 8 errlog, 4 malloc
     and 4 free, 2 S-JPEGENC, 1 memcpy, 1 the release's observer and 29 single steps) and, in the player's status,
     these 8 logs' kernel events (harness entries +8) and the create's 4 allocations, freed by the release (heap
@@ -2848,14 +2849,13 @@ traRoutingSession, below).
     of the record's exposure fields takepic reads only +38198 from one of them; the others come from TAKE's state and
     the exposure record takepic is handed, which TAKE (not run) fills from what is not read. S-EXIFPRM writing
     S-EXPOSE's values there would invent that mapping, so it does not.
-- **Open.** The gains' computation and its inputs (TAKE's shot fields; the cache's keys); TAKE's shot table
-  (`0x62a494a4`) and MM's banks behind ImageParam's sources; the run's kinds and units (development, encode,
-  thumbnail, view) and the allocator's list (the kinds, the stages and the JPEG codec read in 4.3.9; the pipeline unit
-  at `0x9c200000` read in 4.8.13 for the decode and, for the development, as far as its pages' writers; the work
-  buffer's source still open there); the record's +41052 block, the layout with PlayPic
-  (read in 4.3.9), and Jpeg_Result's EXIF
-  writes (ExifImageWidth and the thumbnail's length stay 0 in the file, X); takepic and the EXIF set for the exposure
-  fields.
+- **Open.** The gains' computation and its inputs (TAKE's shot fields; the cache's keys; each input's writer read in
+  4.3.13); MM's banks behind ImageParam's sources (TAKE's shot table `0x62a494a4` is read in 4.3.13); the run's kinds
+  and units (development, encode, thumbnail, view) and the allocator's list (the kinds, the stages and the JPEG codec
+  read in 4.3.9; the pipeline unit at `0x9c200000` read in 4.8.13 for the decode and, for the development, as far as its
+  pages' writers; the work buffer's source still open there); the record's +41052 block, the layout with PlayPic (read
+  in 4.3.9), and Jpeg_Result's EXIF writes (ExifImageWidth and the thumbnail's length stay 0 in the file, X); takepic
+  and the EXIF set for the exposure fields.
 
 #### 4.3.5 REC_IMAGE on E146 and E147 (2026-11-10; D unless tagged)
 
@@ -3564,7 +3564,8 @@ mode follows the lever in camapp 1 as it does in camapp 3.
 - **Whether the lab can run it.** Not this round. What a native run needs, each without a source in the lab:
   - the gains (4.3.4: REC_PREPRO's rec_precon_wb_exec from TAKE's shot fields; the lab's capture stand-in is a
     developed YCbCr frame and measures no white balance);
-  - the Bayer source and the work buffer, which TAKE's shot table and MM give on the camera;
+  - the Bayer source's pixels and the work buffer, which TAKE's shot table and MM give on the camera (since
+    2026-11-14 the Bayer buffer is TAKE's, H-SHOTALLOC, 4.3.13, and nothing writes it);
   - the pipeline unit at `0x9c200000`: its parameter block, its steps and its end, for kind 0 the whole development.
 
   A device answering the codec's registers alone would have nothing to encode, and a stream written at the run's end
@@ -3865,12 +3866,12 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   recFileInline's, the E118 family's).
 - **What runs (X, `emu/test/test_storage.mjs` storageSession on E143, E146 and E147).** One native run of the EXIF set
   per picture, after H-RECPRECON. The file's dates are the clock's, as before. X and Y resolution 350/1, the zoom ratio
-  0/100, ExposureTime 10/10 and FNumber 0/10 (refs/exif.mjs; since 2026-11-14 ExposureTime is the exposure plan's on
-  E143, and on E146 and E147 once S1 has left the start screen, 4.3.13). Control: a fresh template copy, with the clock
-  read after the clock was set to another date, gets that date from the EXIF set and keeps the template's empty
-  DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus v0.29, outside the tree)
-  wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did not before
-  (X).
+  0/100, ExposureTime 10/10 and FNumber 0/10 (refs/exif.mjs; since 2026-11-14 ExposureTime is the exposure plan's on the
+  three, 4.3.13, on E146 and E147 from the start since their start reaches the shooting screen, 4.4.4). Control: a fresh
+  template copy, with the clock read after the clock was set to another date, gets that date from the EXIF set and keeps
+  the template's empty DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus
+  v0.29, outside the tree) wrote its film's name into ImageDescription and its code into UserComment in the card's file,
+  which it did not before (X).
 - **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1; read in 4.3.13,
   where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144 (StlRdy1's exposure
   request and the strobe sequence's answer, read in 4.3.13); the lens flag +37982 and the lens fields (TAKE's lens
@@ -3905,6 +3906,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 | the library's run; the generic kind handler | `0x50492758`; `0x5046d994` | `0x50485182`; `0x5045f338` | `0x504939e0`; `0x5046dba4` | 0 | 0 |
 | TAKE's shot-record fill; takepic | `0x503bba51`; `0x503bcd51` | `0x503bc37e`; `0x503bd6ab` | `0x503c660c`; `0x503c793b` | 0 | 0 |
 | TAKE's exposure-record fill (S-EXIFPRM runs it, 4.3.13) | `0x503bf619` | `0x503bfe9c` | `0x503c9db8` | 1 | 1 |
+| TAKE's shot allocation; its free (H-SHOTALLOC runs them, 4.3.13) | `0x503af59e`; `0x503af80b` | `0x503af63e`; `0x503af8b1` | `0x503b98cf`; `0x503b9b42` | 1; 1 | 1; 1 |
 | the per-shot EXIF fill (the observers' control) | `0x5042c2d5` | `0x50428252` | `0x50436558` | 1 | 1 |
 
   The release (`0x5054322e`; E146 `0x50520568`, E147 `0x5052f657`) runs once (4.3.9's pin). The format word's helper
@@ -3914,8 +3916,9 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   three bodies: CreateParam with its helpers, the create with the constructor the picture mode selects (E143 and E146
   the still constructor; E147 at COLOR, MONO and ART `0x504966f7`, after the extension's apply, and at position 2 and
   CRT the still constructor) and its second step, ImageParam's body and the release; stood in or not reached: the
-  parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot record and takepic (S-EXIFPRM, which
-  runs TAKE's exposure-record fill since 2026-11-14).
+  parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot-record fill and takepic (S-EXIFPRM, which
+  runs TAKE's exposure-record fill since 2026-11-14). The shot itself is TAKE's since 2026-11-14: H-SHOTALLOC runs
+  TAKE's allocation and its free through api_rec, once each per picture (4.3.13).
 - **The request (D).** rec_jpeg_make_image clears the request on its stack (48 bytes at `0x50549b6b`; E146 56 at
   `0x50527c52`, E147 60 at `0x50536e60`). CreateParam writes +0 (the callback) and +4 (the packet), then through its
   helpers the format word +8 (4 bytes, `0x50547cf7`) and the flags +12 (`0x50547e3b`), +34 and +35 (the packet's +299),
@@ -4361,7 +4364,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 |---|---|---|---|
 | take-picture request (api_rec command 11) | not sent: S-RELSEQ posts the callbacks; under camapp 3 sent and taken unanswered (4.1.12, 4.1.13) | S-RELSEQ, S-TAKERDY | `src/lab/camapp.mjs` |
 | TAKE_MAIN's still states, RdyFcsTake to StlEnd2 | not run | S-MODACK (TAKE_EXEC) | `src/lab/camapp.mjs` |
-| TAKE_EXPOSE's plan into the settings | native (S-EXPOSE's calculation) on the shooting GUI state `0x0108`; E146 and E147 start at `0x102`, where it does not plan, so the settings read 0 until S1 has left it (X: E147 at `0x102` after 4 s, at `0x108` after S1, where the calculation gives Tv 1924, Av 1404) | S-EXPOSE | `src/lab/camapp.mjs` expose() |
+| TAKE_EXPOSE's plan into the settings | native (S-EXPOSE's calculation) on the shooting GUI state `0x0108`, which E146's and E147's start reaches since 2026-11-14 (4.4.4; before, it ended at `0x102`, where S-EXPOSE does not plan, and the settings read 0 until S1 had left it); their plan for the default scene is Tv 1924, Av 1404 (X) | S-EXPOSE | `src/lab/camapp.mjs` expose() |
 | StlRdy1's exposure record and its fill | native fill on a record of the lab's (since this round) | S-EXIFPRM | `src/lab/rec.mjs` exif_param() |
 | the shot-record fill | its six fields REC_IMAGE reads (4.3.5) and the shutter range (since this round) | S-EXIFPRM | same |
 | takepic | its copy of the exposure record (since this round) and the EXIF set it calls (4.3.11); the rest not run (Sv, TAKE context fields, the lens step) | S-EXIFPRM | same |
@@ -4387,10 +4390,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     ExposureTime is 1/250 s (the set's conversion; it was 1 s, Tv 0). A program shift with the main dial before the
     shot gives Tv 2222 and 1/400 s (X, a probe). The range words are the calculation's: zeroed and recomputed by an
     input, they are rewritten once each (X, a probe on `0x50598e03` and `0x50598e1c`).
-  - E146 and E147: in storageSession's shot (S1 and S2 from the start screen, where S-EXPOSE does not plan) the
-    fill reads 0 and ExposureTime stays 1 s (X). Past the start screen the plan's values come: Caduceus v0.29's
-    flow on E147 (`bin/session.mjs`) now writes ExposureTime 1/200 s where it wrote 1 s, the rest of its Exif the same
-    but the dates and the file's size the same (X).
+  - E146 and E147: the plan's Tv 1924 gives ExposureTime 1/200 s (X: Caduceus v0.29's flow on E147 through
+    `bin/session.mjs`, where it wrote 1 s, the rest of its Exif the same but the dates and the file's size the same).
+    In storageSession's shot, taken straight after the start, the fill read 0 and ExposureTime stayed 1 s until the
+    start reached the shooting screen (4.4.4); since then it is 1/200 s there too (X, `emu/test/test_storage.mjs`).
   - Not filled: Sv +38174 (TAKE's context), so ISO stays 25 (REC_IMAGE's); FNumber stays 0/10 (the lens step and
     the lens flag are takepic's); the other takepic fields above. The files' size and picture are unchanged; only
     the Exif exposure fields move.
@@ -4405,12 +4408,13 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     its geometry is not read.
   - *The white-balance gains.* Their inputs include TAKE's context fields the still states fill (item 6); without
     those the computation divides by zero (4.3.4, X). No step here supports them (each input and its writer: below).
-- **Sized plan to a development hook (I).** (1) H-SHOTALLOC and the shot's record as TAKE's: days (read the normal
-  still's caller and kind on three bodies, re-pin the sources' logs). (2) TAKE_EXPOSE's still request (RdyFcsTake's
-  `0x600`) natively, which the lab stopped at a jump to `0x000020fb` in 4.1.8: days to a week. (3) TAKE's still states with their neighbours stood in (the camera driver, BC, the dust filter),
-  which fill TAKE's context and so Sv and the white-balance inputs: 1-2 weeks (4.3's estimate). (4) REC_PREPRO's
-  white-balance step natively on that record: days after 3. (5) The parameter set natively, then the run up to the
-  pipeline unit's request (4.3.9's work pool and stage table): weeks. Every data hook in the set runs only after 5.
+- **Sized plan to a development hook (I; the first pass's, revised below).** (1) H-SHOTALLOC and the shot's record as
+  TAKE's: days (read the normal still's caller and kind on three bodies, re-pin the sources' logs). (2) TAKE_EXPOSE's
+  still request (RdyFcsTake's `0x600`) natively, which the lab stopped at a jump to `0x000020fb` in 4.1.8: days to a
+  week. (3) TAKE's still states with their neighbours stood in (the camera driver, BC, the dust filter), which fill
+  TAKE's context and so Sv and the white-balance inputs: 1-2 weeks (4.3's estimate). (4) REC_PREPRO's white-balance step
+  natively on that record: days after 3. (5) The parameter set natively, then the run up to the pipeline unit's request
+  (4.3.9's work pool and stage table): weeks. Every data hook in the set runs only after 5.
 - **The normal still's shot is the application's take buffer (2026-11-14, second pass; D on E143).** Not TAKE_MAIN's:
   - TAKE's still states allocate a shot only under context bytes of other modes: StlRdy1's function, after the
     exposure fill, calls `0x503aa8bf` where `0x62a4b190` is 1, `0x503af59e(8)` (at `0x503b1365`) where `0x62a4b16c` and
@@ -4578,8 +4582,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 - **Open.** Where CapBuf_TakeBuff allocates and frees in the release sequence; the strobe sequence's mode word
   `0x62a34c2c` and its init; who writes the white-balance step's +10542, +10546, +10548, +10552, +38210, +41001,
   +7626 and +6140; which operand the auto white balance's multiply refuses; the buffers' geometry (MM's kinds); the
-  readout's event and unit; what E146's and E147's start screen (GUI state `0x102`) is and whether the camera plans
-  there; TAKE_EXPOSE's `0x600`; E146's and E147's Rdy builder, exposure request and lens fill (read on E143 alone).
+  readout's event and unit; TAKE_EXPOSE's `0x600`; E146's and E147's Rdy builder, exposure request and lens fill
+  (read on E143 alone).
 
 ### 4.4 AF, lens and body IS
 
@@ -8812,7 +8816,7 @@ None of these needs flashing, but the last row, which needs code run on a camera
 | Timing: VD period per mode, shot-to-card, S2 to rec view, key latencies | the time model; completion times at the capture and storage seams |
 | Photos or video of the rear screen: rec view, AF frames in S-AF / C-AF / tracking, the recording screen with audio meters, Connection Setup | checks for the capture, AF, movie and wireless displays |
 | A dump of store F (flash `0x400a0000`, 128 KiB) | per-unit adjustment values, for a full boot |
-| **Needs code run on a camera** (a patched build that copies memory to the card): a still's development job from an OM-3 (E147), for one COLOR shot and one shot in another picture mode, taken at the stage wrapper's entry `0x504f8e1c` (before the YC packing) and again after the stage list `0x504f8694` returns (`0x504f8e2e`). The job record C (192 bytes, a0); the request R (C+4; 4 KiB covers every offset read so far, the highest R+1756); the register image (C+8; 16 KiB: the stages' output O is its +2832 or the request's own block, the second block follows O at +4396, and the set-up's dispatch hands out parts of the image up to its +11860); and after the call the tables O points at (the pointers at O+3172..O+3184, O+3828 and O+4344..O+4392; 32 to 4096 entries each). The offsets are 4.3.12's and 4.8.13's ("The development's pages"). A dump stays out of the tree and is read at run time, as a Caduceus checkout is; it may hold a body's calibration, so its owner decides what to share | the stage checks from "an assumed job" to "a camera's job": the lab calls the still's stages on a job a test writes (`emu/test/test_lookhooks.mjs`, 4.3.12), and no call can show that the camera's request holds what the test wrote or 0 where the test left 0. One dump gives R's fields the stages read, whether the request names its own block and so which flags the stage list gets (C+60), the unit masks a development request sets (the image's words 0 to 2, 4.8.13) and a stock output to compare with, without the native TAKE, white-balance and parameter-set work of 4.3.13. It is E147's layout and says nothing of another body's |
+| **Needs code run on a camera** (a patched build that copies memory to the card): a still's development job from an OM-3 (E147), for one COLOR shot and one shot in another picture mode, taken at the stage wrapper's entry `0x504f8e1c` (before the YC packing) and again after the stage list `0x504f8694` returns (`0x504f8e2e`); a second entry, `0x504f8e43`, calls the stage list first (at `0x504f8e44`) and `0x504f3088` after it (D), and which of the two a still takes is not read (?), so a dump is taken at both. The job record C (192 bytes, a0); the request R (C+4; 4 KiB covers every offset read so far, the highest R+1756); the register image (C+8; 16 KiB: the stages' output O is its +2832 or the request's own block, the second block follows O at +4396, and the set-up's dispatch hands out parts of the image up to its +11860); and after the call the tables O points at (the pointers at O+3172..O+3184, O+3828 and O+4344..O+4392; 32 to 4096 entries each). The offsets are 4.3.12's and 4.8.13's ("The development's pages"). A dump stays out of the tree and is read at run time, as a Caduceus checkout is; it may hold a body's calibration, so its owner decides what to share | the stage checks from "an assumed job" to "a camera's job": the lab calls the still's stages on a job a test writes (`emu/test/test_stages.mjs` under A-STAGEJOB, `emu/test/test_lookhooks.mjs`, 4.3.12), whose pinned read-while-zero lists say which bytes the dump must hold (E147: 117 for the stage list, 37 of them changing an output), and no call can show that the camera's request holds what the test wrote or 0 where the test left 0. One dump gives R's fields the stages read, whether the request names its own block and so which flags the stage list gets (C+60), the unit masks a development request sets (the image's words 0 to 2, 4.8.13) and a stock output to compare with, without the native TAKE, white-balance and parameter-set work of 4.3.13. It is E147's layout and says nothing of another body's |
 
 ## 9. Facts settled between the surveys
 

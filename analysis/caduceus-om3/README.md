@@ -944,7 +944,7 @@ window branch (the mapper, the window's cached view and the flush after each row
    protocol (the unit masks, the set-up, the go, the end's IRQ 288) is read and modelled for the play module's decode
    only (S-IMGPIPE, `docs/hle-gaps.md` 4.8.13; D and X on E143, whose board E147 shares). The development's pages are
    read as far as the writers that copy the stages' blocks to them (4.8.13 "The development's pages", D on E143 and
-   E147: the stages' output O goes to the page `+0x1000` at O + `0x80`, the RGB gamma tables and the luminance LUT
+   E147: the stages' output O goes to the page `+0x1000` at its `+0x80`, the RGB gamma tables and the luminance LUT
    it points at to `+0xc800`), so a hook's records and tables can be followed to a page and an offset. The lab keeps
    no page for them: a development request's first write there is a bus error. Which unit-mask bits such a request
    sets and what the pages' words mean are not known (?), and the firmware gives no evidence of the pixel processing

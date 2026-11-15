@@ -741,7 +741,8 @@ const SET_SAVE = A(0x500421CD), SET_SAVE_RETURNS = new Set([A(0x503F01A4)]);
 // instruction; another build keeps it there or in a register, fact 'func_direct.id', src/fw/facts.mjs funcDirect,
 // which bin/port.mjs also places the start by)
 const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = 27;
-// The page's texts for the four stand-ins (playui.mjs STAND_INS is a recorded document and stays as it was).
+// The page's texts for the camera application's stand-ins, kept apart from playui.mjs STAND_INS; the Stand-ins tab
+// shows both (src/lab/playapi.mjs standInRows).
 export const CAMAPP_STAND_INS = {
   "H-GUIBYAPP": "the lab's bring-up does not create the GUI (the creator 0x5108bc37): the application's start does, from CA_MAIN's code (0x510609ce), as on the camera; the lab takes the GUI's task and OSD records after it. Created twice, the lab's idle GUI kept a root of output 0 and one of the two buffers of OSD layer 1 (the registry 0x62b26528), so the shown root's double buffer had layer 1 on one side only: on the EVF the bottom bar and most of the information were missing in every other frame (docs/om1-shutter-spec.md section 7 item 59)",
 "S-CAMAPP": "the camera application runs natively in every session: the event broker init 0x502a48b6, then the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), in the start tasks' order, and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too; control camapp 3 runs them with the transaction path native, the OXF main thread started before HL_INIT",

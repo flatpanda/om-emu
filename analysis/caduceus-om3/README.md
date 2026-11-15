@@ -20,8 +20,8 @@ round's base. Where this round's modules changed what the lab shows, the text ma
 `f2b326b`" and gives the result on the round's final tree beside it (X, 2026-11-13). A second round the same day, on
 base `ae63e25`, took up section 7's follow-ups against the checkout at `0b1d5cb`, which adds v0.29.1; its modules are
 listed in 4.1, and where it changed a result the text says so. A third round on 2026-11-14, on base `a68dca3` and the
-same checkout, took up the second round's follow-ups in the same way. No excerpt of Caduceus' code, no byte of its
-patch and no picture it draws is committed.
+same checkout, took up the second round's follow-ups in the same way, and a fourth later that day, on base `b36e3e5`,
+took up the third's. No excerpt of Caduceus' code, no byte of its patch and no picture it draws is committed.
 
 **Licence.** The repository is Apache-2.0 (`LICENSE`) with a `NOTICE` that says the release patch files hold only the
 bytes the project writes, that its tour screenshots were drawn by om-emu running its firmware, and that its developer
@@ -77,8 +77,10 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
    their driver's remaining tools (stack captures, dumps, the display options, a call at a breakpoint's stop), the
    still / movie switch as an input, a power-on without a card, the boot-stage bits the lab can justify, the camera's
    pipeline constructor for a still (their still set-up hook runs at S2), TAKE's exposure in the picture's EXIF and a
-   check of three look hooks on what they write (4.1, 4.6). **Corrections to om-emu's docs:** four (section 5), all
-   made.
+   check of three look hooks on what they write (4.1, 4.6). The fourth adds a built `.BIN` as `--main`, a patch's own
+   cache flush answered, the OM-3's display switch, the picture's shot in TAKE's own table, the stock stage builders
+   pinned on a job the test writes, and their Grain route and halation pass checked by calls (4.1, 4.6).
+   **Corrections to om-emu's docs:** four (section 5), all made.
 
 ## 1. What it is, and how it is built and delivered
 
@@ -458,10 +460,36 @@ The third round (base `a68dca3`, 2026-11-14) adds:
   film's ImageDescription (X, `emu/test/test_stillsetup.mjs --caduceus`). What their set-up code builds is not checked.
 - **TAKE's exposure in the shot's record** (S-EXIFPRM, `docs/hle-gaps.md` 4.3.13): StlRdy1's exposure-record fill run
   natively on the settings the exposure plan publishes, TAKE_EXPOSE's shutter range and takepic's copy into the block,
-  so the picture's ExposureTime is the session's plan (4.2's: 1/200 s, X). On E146 and E147 the plan exists only once S1
-  has left the start screen.
+  so the picture's ExposureTime is the session's plan (4.2's: 1/200 s, X). On E146 and E147 the plan then existed only
+  once S1 had left the start screen; since the fourth round it exists from the start (below).
 - **Their look hooks on their outputs** (`emu/test/test_lookhooks.mjs`; 4.6): hue and lightness, Blacks and Whites
   and split toning checked on the records, LUT and tables the stages write.
+
+The fourth round (base `b36e3e5`, 2026-11-14) adds:
+
+- **A built `.BIN` as `--main`** (`emu/README.md` "Patch overlays"): the container whose head names E147 at 1.1 is
+  walked, its main code block descrambled and taken as a bare block is; its other blocks are not read and its
+  checksum is not checked, which the summary's `not_applied` says, so a run checks the main block's changes, not the
+  file the updater takes. What a file is (stock, another version, modified, unknown, with a reason) comes from
+  `src/fw/identify.mjs`, by the head's model field and the digest, never a length.
+- **A patch's own cache flush** (H-PATCHFLUSH, `emu/FIDELITY-NOTES.md` 7.16): a call of the kernel's flush whose return
+  address lies on patched bytes is answered as the stock callers the lab lists are; a stock routine the patch calls
+  that flushes on its own stays refused. Their halation pass needed it (4.6).
+- **The OM-3's display switch and TFT start** (H-CHAINREST, `docs/hle-gaps.md` 4.4.4): the switch failed the lab's
+  re-entry check in either direction, and a TFT start published no frame before the first wait. Both were the lab's:
+  the touch task did not run, and a settle ended inside the touch driver's 1 ms sleeps. With the touch task running
+  and lab time run on through those sleeps, `eye`, `lv` and `switch:eye=V` switch both ways and a `shot:` right after
+  the open has a frame (X, `emu/test/test_dispswitch.mjs`); a shot straight after the start has the exposure plan
+  (1/200 s).
+- **The picture's shot in TAKE's table** (H-SHOTALLOC, `docs/hle-gaps.md` 4.3.13): api_rec's allocation and free run
+  natively around each picture, as the application's take buffer does; the EXIF parameters are that shot's record,
+  and ImageParam's sources find its buffers, which hold no sensor image.
+- **The stock stage builders** (`emu/test/test_stages.mjs`, A-STAGEJOB, `docs/hle-gaps.md` 4.3.12): the stages their
+  hooks sit in (the COLOR stage and its HSL builder, the LUT builder, the tone step, the gamma stage, the YC packing,
+  the grain builder, the register writer) called standalone on stock E147 (and E122, E143) with outputs and read sets
+  pinned. Without `OM_CADUCEUS`, this is the stock side a hook's output is compared with (4.6).
+- **Their Grain route and halation pass by calls**, and their still set-up code traced at S2
+  (`emu/test/test_lookcode.mjs`, `emu/test/test_stillsetup.mjs --caduceus`; 4.6).
 
 ### 4.2 Verifying a caduceus build
 
@@ -474,7 +502,8 @@ node emu/bin/session.mjs --model E147 --patch $R/patch.json --card $W/card.omsd 
   --nvram $W/nv.json --out $W/run --script $W/flow.txt; echo "exit $?"
 ```
 
-`--main $W/main.bin` takes a local build's block in place of `--patch`. `$W/flow.txt`:
+`--main $W/main.bin` takes a local build's block in place of `--patch`, and `--main` a built `.BIN` too (its main code
+block alone, 4.1). `$W/flow.txt`:
 
 ```
 wait:1500
@@ -549,6 +578,19 @@ runs, as their worker (H-PATCHTASK) waits for boot-stage bits `0x2e9` at `0xa32d
 bits of sections 1 to 7 and not bits 7 and 9, which follow section 8's step on CPU 1 (2.2; D, their source; X: the
 state word is still 0 after 4.5 s), so the half press loads the films.
 
+**Below the pixels, per release** (4.6; each reads `$C/releases/$OM_CADUCEUS_RELEASE`, `v0.29` by default, and runs
+about 20 to 30 s):
+
+```sh
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_looks.mjs --session        # a film's values (settings, reads)
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_lookhooks.mjs --session    # three hooks on their outputs
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_lookcode.mjs --session     # Grain's route and halation, by calls
+OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_stillsetup.mjs --caduceus  # their set-up code at S2
+```
+
+The calls of `test_lookcode` leave their code's own state bytes pointing into a scratch the call gave back (4.6), so
+a session that makes such calls takes no shot after them.
+
 **v0.29.1's films with no card** (their #38, camera-tested). Their gate loads the films from the card only where the SD
 medium word `0x60369308` is OK (D). The flow takes the card out while the camera runs (`card:out`) and later powers on
 with the slot still empty (`power:off`, `restart`); S-MEDIA and S-CARD leave the word NOT_PRESENT (`01100000`) both
@@ -589,7 +631,7 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 | calls from a spec with memory, sp or pc and stop pcs (`ncall`, `tonecall`) | `call:FN:entry=PC,stop=PC,frame=MASK/SIZE`, or `call:@FILE` with the op's whole request (memory, reads, scratch, restore); `sp` and `mdr` are the frame the harness's CALL builds, a larger frame for code that moved `sp` before the entry (their two drivers give their values so, 4.1) |
 | exec-trace watches (`WATCH`, `WSTACK`, ...) | `trace:PC`, `trace:mem:ADDR:LEN[:r\|w\|rw]`: each step's hits with the 16 registers and counts; `break:` with `read:` and the other tokens at the stop, then `resume`; `trace:PC:stack=N` is `WSTACK`, the N words from `sp` up at every hit |
 | a dump of RAM (`0x60000000..0x63000000`, `0xa2000000..0xa6000000`) | `dump:ADDR:LEN:FILE`, at most 64 MiB a token, so one token per range here; ranges the boot does not load are named in the record with S-STALERAM's fill |
-| the player's `a15` and EVF options (`a15: 'on'`, the TFT) | `--a15 auto\|off\|on`, `--device tft\|evf`; on E147 a live display switch fails the lab's re-entry check in either direction (4.4) |
+| the player's `a15` and EVF options (`a15: 'on'`, the TFT) | `--a15 auto\|off\|on`, `--device tft\|evf`; `eye`, `lv` and `switch:eye=V` switch the display live, both ways on E147 since the fourth round (4.1) |
 
 ### 4.4 What the lab cannot verify today
 
@@ -601,18 +643,28 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   rec_ImgPro_CreateParam and its helpers (`.hook_fx` among them), the image library's create with the constructor the
   picture mode selects and its second step (on E147 at COLOR, MONO and ART the stub `0x50496710`, where their
   `.hook_su` runs, X at COLOR),
-  ImageParam's body and the release; the parameter set, the run, its stages and kinds do not run (S-JPEGENC), nor do
-  TAKE's shot-record fill and takepic, of which S-EXIFPRM stands in for the exposure copy (`docs/hle-gaps.md` 4.3.12,
-  4.3.13; X, pinned per body in `emu/test/test_storage.mjs`). What their set-up code builds is not checked: the run
-  that would use it does not run.
+  ImageParam's body and the release, on a shot TAKE's own table holds (H-SHOTALLOC); the parameter set, the run, its
+  stages and kinds do not run (S-JPEGENC), nor do TAKE's shot-record fill and takepic, of which S-EXIFPRM stands in for
+  the exposure copy (`docs/hle-gaps.md` 4.3.12, 4.3.13; X, pinned per body in `emu/test/test_storage.mjs`). The stages
+  their hooks sit in are reached only by calls, on a job the test writes (4.6).
+- **A film with Grain at S2**: their work-list hook asks the stock texture builder, whose build is a request to the
+  pipeline unit, and the lab has no model of the page it writes: the session stops there (4.6, X). So such a film is
+  checked by calls, not by a shot.
+- **The bus window inside a call**: a buffer that the window maps (where the camera keeps its images) is not reached
+  by a call: the mapper's own flush, the window's second register and its cached view stop it (4.6), so `hl_run` is
+  checked on a buffer in main DRAM only.
 - **The colour wheel's plane**: the GPU plane is not composed (`PLANC_UNOBSERVED`, stock too), so on the wheel's pages
   the published frame stays the one before them and `shot:` cannot show the wheel or its guides (X).
 - **The boot order** of sections against the tasks that call into them (FIDELITY 7.18).
-- **Timing, the watchdog and the cache**: no fetch cost, no cache or watchdog model (their lk7 / lk9 hang).
+- **Timing, the watchdog and the cache**: no fetch cost, no cache or watchdog model (their lk7 / lk9 hang). The
+  kernel's flush is answered at once, for a patch's own call too (H-PATCHFLUSH), so a patch that leaves out a flush
+  the camera needs runs in the lab as if it had one.
 - **Component 2's frames**: the lab loads only the main and resource blocks, and `om3-patch-2`'s `frames` are
   reported as not applied.
-- **The EXIF FNumber and ISO**: `0/10` and 25 have no source in the lab (takepic's lens step and TAKE's context, which
-  do not run). ExposureTime is the session's exposure plan, on E147 once S1 has left the start screen (X, 4.2).
+- **The EXIF FNumber and ISO**: `0/10` and 25 are not filled in the lab. Their sources are read: FNumber from TAKE's
+  lens fill and the lens step, ISO from setting 50522 handed back by the strobe sequence; both need TAKE's fills run
+  natively in order and the strobe sequence's init (`docs/hle-gaps.md` 4.3.13). ExposureTime is the session's exposure
+  plan (X, 4.2).
 - **Picture runs across a row end in formats other than 0x0B**, and a run past a picture's last row: the OSD engine
   refuses them (`BMP_TOKEN`, in the step's `osd_errors`, which fails the step); A-BMPWRAP covers format 0x0B only, the
   one their pictures use.
@@ -627,10 +679,6 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   call at a watchpoint's stop is refused (`emu/README.md` "The debug API"). A stop is a main-loop visit an untraced run
   need not make, so the interrupt taken after it may differ; logging traces and a break at a hooked pc do not change the
   run (X).
-- **E147's live display switch**: the switch fails the lab's re-entry check in either direction, the EVF back to the TFT
-  and the TFT to the EVF (X: `the re-entry landed on GUI state 0x0108 panel 0`, not the switch's panel 10, with
-  `switch:eye=1` or `eye` after the open or S1; after S1 at `a68dca3` too), so a script stays on the display `--device`
-  picks.
 - **`bin/nav.mjs` on E147**: its bring-up check stops at start, stock too (X: `error: bring-up: tasks started: [...]`).
   Use `bin/session.mjs`.
 
@@ -746,6 +794,13 @@ colour taken as r instead of their order fails all 4. A wrong look in a future r
 LUT index or channel entry with the lab's value and LOOKS.BIN's. A hook that is not reached shows as a stock output
 where the film has values.
 
+**The stock side (X, 2026-11-14).** `emu/test/test_stages.mjs` (no `OM_CADUCEUS`; `bin/test.mjs` runs it on E122,
+E143 and E147) calls the same stages on stock E147 standalone, each builder on a job of its own, and pins their
+outputs and every job byte each reads (`docs/hle-gaps.md` 4.3.12). The hook test's job is the same kind of
+assumption, named there A-STAGEJOB (`emu/FIDELITY-NOTES.md` 8.2): the values are the stages' answers to that job, and
+a camera's job may hold other bytes where both leave 0 (on E147, 37 of the 117 bytes the stage list reads while they
+are 0 change an output when set, X).
+
 Not checked there: halation, Grain and glow. Their data goes to the combiner and the Art Effect job, or acts as code on
 pixels, not on a stage output read there. Grain's camera route and halation are checked by calls of their own (next);
 glow (the Soft Focus job flags and the blend weight) is not checked.
@@ -860,19 +915,23 @@ window branch (the mapper, the window's cached view and the flush after each row
 
 **What stands between the hook sites and the JPEG**, in the camera's order (I for the order):
 
-1. **TAKE's shot** (S-RELSEQ, S-EXPOSE, S-TAKEFRAME): no take request and no RAW frame; rec_ImgPro_ImageParam's four
-   sources find no buffer in TAKE's shot table (X on E143, E146 and E147: S-JPEGENC's text). Since 2026-11-14 TAKE's
-   exposure record reaches the shot's record (S-EXIFPRM runs its fill natively, `docs/hle-gaps.md` 4.3.13). The shot's
-   buffers come next: TAKE's own shot allocation `0x503af59e` runs natively in an E143 session (X, a probe: Bayer,
-   thumbnail and record handles), so H-SHOTALLOC would run it at S2 once the normal still's caller and kind are read,
-   and a declared S-RAWFRAME would fill the Bayer buffer, as the lab has no sensor readout (S-SCENE draws a view frame).
-   Size: days for the allocation, then TAKE_EXPOSE's still request and TAKE's still states with their neighbours stood
-   in, 1-2 weeks (4.3.13's plan, I).
+1. **TAKE's shot** (S-RELSEQ, S-EXPOSE, S-TAKEFRAME): no take request and no RAW frame. Since 2026-11-14 the shot
+   exists in TAKE's own table with its record and buffers (H-SHOTALLOC: api_rec's allocation and free natively, as the
+   application's take buffer; X on E143, E146 and E147), ImageParam's four sources find its buffers, and TAKE's
+   exposure record reaches the shot's record (S-EXIFPRM runs its fill natively; `docs/hle-gaps.md` 4.3.13). The
+   buffers hold no sensor image. Next (4.3.13's revised plan, I for the sizes): TAKE's own fills natively on that shot
+   and TAKE's context, in the still states' order (days: FNumber, the lens fields, the WB mode and key), the strobe
+   sequence's init (Sv, so ISO), then a declared S-RAWFRAME for the Bayer and thumbnail buffers, as the lab has no
+   sensor readout; TAKE_EXPOSE's still request and TAKE's still states with their neighbours stood in, 1-2 weeks.
 2. **The white balance gains** (S-RECREQ in place of REC_PREPRO's step; REC_RAWNR's on E147): the shot record's four
-   gains stay 0 and the library's parameter set divides by them; on the camera a computation over TAKE's shot fields
-   gives them (`docs/hle-gaps.md` 4.3.4, D on E143). Its inputs include takepic's copies of TAKE's context fields,
-   which only TAKE's still states fill (4.3.13, D), so it waits on 1: days after it (I). Whether the development's own
-   WB reads (`0x50442192`, `0x504666a3`) belong to this step is not read (?).
+   gains stay 0 and the library's parameter set divides by them (X, an E143 probe on H-SHOTALLOC's shot: fault 6 at
+   `0x505099e0`); on the camera a computation over TAKE's shot fields gives them (`docs/hle-gaps.md` 4.3.4, D on E143).
+   Each of its inputs is now read to its writer (4.3.13, D on E143): six settings TAKE's fills read, two that exist
+   (the preset gains, the thumbnail's handle), the key and the frame count from the still states' own code, two from
+   the strobe sequence's answer, eight fields no fill of TAKE's writes (their writers ?), and the thumbnail's pixels,
+   the one input a capture gives. There is no shortcut, and no invented value is needed once TAKE's fills run in order
+   (1), with S-RAWFRAME's thumbnail and the eight fields' writers read. Days after 1 (I). Whether the development's
+   own WB reads (`0x50442192`, `0x504666a3`) belong to this step is not read (?).
 3. **The image library's parameter set, the run and Jpeg_Result** (S-JPEGENC's three steps, on E147 as on E143 since
    2026-11-11, `emu/src/lab/rec.mjs`, D): the stage table, the work pool (a probe's allocator walk did not end on E143,
    `docs/hle-gaps.md` 4.3.4, X) and the development stages whose builders their hooks patch (I; the work-list hook is
@@ -956,8 +1015,14 @@ front dial (section 3's table).
   (`docs/hle-gaps.md` 4.1.13).
 - Whether the camera, too, brings a film picked without a later half press back as `Color Profile k` after a power
   cycle (4.2; the lab's order, I for the camera).
-- Which bits of the stage list's flags (the job's +60) the camera sets on a still; the hook test takes their
-  `tonecall`'s mask (4.6, ?).
+- Which bits of the stage list's flags (the job's +60) the camera sets on a still, and what its request holds where
+  the tests' jobs leave 0; the hook test takes their `tonecall`'s mask, the stage test all ones (4.6, ?). One
+  development job dumped from a camera would answer both (`docs/hle-gaps.md` section 8).
+- What the bus window's second register `0x9810004c` is, which E147's window mapper reads after its flush, and how the
+  window's cached view (`0x78000000..0x7fffffff` by their source) maps (4.6, `docs/om1-vsc-spec.md`); both stand
+  between a call and `hl_run`'s window branch.
+- Who sets the stages `0x0901` and `0x0902` and the level byte +1751 on a key-12 request (the stock grain's combiners 31
+  and 32, `docs/hle-gaps.md` 4.3.12), and what the texture's build `0x504ae099` writes on the pipeline unit's pages.
 - Why the firmware's `fopen` found `DEBUG.TXT` but not `DEBUG.ON` in the lab (their notebook; not tried on a camera).
 - Whether E143's SD updater accepts a modified main block as E147's does.
 
@@ -967,40 +1032,48 @@ Done: the first round's 1 (a regression run of each release), 2 (row-crossing OS
 exec traces in scripted sessions) in the second round (4.1, 4.2); the second round's 1 (the session's dial tokens), 2
 (E147's stills-mode keys: re-run, the arrows and dials agree), 3 (hue and lightness, Blacks and Whites and split toning
 on their outputs), 4 (a power-on without a card), 5 (E147's still at COLOR, MONO and ART: the cause was S-RECREQ's
-Command 0, not MM) and 6 (the boot-stage bits, as far as the lab runs the steps) in the third (4.1, 4.6). What they
-left is below.
+Command 0, not MM) and 6 (the boot-stage bits, as far as the lab runs the steps) in the third (4.1, 4.6); the third
+round's 1 (their still set-up code traced at S2: without Grain it writes nothing into the job, with Grain the
+texture's build stops at the pipeline unit), 2 (the shot's buffers as TAKE's, H-SHOTALLOC), 4 (E147's display switch:
+the lab's, fixed; E143's own failure right after S2's rec view stays open, `docs/ROADMAP.md` "Debug API follow-ups" 7)
+and 6 (halation by a call, on a buffer in main DRAM) in the fourth (4.1, 4.6). What they left is below.
 
-1. **What their still set-up builds**: a trace of `.hook_su`'s calls (their texture builder) and a watch on the job's
-   +8324 through S2 at COLOR, MONO and ART; TAKE's other fills of the shot record after the picture mode (E147's
-   settings 63153 at COLOR and 63281 at MONO, `docs/hle-gaps.md` 4.3.12) written by S-EXIFPRM as TAKE's fill writes
-   them. Size: days (I). Payoff: their grain route's first step checked where it runs today.
-2. **The shot's buffers as TAKE's** (H-SHOTALLOC, `docs/hle-gaps.md` 4.3.13): TAKE's shot allocation run natively at
-   S2, once the normal still's caller and kind are read on E143, E146 and E147, and the shot's record TAKE's. Size:
-   days (I). Payoff: the first step of 4.6's list 1, and ImageParam's sources find their buffers.
+1. **TAKE's fills natively on the allocated shot** (`docs/hle-gaps.md` 4.3.13's 1b and 1c): the mode bytes, StlRdy1's
+   exposure request, the shot-record fill (with E147's settings 63153 at COLOR and 63281 at MONO), the key, takepic,
+   the lens fill and the third fill, in the still states' order on TAKE's own context, in place of S-EXIFPRM's copies;
+   then the strobe sequence's init. Size: days each (I; read on E143, E146's and E147's Rdy builder and lens fill not
+   yet). Payoff: FNumber, ISO and the lens fields in their pictures' EXIF, and the white balance's inputs (4.6 list 1
+   and 2).
+2. **A camera's development job** (`docs/hle-gaps.md` section 8): one COLOR shot and one other mode dumped at the
+   stage wrapper by a patched build. Their project builds such patches and runs them on an OM-3. Size: minutes to ask,
+   a day to digest; it depends on a third party, and nothing has been asked. Payoff: the hook and stage checks on a
+   camera's job instead of the tests' (4.6).
 3. **E147's remaining key differences**: OK on their custom Picture Mode row, the ISO and Fn-type keys (not in board
    0's tables), the Fn lever and setting 534, and the still / movie switch's two movie positions (6). Size: days (I).
    Payoff: the Button Function paths users run.
-4. **E147's live display switch, either direction** (4.4): read the screen the re-entry lands on (GUI state `0x0108`
-   panel 0) and which screen the switch should hold; E143 fails the same check right after S2's rec view
-   (`docs/ROADMAP.md` "Debug API follow-ups" 7). Size: days (I). Payoff: their driver's EVF steps.
-5. **The second slot's media word** where no media manager runs: a rule for the setter's second-slot store, then
+4. **The second slot's media word** where no media manager runs: a rule for the setter's second-slot store, then
    S-MEDIA and S-CARD writing it (`docs/hle-gaps.md` 4.8.3). Size: a few days (I). Payoff: E143 and E146 only; the
    OM-3 has one slot.
-6. **Halation on a buffer of the call's** (`hl_run`): a call on an image record in the call's scratch, once the lab is
-   shown to serve the bus window it uses (4.6). Size: days to a week (I). Payoff: low until a film sets halation.
-7. **CPU 1 for section 8's constructors**: the six constructors and the step that sets stage 8's bit, run on a CPU 1
+5. **The bus window inside a call**, for `hl_run`'s window branch: what the register `0x9810004c` is, the mapper's
+   flush listed once its caller is read, and the window's cached view (6). Size: days to a week, if the register's
+   role can be read (I). Payoff: low until a film sets halation.
+6. **CPU 1 for section 8's constructors**: the six constructors and the step that sets stage 8's bit, run on a CPU 1
    of the lab's (`docs/hle-gaps.md` 4.6, 4.6.4), not by setting the bits. Size: weeks (I: the lab runs no CPU 1).
    Payoff: v0.26.2's and v0.27's power-on load; S-STAGE9 and S-SECLOADED's bits 8 and 9 in the camera's order.
-8. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
+7. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
    calls a later section early faults; sections 9 and 10 absent until stages 7 and 8 (2.2, `docs/hle-gaps.md` 4.6.4,
    FIDELITY 7.18). Size: weeks (it is CPU 2's boot job, and section 10's copy waits on 7). Payoff: the v0.20-t1 class of
    boot loop.
-9. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
+8. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
    months. Payoff: the largest: their looks on the camera's job, grain and halation, and every capture-path crash in
-   section 3. It splits (4.6, `docs/hle-gaps.md` 4.3.13's sized plan): TAKE's shot (2 above, then TAKE_EXPOSE's still
-   request and TAKE's still states, 1-2 weeks), the white balance gains (days after it) and the image library's
-   parameter set and run natively up to the pipeline unit's request (weeks), which runs every data hook on the
-   camera's job; then a model of the pipeline unit, which the firmware gives no evidence for and which would be a
+   section 3. It splits (4.6, `docs/hle-gaps.md` 4.3.13's revised plan): TAKE's fills (1 above), S-RAWFRAME,
+   TAKE_EXPOSE's still request and TAKE's still states (1-2 weeks), the white balance gains (days after them) and the
+   image library's parameter set and run natively up to the pipeline unit's request (weeks), which runs every data hook
+   on the camera's job; then a model of the pipeline unit, which the firmware gives no evidence for and which would be a
    declared stand-in (months).
-10. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and
-    stock.
+9. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and
+   stock.
+
+Leads for upstream, not sent (nothing has been posted to them): two places of their `research/NOTES.md`
+differ from their source and from the stock code (the ft1 paragraph and the 7-byte block, 4.6), and `hl_run`'s header
+comment says two allocations where the code makes three.

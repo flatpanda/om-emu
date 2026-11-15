@@ -161,7 +161,9 @@ Their decoder is an independent implementation of the scheme in `docs/firmware-c
   twelve-sector HSL, tone, sharpening, grain). This is the kind of parameter-block map `docs/hle-gaps.md` 4.3's seam
   C2 step needs; the E143 and E147 counterparts are located since 2026-11-14 (`docs/hle-gaps.md` 4.3.12, "The
   still's stage builders on E122, E143 and E147": each builder's entry, frame and call sites on the three bodies;
-  the matrix builder, by the lead alone the list's first call, is not in that table).
+  the matrix builder, by the lead alone the list's first call, is not in that table). Its offsets agree with this
+  section's: the saturation set at request + 1076 (E122), + 1479 (E143) and + 1739 (E147), and the HSL builder's
+  twelve records at output + 676 (E122) and + 836 (E143, E147) (D; X, `emu/test/test_stages.mjs`).
 - **ORF metadata:** their CMIO P (tag `0x0635`, 5,764 bytes) and T (`0x0636`, 119,360 bytes) blocks carry the HSL
   coefficients and a 3,028-byte base table; the lab writes no firmware-developed ORF, so this is reference only.
 
@@ -448,10 +450,11 @@ report). Line numbers are theirs at `d565cb6`.
   2026-10-29, the day before E122 reached its shooting screen (`docs/ROADMAP.md` "Multi-model"). 2.1 keeps its value
   as the list of board facts their boot work supplied.
 - *Patch input.* `OM_EMU.md:49-56` describes a patch file of `block`, `offset`, `old` and `new` entries and says a
-  modified `.BIN` cannot replace the stock input. Since then the tools also take a whole patched main
-  block (`--main`, node only) and Caduceus for OM-3's digest-anchored files (`emu/README.md` "Patch overlays"). A
-  container `.BIN` is still not an input and a change to the resource block still needs a patch file, so their
-  converter keeps its use for a release that changes both blocks, as theirs does.
+  modified `.BIN` cannot replace the stock input. Since then the node tools also take a whole patched main block or a
+  container `.BIN` (`--main`) and Caduceus for OM-3's digest-anchored files (`emu/README.md` "Patch overlays"). Of a
+  `.BIN` only the main code block is taken: its other blocks are not read and its checksum is not checked. A change
+  to the resource block still needs a patch file, so their converter keeps its use for a release that changes both
+  blocks, as theirs does.
 - *Counts.* `OM_EMU.md:102-104` reports 5,311 instruction vectors a tier; master has 5,322 (X, `bin/test-pure.mjs`).
   A difference of revisions, not of fact.
 
@@ -481,9 +484,11 @@ report). Line numbers are theirs at `d565cb6`.
 
 1. *The PEN-F's two picture-function inputs* (8.4). Without them the COLOR editor is not reached from the shooting
    screen; their probe adds the two controls from outside. Hours to a day, with a session test.
-2. *A modified update file as input.* They wrote a converter from two `.BIN` files to a patch file. `--main` now
-   covers a decoded main block in node; taking a container `.BIN` there (walk it, read the main block, compare with
-   the verified stock block, say what else differs and is not applied) is hours, the browser about a day.
+2. *A modified update file as input.* They wrote a converter from two `.BIN` files to a patch file. Made in node
+   (2026-11-14): `--main` takes a container `.BIN`, walks it, compares its main code block with the verified stock
+   block and says in the summary that the other blocks and the checksum are not applied (above); what a file is comes
+   from `emu/src/fw/identify.mjs`. The browser player's Patch option takes no `.BIN` yet: about a day. Their
+   resource-block changes still need a patch file.
 3. *A supported way to script a session.* Their probe imports the lab's internals (the player, the replay parser,
    the control table, the PNG writer). `emu/host/session.mjs` and `bin/session.mjs` exist since 2026-11-13; whether
    they serve the probe unchanged once item 1 is in was not tried. No further work is known.
@@ -523,7 +528,8 @@ the release. Whether the camera enters the editor at the press or at the release
 (?). The same holds for one to nine unnamed keys on twelve other ported bodies (`0x120b` on E147; `0x120b` or
 `0x1208` with `0x1224` on E148, E144, E137, E142, E140, E125 and E130; `0x1224` on E118 and E120; `0x120b` twice and
 a second code-4 key on E139; `0x120b`, `0x1224` and seven more on E134); E143, E146, E133, E145, E129 and E132 have
-none. What a held level changes in those sessions was not looked at (?).
+none. What a held level changes in those sessions was not looked at (?). Not fixed as of 2026-11-14; recorded as the
+lab's defect in `emu/FIDELITY-NOTES.md` 7.7.
 
 What it would take: two control rows wired where a body's table holds the codes, named as the firmware names them;
 the idle image giving every type-2 entry of the body's table its released level; and a session test on E122 whose

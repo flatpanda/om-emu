@@ -119,7 +119,7 @@ copied to (4.8.13), not the operation.
 | 2 | "PEN-F firmware 3.1" (`README.md:31-33`; `src/firmware.js:21`) | Not a gate: any main block of 21,364,672 bytes is taken as "PEN-F 3.1 layout, modified". The E-M5 II 4.1 and E-M10 II 1.4 blocks have that length; the E-M5 II file is accepted, all 55 function rows fail and the tables read from fixed addresses are garbage, with no error | X, rerun (E118); X, the study (E120) |
 | 3 | `test/realfw.mjs` prints every function's output for a real PEN-F 3.1 file (`README.md:79-80`) | Holds: 62 lines, 55 function rows, none failed | X, rerun |
 | 4 | "stages marked Firmware show the values a real PEN-F 3.1 `.BIN` produces" (`README.md:31-33`) | The function outputs hold: all 55 rows byte for byte and step for step through om-emu's `call` op in an E122 session (the study); rerun here for eight (six-axis modes 1 and 3, the YC packing at three settings, chroma mode 12, grain level 2, tone mode 3: equal values, 187, 283, 544, 544, 619, 56, 144 and 98 instructions as the bench counts). "A camera produces these values" does not follow: section 4 | X |
-| 5 | The fixture writes a job as the camera would see it (implied by 4) | Does not hold as stated. The study's sweep found 22 request and record bytes the fixture leaves 0 that change an output or make a call fault. Rerun for the YC packing at COLOR, sharpness 0, Sv 1280 (coring 7, gain 37, 544 instructions): the request's +0x431 = 1 gives coring 0 and gain 70 in 547; +0x430 = 1 gain 30; the record's +0x63 = 1 gain 0 and the first limit 0. Whether a camera's request has zeros there is ? | X |
+| 5 | The fixture writes a job as the camera would see it (implied by 4) | Does not hold as stated. The study's sweep found 22 request and record bytes the fixture leaves 0 that change an output or make a call fault. Rerun for the YC packing at COLOR, sharpness 0, Sv 1280 (coring 7, gain 37, 544 instructions): the request's +0x431 = 1 gives coring 0 and gain 70 in 547; +0x430 = 1 gain 30; the record's +0x63 = 1 gain 0 and the first limit 0. The 22 are the bench's fixture's: om-emu's own job (A-STAGEJOB, which sets every flag bit) leaves other bytes 0, and for the stage list alone 43 of the 66 it reads while 0 change an output (`docs/hle-gaps.md` 4.3.12). Whether a camera's request has zeros there is ? | X |
 | 6 | Only mapped regions exist and anything else is a reported fault (`src/native.js:1-2`) | Holds for unmapped accesses and unimplemented instructions. The mapped block's tail is `0xff` in the file though part of it is RAM the boot fills on the camera, and reads there return `0xff` without a fault; the seven functions do not read it | X, the study |
 | 7 | Sharpness +1 and +2 give the gain of 0 | Reproduced, and explained (D, E122): the gain is (K0 x LUT[clamp(base + sharpness, 0, 10)]) >> 8 with COLOR's base 5 and the table 256 from index 5 up, so on this path a positive sharpness changes nothing. oly_fw_analysis documents the table and says it does not prove equal photographs | X, D, the study |
 | 8 | "at the camera's register values both paths produce identical shaper output" and "`wsGain` reduces to `gain = KEDGE` exactly" (`README.md:65-66`) | Holds at the level of the two shaper functions, for ES 0, ESVX = ESVY = 64 and KEDGE up to 255 (851,105 cases, none differ); above 255 it clamps while the slider runs to 512. The rendered picture of the two paths differs by default (136,167 of 640,000 bytes, at most 16) because the bench path's brightness gain defaults to 1, and is identical at 0. It says nothing about the camera | X, rerun |
@@ -138,6 +138,11 @@ Not looked at: the E-P7 project its README also names (not read for this note; n
 - The PEN-F's seven entry points with their call sites, masks and frames (section 1), and the family on E143 and
   E147 (`docs/hle-gaps.md` 4.3.12 and 4.8.13 for the stage list, the YC packing, the job record and the wrapper that
   calls them; the per-stage table, its read sets and values are 4.3.12's, pinned by `emu/test/test_stages.mjs`).
+  om-emu's own values for the family (six of the bench's functions, its tone selector through the selector's wrapper,
+  and five more builders) are what `OM_EMU_MODEL=E122 node
+  emu/test/test_stages.mjs --json` prints (E143 and E147 likewise): each row with its entry, the job fields written,
+  the outputs and the read set, on om-emu's job (the named assumption A-STAGEJOB). The bench's "Firmware" values are
+  the same kind of number: the functions on an otherwise-zero job of its own.
 - The job record: what the generic handler writes into it on E122, E143 and E147, that the stages' output block lies
   inside the register image, and the pages its parts are copied to with their writers (4.8.13 "The development's
   pages"). The bench's own layout (the record's +12 = the parameter block's +524) is the PEN-F firmware's.
@@ -149,14 +154,20 @@ Not looked at: the E-P7 project its README also names (not read for this note; n
 
 - A call harness in which anything outside the declared job faults, with negative controls. oly_fw_analysis has it,
   the bench kept it, and om-emu's earlier note already listed it as worth adopting. In a session the `call` op does
-  not fault on a read outside the job (a null pointer reads page 0, X, the study); a stage check can instead pin the
-  set of addresses a call reads with `trace:mem`.
+  not fault on an access outside the job (a null pointer reads page 0, X, the study). `emu/test/test_stages.mjs` pins
+  instead the set of job bytes each call reads and every access outside the job, its stack and the image, through
+  `trace:mem`; `emu/test/test_slice.mjs` pins the call's limit on a synthetic block (a store through a null pointer
+  lands in the lab's low RAM and returns). A strict slice would need a memory map of its own for the call (a region
+  list for `createMachine`, or a second call loop on `core/`); not done.
 - Two provenance marks at the output, one for the values and one for the pixels. For om-emu's still they would read
-  "parameters" and "pixels": the lab's picture has the firmware's own EXIF set and the lab's pixels (S-JPEGENC).
+  "parameters" and "pixels": the lab's picture has the firmware's own EXIF set and the lab's pixels (S-JPEGENC). A
+  first tier is made: both pages, the Card panel and a session's `shot:` record say in words what the picture is
+  (`emu/src/lab/sources.mjs`).
 - A table of what the firmware's own code returned for the current inputs, with instruction counts, and a plain line
   when it did not run.
 - A firmware gate that answers stock, modified or other instead of throwing. Claim 2 shows what it must not do: a
-  length is not an identity; the header's model and the digest are.
+  length is not an identity; the header's model and the digest are. Made: `emu/src/fw/identify.mjs` answers stock,
+  other version, modified or unknown with a reason, a container's body by its head's model field and its digest.
 
 **Not taken:** `src/pipeline.js` as a model of the pipeline unit, any pixel formula, the measured kernel, the
 register field names of the table in section 2, the desktop program's arithmetic, the bench's setting keys, and any
@@ -185,8 +196,9 @@ lab can run it").
 - The meaning of the request's +0x431 on the PEN-F, which the YC packing reads and which moves the gain from 37 to
   70 and the coring from 7 to 0 (X); and whether a positive sharpness acts elsewhere on a real shot.
 - Which unit-mask bits a development request sets, and what the pages' words mean to the hardware (4.8.13).
-- On E143 and E147 a zero job gives twelve six-axis values that are the PEN-F's plus a constant, and a chroma word
-  for MONO that differs from the PEN-F's (X, the study): body values or artefacts of the zero job is ?.
+- On E143 and E147 the six-axis sets for the keys 1, 3 and 4 are the PEN-F's plus E143's set for the key 11, which is
+  all zero on the PEN-F, and the chroma control writes four words for MONO where the PEN-F writes one (X, on
+  om-emu's job, `docs/hle-gaps.md` 4.3.12): body values or artefacts of the job is ?.
 
 ## 7. Follow-ups, ranked
 

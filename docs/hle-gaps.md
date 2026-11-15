@@ -4136,11 +4136,14 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     `0x504939c7`, under bits 3 and 16). That a3 is the stages' C is read in 4.8.13 ("The development's pages": the
     kind's packer hands C to the wrapper of the YC packing and the stage list, and the set-up's dispatch picks the
     pages by C+176). The writer clears two words of the page (+20 and +24; PEN-F +36 and +40) and copies O word for
-    word from page + 128 (PEN-F page + 52), in segments some of which a bit of O's first words gates (4.8.13 lists the
-    bits). X: on the block the packing and the stage list fill, every other word it writes equals O's word 128 (PEN-F
-    52) below it: 207 words on E143 and E147 (the packed word at page + 136, record 0's S word at page + 984), 216 on
-    PEN-F (page + 64 and + 748). So O is the page's image, and a look's value in O is the value the unit's register
-    gets; what the unit does with it is not in the firmware (4.3.9).
+    word from page + 128 (PEN-F: O+0..+1039 from page + 52, O+1040 not copied, O+1044 and O+1048 at page + 1100 and +
+    1104, `0x504941a1..0x504941b4`, 4.8.13), in segments some of which a bit of O's first words gates (4.8.13 lists
+    the bits). X: on the block the packing and the stage list fill, every other word it writes equals O's word 128
+    below it: 207 words on E143 and E147 (the packed word at page + 136, record 0's S word at page + 984); on PEN-F
+    214 at + 52 (page + 64 and + 748) and its last two words at + 56 (the test puts three distinct words that are not
+    0 at O+1040..+1051, so the two land at page + 1100 and + 1104 and O+1040 nowhere). So O is the page's image, and a
+    look's value in O is the value the unit's register gets; what the unit does with it is not in the firmware
+    (4.3.9).
   - **What a call reads and writes (X, `emu/test/test_stages.mjs`, 2026-11-14).** Each builder was called alone by the
     call op on a job in the call's scratch (A-STAGEJOB, `emu/FIDELITY-NOTES.md` 8.2: zero but for the blocks'
     pointers, the key 11 or the row's, the flags word all ones, a size of 5184 x 3888 twice and the row's own fields),

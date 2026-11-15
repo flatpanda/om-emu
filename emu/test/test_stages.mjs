@@ -70,7 +70,9 @@ const blockOf = (off) => Object.keys(BLOCKS).find((b) => off >= BLOCKS[b][0] && 
 
 // ---- the three bodies (D) ----------------------------------------------------------------------------------------
 // fn: entry, the frame its call sites give ([mask, size]) and the call sites; job: the request's and context's
-// offsets; out: the output blocks' offsets
+// offsets; out: the output blocks' offsets (pageTail, PEN-F's: [the first O offset the register writer copies apart,
+// its distance from the page offset it goes to], 0x504941a1..0x504941b4: O+1044 and +1048 at the page's +1100 and
+// +1104, O+1040 not copied, D)
 const fn = (entry, mask, size, ...sites) => ({ entry, frame: [mask, size], sites });
 export const BODIES = {
   E122: {
@@ -80,7 +82,7 @@ export const BODIES = {
       yc: fn(0x504d2b81, 0xf0, 24, 0x504d78ca), grain: fn(0x504c929a, 0xf0, 20, 0x504c8f63), writer: fn(0x50493fe6, 0xf0, 24, 0x504939ab, 0x504939cd) },
     job: { flags: 56, size: 996, sat: 1076, sv: 1038, sharp: 1058, alt: 1073, level: 1088, seedp: 212, toneFlag: true },
     out: { ycw: 12, gainBits: 8, lim: 16, pairs: 20, six: 108, chroma: [76, 4], recs: 676, hslTail: [5172, 40], lutp: 4656, lut: 4660, cfg: 6056, gain: 112, seed: 148, cfgLen: 160,
-      gamPtr: 4644, curveTop: 1023, step: [68, 8], page: 0x34 },
+      gamPtr: 4644, curveTop: 1023, step: [68, 8], page: 0x34, pageTail: [1044, 56] },
   },
   E143: {
     fn: { stages: fn(0x504f5cb0, 0xf0, 48, 0x504f643b, 0x504f6456), gamma: fn(0x504f32a8, 0xf0, 16, 0x504f5cf9), six: fn(0x504f26e6, 0xf0, 128, 0x504f5d00),
@@ -479,17 +481,24 @@ export async function stagesSession({ pin = false } = {}) {
     const chainOut = [{ name: 'O', b: 'O', o: 0, n: BLOCKS.O[1], as: 'rsha' }];
     const y = row('yc', 'chain: yc key 11 sv 1280 sharpness 0', C0, yc(11, 1280, 0), chainOut);
     const l2 = y && row('stages', 'chain: stages key 11 on the packed block', C0, job(11, sat('first5')), chainOut, { memExtra: [[sc('O'), y.d.reads[0].hex]] });
+    // PEN-F's writer copies its last two words apart (Q.pageTail): the block gets three distinct words that are not 0
+    // at O+1040..+1051 so the comparison cannot pass on zeros and O+1040's absence shows
     let copied = [];
-    const wr = l2 && row('writer', 'chain: the register writer', { regs: { a0: sc('P'), a1: sc('O') } }, [], [{ name: 'page', b: 'P', o: 0, n: BLOCKS.P[1], as: 'rsha' }], { memExtra: [[sc('O'), l2.d.reads[0].hex]], more: (r, d) => {
-      const o = bytesOf(l2.d.reads[0].hex), p = bytesOf(d.reads[0].hex), words = [...textSet(r.wrote)].map((x) => x - BLOCKS.P[0]).filter((x) => x % 4 === 0).sort((a, b) => a - b);
-      copied = words.filter((w) => w >= Q.page && u(p, w, 4) === u(o, w - Q.page, 4));
+    const tail = Q.pageTail ?? null, SENT = ['aa', '11', '22'].map((x) => x.repeat(4)).join('');
+    const oHex = l2 && (tail ? l2.d.reads[0].hex.slice(0, 2 * (tail[0] - 4)) + SENT + l2.d.reads[0].hex.slice(2 * (tail[0] + 8)) : l2.d.reads[0].hex);
+    const srcOf = (w) => (tail && w >= tail[0] + tail[1] ? w - tail[1] : w - Q.page);
+    let tailOk = true;
+    const wr = l2 && row('writer', 'chain: the register writer', { regs: { a0: sc('P'), a1: sc('O') } }, [], [{ name: 'page', b: 'P', o: 0, n: BLOCKS.P[1], as: 'rsha' }], { memExtra: [[sc('O'), oHex]], more: (r, d) => {
+      const o = bytesOf(oHex), p = bytesOf(d.reads[0].hex), words = [...textSet(r.wrote)].map((x) => x - BLOCKS.P[0]).filter((x) => x % 4 === 0).sort((a, b) => a - b);
+      copied = words.filter((w) => w >= Q.page && u(p, w, 4) === u(o, srcOf(w), 4));
+      if (tail) tailOk = u(p, tail[0] + tail[1], 4) === 0x11111111 && u(p, tail[0] + tail[1] + 4, 4) === 0x22222222 && !words.includes(tail[0] - 4 + Q.page) && !words.includes(tail[0] - 4 + tail[1]);
       return [{ name: 'words', at: 'P', bytes: 4 * words.length, value: words.length }, { name: 'not copied', at: 'P', bytes: 4 * (words.length - copied.length), value: words.filter((w) => !copied.includes(w)).map((w) => [w, u(p, w, 4)]) },
         { name: 'packed at', at: `P+${Q.page + Q.ycw}`, bytes: 4, value: unpack(u(p, Q.page + Q.ycw, 4)) }, { name: 'S at', at: `P+${Q.page + Q.recs + 20}`, bytes: 4, value: u(p, Q.page + Q.recs + 20, 4) }];
     } });
     if (wr) {
       const other = val(wr, 'not copied');
-      ok(other.length === 2 && other.every(([w, v]) => w < Q.page && v === 0) && copied.length > 100 && same(val(wr, 'packed at'), val(ycRows['1280 0'], 'packed')) && val(wr, 'S at') === 225,
-        `the writer copies ${copied.length} words of O to the page at +${Q.page} (the packed word to +${Q.page + Q.ycw}, record 0's S word to +${Q.page + Q.recs + 20}) and clears two words below: ${JSON.stringify(other)}`);
+      ok(other.length === 2 && other.every(([w, v]) => w < Q.page && v === 0) && copied.length > 100 && tailOk && same(val(wr, 'packed at'), val(ycRows['1280 0'], 'packed')) && val(wr, 'S at') === 225,
+        `the writer copies ${copied.length} words of O to the page at +${Q.page}${tail ? ` (O+${tail[0]} and +${tail[0] + 4} at +${tail[0] + tail[1]} and +${tail[0] + tail[1] + 4}, O+${tail[0] - 4} not copied: ${tailOk})` : ''} (the packed word to +${Q.page + Q.ycw}, record 0's S word to +${Q.page + Q.recs + 20}) and clears two words below: ${JSON.stringify(other)}`);
     }
 
     // ---- the read sets and the write sets, per builder

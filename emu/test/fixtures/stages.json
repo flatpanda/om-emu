@@ -105,7 +105,7 @@
   "stages key 12": {"builder":"stages","end":"return","steps":8275,"outside":[],"out":{"O":"b18a7233fe9da967","six":[0,0,0,0,0,0,0,0,0,0,0,0],"chroma":[8421377],"records":"2b8f8fa342e12556","gamma pointer":"0x605fdf38","lut pointer":"0x605fdd38","step":[349177876,3670224],"curve":"9ed264a3fdb7d23a","curve samples":[0,20,648,865,1023,0,909]}},
   "chain: yc key 11 sv 1280 sharpness 0": {"builder":"yc","end":"return","steps":544,"outside":[],"out":{"O":"d4bccbd29baddd23"}},
   "chain: stages key 11 on the packed block": {"builder":"stages","end":"return","steps":7951,"outside":[],"out":{"O":"5dd6ef7f91d70ca1"}},
-  "chain: the register writer": {"builder":"writer","end":"return","steps":1621,"outside":[],"out":{"page":"49b874adb7e9b4b1","words":218,"not copied":[[36,0],[40,0]],"packed at":{"control":0,"coring":7,"gain":37},"S at":225}}
+  "chain: the register writer": {"builder":"writer","end":"return","steps":1621,"outside":[],"out":{"page":"fd7abe6b70b23285","words":218,"not copied":[[36,0],[40,0]],"packed at":{"control":0,"coring":7,"gain":37},"S at":225}}
  }
 },
 "E143": {

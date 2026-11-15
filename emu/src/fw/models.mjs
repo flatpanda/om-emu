@@ -491,10 +491,11 @@ export const MODELS = {
     // E146's firmware writes was not read)
     board: { family: 'E143', vsc: { unapplied: VSC_UNAPPLIED } },
     vsc_extra: [0x6800, 0x1400],
-    // the touch panel runs (no touch: false) since 2026-11-14, as E147's: E143's driver and controller with the close
-    // handed to the touch task (0x501ea754: OlyEvSt of pattern 4 on its flag at 0x501ea77d, OlySmWt without timeout at
-    // 0x501ea78d on the semaphore the task signals at 0x501ea64a; the task's wait has mask 15 at 0x501ea480) and the
-    // wake's 1 ms sleep (0x501eaa94, OlyTaSS at 0x501eaacd), D; X: test/test_touch.mjs, test/test_dispswitch.mjs
+    // the touch panel runs (no touch: false) since 2026-11-14, as E147's: E143's driver and controller with a close
+    // that waits for the touch task before its release (0x501ea754: OlyEvSt of pattern 4 on its flag at 0x501ea77d,
+    // OlySmWt without timeout at 0x501ea78d on the semaphore the task signals at 0x501ea64a; the task's wait has mask
+    // 15 at 0x501ea480) and the wake's 1 ms sleep (0x501eaa94, OlyTaSS at 0x501eaacd), D; X: test/test_touch.mjs,
+    // test/test_dispswitch.mjs
     chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
     // the lens on the mount natively, the default (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3): its driver is E143's
@@ -602,17 +603,18 @@ export const MODELS = {
     vsc_features: { 0x428: [0x22], 0x580: [0], 0x584: [0], 0x588: [0], 0x58c: [0], 0x598: [0] },
     // the touch panel runs (no touch: false) since 2026-11-14: E143's driver and controller (slave 0x70, the power mode
     // register 0xa5, the 11-byte report at register 2, D; X: a tap on the touch mode icon reaches HFW at its pixel,
-    // test/test_touch.mjs), with two differences (D; docs/hle-gaps.md 4.4.4). Its close (0x501f2327) hands the close to
-    // the touch task, OlyEvSt of pattern 4 on its flag (0x501f2350), and waits without timeout, OlySmWt (0x501f2360),
-    // on a semaphore the task signals after it cleared the open byte (0x501f2186..0x501f2207); E143's close
-    // (0x501e4139) does the work inline, and its task's wait does not take that pattern (mask 11 at 0x501e3eee, E147's
-    // 63 at 0x501f2063). The application's output change closes the panel (called from 0x5042fbdd), so with the
-    // touch task not run its event task did not come back from that wait at the lab's display switch and the screen
-    // was not built again (X: the close's pcs traced through the switch). touch: false dated from the first port
-    // (2026-10-15), whose touch init met a wait on the controller's I2C completion (X then); the touch I2C transport's
-    // places and arguments are read by rules since (facts touch, touch_args) and the start runs through (X now; which
-    // change it was is not bisected). And its wake (0x501f2667) sleeps 1 ms after the power mode write (OlyTaSS at
-    // 0x501f26a0), where E143's (0x501e4459) returns: chain_sleeps
+    // test/test_touch.mjs), with two differences (D; docs/hle-gaps.md 4.4.4). Its close (0x501f2327) waits for the
+    // touch task before its release: OlyEvSt of pattern 4 on its flag (0x501f2350), then OlySmWt without timeout
+    // (0x501f2360) on a semaphore the task signals after its own work and clearing the open byte (0x501f2203), then
+    // E143's inline release (0x501f2367..0x501f2391); E143's close (0x501e4139) does the release without the wait, and
+    // its task's wait does not take that pattern (mask 11 at 0x501e3eee, E147's 63 at 0x501f2063). The application's
+    // output change closes the panel (called from 0x5042fbdd), so with the touch task not run its event task did not
+    // come back from that wait at the lab's display switch and the screen was not built again (X: the close's pcs
+    // traced through the switch). touch: false dated from the first port (2026-10-15), whose touch init met a wait on
+    // the controller's I2C completion (X then); the touch I2C transport's places and arguments are read by rules since
+    // (facts touch, touch_args) and the start runs through (X now; which change it was is not bisected). And its wake
+    // (0x501f2667) sleeps 1 ms after the power mode write (OlyTaSS at 0x501f26a0), where E143's (0x501e4459) returns:
+    // chain_sleeps
     chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
     // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3; X: the same

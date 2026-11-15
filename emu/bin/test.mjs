@@ -711,7 +711,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...sm.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += sm.bad.length + (r.status === 0 ? 0 : 1);
 }
-// the display switch and the TFT's frame at idle on the bodies whose touch driver hands its close to the touch task
+// the display switch and the TFT's frame at idle on the bodies whose touch driver's close waits for the touch task
 // and sleeps in its wake (test_dispswitch.mjs, H-CHAINREST): E146 and E147 each in a process of its own, through
 // bin/session.mjs with the controls (the touch task not run, no chain rest); E143 here, which gets no lab time from it
 {

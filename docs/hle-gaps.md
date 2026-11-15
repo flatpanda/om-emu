@@ -4938,18 +4938,21 @@ tool (`bin/session.mjs`) and fixed on 2026-11-14.
   screen and a frame; one play token `WAIT:4000` did not (`emu/FIDELITY-NOTES.md` 1.5), and
   `bin/modelcheck.mjs` recorded the start as `0x102` with the composite's error. An EVF start ended on the shooting
   screen. E143 has neither symptom.
-- **The close hands its work to the touch task.** E143's close (`0x501e4139`) clears the open byte and does the release
-  inline. E147's (`0x501f2327`) sets pattern 4 on the touch task's event flag (OlyEvSt at
+- **The close waits for the touch task.** E143's close (`0x501e4139`) clears the open byte and does the release inline
+  (`0x501e4159..0x501e4183`). E147's (`0x501f2327`) first sets pattern 4 on the touch task's event flag (OlyEvSt at
   `0x501f2350`) and waits without timeout on a semaphore (OlySmWt at `0x501f2360`); the touch task, whose wait takes
-  the pattern (mask 63 at `0x501f2063`, E143's 11 at `0x501e3eee`), does the release, clears the open byte and signals
-  the semaphore (`0x501f2186..0x501f2207`). E146's is E147's (close `0x501ea754`, the set at `0x501ea77d`, the wait
-  at `0x501ea78d`, the task's mask 15 at `0x501ea480` and its signal at `0x501ea64a`). The application's event task
-  calls the close (from `0x5042fbdd` on E147) in the start's chain and at a display switch (X). With the touch task not
-  started (`touch: false`, kept from the first port of 2026-10-15, whose touch init had met a wait on the controller's
-  I2C completion, X then) the event task stayed in that wait at the lab's switch and the screen was not built again
-  (X: pcs traced through the switch, the close's OlyEvSt call reached and the instruction after its OlySmWt not; the
-  task's stack after the failed switch: OlySmWt, `0x501f2367`, `0x5042fbe4`). The start's own close had come back
-  from the wait (X: its stack one sleep later); the semaphore's count at the start was not read (?).
+  the pattern (mask 63 at `0x501f2063`, E143's 11 at `0x501e3eee`), finishes its own work at that pattern
+  (`0x501f218f..0x501f21f4`, under the byte `0x6035f44d`; what it does there is not read, ?), clears the open byte and
+  signals the semaphore (`0x501f2203`); the close then does the same release as E143's inline
+  (`0x501f2367..0x501f2391`: the open byte, four calls, two stores, the power function). E146's is E147's (close
+  `0x501ea754`, the set at `0x501ea77d`, the wait at `0x501ea78d`, the release `0x501ea794..0x501ea7be`, the task's
+  mask 15 at `0x501ea480` and its signal at `0x501ea64a`). The application's event task calls the close (from
+  `0x5042fbdd` on E147) in the start's chain and at a display switch (X). With the touch task not started (`touch:
+  false`, kept from the first port of 2026-10-15, whose touch init had met a wait on the controller's I2C completion,
+  X then) the event task stayed in that wait at the lab's switch and the screen was not built again (X: pcs traced
+  through the switch, the close's OlyEvSt call reached and the instruction after its OlySmWt not; the task's stack
+  after the failed switch: OlySmWt, `0x501f2367`, `0x5042fbe4`). The start's own close had come back from the wait (X:
+  its stack one sleep later); the semaphore's count at the start was not read (?).
 - **The wake sleeps 1 ms.** The driver's power function (E147 `0x501f2c92`) wakes the controller (`0x501f2667`: the
   power mode register `0xa5` of slave `0x70` written, then OlyTaSS(1) at `0x501f26a0`) or takes its other branch
   (`0x501f2621`) by two values it reads through `0x50042360` (27473 and 37777; what they are was not read, ?); the open (`0x501f22c8`, the call at `0x501f2319`), the close

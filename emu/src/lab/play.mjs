@@ -2122,7 +2122,7 @@ export class PlaySession extends N.NavSession {
     if (!same) {
       problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not the screen the switch left (${h4(state0)} panel ${panel0})` +
         (chain.asleep.length ? `; task(s) ${show(chain.asleep)} still sleep after ${Math.round(chain.ns / 1e6)} ms of lab time (H-CHAINREST's bound)` : '') +
-        // E146's and E147's touch close hands over to the touch task and waits for it (src/fw/models.mjs)
+        // E146's and E147's touch close waits for the touch task before its release (src/fw/models.mjs)
         (!this.touch_on && D.HAS_TOUCH ? '; the touch task does not run (touch off): where the touch driver\'s close waits for it (E146, E147), the application\'s event task stays in that close and the screen is not built again; run with the touch on' : ''));
     }
     // the module-9 reads a switch may make: ChangeOutline's first (S-TAKEOVER's state 2 ends it there, X) and the

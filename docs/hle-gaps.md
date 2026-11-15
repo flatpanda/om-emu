@@ -2851,7 +2851,8 @@ traRoutingSession, below).
 - **Open.** The gains' computation and its inputs (TAKE's shot fields; the cache's keys); TAKE's shot table
   (`0x62a494a4`) and MM's banks behind ImageParam's sources; the run's kinds and units (development, encode,
   thumbnail, view) and the allocator's list (the kinds, the stages and the JPEG codec read in 4.3.9; the pipeline unit
-  at `0x9c200000` and the work buffer's source still open there); the record's +41052 block, the layout with PlayPic
+  at `0x9c200000` read in 4.8.13 for the decode and, for the development, as far as its pages' writers; the work
+  buffer's source still open there); the record's +41052 block, the layout with PlayPic
   (read in 4.3.9), and Jpeg_Result's EXIF
   writes (ExifImageWidth and the thumbnail's length stay 0 in the file, X); takepic and the EXIF set for the exposure
   fields.
@@ -3400,8 +3401,10 @@ mode follows the lever in camapp 1 as it does in camapp 3.
 - **Why.** S-JPEGENC stands in for the run and rec_ImgPro_Jpeg_Result (4.3.4). This round reads what the run asks of
   the hardware, to see whether the encode can be a request of its own that a device model answers. It is not one: the
   encode is a stage inside the image library's pipeline request, and the JPEG codec it starts holds no buffer address.
-  The codec's block and its driver are read below; the pipeline unit around it is not, so S-JPEGENC keeps the run and
-  the file's bytes are unchanged (X: golden, the storage sessions). Two clean-ups in the lab's REC rule are at the end.
+  The codec's block and its driver are read below; the pipeline unit around it is read in 4.8.13 (its protocol as the
+  play module's decode drives it, the development's pages as far as their writers) and has no model for a development
+  request, so S-JPEGENC keeps the run and the file's bytes are unchanged (X: golden, the storage sessions). Two
+  clean-ups in the lab's REC rule are at the end. (Corrected 2026-11-14: this said the unit was not read.)
 - **The run is a table of stages.** The library's request lives at the create's handle (the context of 4.3.4 is the
   handle + 52, `0x50491c98`). At the handle's +8128 it keeps up to 16 stages of 12 bytes (the stage's function at +0,
   the issue record to wait for at +8), their count at +9298, the next stage at +9296, the status at +9300 and an

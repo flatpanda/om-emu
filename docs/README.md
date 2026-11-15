@@ -34,7 +34,7 @@ The emulator's own documents are in `emu/` ([README](../emu/README.md), [ARCHITE
 ([feature gap](../analysis/feature-gap/README.md), [lens gates](../analysis/lens-gates/README.md),
 [ND128](../analysis/nd128/README.md), [the oly_fw_analysis study](../analysis/oly-fw-analysis/README.md), [the
 om-c-firmware study](../analysis/om-c-firmware/README.md), [the caduceus-om3
-study](../analysis/caduceus-om3/README.md)).
+study](../analysis/caduceus-om3/README.md), [the olyom-isp-bench study](../analysis/olyom-isp-bench/README.md)).
 
 ## Evidence tags
 

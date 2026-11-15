@@ -6,7 +6,8 @@ alpha releases (2026-10-13, 2026-10-17) are patched PEN-F firmware that adds Hue
 twelve-sector COLOR saturation editor. This note answers what om-emu can take from it: their boot, container,
 colour, settings and protocol findings against ours; their patching and safety method against the firmware-patch
 track; whether an HSL-style unlock has an analogue on the OM-1 (E143); their emulator against ours; and where the
-two disagree. It ends with ranked follow-ups.
+two disagree. It ends with ranked follow-ups. Section 8 (2026-11-14) reads the repository again at `d565cb6`: its
+licence now, what it added, and what it writes about om-emu.
 
 How it was read: the repository was cloned read-only outside the tree and its documents, patch manifest
 (`patches/hsl/pen-f/patch.json`), assembly sources and analysis JSON were read; none of its code (Python tools,
@@ -15,9 +16,11 @@ sha256 checked against the release's, and its two images diffed statically again
 never run. Every cross-check below was made on om-emu's own pinned images with small pure-JS scans and the VM's
 `mn10300-objdump`; no excerpt of either is committed.
 
-**Licence.** Its `RIGHTS-AND-PROVENANCE.md` says the analysis tools and writing carry **no repository-wide licence**;
-only the GNU MN103 runner and simulator changes are GPL-3.0-or-later. So nothing here is copied or closely
-paraphrased: ideas only, attributed to fishcu/oly_fw_analysis where used.
+**Licence.** At `539fcf1` its `RIGHTS-AND-PROVENANCE.md` said the analysis tools and writing carried **no
+repository-wide licence**; only the GNU MN103 runner and simulator changes were GPL-3.0-or-later. So nothing here is
+copied or closely paraphrased: ideas only, attributed to fishcu/oly_fw_analysis where used. Since its commit `a61498e`
+(2026-11-09) its original contributions are under the Apache License 2.0 (8.1); this note's rule stays facts and
+ideas only.
 
 Related notes: [ND128 experiment](../nd128/README.md), [lens-gated features](../lens-gates/README.md),
 [feature gap OM-1 vs OM-1 Mark II](../feature-gap/README.md), [the .BIN container](../../docs/firmware-container.md).
@@ -44,9 +47,11 @@ replay, a camera).
    (`0x504f4cfa`), and its Color Creator 2 settings are saturation-only, as stock PEN-F. The structures for an
    HSL-style unlock are there; porting their design is weeks of mapping, and the lab cannot yet run the builder in a
    session (it can as a function slice).
-4. **Emulators.** Theirs is a strict GNU-simulator harness for function slices and a partial three-core boot; ours is
-   a full-system emulator. Their largest known CPU gap, unaligned access, is a fault in om-emu, and their camera
-   restart from a misaligned structure is physical support for that choice.
+4. **Emulators.** Theirs is a strict GNU-simulator harness for function slices and a partial three-core boot; ours
+   runs the kernel, the GUI and the camera application natively from a harness start, with devices and named
+   stand-ins (corrected 2026-11-14: this said "a full-system emulator", which the repository's README says it is not;
+   8.3). Their largest known CPU gap, unaligned access, is a fault in om-emu, and their camera restart from a
+   misaligned structure is physical support for that choice.
 5. **Disagreements.** No factual one found; two of framing (licence, where the head runs) in section 6.
 
 ## 1. Their claims against our E122 image
@@ -319,7 +324,7 @@ writes; pixels stay out of reach.
 | | fishcu (`docs/tooling/EMULATOR.md`) | om-emu |
 |---|---|---|
 | Engine | GNU binutils-gdb `sim` for MN10300, a strict-access patch, a C runner, Python harness | pure JS (`emu/src/core`), the ISA spec `docs/mn10300-isa-spec.md` |
-| Scope | function slices with synthetic callers; a cooperative three-core boot to USTART1's controller init | full system: four cores on E143, devices, kernel, GUI; E143 and the 12 bodies `bin/modelcheck.mjs` passes (E146 and E147 among them) shoot and play back |
+| Scope | function slices with synthetic callers; a cooperative three-core boot to USTART1's controller init | the kernel, the GUI and the camera application natively on CPU 0 from a harness start, with devices and named stand-ins, no boot from reset (corrected 2026-11-14: this said "full system: four cores on E143"; the other cores' services are stood in); E143 and the 12 bodies `bin/modelcheck.mjs` passed then (E146 and E147 among them) shoot and play back |
 | Unknown hardware | explicit regions only; the first unmodelled access stops the run | devices and named HLE stand-ins (S-/H-/A-); unknown board facts throw (`mergeBoard`) |
 | Alignment | not enforced (GNU helpers accept unaligned word loads) | `MN_FAULT_ALIGN` on misaligned 16/32-bit access |
 | Custom instructions | three MAC context transfers added, undefined flags deterministic | UDF semantics from firmware evidence (`docs/om1-udf-spec.md`), undefined flags tracked |
@@ -333,8 +338,9 @@ event-per-assumption trace is close to what om-emu's stand-in lists already give
 
 ## 6. Where the two disagree
 
-- **Licence.** The task's framing (GPL-3.0) is narrower than their statement: no licence for the tools and writing,
-  GPL-3.0-or-later for the GNU runner only. Treated as all rights reserved: ideas only.
+- **Licence.** The task's framing (GPL-3.0) was narrower than their statement at `539fcf1`: no licence for the tools
+  and writing, GPL-3.0-or-later for the GNU runner only. Treated then as all rights reserved: ideas only. The state
+  since 2026-11-09 is in 8.1.
 - **Where the head runs.** Their entry is `0x60021020` with the head handing off at `0x600210dc -> 0x600210f9`, which
   they call an internal handoff and not evidence of a reset vector; om-emu's E122 entry comment reads "the reset head's
   jump into the run-time copy at 0x500000b6". Both name the same jump (block offsets `0xb6` / `0xbc`); from which
@@ -374,4 +380,152 @@ event-per-assumption trace is close to what om-emu's stand-in lists already give
 **The release archive.** It was diffed after all (3.1): the diff confirms the manifest byte for byte and adds what
 the manifest does not say in prose (the update file's shape, the segment-loaded checks and their one gap, the Wi-Fi
 property path's reach). Running the patched image waits for E122 to run in the lab, when it would also be a test of
-the board port.
+the board port. (2026-11-14: E122 runs in the lab since 2026-10-30, and they have since run the release there
+themselves as a patch overlay, 8.3; om-emu has not.)
+
+## 8. The repository at `d565cb6` (update of 2026-11-14)
+
+Read again from a plain clone at its head `d565cb6` (2026-11-14), outside the tree; nothing of it was run and nothing
+of it is committed here. Sections 1 to 7 stand as written against `539fcf1`, with the corrections marked in place.
+Their file references below are relative to their repository's root.
+
+### 8.1 The licence now
+
+Since `a61498e` (2026-11-09, "License original contributions under Apache 2.0") the repository has a `LICENSE` (the
+Apache License 2.0), and its `RIGHTS-AND-PROVENANCE.md` says original code, documentation and research metadata are
+under it. That file names what is outside the grant: the three GNU-simulator files (`tools/mn103_runner.c`,
+`tools/mn103_strict.patch`, `tools/prepare_mn103_sim.py`, GPL-3.0-or-later), lettering derived from a DejaVu font
+(its own notice), external research (attributed, not relicensed), and the vendor-derived fragments in the HSL source
+(the short displaced stock instructions at hook boundaries and the before / after byte edits), also where they stand
+beside code that carries an Apache notice. Vendor firmware, and the firmware files in the release archives, are not
+licensed by it. These are their statements, recorded as facts. om-emu's rule for this repository does not change:
+facts and ideas, each read again on om-emu's own images and attributed; no code, table or byte.
+
+### 8.2 What was added since `539fcf1`
+
+Nine commits (2026-11-04 to 2026-11-14). The new files, none compared against om-emu's images unless this section
+says so:
+
+- `docs/tooling/OM_EMU.md` and `docs/tooling/pen-f/OM_EMU.md`: their description of om-emu (8.3), with two tools
+  that drive it, `tools/om_emu_overlay.py` (two update files to an om-emu patch file) and
+  `tools/om_emu_penf_editor.mjs` (8.4).
+- OM-3 (E147): `docs/protocols/om-3/TETHERING.md` (a third party's USB tethering patch, with their own byte checks
+  and bounded native runs), `tools/om3_tethering_probe.py`, `tools/om3_preview_probe.py`.
+- PEN-F: `docs/boot/pen-f/FLASH_READERS.md` (the diagnostic dump command is not read-only),
+  `docs/protocols/pen-f/WIFI_DEBUG.md` and `DEBUG_FILES.md` (a stock parameter file on the card that enables a Wi-Fi
+  debug shell; other debug files), `docs/features/pen-f/APERTURE_RING.md` (azqeurio's aperture-ring patch on E122),
+  with `tools/penf_aperture_ring_probe.py`, `tools/penf_boot_dump_probe.py` and `tools/penf_sd_debug_probe.py`.
+- E-M10 (E113): `docs/boot/e-m10/RECOVERY.md`, `docs/color/e-m10/PROCESSING.md` and `docs/tooling/e-m10/PLUGINS.md`
+  (another author's boot dump, recovery, image-processing plugins and SD plugin loader, relayed as reports), with
+  `tools/em10_dump_probe.py` and `tools/em10_source_audit.py`.
+- `tools/oly_release_inspect.py`, `provenance/community-reports.json`, `provenance/azqeurio-release.json`.
+- The head commit adds a contribution rule: a flashable modification needs a hardware confirmation before it is
+  merged or published.
+
+Two things there touch om-emu's still path. Their E-M10 note relays that an ordinary still is a direct Bayer-to-JPEG
+job with no complete YCC image in memory the CPU can reach (`docs/color/e-m10/PROCESSING.md`, an author's report on
+another body), which is what `docs/hle-gaps.md` 4.3.9 infers for E143 from the code. And three PEN-F documents that
+were already there at `539fcf1` and that the first reading did not compare, `docs/color/pen-f/SHARPENING.md`,
+`GRAIN.md` and `SHADING.md`, are with their probes the source of the call fixtures olyom-isp-bench runs on om-emu's
+CPU core (`analysis/olyom-isp-bench/README.md`).
+
+### 8.3 What they write about om-emu
+
+Both documents describe om-emu's public release commit `d24ff9dd` (2026-11-09) and were made by running it (their
+report). Line numbers are theirs at `d565cb6`.
+
+**Where they differ from om-emu's documentation today.**
+
+- *Licence.* `docs/tooling/OM_EMU.md:115-119`: no licence file at that revision, so their helpers are written
+  independently and carry no om-emu code. True then. om-emu is under the MIT License since 2026-11-14 (`LICENSE`,
+  the repository README's "Licence").
+- *"Full-system emulator".* `OM_EMU.md:106-110` says some older om-emu notes describe a fully substituted camera
+  application or call the project a full-system emulator, and that the code takes precedence. The second is this
+  note's own wording (Short answer 4 and section 5), against the repository README's "It is not a full-system
+  emulator". They are right; both places are corrected above.
+- *This note's PEN-F status.* `docs/tooling/pen-f/OM_EMU.md:114-117` says this note's description of PEN-F support
+  predates the working port. Right again: 2.1's "stops at import" and the closing paragraph were written on
+  2026-10-29, the day before E122 reached its shooting screen (`docs/ROADMAP.md` "Multi-model"). 2.1 keeps its value
+  as the list of board facts their boot work supplied.
+- *Patch input.* `OM_EMU.md:49-56` describes a patch file of `block`, `offset`, `old` and `new` entries and says a
+  modified `.BIN` cannot replace the stock input. Since then the tools also take a whole patched main
+  block (`--main`, node only) and Caduceus for OM-3's digest-anchored files (`emu/README.md` "Patch overlays"). A
+  container `.BIN` is still not an input and a change to the resource block still needs a patch file, so their
+  converter keeps its use for a release that changes both blocks, as theirs does.
+- *Counts.* `OM_EMU.md:102-104` reports 5,311 instruction vectors a tier; master has 5,322 (X, `bin/test-pure.mjs`).
+  A difference of revisions, not of fact.
+
+**Where they agree with it, from their own runs (their report; none rerun here).**
+
+- `bin/modelcheck.mjs E122 --no-port` passes on the TFT and the EVF (shooting, a capture, playback, INFO, the menu
+  opened, moved and closed), the panels are 720 x 480 and 1024 x 768, and the firmware formats an 8 GiB card as FAT32
+  and writes one picture that their test reads back (`pen-f/OM_EMU.md:35-37`): the README's PEN-F row and
+  `MODELS.E122`.
+- The PEN-F keeps no settings: the model starts blank and a kept state asked for is refused
+  (`pen-f/OM_EMU.md:27-29`, `OM_EMU.md:99-100`), as `emu/README.md` "The camera's kept state" says of every body but
+  E143, E146 and E147.
+- The browser player loaded the stock `.BIN` locally and sent only GET requests for static files
+  (`OM_EMU.md:38-41`): an independent run of what `bin/webgate.mjs` checks.
+- The standalone debugger defaults to the ND128 candidate's image (`OM_EMU.md:71-72`), as `bin/debug.mjs` says.
+- A JPEG on the lab's card is no test of HSL, grain or vignette pixels (`OM_EMU.md:91-92`): `docs/hle-gaps.md` 4.3.9.
+- The alignment fault caught what their GNU harness had let through in a UI patch (`OM_EMU.md:80-82`), the point of
+  section 5 above.
+- Their HSL release as an overlay: 5,145 changed main-block bytes and 725 resource bytes (`pen-f/OM_EMU.md:87-90`),
+  the counts of 3.1's diff, and a loaded resource prefix of 19,767,776 bytes with the last change inside it
+  (`:92-93`), `MODELS.E122`'s `res_len`. Both blocks loaded, the menus and the COLOR editor were reached, and the
+  firmware drew `Value` where stock draws `Vivid` (`:40`, `:96`). That is the run this note's closing paragraph was
+  waiting for, made by them. It did not validate the patch's axis switching or its hue and lightness edits: the
+  added headings and the wheel were not visible (`:96-99`).
+
+**What they needed and did not find**, each a candidate for om-emu (sizes I):
+
+1. *The PEN-F's two picture-function inputs* (8.4). Without them the COLOR editor is not reached from the shooting
+   screen; their probe adds the two controls from outside. Hours to a day, with a session test.
+2. *A modified update file as input.* They wrote a converter from two `.BIN` files to a patch file. `--main` now
+   covers a decoded main block in node; taking a container `.BIN` there (walk it, read the main block, compare with
+   the verified stock block, say what else differs and is not applied) is hours, the browser about a day.
+3. *A supported way to script a session.* Their probe imports the lab's internals (the player, the replay parser,
+   the control table, the PNG writer). `emu/host/session.mjs` and `bin/session.mjs` exist since 2026-11-13; whether
+   they serve the probe unchanged once item 1 is in was not tried. No further work is known.
+4. *The PEN-F's kept settings.* The E118 family's builds have no site for S-NVRAM's flash post, so their patch's
+   persistence, backup and custom-mode life cycle cannot be tested (`pen-f/OM_EMU.md:27-29`). Not sized: the family's
+   save path is not read (?).
+5. *The COLOR editor's graphics on the PEN-F.* In their frames the stock wheel and polygon are absent, and so are
+   menu background graphics (`pen-f/OM_EMU.md:41-42`, `OM_EMU.md:93-98`); they name the OM-3's C3D path
+   (`docs/hle-gaps.md` 4.12) as a plausible cause for the wheel and say they did not trace it. om-emu's documents say
+   nothing about either on E122, and neither was reproduced here. Finding the cause: days; a fix depends on it.
+6. *The front creative dial on the PEN-F.* The lab decodes its five positions from E122's tables (D: the code
+   `0x1906`, five entries in UI_IN's group 10) and names none (`emu/src/lab/play.mjs`); their probe leaves it out
+   (`pen-f/OM_EMU.md:73-75`). Reading what each position selects, as was done for E147: about a day.
+7. *A licence.* Done (above).
+
+### 8.4 A lead: the PEN-F's two picture-function inputs
+
+Their report (`docs/tooling/pen-f/OM_EMU.md:49-65`, `tools/om_emu_penf_editor.mjs`): E122's UI_IN table holds two
+keys the lab's controls do not offer, codes `0x122b` and `0x122c`. With the two added from outside the harness, a
+press and release of the first on the blank camera's shooting screen enters GUI state `0x0202`
+(SS_REC/ID_ST_SETVAL) at the release, one step of the main dial then writes setting 931 (a COLOR saturation value,
+2.4) as 1, and the sub dial writes settings 1095 and 1102. Not rerun here.
+
+Read on om-emu's own E122 block (D, the lab's `uiin_layout` on `unpacked/E122`): UI_IN's group 1 has code `0x122b`
+at byte 1 bit 2 and `0x122c` at byte 1 bit 3, both of type 2 with polarity 0, as they say. The firmware's event names
+for them are EV_PRESS_PICFUNCTION_LEFT / RIGHT and EV_RELEASE_PICFUNCTION_LEFT / RIGHT, with LONG_PRESS and REPEAT
+forms (strings in the main block from run-time `0x6095a918`). E143's and E147's blocks hold the same event names, and
+their UI_IN tables hold neither code. In the lab neither code is in `CONTROLS` or `FW_KEYS` (`emu/src/lab/play.mjs`),
+and a ported body's keys come from those rows by code (`apply_uiin_layout`), so E122 offers no control for them.
+
+One thing in the lab's own code bears on their observation (D, with X from a script over `uiin_layout` and
+`idle_images` on each ported body's block). The idle key image sets the released level only for the keys a control
+row is wired to; a type-2 entry of a body's table that no row names keeps bit 0, and with polarity 0 that is the
+level the lab uses as pressed for the keys it knows. On E122 exactly these two keys idle that way. So in the lab
+they are held from the session's start, and their probe's "down" changes nothing: the first edge the firmware sees is
+the release. Whether the camera enters the editor at the press or at the release is therefore not shown by that run
+(?). The same holds for one to nine unnamed keys on twelve other ported bodies (`0x120b` on E147; `0x120b` or
+`0x1208` with `0x1224` on E148, E144, E137, E142, E140, E125 and E130; `0x1224` on E118 and E120; `0x120b` twice and
+a second code-4 key on E139; `0x120b`, `0x1224` and seven more on E134); E143, E146, E133, E145, E129 and E132 have
+none. What a held level changes in those sessions was not looked at (?).
+
+What it would take: two control rows wired where a body's table holds the codes, named as the firmware names them;
+the idle image giving every type-2 entry of the body's table its released level; and a session test on E122 whose
+expectations are om-emu's own runs (the GUI state after the left input's press and after its release, the setting one
+dial step writes). Their observations are the lead, not the expectation.

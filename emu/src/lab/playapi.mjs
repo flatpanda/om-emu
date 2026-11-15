@@ -69,9 +69,11 @@ import { audioDoc } from './audio.mjs';
 // /api/screens' stand_ins, the page's Stand-ins tab: a row for every label a session can report in use
 // (player.mjs stand_ins_in_use; test/test_standins.mjs checks it): playui.mjs STAND_INS, the camera application's
 // rows (camapp.mjs CAMAPP_STAND_INS; a label in both keeps STAND_INS's text, the one the page showed) and the model's
-// own stand-ins by name (modelStandInRows).
+// own stand-ins by name (modelStandInRows). STAND_INS's rows come first, in its order: the rows the page showed stay
+// where they were, and the others follow them.
 export function standInRows(info = MODEL_INFO) {
-  return { ...CAMAPP_STAND_INS, ...STAND_INS, ...modelStandInRows(info) };
+  const camapp = Object.fromEntries(Object.entries(CAMAPP_STAND_INS).filter(([k]) => !(k in STAND_INS)));
+  return { ...STAND_INS, ...camapp, ...modelStandInRows(info) };
 }
 // A MODELS entry's own stand-ins as rows (src/fw/models.mjs return_stubs: [function, d0, name, why]; call_skips: [call
 // site or fact path, name, why]; src/lab/play.mjs installs them): the entry's own reason, with what the lab does there

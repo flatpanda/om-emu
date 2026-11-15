@@ -84,6 +84,10 @@ export async function standinsUnits() {
   const both = Object.keys(CAMAPP_STAND_INS).filter((k) => k in STAND_INS);
   ok(both.length > 0 && both.every((k) => rows[k] === STAND_INS[k]) && Object.keys(rows).length === new Set([...Object.keys(STAND_INS), ...Object.keys(CAMAPP_STAND_INS), ...Object.keys(modelStandInRows((await import('../src/fw/model.mjs')).MODEL_INFO))]).size,
     `a label in both tables keeps STAND_INS's text (${both.join(' ')}); ${Object.keys(rows).length} rows`);
+  // the rows the page showed stay where they were: STAND_INS's keys first, in its order, the other tables' after them
+  const first = Object.keys(STAND_INS);
+  ok(JSON.stringify(Object.keys(rows).slice(0, first.length)) === JSON.stringify(first) && Object.keys(rows)[first.length] in CAMAPP_STAND_INS,
+    `the rows start with STAND_INS's, in its order: ${Object.keys(rows).slice(0, 3).join(' ')} ... then ${Object.keys(rows)[first.length]}`);
   // the route answers them, the shape as before: {not_offered, stand_ins: {label: text}} (a headless Player, no session)
   const { PlayApi } = await import('../src/lab/playapi.mjs');
   const { Player } = await import('../src/lab/player.mjs');

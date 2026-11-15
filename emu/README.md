@@ -967,7 +967,8 @@ name a 32-bit word: the section loader's end words, `sections.ends`):
   lab does not model): no stock task's code is there, so it is a task the patch made. The task runs natively, the
   status's stand-ins list H-PATCHTASK and `patch_audit.tasks` its entries (X: caduceus-om3 v0.27's film loader at E147
   `0x50a6e603`, started at power-on).
-- H-PATCHFLUSH: a call of the kernel's cache flush whose return address is on patched bytes is answered as the stock
+- H-PATCHFLUSH: a call of the kernel's cache flush whose calling instruction and return address are on patched bytes
+  (a stock call followed by a patched instruction does not count) is answered as the stock
   callers the lab lists are (K-CFLUSH returns at once: the lab has no caches, `emu/FIDELITY-NOTES.md` 4.1), where any
   other caller the lab does not list is refused: no stock caller's code is there, so the flush is the patch's own. The
   status's stand-ins list H-PATCHFLUSH. A stock routine the patched code calls that flushes on its own stays refused

@@ -896,13 +896,16 @@ export class MenuLab extends T.TextDisplayLab {
     }
     return out;
   }
-  // A caller on bytes a patch overlay changed (src/lab/patchaudit.mjs) is answered too: no stock caller's code is
-  // there, so it is the patch's own flush, not a stock flow the lab has not read (H-PATCHFLUSH, listed in
+  // A caller on bytes a patch overlay changed (src/lab/patchaudit.mjs) is answered too: the calling instruction's last
+  // byte (the one before the return address) and the instruction at the return address both on changed bytes, so no
+  // stock caller's code is there and it is the patch's own flush, not a stock flow the lab has not read; a stock call
+  // followed by a patched instruction (a hook placed right after it) stays refused (H-PATCHFLUSH, listed in
   // patch_flushes by its return address)
   _k_cflush(hle, r) {
     const k = disasm(r.mdr);
     if (k !== K_CFLUSH_RETURN && !knob('cflush_returns', []).includes(k) && !(this.env.nvram && k === STORE_SAVE_CFLUSH_RETURN)) {
-      if (this.patch?.code(r.mdr) == null) throw new MenuError(`K-CFLUSH: 0x5004e68a called from ${where(r.mdr)}; only 0x50040863 (return ${h8(K_CFLUSH_RETURN)}) is listed`);
+      const patched = this.patch && this.patch.code(r.mdr) !== null && this.patch.hit((((r.mdr >>> 0) - this.patch.base) | 0) - 1, 1) !== null;
+      if (!patched) throw new MenuError(`K-CFLUSH: 0x5004e68a called from ${where(r.mdr)}; only 0x50040863 (return ${h8(K_CFLUSH_RETURN)}) is listed`);
       if (!this.patch_flushes.includes(k)) this.patch_flushes.push(k);
     }
     this.store_log.cflush.set(k, (this.store_log.cflush.get(k) ?? 0) + 1);

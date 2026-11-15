@@ -472,8 +472,8 @@ The fourth round (base `b36e3e5`, 2026-11-14) adds:
   checksum is not checked, which the summary's `not_applied` says, so a run checks the main block's changes, not the
   file the updater takes. What a file is (stock, another version, modified, unknown, with a reason) comes from
   `src/fw/identify.mjs`, by the head's model field and the digest, never a length.
-- **A patch's own cache flush** (H-PATCHFLUSH, `emu/FIDELITY-NOTES.md` 7.16): a call of the kernel's flush whose return
-  address lies on patched bytes is answered as the stock callers the lab lists are; a stock routine the patch calls
+- **A patch's own cache flush** (H-PATCHFLUSH, `emu/FIDELITY-NOTES.md` 7.16): a call of the kernel's flush whose calling
+  instruction and return address lie on patched bytes is answered as the stock callers the lab lists are; a stock routine the patch calls
   that flushes on its own stays refused. Their halation pass needed it (4.6).
 - **The OM-3's display switch and TFT start** (H-CHAINREST, `docs/hle-gaps.md` 4.4.4): the switch failed the lab's
   re-entry check in either direction, and a TFT start published no frame before the first wait. Both were the lab's:

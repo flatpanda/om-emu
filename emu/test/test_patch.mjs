@@ -295,8 +295,9 @@ export function patchUnits() {
     `the guard refuses an entry beside the patched bytes (${m1}) and any entry without an overlay (${m2})`);
 
   // H-PATCHFLUSH: the cache flush's caller guard (src/lab/menu.mjs MenuLab._k_cflush) on a made-up lab: a return
-  // address on patched bytes is answered and listed, once; a caller beside them, or any unlisted caller without an
-  // overlay, is refused as before; the listed stock caller is answered and not listed
+  // address on patched bytes after a call on patched bytes is answered and listed, once; a caller beside them, a stock
+  // call followed by patched bytes, or any unlisted caller without an overlay, is refused; the listed stock caller is
+  // answered and not listed
   const flab = (patch) => ({ patch, patch_flushes: [], env: {}, store_log: { cflush: new Map() } });
   const fl = flab(new PatchRanges([[0x100, 8]], timage, IMAGE_BASE)), answered = [];
   const flush = (lab, mdr) => { try { MenuLab.prototype._k_cflush.call(lab, { finish: (r) => answered.push(r.mdr) }, { mdr }); return null; } catch (e) { return e.message; } };
@@ -308,6 +309,11 @@ export function patchUnits() {
     `the guard refuses a caller beside the patched bytes (${f3}) and an unlisted caller without an overlay (${f4})`);
   const f5 = flush(fl, K_CFLUSH_RETURN - 0x50000000 + IMAGE_BASE);
   ok(f5 === null && answered.length === 3 && fl.patch_flushes.length === 1, `the listed stock caller is answered and is not the patch's: ${f5} ${JSON.stringify(fl.patch_flushes)}`);
+  // a stock call whose next instruction the patch changed (a hook placed right after the call): the return address is
+  // the first changed byte, the calling instruction's bytes are stock, so the flush is not the patch's own
+  const f6 = flush(fl, IMAGE_BASE + 0x100);
+  ok(fl.patch.code(IMAGE_BASE + 0x100) !== null && fl.patch.hit(0xff, 1) === null && /K-CFLUSH: .* called from .*0x50000100.*listed/.test(f6 ?? '') && answered.length === 3 && fl.patch_flushes.length === 1,
+    `the guard refuses a stock call followed by a patched instruction (${f6})`);
 
   // the default S-NVRAM file of patched firmware: the build's own (host/nvram.mjs)
   const nb = nvramChoice({ arg: null, env: null, model: 'E147', build: 'ab'.repeat(32) }), ns = nvramChoice({ arg: null, env: null, model: 'E147' });

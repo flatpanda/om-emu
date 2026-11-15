@@ -4471,11 +4471,15 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   checks each). The exposure plan is S-LENS's. The screens are S-LENS's (frames at the start, S1, MENU, PLAY, INFO) but
   for the focal length: back on the shooting screen from the menu or playback the application shows "12mm" for about 3 s
   where S-LENS leaves `---` (x 157..222, y 502..529 of the TFT), as E143 shows 25 mm (4.4.2); the only other pixels that
-  differed were the blinking ISO item's (`bin/modelcheck.mjs`'s note), caught in another phase. Both bodies' starts end
-  at `0x102` with either lens, so E143's leaving of the date prompt on the lens's event does not show, and the lens
-  stays at its first step (12 mm) until S-EXPOSE turns the ring on the shooting screen.
-- **The touch:** E146 and E147 run with the touch driver off (`models.mjs` `touch: false`), so the application's touch
-  forward of 4.4.2 is not reached on them, and the lab posts no touch with either lens.
+  differed were the blinking ISO item's (`bin/modelcheck.mjs`'s note), caught in another phase. Until 2026-11-14 both
+  bodies' starts ended at `0x102` with either lens, so E143's leaving of the date prompt on the lens's event did not
+  show, and the lens stayed at its first step (12 mm) until S-EXPOSE turned the ring on the shooting screen; since
+  then their starts end on the shooting screen (4.4.4), where S-EXPOSE plans and turns the ring to the scene's 25 mm
+  as on E143 (X, `emu/test/test_lens.mjs`).
+- **The touch:** until 2026-11-14 E146 and E147 ran with the touch task not started (`models.mjs` `touch: false`), so
+  the application's touch forward of 4.4.2 was not reached on them. Since then their touch panel runs (4.4.4) and the
+  application forwards a touch on the shooting screen itself, from each body's port of E143's call site (E146
+  `0x51261a83`, E147 `0x51275df6`), the lab posting none (X, `emu/test/test_lens.mjs`).
 - **An error log the native sessions met:** on the shooting screen both bodies log `0x39000903`, E143's expected movie
   time query log (its time code conversion finds the movie info's frame rate 0), about ten times a second with either
   lens (X); their conversion is E143's `0x5044949b` but for the log's line number (E146 `0x5043fa3d`, E147
@@ -4483,6 +4487,71 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   found it).
 - **Open:** the lens's real replies (4.4.2), as on E143; the E144 family's lens driver, another lineage (the shapes
   above are not its), which a reading of its own would bring to the native lens.
+
+#### 4.4.4 The touch panel, the start and the display switch on E146 and E147 (2026-11-14; D unless tagged)
+
+Two defects of the lab on these bodies, both in their touch driver's differences from E143's, found from the session
+tool (`bin/session.mjs`) and fixed on 2026-11-14.
+
+- **The symptoms (X, at `b36e3e5`).** A live display switch failed the lab's re-entry check in either direction, on
+  E146 as on E147: `SWITCH:evf: the re-entry landed on GUI state 0x0108 panel 0, not the screen the switch left (0x0108
+  panel 10)` (`emu/src/lab/play.mjs` `live_switch`; `switch:eye=1` after `wait:1500`, and `switch:eye=0` from an
+  EVF start). And a start on the TFT ended on the power-on screen (GUI `0x0102`) with no frame: the compositor
+  refused one, `UNWRITTEN ch 2 off 0x04e0`, the TFT channel's OSDCP2 word (`emu/src/dev/vsccompose.mjs`), which
+  nothing had written yet because the GUI had not built a screen (X: it is written once the shooting screen is
+  there; which function writes it was not read, ?). The session's sliced `wait:1500` after it reached the shooting
+  screen and a frame; one play token `WAIT:4000` did not (`emu/FIDELITY-NOTES.md` 1.5), and
+  `bin/modelcheck.mjs` recorded the start as `0x102` with the composite's error. An EVF start ended on the shooting
+  screen. E143 has neither symptom.
+- **The close hands its work to the touch task.** E143's close (`0x501e4139`) clears the open byte and does the release
+  inline. E147's (`0x501f2327`) sets pattern 4 on the touch task's event flag (OlyEvSt at
+  `0x501f2350`) and waits without timeout on a semaphore (OlySmWt at `0x501f2360`); the touch task, whose wait takes
+  the pattern (mask 63 at `0x501f2063`, E143's 11 at `0x501e3eee`), does the release, clears the open byte and signals
+  the semaphore (`0x501f2186..0x501f2207`). E146's is E147's (close `0x501ea754`, the set at `0x501ea77d`, the wait
+  at `0x501ea78d`, the task's mask 15 at `0x501ea480` and its signal at `0x501ea64a`). The application's event task
+  calls the close (from `0x5042fbdd` on E147) in the start's chain and at a display switch (X). With the touch task not
+  started (`touch: false`, kept from the first port of 2026-10-15, whose touch init had met a wait on the controller's
+  I2C completion, X then) the event task stayed in that wait at the lab's switch and the screen was not built again
+  (X: pcs traced through the switch, the close's OlyEvSt call reached and the instruction after its OlySmWt not; the
+  task's stack after the failed switch: OlySmWt, `0x501f2367`, `0x5042fbe4`). The start's own close had come back
+  from the wait (X: its stack one sleep later); the semaphore's count at the start was not read (?).
+- **The wake sleeps 1 ms.** The driver's power function (E147 `0x501f2c92`) wakes the controller (`0x501f2667`: the
+  power mode register `0xa5` of slave `0x70` written, then OlyTaSS(1) at `0x501f26a0`) or takes its other branch
+  (`0x501f2621`) by two values it reads through `0x50042360` (27473 and 37777; what they are was not read, ?); the open (`0x501f22c8`, the call at `0x501f2319`), the close
+  (`0x501f2391`) and the gesture mask's set (`0x501f23df`, the call at `0x501f2406`) each end with it. E143's wake
+  (`0x501e4459`) is the same write with no sleep; E146's is E147's (`0x501eaa94`, OlyTaSS at `0x501eaacd`). The
+  lab's settle runs the firmware at one lab time, so a chain with a sleep in it has not ended when the settle
+  returns: after the application's start its event task (task 165, entry `0x510a711e`) was in the kernel's timeout
+  queue with OlyTaSS, `0x501f26a7`, `0x501f2ce6` and the mask set's `0x501f240b` on its stack (X), and each later
+  millisecond of lab time with the stand-ins' replies delivered took it one sleep further (the open's, the close's,
+  the mask set's again), the GUI reaching the shooting screen after 11 such slices, where the GUI task slept in the
+  same wake. The session's 50 ms slices did the same more slowly; a single long input did it once.
+- **The fixes.** `models.mjs` no longer turns the touch off on the two bodies: the touch task runs, and their touch
+  panel is E143's in the lab (S-TPREG's controller at slave `0x70`, the 11-byte report at register 2; X: a tap on the
+  touch mode icon at 35, 465 reaches HFW at its pixel and changes the frame, `emu/test/test_touch.mjs`). And on a
+  body of `models.mjs` `chain_sleeps` (the two), the application's start and the lab's display switch end with
+  H-CHAINREST (`emu/src/lab/play.mjs` `chain_rest`): lab time runs on in 1 ms slices, the stand-ins' replies
+  delivered after each, while the GUI task or one of the application's event tasks is in the kernel's timeout queue,
+  for at most 200 ms; the start then runs S-EXPOSE on the screen it reached, as E143's start does. X
+  (`emu/test/test_dispswitch.mjs`, each body through `bin/session.mjs`): the open ends on the shooting screen with a
+  published frame, `WAIT:4000` keeps it, the eye sensor and the LV button switch both ways with a shot on each
+  display and one picture per display on the card, from a TFT start and from an EVF start; with the touch off the
+  switch to the EVF fails and the error names the touch; with the mutant `no-chain-rest` the open ends at `0x0102`
+  with no frame, the switch to the EVF passes and the one back to the TFT fails. The TFT start's rest took 17
+  slices on each body (X: 43 ms of lab time on E147, 57 ms on E146) and a switch to the TFT's 9 (34 ms); an EVF
+  start and a switch to the EVF met no sleep and got none. E143's sessions get no lab time from it (its golden
+  sessions that switch or idle are unchanged, X).
+- **What changed besides (X).** `bin/modelcheck.mjs`'s TFT start on the two bodies is `0x108` with a 900 x 600
+  frame. The open of a TFT session publishes a frame, and the TFT's frame 1.5 s later is the one it was (the same
+  digest on each body). A shot taken straight after the start has S-EXPOSE's plan
+  (Tv 1924, Av 1404 for the default scene on both; E143's 2052 and 1276), as on E143 (`emu/test/test_storage.mjs`:
+  its EXIF exposure time is the set's 1/200 s of that Tv, where it was the 1 s of an unplanned Tv 0). The
+  application forwards touches itself (4.4.3). The 19 caduceus-om3 releases run as pinned
+  (`emu/test/test_caduceus.mjs`).
+- **Open.** The rest's end condition is the lab's (`emu/FIDELITY-NOTES.md` 1.6). Other steps on these bodies still
+  end inside a 1 ms sleep (a key that returns to the shooting screen sets the gesture mask) and finish in the lab
+  time after them. Whether other bodies' chains sleep was not surveyed: `chain_sleeps` is set by hand from the
+  disassembly. Which change between 2026-10-15 and now let the touch init run through was not bisected.
 
 ### 4.5 Movie, audio and the AV back end
 

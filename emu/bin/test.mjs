@@ -60,7 +60,8 @@
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
 // Also: the memory map's rules at addRegion (test_mem.mjs).
-// What a firmware file is, on made-up bodies and on the .BINs and blocks at hand (test_identify.mjs).
+// What a firmware file is, on made-up bodies and on the .BINs and blocks at hand, and --main with a .BIN container on
+// E143 and E147 (test_identify.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -859,14 +860,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   mu.bad.forEach((x) => console.log('  ', x));
   bad += mu.bad.length;
 }
-// what a firmware file is (src/fw/identify.mjs; test_identify.mjs): the units, then the .BINs and unpacked blocks at
-// hand; a body without its .BIN is a skip the line counts
+// what a firmware file is (src/fw/identify.mjs) and --main with a .BIN container (test_identify.mjs): the units, the
+// .BINs and unpacked blocks at hand, then bin/session.mjs on E143 here and on E147 in a process of its own; a body
+// without its .BIN is a counted skip
 {
-  const { identifyUnits, identifyFiles } = await import('../test/test_identify.mjs');
-  const iu = await identifyUnits(), fi = await identifyFiles();
-  console.log(`firmware identity: units ${iu.checks - iu.bad.length}/${iu.checks}; the files at hand ${fi.checks - fi.bad.length}/${fi.checks}${fi.skipped.length ? `, ${fi.skipped.length} SKIPPED` : ''}`);
-  [...iu.bad, ...fi.bad, ...fi.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
-  bad += iu.bad.length + fi.bad.length;
+  const { identifyUnits, identifyFiles, identifySession } = await import('../test/test_identify.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const iu = await identifyUnits(), fi = await identifyFiles(), is = await identifySession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_identify.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`firmware identity: units ${iu.checks - iu.bad.length}/${iu.checks}; the files at hand ${fi.checks - fi.bad.length}/${fi.checks}${fi.skipped.length ? `, ${fi.skipped.length} SKIPPED` : ''}; --main with a .BIN on E143 ${is.checks - is.bad.length}/${is.checks}${is.skipped.length ? `, ${is.skipped.length} SKIPPED` : ''}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...iu.bad, ...fi.bad, ...is.bad, ...[...fi.skipped, ...is.skipped].map((x) => `SKIPPED ${x}`), ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += iu.bad.length + fi.bad.length + is.bad.length + is.skipped.length + (r.status === 0 ? 0 : 1);
 }
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {

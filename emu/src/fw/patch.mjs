@@ -31,7 +31,7 @@
 // carries a summary for the player's status and the logs: the files, the count, the bytes changed, and per patched
 // block its sha256 after the patches; and the main block's changed bytes as ranges (the lab's patch rules, src/lab/
 // patchaudit.mjs). mainPatches makes the patches of a whole patched main code block (--main FILE): its runs of bytes
-// that differ from the stock block's.
+// that differ from the stock block's; mainFilePatches takes that block from a .BIN container too.
 // Worker-safe: no node API; the hash comes in as an argument.
 import { base64Bytes, hexBytes } from '../util/bytes.mjs';
 
@@ -166,7 +166,8 @@ const name = (p) => `${p.source} patch ${p.n}${p.label ? ` (${p.label})` : ''}`;
 // verified by the caller; the resource block whole or its prefix), layout patchLayout's, files the sources' names.
 // Returns {blocks: {main, resource} (a patched block a new copy, the other the caller's own), summary: {files,
 // applied, bytes, blocks: [{block, name, patches, sha256, stock_sha256}], not_applied? (a digest-anchored file's
-// content the lab does not apply: [{file, field, why}])}, changed: the main block's changed bytes as sorted [offset,
+// content the lab does not apply, and a patch's own not_applied list, which every patch of a source shares:
+// [{file, field, why}])}, changed: the main block's changed bytes as sorted [offset,
 // length] ranges}, or throws PatchRefused for the first patch that fails a rule (a block absent from blocks takes no
 // patch); nothing the caller gave is changed.
 export function applyPatches(blocks, patches, { layout, createHash, files = [...new Set(patches.map((p) => p.source))] }) {
@@ -232,7 +233,8 @@ export function applyPatches(blocks, patches, { layout, createHash, files = [...
     }
     summary.blocks.push({ block: key, name: layout[key].name, patches: list.length, sha256, stock_sha256 });
   }
-  const not_applied = anchors.flatMap((an) => an.not_applied);
+  // and what a patch's source holds besides it (p.not_applied, one list per source: a container given as --main)
+  const not_applied = [...anchors.flatMap((an) => an.not_applied), ...[...new Set(patches.map((p) => p.not_applied).filter(Boolean))].flat()];
   if (not_applied.length) summary.not_applied = not_applied;
   return { blocks: out, summary, changed };
 }
@@ -252,6 +254,27 @@ export function mainPatches(stock, block, source) {
   }
   if (!out.length) throw new PatchRefused(`${source}: the stock main code block itself (nothing to patch)`);
   return out;
+}
+
+// --main FILE's bytes as patches against the stock block: a main code block as unpacked, or the .BIN container that
+// holds one. id: what the file is (src/fw/identify.mjs identifyBytes' answer); code: the run's model.
+// - a container: its head must name the run's model at the release's version, with the main code block at the
+//   release's place and length (identify's 'stock' or 'modified'; the stock one is then refused as the bare stock block
+//   is); its main block, descrambled, is compared, whatever its checksum. Only that block is taken: the container's
+//   other blocks are not read and a checksum total that is not 0 does not stop the run. Each patch carries a
+//   not_applied list that says both (applyPatches puts it in the summary), so a run on it checks the main code block's
+//   changes, not the file an updater would take;
+// - a bare block that is another body's stock block (bodies share lengths) is refused by name; any other goes to
+//   mainPatches as before.
+export function mainFilePatches(stock, bytes, source, id, code) {
+  if (id.kind === 'container') {
+    if (id.model !== code || (id.status !== 'stock' && id.status !== 'modified')) throw new PatchRefused(`${source}: ${id.reason}: not a .BIN of ${code}'s firmware as the lab runs it, stock or modified`);
+    const not_applied = [{ file: source, field: 'container', why: `only its main code block is taken: its ${id.blocks - 1} other block(s) are not read, the lab loads the stock resource block` },
+      ...(id.checksum_ok ? [] : [{ file: source, field: 'checksum', why: 'the main code block\'s checksum total is not 0 (not recomputed after the change); the lab does not check it' }])];
+    return mainPatches(stock, id.main, source).map((p) => ({ ...p, not_applied }));
+  }
+  if (id.status === 'stock' && id.model !== code) throw new PatchRefused(`${source}: ${id.reason}, not a patched main code block of ${code}`);
+  return mainPatches(stock, bytes, source);
 }
 
 // One line for a summary: 'N patches (B bytes changed) from FILES; main blk... sha256 X (stock Y)', and what a

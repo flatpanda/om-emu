@@ -12,8 +12,9 @@ import { MODEL, MODEL_INFO } from '../../src/fw/model.mjs';
 import { romPath, resPath, scpuPath, nandPath } from '../../src/fw/models.mjs';
 import { resPrefix } from '../../src/fw/resprefix.mjs';
 import { coverageOption } from './coverage.mjs';
-import { PatchRefused, readPatchText, applyPatches, patchLayout, mainPatches } from '../../src/fw/patch.mjs';
+import { PatchRefused, readPatchText, applyPatches, patchLayout, mainFilePatches } from '../../src/fw/patch.mjs';
 import { extractSource, decodeExtract } from '../../src/fw/nand.mjs';
+import { identifyBytes } from '../../src/fw/identify.mjs';
 
 export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
@@ -42,14 +43,15 @@ export function readPatchFiles(files) {
     return readPatchText(text, f);
   });
 }
-// --main FILE (bin/play.mjs, bin/nav.mjs, bin/debug.mjs, bin/modelcheck.mjs): a whole patched main code block as
-// unpacked (caduceus-om3's firmware/build.py main.bin) as the patches that make it from the stock block, checked
-// against its MODELS digest: one per run of bytes that differ (src/fw/patch.mjs mainPatches; a file of another length,
-// the stock block itself, or one that cannot be read is refused, PatchRefused).
+// --main FILE (bin/play.mjs, bin/nav.mjs, bin/debug.mjs, bin/modelcheck.mjs, bin/session.mjs): a whole patched main
+// code block as unpacked (caduceus-om3's firmware/build.py main.bin), or the .BIN container that holds one, as the
+// patches that make it from the stock block, checked against its MODELS digest: one per run of bytes that differ
+// (src/fw/patch.mjs mainFilePatches, with what src/fw/identify.mjs finds the file to be; a file of another length,
+// another body's, the stock block itself, or one that cannot be read is refused, PatchRefused).
 export function readMainFile(file) {
   let b;
   try { b = readBytes(file); } catch (e) { throw new PatchRefused(`${file}: cannot read it (${e.code ?? e.message})`); }
-  return mainPatches(checkImage(readBytes(ORIGINAL)), b, file);
+  return mainFilePatches(checkImage(readBytes(ORIGINAL)), b, file, identifyBytes(b, createHash), MODEL);
 }
 // The run's firmware with a patch overlay: the stock main code block and resource block, each checked against its
 // MODELS digest, then the patches applied to copies (src/fw/patch.mjs applyPatches, which refuses a patch whose old

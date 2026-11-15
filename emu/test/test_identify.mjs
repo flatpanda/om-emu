@@ -1,4 +1,5 @@
-// What a firmware file is (src/fw/identify.mjs) and the gates that say it:
+// What a firmware file is (src/fw/identify.mjs), the gates that say it, and --main FILE on a .BIN container
+// (src/fw/patch.mjs mainFilePatches, checks/lib/env.mjs readMainFile):
 //   identifyUnits    (firmware-free) made-up bodies and containers the test builds: a release's container and its
 //                    bare block ('stock'), a head with another version field ('other-version'), a changed main block
 //                    with the checksum recomputed and not ('modified', checksum_ok), and what is 'unknown': a head
@@ -7,19 +8,31 @@
 //                    throws (answered, never thrown). The control the rule exists for: two bodies with main blocks of
 //                    one length are told apart by the head's model field and the digest (a length-only gate takes
 //                    either for a modified copy of the other); a bare block of that length with an unknown digest names
-//                    both as candidates. The reader's answer is the whole file's, walkBytes is walk. The lab's gate
-//                    (labFirmware, the run's model): a container of nobody's, bytes of no container and a container
-//                    with the model's own head around another main block are refused as before, each now naming what
-//                    the file is
+//                    both as candidates. The reader's answer is the whole file's, walkBytes is walk. --main's core on
+//                    the same files: a modified container's patches are the bare block's with not_applied saying the
+//                    other blocks are not read (and the checksum, when not recomputed), in the overlay's summary and
+//                    line; the stock container refused as the stock block is; another body's container or stock block,
+//                    another version's container refused by name. The lab's gate (labFirmware, the run's model): a
+//                    container of nobody's, bytes of no container and a container with the model's own head around
+//                    another main block are refused as before, each now naming what the file is
 //   identifyFiles    (the .BINs and unpacked blocks at hand; a body without either is a counted skip) each MODELS
 //                    body's .BIN is its 'stock' container with the checksum 0 and its unpacked block its 'stock' block:
 //                    the head rule (model field: the body's digits and 0; version field: the .BIN name's digits)
-//   node emu/test/test_identify.mjs [--units] [--files]
+//   identifySession  (the process's model through bin/session.mjs; E147 in bin/test.mjs's child) --main with the
+//                    stock .BIN refused as the stock block; a .BIN the test makes from it (16 bytes of the main block's
+//                    0xFF tail padding changed, the checksum not recomputed, written outside the tree and removed)
+//                    runs: its steps' lab times and frames are those of --main with the bare block and the frames
+//                    those of the stock session, the summary's patch and audit the bare block's but for the file and
+//                    what is not applied; the same .BIN with the checksum recomputed has no checksum note; the lab's
+//                    gate refuses both naming them modified, and another body's .BIN is refused by --main by name
+//   node emu/test/test_identify.mjs [--units] [--files] [--session]      (OM_EMU_MODEL=E147 for the OM-3)
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import * as F from '../src/fw/olyfw.mjs';
 import { identifyBytes, identifyFirmware, releaseHead, bodyOfHead, bodyOfDigest } from '../src/fw/identify.mjs';
+import { PatchRefused, mainPatches, mainFilePatches, applyPatches, patchLayout, patchLine } from '../src/fw/patch.mjs';
 import { MODELS, romPath } from '../src/fw/models.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname), REPO = path.resolve(EMU, '..');
@@ -109,6 +122,32 @@ export async function identifyUnits() {
   const r2 = identifyBytes(A, () => { throw new Error('no hash'); }, M);
   ok(is(r1, 'unknown', null, null, /^a file that could not be read \(NotReadableError\)$/) && is(r2, 'unknown', null, null, /could not be read \(no hash\)/), `a failing reader and a failing hash are answered: ${show(r1)} ${show(r2)}`);
 
+  // --main FILE's core on these files, the run's model A
+  const main = (u8) => mainFilePatches(A, u8, 'f.BIN', id(u8), 'E901');
+  const refused = (u8, re, what) => { const e = thrown(() => main(u8)); ok(e instanceof PatchRefused && re.test(e.message), `--main ${what}: ${e ? e.message : 'accepted'}`); };
+  const bare = mainPatches(A, Amod, 'f.BIN'), strip = (ps) => JSON.stringify(ps.map(({ not_applied, ...p }) => ({ ...p, old: [...p.old], new: [...p.new] })));
+  for (const [cks, fields] of [[true, 'container'], [false, 'container,checksum']]) {
+    const ps = main(container(Amod, { cks }));
+    ok(bare.length === 2 && strip(ps) === strip(bare) && ps.every((p) => p.not_applied === ps[0].not_applied) && ps[0].not_applied.map((x) => x.field).join() === fields,
+      `--main a modified container (checksum ${cks ? 'recomputed' : 'not recomputed'}): the bare block's patches, not_applied ${JSON.stringify(ps[0]?.not_applied)}`);
+    const r = applyPatches({ main: A, resource: RES }, ps, { layout: patchLayout(M.E901), createHash });
+    ok(same(r.blocks.main, Amod) && r.summary.not_applied?.map((x) => x.field).join() === fields && r.summary.not_applied.every((x) => x.file === 'f.BIN') &&
+      patchLine(r.summary).includes('; not applied: container (only its main code block is taken: its 1 other block(s) are not read, the lab loads the stock resource block)') &&
+      patchLine(r.summary).includes('checksum (the main code block\'s checksum total is not 0') === !cks,
+    `the overlay of a modified container: the block, the summary's not_applied, the line: ${patchLine(r.summary)}`);
+  }
+  ok(strip(main(Amod)) === strip(bare) && main(Amod).every((p) => !('not_applied' in p)) && !('not_applied' in applyPatches({ main: A }, main(Amod), { layout: patchLayout(M.E901), createHash }).summary),
+    'control: --main a bare modified block: mainPatches\' patches, nothing listed as not applied');
+  refused(container(A), /^f\.BIN: the stock main code block itself \(nothing to patch\)$/, 'the stock container (as the stock block)');
+  refused(A, /^f\.BIN: the stock main code block itself \(nothing to patch\)$/, 'the stock block');
+  refused(container(B, { model: '9020', ver: 0x1101 }), /^f\.BIN: E902 \(Made-up B\)'s v1\.1 release container \(OLY_E_902_1101_0000_0000\.BIN\): not a \.BIN of E901's firmware as the lab runs it, stock or modified$/, 'another body\'s container');
+  refused(container(Amod, { model: '9020', ver: 0x1101 }), /^f\.BIN: a container of E902 \(Made-up B\) v1\.1 with another main code block .*: not a \.BIN of E901's firmware/, 'another body\'s modified container');
+  refused(container(Amod, { ver: 0x1300 }), /^f\.BIN: a container of E901 \(Made-up A\) at version field 0x1300, .*: not a \.BIN of E901's firmware as the lab runs it/, 'another version\'s container');
+  refused(container(Amod, { model: '1234' }), /a body MODELS does not hold .*: not a \.BIN of E901's firmware/, 'a container of no body');
+  refused(B, /^f\.BIN: E902 \(Made-up B\)'s v1\.1 main code block as unpacked, not a patched main code block of E901$/, 'another body\'s stock block of the same length');
+  refused(random(1000, 6), /^f\.BIN: 1000 bytes, the stock main code block 4096: not a patched main code block of this model$/, 'a file of another length (mainPatches\' refusal)');
+  ok(mainPatches(A, B, 'f.BIN').reduce((n, p) => n + p.new.length, 0) > 4000, 'control: mainPatches alone takes another body\'s stock block of the same length as a patched block (nearly every byte a patch)');
+
   // the lab's gate on files of the run's model: refused as before, each now naming what the file is
   const { labFirmware, WrongFirmware } = await import('../src/fw/labfw.mjs');
   const { MODEL, MODEL_INFO } = await import('../src/fw/model.mjs');
@@ -158,8 +197,85 @@ export async function identifyFiles() {
   return { checks: t.checks, bad: t.bad, skipped };
 }
 
+// ---- the process's model through bin/session.mjs --------------------------------------------------------------------
+const BIN = path.join(EMU, 'bin/session.mjs');
+const cli = (args, opts = {}) => {
+  const r = spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', timeout: opts.timeout ?? 300000, maxBuffer: 1 << 28, env: { ...process.env, ...(opts.env ?? {}) } });
+  const lines = [];
+  for (const l of (r.stdout ?? '').split('\n').filter(Boolean)) { try { lines.push(JSON.parse(l)); } catch { lines.push({ unparsed: l }); } }
+  return { rc: r.status, steps: lines.filter((x) => !x.summary), sum: lines.find((x) => x.summary) ?? null, err: r.stderr ?? '', last: (r.stderr ?? '').trim().split('\n').at(-1) ?? '' };
+};
+export async function identifySession() {
+  const t = tester(), { ok } = t, skipped = [];
+  const { MODEL, MODEL_INFO } = await import('../src/fw/model.mjs');
+  const { labFirmware } = await import('../src/fw/labfw.mjs');
+  const stockBin = binOf(MODEL_INFO), stockBlk = path.join(REPO, romPath(MODEL_INFO));
+  if (!stockBin) { skipped.push(`${MODEL}: no ${MODEL_INFO.bin} (fw/, fw/old/ or $OM_FW_DIR)`); return { checks: t.checks, bad: t.bad, skipped }; }
+  const tmp = path.join(process.env.HOME, '.cache/om-emu-tmp/test-identify-' + process.pid);
+  fs.mkdirSync(tmp, { recursive: true });
+  try {
+    // --main with the stock .BIN: the stock block itself, as --main with the unpacked block
+    const s0 = cli(['--main', stockBin, 'wait:100']), s1 = cli(['--main', stockBlk, 'wait:100']);
+    ok(s0.rc === 1 && s0.last === `session.mjs: --main refused: ${stockBin}: the stock main code block itself (nothing to patch)` && s1.rc === 1 && s1.last === `session.mjs: --main refused: ${stockBlk}: the stock main code block itself (nothing to patch)`,
+      `--main with the stock .BIN and with the stock block: rc ${s0.rc} ${s0.last} | rc ${s1.rc} ${s1.last}`);
+    // a .BIN with 16 bytes of the main block's 0xFF tail padding changed: the file as it is, and its checksum recomputed
+    const TAIL = MODEL_INFO.rom_len - 0x100, NEW = Buffer.from('om-emu container');
+    const whole = new Uint8Array(fs.readFileSync(stockBin)), b0 = F.walkBytes(whole).blocks[0], stock = F.decodeBlock(whole.subarray(0, 64 + b0.len), b0).data;
+    ok(b0.flags === 0x0100 && stock.subarray(TAIL, TAIL + 16).every((x) => x === 0xff) && sha(stock) === MODEL_INFO.rom_sha256, `${MODEL}: the .BIN's first block is the stock main block, 0xFF padding at 0x${TAIL.toString(16)}`);
+    const want = stock.slice(); want.set(NEW, TAIL);
+    for (let k = 0; k < 16; k++) whole[32 + TAIL + F.PERM[k]] = want[TAIL + k] ^ 0xff;        // the group scrambled back (TAIL is 16-aligned)
+    const modBin = path.join(tmp, MODEL_INFO.bin), fixBin = path.join(tmp, 'fixed.BIN'), bareBlk = path.join(tmp, 'main.bin');
+    fs.writeFileSync(modBin, whole);
+    fs.writeFileSync(bareBlk, want);
+    const flow = ['wait:1500', 's1', 's2', 'wait:1500', 'play', 'info', 'play', 'menu', 'down', 'menu'];
+    const plain = cli(flow), bare = cli(['--main', bareBlk, ...flow]), cont = cli(['--main', modBin, ...flow]);
+    const shape = (r, lab = true) => JSON.stringify(r.steps.map((x) => [x.token, x.ok, lab ? x.lab_ns : 0, x.gui, x.frame]));
+    ok(plain.rc === 0 && bare.rc === 0 && cont.rc === 0 && plain.steps.length === flow.length + 1 && new Set(plain.steps.map((x) => x.frame)).size >= 3 && plain.steps.slice(1).every((x) => x.frame),
+      `the three runs pass and the flow's frames change: rc ${plain.rc} ${bare.rc} ${cont.rc}; ${plain.steps.map((x) => x.frame)} | ${cont.last}`);
+    ok(shape(cont) === shape(bare), `--main with the .BIN: every step's lab time, GUI and frame are the bare block's:\n${shape(cont)}\n${shape(bare)}`);
+    ok(shape(cont, false) === shape(plain, false), `--main with the .BIN: every step's GUI and frame are the stock session's:\n${shape(cont, false)}\n${shape(plain, false)}`);
+    const tailNote = '; not applied: container (only its main code block is taken: its ';
+    const head = `1 patch (16 bytes changed) from ${modBin}; main block sha256 ${sha(want).slice(0, 16)} (stock ${MODEL_INFO.rom_sha256.slice(0, 16)})`;
+    ok(cont.sum?.patch?.startsWith(head + tailNote) && /other block\(s\) are not read, the lab loads the stock resource block\), checksum \(the main code block's checksum total is not 0 \(not recomputed after the change\); the lab does not check it\)$/.test(cont.sum.patch) &&
+      bare.sum?.patch === head.replace(modBin, bareBlk) && cont.err.includes(`session.mjs: patched firmware: ${cont.sum.patch}`),
+    `the summary's patch: the bare block's but for the file and what is not applied: ${cont.sum?.patch} | ${bare.sum?.patch}`);
+    ok(cont.sum?.patch_audit && JSON.stringify(cont.sum.patch_audit) === JSON.stringify(bare.sum?.patch_audit) && JSON.stringify(cont.sum.stand_ins) === JSON.stringify(bare.sum.stand_ins) && plain.sum.patch === null,
+      `the summary's patch audit and stand-ins are the bare block's: ${JSON.stringify(cont.sum?.patch_audit)} | ${JSON.stringify(bare.sum?.patch_audit)}`);
+    // control: the comparison tells a run with another flow apart
+    const other = cli(['--main', modBin, ...flow.filter((x) => x !== 's2')]), drop = (r) => JSON.stringify(r.steps.filter((x) => x.token !== 's2').map((x) => [x.token, x.gui, x.frame]));
+    ok(other.rc === 0 && drop(other) !== drop(plain), `control: the same comparison tells a flow without S2 apart (its playback has no picture): rc ${other.rc} ${other.last}`);
+
+    // the checksum recomputed: the tail's checksum field moved by the sum's change; no checksum note
+    const fixed = whole.slice(), dv = new DataView(fixed.buffer), at = 32 + b0.len + 28;
+    dv.setUint32(at, (dv.getUint32(at, true) - (F.sum32(want) - F.sum32(stock))) >>> 0, true);
+    fs.writeFileSync(fixBin, fixed);
+    const idMod = identifyBytes(whole, createHash), idFix = identifyBytes(fixed, createHash);
+    ok(idMod.status === 'modified' && idMod.model === MODEL && idMod.checksum_ok === false && idFix.status === 'modified' && idFix.checksum_ok === true && idFix.rom_sha256 === sha(want),
+      `the two .BINs: ${JSON.stringify({ ...idMod, main: null })} ${JSON.stringify({ ...idFix, main: null })}`);
+    const fx = cli(['--main', fixBin, 'wait:100']);
+    ok(fx.rc === 0 && fx.sum?.patch?.startsWith(head.replace(modBin, fixBin) + tailNote) && /stock resource block\)$/.test(fx.sum.patch), `--main with the checksum recomputed: no checksum note: rc ${fx.rc} ${fx.sum?.patch} | ${fx.last}`);
+    // the lab's gate (the browser player's and fetch-fw's) still refuses both, naming them
+    for (const [file, re] of [[modBin, /^OE block 0x0100 at 0x00000000: checksum total 0x[0-9a-f]{8}, not 0 \(a damaged or altered \.BIN\); this file is a container of /], [fixBin, /^the main code block is not .*: this file is a container of /]]) {
+      const f = fileReader(file);
+      let e = null;
+      try { await labFirmware(f.read, f.size, createHash); } catch (x) { e = x; } finally { f.close(); }
+      ok(e && re.test(e.message) && e.message.includes(`${MODEL} (${MODEL_INFO.name}) v${MODEL_INFO.version} with another main code block`) && e.message.endsWith('node\'s --patch or --main)') && e.id?.status === 'modified',
+        `the gate on ${path.basename(file)}: ${e ? e.message : 'accepted'}`);
+    }
+    // another body's .BIN (one of the same main block length where there is one at hand)
+    const otherCode = Object.keys(MODELS).find((c) => c !== MODEL && MODELS[c].rom_len === MODEL_INFO.rom_len && binOf(MODELS[c])) ?? Object.keys(MODELS).find((c) => c !== MODEL && binOf(MODELS[c]));
+    if (!otherCode) skipped.push('no other body\'s .BIN at hand');
+    else {
+      const o = cli(['--main', binOf(MODELS[otherCode]), 'wait:100']);
+      ok(o.rc === 1 && o.last === `session.mjs: --main refused: ${binOf(MODELS[otherCode])}: ${otherCode} (${MODELS[otherCode].name})'s v${MODELS[otherCode].version} release container (${MODELS[otherCode].bin}): not a .BIN of ${MODEL}'s firmware as the lab runs it, stock or modified`,
+        `--main with ${otherCode}'s .BIN: rc ${o.rc} ${o.last}`);
+    }
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  return { checks: t.checks, bad: t.bad, skipped };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const all = !['--units', '--files'].some((x) => process.argv.includes(x));
+  const all = !['--units', '--files', '--session'].some((x) => process.argv.includes(x));
   let fail = 0;
   const say = (name, r) => {
     console.log(`${name}: ${r.checks - r.bad.length}/${r.checks}${r.skipped?.length ? `, ${r.skipped.length} SKIPPED` : ''}`);
@@ -168,5 +284,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   };
   if (all || process.argv.includes('--units')) say('firmware identity units', await identifyUnits());
   if (process.argv.includes('--files')) say('firmware identity of the files at hand', await identifyFiles());
+  if (process.argv.includes('--session')) { const r = await identifySession(); say(`--main with a .BIN (${process.env.OM_EMU_MODEL ?? 'E143'}, bin/session.mjs)`, r); fail += r.skipped.length; }
   process.exit(fail ? 1 : 0);
 }

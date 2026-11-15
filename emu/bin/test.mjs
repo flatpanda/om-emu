@@ -64,6 +64,7 @@
 // E143 and E147 (test_identify.mjs).
 // The Stand-ins tab's rows against the labels a session can report, and does report on E143 and E147 (test_standins.mjs).
 // What a picture is, said at the picture, and a shot's source on E143 and E147 (test_sources.mjs).
+// The lab's call on a synthetic block of hand-written functions, without firmware (test_slice.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -898,6 +899,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`what a picture is: units ${su.checks - su.bad.length}/${su.checks}; a session's shots on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the lab's call on a synthetic block (src/lab/hle.mjs HLE.call; test_slice.mjs), without firmware
+{
+  const { sliceUnits } = await import('../test/test_slice.mjs');
+  const su = await sliceUnits();
+  console.log(`the lab's call on a synthetic block: units ${su.checks - su.bad.length}/${su.checks}`);
+  su.bad.forEach((x) => console.log('  ', x));
+  bad += su.bad.length;
 }
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {

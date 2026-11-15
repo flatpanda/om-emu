@@ -134,3 +134,11 @@ traces or frames from running it. It does hold what the reverse engineering deri
 tables (`emu/checks/fixtures/om1-vsc-regs.h`), digests and short recorded observations that the tests compare
 (`emu/checks/fixtures/`, `emu/golden.json`), and short disassembly and string excerpts (`analysis/`). Olympus and OM
 System are trademarks of their owners; this project is not affiliated with them.
+
+## Licence
+
+om-emu's own code and documentation are under the MIT License ([LICENSE](LICENSE)). Three files carry their own notice
+and keep it: `tools/a53-oracle/om-isc.c` and `tools/a53-oracle/om-isc-qemu.patch` (GPL-2.0-or-later, as they are built
+into QEMU) and `emu/refs/mt19937.mjs` (the MT19937 authors' notice and the Python Software Foundation License). The
+licence covers this project's work only: it grants no right in the vendor's firmware, which is not part of this
+repository.

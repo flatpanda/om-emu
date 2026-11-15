@@ -1,6 +1,7 @@
 {
   "name": "om-emu",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "OM-Emu: an emulator of Olympus/OM camera firmware in JavaScript; see README.md",
   "engines": { "node": ">=26" },

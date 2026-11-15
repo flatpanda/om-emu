@@ -70,8 +70,24 @@
 //               X: the values the lab's store holds already), properties copied from the settings store (0x5004188b)
 //               and the white-balance preset table 0xa31f1bd0 (0x5039950e), whose rows the EXIF set's gains read
 //               (docs/hle-gaps.md 4.3.11)
+//   H-SHOTALLOC (where the rule reads it, fact 'take_shot', src/fw/facts.mjs takeShot: E143, E146, E147;
+//               docs/hle-gaps.md 4.3.13) the picture's shot in TAKE's shot table, as the camera application takes it
+//               before its take-picture request and gives it back afterwards: CapBuf_TakeBuff's call of api_rec's
+//               take-buffer allocation (API 0x20019), natively before S-EXIFPRM, which has TAKE's own allocation
+//               pick a free id and take the shot's buffers from MM by the kind the settings give (X on the three:
+//               id 1, the entry's flags 0x7d: the Bayer and thumbnail handles, the shot's record with its handle, and
+//               the four other buffers, no error logged); and its call of api_rec's free (API 0x2001a) natively once
+//               REC_FILE's reply is taken and both REC tasks wait again (I: when the application frees it is not
+//               read), which leaves the entry free and MM's handles for the next shot (X: 20 shots, the same id and
+//               handles each). The id is the packet's HandleTarget and its record, by TAKE's own lookup, the block
+//               S-EXIFPRM fills, as REC_MAIN's still handler sets pExifParam from HandleTarget (D). The buffers hold
+//               no sensor image: nothing in the lab writes the Bayer, thumbnail or other buffers, so a reader of
+//               their pixels gets what MM's memory holds (the lab's DRAM, zero unless something else wrote there).
+//               TAKE's lock of the entry for the take (its +26, TAKE_MAIN's on taking the request) is not set: TAKE_MAIN
+//               does not run
 //   S-EXIFPRM   the shot's EXIF parameter block (pExifParam, the packet's +28; on the camera TAKE's per-shot record,
-//               0x503afc3e(HandleTarget), 92252 bytes), as TAKE's takepic hands it to REC, whose shooting values
+//               0x503afc3e(HandleTarget), 92252 bytes; with H-SHOTALLOC that record, else a block of the lab's), as
+//               TAKE's takepic hands it to REC, whose shooting values
 //               takepic fills and the lab does not run: the template copied by TAKE's own copy (0x504298f9, TAKE's
 //               call 0x503bba70); the camera's clock read natively (0x5012b7cd) into the capture's time record at
 //               +37800 (I: TAKE's; the EXIF set formats the dates from there, 0x5042c16e); the crop areas +40858 (JPEG)
@@ -184,9 +200,10 @@
 //               G gains (0x505099e0 from 0x50509ac9), which ImageParam copies from the shot record's +37810.. and
 //               REC_PREPRO's rec_precon_wb_exec fills on the camera: 0 here (X, D). ImageParam's body natively asks
 //               TAKE's shot table for its four sources' buffers (rec_ImgProCtrl_Src_Bayer, _Thumb, _ThumbICam1,
-//               _ThumbICam2, by HandleTarget), which TAKE does not fill in the lab: each logs 0x25000402 and gives
-//               handle 0, for which MM's handle-to-address 0x50534dd1 logs 0x08010004 (X; the record's errlog, the
-//               logs from the post to the parameter set's call). Natively Jpeg_Result sets Size to
+//               _ThumbICam2, by HandleTarget): with H-SHOTALLOC's shot each finds its handle and MM its buffer, and
+//               nothing is logged from the post to the parameter set's call (X; the record's errlog); with no shot
+//               allocated (until 2026-11-14) each logged 0x25000402 and gave
+//               handle 0, for which MM's handle-to-address 0x50534dd1 logged 0x08010004 (X). Natively Jpeg_Result sets Size to
 //               HeaderSize + the library's primary size and then copies 51200 bytes from the record's +41052 after
 //               the primary with a kind 13 request to the imgpro unit, Size grown by as much (D); the lab makes
 //               neither (with the lab's PlayPic 1 it would add the preview's length too, X, D). What the run would do
@@ -212,7 +229,7 @@ import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
-import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143 } from '../fw/facts.mjs';
+import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143 } from '../fw/facts.mjs';
 
 export class RecError extends FirmwareError {}
 
@@ -268,7 +285,8 @@ const STILL = 4097;          // Mode: REC_MAIN's still (0x5053a349); REC_IMAGE m
 const NO_MEDIA = 0xFFFF;     // Media2: no second slot (0x5053dd14)
 const CARD = 1;              // RecordDevice bit 0: the card (0x50540392, 0x50540418)
 const JPEG = 1;              // FileType: the extension and DCF kind tables' index 1 (0x5053fee3; JPG, kind 1)
-const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117)
+const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117) where
+                             // H-SHOTALLOC does not allocate one (the bodies without REC_IMAGE natively)
 // Command: the requester's command, which REC_MAIN copies from its message (docs/hle-gaps.md 4.3.4) and dispatches on:
 // its still handler, the one that sets Mode 4097 (0x5053a349), is Command 16's case for the request's Mode 4113, and
 // its receive refuses a command below 16 (D on E143, E146 and E147). rec_ImgPro_CreateParam's extension sizes its
@@ -324,7 +342,9 @@ export class RecFile {
     // TAKE's exposure for the shot's record (S-EXIFPRM, where the EXIF set runs natively: fact 'take_exposure',
     // src/fw/facts.mjs takeExposure)
     this.exposure = this.image && this.exif_set() ? fact('take_exposure', TAKE_EXPOSURE_E143) : null;
-    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take}
+    // TAKE's shot for the picture (H-SHOTALLOC, on the same bodies: fact 'take_shot', src/fw/facts.mjs takeShot)
+    this.shot = this.image ? fact('take_shot', TAKE_SHOT_E143) : null;
+    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
     // rule's record steps; recFileInline's version has no file context either, but its registration's, context)
@@ -390,9 +410,32 @@ export class RecFile {
     const lab = this.lab;
     return (lab.nk.state(t) & 0xF) === WAI && !lab.nk.timed_waiters().includes(t);
   }
-  // S-EXIFPRM: the shot's EXIF parameter block; returns its address and the capture's clock record
-  exif_param() {
-    const lab = this.lab, sim = lab.sim, X = this.R.exif, D = X.date, x = lab.alloc(new Uint8Array(X.size), 64);
+  // H-SHOTALLOC: the picture's shot, allocated as the application's CapBuf_TakeBuff allocates it (api_rec's take-buffer
+  // allocation natively: TAKE's own allocation by the settings' kind); its record by TAKE's own lookup. Returns {id,
+  // record, flags, entry} (the entry's 32 bytes as the allocation left them), or null where no rule reads it
+  shot_alloc() {
+    const T = this.shot;
+    if (!T) return null;
+    const lab = this.lab, sim = lab.sim, e0 = lab.kernel.errors.length;
+    const id = lab.call(T.alloc, null, null, null, 2000000).d0 & 0xFFFF;
+    const logs = () => lab.kernel.errors.slice(e0).map(([c]) => h8(c)).join(' ') || 'none';
+    if (id < 1 || id >= T.record.ids) throw new RecError(`H-SHOTALLOC: api_rec's take-buffer allocation ${h8(T.alloc)} gave the id ${id}, no shot of TAKE's table (its error logs: ${logs()})`);
+    const record = lab.call(T.record.fn, { d0: id }, null, null, 2000000).a0 >>> 0;
+    if (!record || lab.kernel.errors.length !== e0) throw new RecError(`H-SHOTALLOC: TAKE's lookup ${h8(T.record.fn)} gives the shot ${id} the record ${h8(record)} (error logs: ${logs()})`);
+    const entry = sim.read(T.record.table + T.record.entry * id, T.record.entry);
+    return { id, record, flags: entry[0] | entry[1] << 8, entry };
+  }
+  // H-SHOTALLOC's end: the application's free of the shot (api_rec's free natively), after which TAKE's entry is free
+  shot_free(shot) {
+    const T = this.shot, lab = this.lab;
+    lab.call(T.free, { d0: shot.id }, null, null, 2000000);
+    const b = lab.sim.read(T.record.table + T.record.entry * shot.id, 2), flags = b[0] | b[1] << 8;
+    if (flags !== 0) throw new RecError(`H-SHOTALLOC: api_rec's free ${h8(T.free)} left the shot ${shot.id}'s flags 0x${flags.toString(16)}`);
+  }
+  // S-EXIFPRM: the shot's EXIF parameter block (the shot's record where H-SHOTALLOC allocated one, else a block of the
+  // lab's); returns its address and the capture's clock record
+  exif_param(shot = null) {
+    const lab = this.lab, sim = lab.sim, X = this.R.exif, D = X.date, x = shot ? shot.record : lab.alloc(new Uint8Array(X.size), 64);
     lab.call(X.copy, { a0: x }, null, null, 2000000);
     lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
@@ -445,10 +488,11 @@ export class RecFile {
     if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its input`);
     if (this.image && !this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
     const stream = encoderStream(jpeg);
-    const { x, clock, date, take, exposure } = this.exif_param();
+    const shot = this.shot_alloc();
+    const { x, clock, date, take, exposure } = this.exif_param(shot);
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
-    put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
+    put('pExifParam', '<I', x); put('HandleTarget', '<I', shot ? shot.id : SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
     if (this.image) put('Command', '<I', STILL_COMMAND);
     if (this.frame) {       // the E118 family's packet: FileType a halfword, no second slot; RecordDevice on E118 only
       put('FileType', '<H', JPEG);
@@ -459,7 +503,8 @@ export class RecFile {
       if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
       put('FileType', '<B', JPEG);
     }
-    const { header, size } = this.image ? this.image_native(pk, stream, take, exposure) : this.image_lab(pk, stream);
+    const { header, size } = this.image ? this.image_native(pk, stream, take, exposure, shot) : this.image_lab(pk, stream);
+    if (shot) this.shot_free(shot);
     // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
     // for 1: 0x5053ff29..0x5053ff37, D; its fnode and DCF block, storage.mjs REC's layouts); where rec_make_file keeps
     // the context on its stack (recFileInline: contexts null), from the fnode and the stamp it held at the
@@ -527,7 +572,7 @@ export class RecFile {
   // REC_IMAGE's task natively with S-JPEGENC's encode (the lab's stream), REC_FILE natively, S-RECREQ's reply taken;
   // lab time runs until the reply and both tasks wait again. Returns {header, size} as REC_FILE's packet has them at
   // its reply
-  image_native(pk, stream, take, exposure) {
+  image_native(pk, stream, take, exposure, shot) {
     const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, P = R.packet.fields, I = this.image, who = 'S-RECREQ';
     const imgpro = lab.sim.m.devices.imgpro, runs0 = imgpro?.runs ?? 0;
     const alive = lab.alloc(new Uint8Array(4), 4);
@@ -588,7 +633,8 @@ export class RecFile {
     const y = run.reply, fills = (imgpro?.log ?? []).filter((f) => f.n > runs0);
     // S-JPEGENC's steps
     const steps = { set: run.set, run: run.run, result: run.encoded, id: run.id, handle: run.handle, released: run.released };
-    const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take, exposure };
+    const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take, exposure,
+      shot: shot && { id: shot.id, record: shot.record, flags: shot.flags, entry: shot.entry } };
     this.images.push(record);
     if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.id !== run.handle || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
       throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
@@ -678,7 +724,7 @@ export class RecFile {
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
 // H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

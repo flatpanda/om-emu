@@ -4058,6 +4058,63 @@ export function takeExposure(img, at) {
   };
 }
 
+// TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps.md 4.3.13),
+// read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged. A normal still's shot is not
+// TAKE_MAIN's to allocate: its still states allocate one only under TAKE context bytes of other modes (StlRdy1
+// 0x503b1365 kind 8, 0x503b1341, 0x503b1391), and keep the take-picture request's own id, the packet's +0, which
+// api_rec's takePicture (0x5040ee43) stores from its second argument. The id is the take buffer the application's
+// CapBuf_TakeBuff allocates through api_rec before the request and frees through it afterwards:
+// - alloc, kind, take.alloc: api_rec's allocation (API 0x20019, the one function that opens `mov 0x20019,d0; call`, its
+//   API trace's entry; 0x5040f43a, called by CapBuf_TakeBuff's 0x50b87891 alone, D). In its first TAKE_SHOT_SPAN bytes
+//   `mov ID,d0; mov 0,a0; clr d1; call S; cmp V,d0; bne; mov 1,d0; bra; clr d0; call ALLOC` (0x5040f469): TAKE's
+//   allocation ALLOC (0x503af59e) with the kind 1 where the setting ID (49698) reads V (2), else 0; it answers the
+//   shot's id in d0, 0 where TAKE's allocation gave none (255). kind {setting, value}
+// - free, take.free: api_rec's free (API 0x2001a, `mov d0,d2; mov 0x2001a,d0; call`; 0x5040f52e, CapBuf_TakeBuff's
+//   0x50b84bb8 and 0x50b875c4 among its four callers), which hands its d0 to TAKE's free, `mov d2,d0; call FREE,[d2],28`
+//   (0x5040f57c: 0x503af80b)
+// - record {fn, table, entry, ids, flag, at}: TAKE's lookup of a shot's record by its id (0x503afc3e; REC's and TAKE's
+//   own, takepic's 0x503bcd64 and the shot-record fill's 0x503bba54 among its callers), the one `mov d0,d1; asl K,d1;
+//   mov d1,a0; add TABLE,a0; movhu (a0),d1; btst 4,d1; bne` of the image (0x503afc46: the entry's flags, bit 4 the
+//   record's) whose branch goes to `mov (AT,a0),a0; ret [],24` and which follows the id's range test `cmp 1,d0; bcs;
+//   cmp IDS,d0; bcc` (IDS an imm8 or an imm16: E146's 233): entry 1 << K bytes (32), ids IDS (116: the ids 1..115;
+//   E146 233, E147 110), flag 4, at AT (20, the record's address). X: the allocation leaves the entry's flags 0x7d on
+//   the three with the lab's settings (the Bayer and thumbnail handles, the record, and the buffers of the flags 8,
+//   0x10, 0x20 and 0x40), and the free 0
+// Throws where a form is missing or found twice
+export const TAKE_SHOT_E143 = { alloc: 0x5040F43A, free: 0x5040F52E, kind: { setting: 49698, value: 2 }, take: { alloc: 0x503AF59E, free: 0x503AF80B },
+  record: { fn: 0x503AFC3E, table: 0x62A494A4, entry: 32, ids: 116, flag: 4, at: 20 } };
+const TAKE_SHOT_SPAN = 0x60, API_SHOT_ALLOC = 0x20019, API_SHOT_FREE = 0x2001A;
+const SHOT_KIND_FORM = [0xfc, 0xcc, null, null, null, null, 0x90, 0x00, 0x04, 0xdd, null, null, null, null, 0x00, 0x04, 0xa0, null, 0xc9, 0x06, 0x80, 0x01,
+  0xca, 0x03, 0x00, 0xdd];
+const SHOT_FREE_FORM = [0x88, 0xdd, null, null, null, null, 0x80, 0x1c];
+const SHOT_LOOK_FORM = [0x81, 0xf8, 0xc1, null, 0xf1, 0xe4, 0xfc, 0xd0, null, null, null, null, 0xf0, 0x64, 0xf8, 0xed, 0x04, 0xc9];
+const SHOT_LOOK_END = [0xf8, 0x20, null, 0xdf, 0x00, 0x18];
+export function takeShot(img) {
+  const rule = 'takeShot', D = (o) => h8(0x50000000 + o);
+  const api = (id, head, what) => {
+    const o = oneAt(img, [...head, 0xfc, 0xcc, ...le32(id), 0xdd], rule, `${what} (API ${h8(id)})`);
+    if (o === null) throw new Error(`${rule}: no ${what} (API ${h8(id)}: no function opens with its trace's entry)`);
+    return o;
+  };
+  const alloc = api(API_SHOT_ALLOC, [], 'api_rec allocations of a take buffer'), free = api(API_SHOT_FREE, [0x82], 'api_rec frees of a take buffer');
+  const kind = oneAt(img, SHOT_KIND_FORM, rule, 'kind selections in the allocation', alloc, alloc + TAKE_SHOT_SPAN + SHOT_KIND_FORM.length);
+  if (kind === null) throw new Error(`${rule}: api_rec's allocation ${D(alloc)} selects no kind by a setting in its first 0x${TAKE_SHOT_SPAN.toString(16)} bytes`);
+  const hand = oneAt(img, SHOT_FREE_FORM, rule, 'calls of TAKE\'s free in the free', free, free + TAKE_SHOT_SPAN + SHOT_FREE_FORM.length);
+  if (hand === null) throw new Error(`${rule}: api_rec's free ${D(free)} hands its id to no free in its first 0x${TAKE_SHOT_SPAN.toString(16)} bytes`);
+  const look = oneAt(img, SHOT_LOOK_FORM, rule, 'lookups of a shot\'s record');
+  if (look === null) throw new Error(`${rule}: no lookup of a shot's record by the entry's bit 4`);
+  const end = look + 17 + (img[look + 18] << 24 >> 24);
+  if (!bytesAt(img, end, SHOT_LOOK_END)) throw new Error(`${rule}: the record lookup ${D(look)} does not end with the record's load and return at ${D(end)}`);
+  // the id's range test before it: cmp 1,d0; bcs; cmp IDS,d0 (imm8 or imm16); bcc
+  const wide = bytesAt(img, look - 6, [0xfa, 0xc8]), head = look - (wide ? 10 : 8);
+  if (img[look - 2] !== 0xc6 || !bytesAt(img, head, [0xa0, 0x01, 0xc4]) || !(wide || img[look - 4] === 0xa0)) throw new Error(`${rule}: the record lookup ${D(look)} has no id range test before it`);
+  return {
+    alloc: 0x50000000 + alloc, free: 0x50000000 + free, kind: { setting: u32(img, kind + 2), value: img[kind + 17] },
+    take: { alloc: 0x50000000 + callAt(img, kind + 25).to, free: 0x50000000 + callAt(img, hand + 1).to },
+    record: { fn: 0x50000000 + head, table: u32(img, look + 8), entry: 1 << img[look + 3], ids: wide ? img[look - 4] | img[look - 3] << 8 : img[look - 3], flag: img[look + 16], at: img[end + 2] },
+  };
+}
+
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
 // reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
@@ -5740,6 +5797,8 @@ export function readPlacedFacts({ img, at }) {
   if (recF !== undefined) facts.take_requests = takeRequests(img, at, qewr);
   // TAKE's exposure for a still's record as S-EXIFPRM gives it, on the same bodies
   if (recF !== undefined) facts.take_exposure = takeExposure(img, at);
+  // TAKE's shot for a still as H-SHOTALLOC allocates it, on the same bodies
+  if (recF !== undefined) facts.take_shot = takeShot(img);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

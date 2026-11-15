@@ -42,7 +42,8 @@
 // display options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147
 // with OM_CADUCEUS (test_looks.mjs), its hue and lightness, Blacks and Whites and split toning hooks on their outputs
 // with OM_CADUCEUS (test_lookhooks.mjs), E147's still set-up at each creative-dial position and, with OM_CADUCEUS,
-// Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), every caduceus-om3 release against its pins when
+// Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), TAKE's shot allocated and freed over 20 pictures on
+// E143, E146 and E147 (test_shotalloc.mjs), every caduceus-om3 release against its pins when
 // OM_CADUCEUS names a checkout
 // (test_caduceus.mjs), a tap on the touch mode icon on E143, E146, E147, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
@@ -792,6 +793,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`E147's still set-up: dial ${r.status === 0 ? 'ok' : 'FAILED'}; Caduceus ${c === null ? 'SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)' : c.status === 0 ? 'ok' : 'FAILED'}`);
   [...(r.status === 0 ? [] : lines(r)), ...(c === null || c.status === 0 ? [] : lines(c))].forEach((l) => console.log('  ', `E147: ${l.trim()}`));
   bad += (r.status === 0 ? 0 : 1) + (c === null || c.status === 0 ? 0 : 1);
+}
+// H-SHOTALLOC over 20 consecutive pictures (test_shotalloc.mjs): TAKE's shot table and MM's handles left as found
+// after each, on E143, E146 and E147, each in a process of its own
+{
+  const { spawnSync } = await import('node:child_process');
+  for (const m of ['E143', 'E146', 'E147']) {
+    const r = spawnSync(process.execPath, [new URL('../test/test_shotalloc.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    const lines = (r.stdout + r.stderr).trim().split('\n');
+    console.log(lines.find((l) => /^H-SHOTALLOC over/.test(l)) ?? `H-SHOTALLOC over 20 pictures (${m}): FAILED`);
+    if (r.status !== 0) { lines.filter((l) => l.startsWith('   ') || !/^H-SHOTALLOC over/.test(l)).forEach((l) => console.log('  ', `${m}: ${l.trim()}`)); bad += 1; }
+  }
 }
 // the caduceus-om3 releases (test_caduceus.mjs): the pins' units; with OM_CADUCEUS naming a caduceus-om3 checkout, each
 // release folder's files against its pins and its flow on E147 in processes of their own; without it SKIPPED

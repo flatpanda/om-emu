@@ -32,8 +32,9 @@
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
-//                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
-//                   only; the still path's coverage, STILL_PATH: CreateParam's calls, the create, its stage-table
+//                   ImageParam's parameter set on; before it no error log: ImageParam's four sources find their
+//                   buffers in the shot H-SHOTALLOC allocated, whose id, entry and record are checked, and its
+//                   entry freed after the shot; the still path's coverage, STILL_PATH: CreateParam's calls, the create, its stage-table
 //                   fill on a request with the picture mode's format word (E143 and E146 2: the still constructor;
 //                   E147 at the creative dial's start, COLOR, 11: the extension's apply, the constructor and the
 //                   second step's stub for bit 19, which the create sets), kind and option 0, the second step once,
@@ -128,7 +129,9 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
 // (with S-RECREQ's Command 16). Never run: the extension's apply on E143 and E146 (byte +8 is 0), the other
 // constructors, the second step's call for the kind byte, the library's run and its generic kind handler (S-JPEGENC),
 // TAKE's shot-record fill and takepic (TAKE does not run). TAKE's exposure-record fill (StlRdy1's) runs once, in
-// S-EXIFPRM (src/fw/facts.mjs takeExposure, docs/hle-gaps.md 4.3.13). The per-shot EXIF fill inside the EXIF set is the
+// S-EXIFPRM (src/fw/facts.mjs takeExposure, docs/hle-gaps.md 4.3.13). TAKE's shot allocation and its free run once each,
+// under api_rec's calls that H-SHOTALLOC makes as the application's CapBuf_TakeBuff does (src/fw/facts.mjs takeShot;
+// each body's pair read on its body, D). The per-shot EXIF fill inside the EXIF set is the
 // observers' control: it runs once. select: the stage-table fill, whose a0 is the create's handle with the request's
 // copy at +4 (size bytes; kind and option its bytes the fill tests first and second); request: the copy's format word
 // (+8) and flags (+12) there. dial (E147): per creative-dial position [position, label, format word, flags, the
@@ -143,7 +146,8 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5049CB5C, 0], ['the constructor for the option byte', 0x504953B9, 0],
     ['the constructor for byte +8 1 or bit 19', 0x504953A9, 0], ["the second step's stub for byte +8 1 or bit 19", 0x504953C2, 0],
     ["the second step's call for the kind byte", 0x5049CD1A, 0], ["the library's run", 0x50492758, 0], ['the generic kind handler', 0x5046D994, 0],
-    ["TAKE's shot-record fill", 0x503BBA51, 0], ['takepic', 0x503BCD51, 0], ['the per-shot EXIF fill (control)', 0x5042C2D5, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BF619, 1]] },
+    ["TAKE's shot-record fill", 0x503BBA51, 0], ['takepic', 0x503BCD51, 0], ['the per-shot EXIF fill (control)', 0x5042C2D5, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BF619, 1],
+    ["TAKE's shot allocation (H-SHOTALLOC)", 0x503AF59E, 1], ["TAKE's shot free (H-SHOTALLOC)", 0x503AF80B, 1]] },
   E146: { select: 0x50485F48, size: 56, kind: 45, option: 50, request: { format: 0x20000, flags: 0 }, at: [
     ['CreateParam', 0x5051F5AF, 1], ['its call of the format word', 0x5051F5E0, 1], ['its call of the flags', 0x5051F5EA, 1],
     ['its call of the kind byte', 0x5051F60D, 1], ['its call of the extensions', 0x5051F64A, 1], ["the extension's test", 0x505216CF, 2],
@@ -152,7 +156,8 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5048F852, 0], ['the constructor for the option byte', 0x50487EA9, 0],
     ['the constructor for byte +8 1 or bit 19', 0x50487E99, 0], ["the second step's stub for byte +8 1 or bit 19", 0x50487EB2, 0],
     ["the second step's call for the kind byte", 0x5048FA10, 0], ["the library's run", 0x50485182, 0], ['the generic kind handler', 0x5045F338, 0],
-    ["TAKE's shot-record fill", 0x503BC37E, 0], ['takepic', 0x503BD6AB, 0], ['the per-shot EXIF fill (control)', 0x50428252, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BFE9C, 1]] },
+    ["TAKE's shot-record fill", 0x503BC37E, 0], ['takepic', 0x503BD6AB, 0], ['the per-shot EXIF fill (control)', 0x50428252, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503BFE9C, 1],
+    ["TAKE's shot allocation (H-SHOTALLOC)", 0x503AF63E, 1], ["TAKE's shot free (H-SHOTALLOC)", 0x503AF8B1, 1]] },
   E147: { select: 0x504947A6, size: 60, kind: 45, option: 50, request: { format: 0xB0000, flags: 0x80000 }, at: [
     ['CreateParam', 0x5052E69F, 1], ['its call of the format word', 0x5052E6D0, 1], ['its call of the flags', 0x5052E6DA, 1],
     ['its call of the kind byte', 0x5052E6FD, 1], ['its call of the extensions', 0x5052E73A, 1], ["the extension's test", 0x505307C8, 2],
@@ -161,7 +166,8 @@ export const STILL_PATH = {
     ['the constructor for the kind byte', 0x5049E129, 0], ['the constructor for the option byte', 0x50496707, 0],
     ['the constructor for byte +8 1 or bit 19', 0x504966F7, 1], ["the second step's stub for byte +8 1 or bit 19", 0x50496710, 1],
     ["the second step's call for the kind byte", 0x5049E2E7, 0], ["the library's run", 0x504939E0, 0], ['the generic kind handler', 0x5046DBA4, 0],
-    ["TAKE's shot-record fill", 0x503C660C, 0], ['takepic', 0x503C793B, 0], ['the per-shot EXIF fill (control)', 0x50436558, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503C9DB8, 1]],
+    ["TAKE's shot-record fill", 0x503C660C, 0], ['takepic', 0x503C793B, 0], ['the per-shot EXIF fill (control)', 0x50436558, 1], ["TAKE's exposure-record fill (S-EXIFPRM)", 0x503C9DB8, 1],
+    ["TAKE's shot allocation (H-SHOTALLOC)", 0x503B98CF, 1], ["TAKE's shot free (H-SHOTALLOC)", 0x503B9B42, 1]],
     dial: [[0, 'MONO', 0xC0000, 0x880000, 'the constructor for byte +8 1 or bit 19'], [1, 'COLOR', 0xB0000, 0x80000, 'the constructor for byte +8 1 or bit 19'],
       [2, 'position 2', 0x20000, 0, 'the still constructor'], [3, 'ART', 0x640101, 0, 'the constructor for byte +8 1 or bit 19'],
       [4, 'CRT', 0x90000, 0, 'the still constructor']] },
@@ -705,6 +711,7 @@ export async function storageSession() {
         // H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5); the E144 family's REC_IMAGE part is S-RECIMAGE's
         if (rec.image) {
           const used = pl.stand_ins_in_use(), run = rec.images[0], y = run?.reply, fill = run?.fills;
+          const hx8 = (v) => (v == null ? String(v) : `0x${(v >>> 0).toString(16).padStart(8, '0')}`);
           ok(['H-RECSHARED', 'H-RECIMGPRO', 'H-RECIMAGE', 'S-RECREQ', 'S-IMGPRO'].every((n) => used.includes(n)) && !used.includes('S-RECIMAGE'), `REC_IMAGE natively, S-RECIMAGE not in use: ${used.filter((n) => /REC|IMGPRO|JPEG/.test(n)).join(' ')}`);
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
           // S-JPEGENC from ImageParam's parameter set on, at the points the rule reads (fact rec_image encode; E146
@@ -713,15 +720,21 @@ export async function storageSession() {
           // at the rule's id the one ImageParam hands the set
           const steps = run?.steps;
           ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.id === steps.handle && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id (the set's handle) and the release native: ${JSON.stringify(steps)}`);
-          // ImageParam's four sources natively: TAKE's shot table has no buffer (0x25000402 from each lookup), MM none
-          // for handle 0 (0x08010004), and nothing else logged before the parameter set's call; each body's callers
-          // pinned as run (X; on E146 and E147 the first lookup's log comes twice: the Bayer source's
-          // rec_misc_select_bayer asks it again when its answer's high byte is clear, D on E146 0x5052af6b and
-          // 0x5052af7a, E147 0x5053a192 and 0x5053a1a1; X on E146: the lookup's only two calls in the shot)
-          const SRC = { E143: [['0x503afa1f', '0x503afb54', '0x503afb9f', '0x503afc35'], '0x50534ec2', 1], E146: [['0x503afacd', '0x503afc0a', '0x503afc57', '0x503afcf1'], '0x50511fbc', 2],
-            E147: [['0x503b9d62', '0x503b9e97', '0x503b9ee2', '0x503b9f78'], '0x50521140', 2] }[MODEL];
-          const SRC_LOGS = SRC ? SRC[0].flatMap((at, k) => [...new Array(k === 0 ? SRC[2] : 1).fill(['0x25000402', at]), ['0x08010004', SRC[1]]]) : null;
-          ok(JSON.stringify(run?.errlog) === JSON.stringify(SRC_LOGS), `the error logs up to the parameter set's call: ImageParam's sources' lookups (TAKE's 0x25000402, MM's 0x08010004 after each): ${JSON.stringify(run?.errlog)}`);
+          // ImageParam's four sources natively find their buffers in the shot H-SHOTALLOC allocated: no error log from
+          // the post to the parameter set's call (until 2026-11-14, with no shot in TAKE's table, each source's lookup
+          // logged TAKE's 0x25000402 and MM's handle-to-address 0x08010004 for handle 0: four pairs a shot, on E146
+          // and E147 the first lookup's log twice; that is what this check gives with H-SHOTALLOC taken out, X)
+          ok(JSON.stringify(run?.errlog) === '[]', `no error log up to the parameter set's call (ImageParam's sources find the shot's buffers): ${JSON.stringify(run?.errlog)}`);
+          // H-SHOTALLOC (src/fw/facts.mjs takeShot; docs/hle-gaps.md 4.3.13): the shot api_rec's allocation gave, its
+          // entry as TAKE's allocation left it (the flags of the Bayer and thumbnail handles 1, the record 4, and the
+          // buffers 0x10 and 0x40, which ImageParam's sources look up; each handle not 0), its record the block the
+          // EXIF set ran on (the packet's pExifParam) and the one TAKE's own lookup gives while it is allocated;
+          // after the shot api_rec's free has left the entry's flags 0, and the lookup then gives none (its log)
+          const T = rec.shot, sh = run?.shot, eb = sh?.entry ?? new Uint8Array(32), h16 = (o) => eb[o] | eb[o + 1] << 8;
+          const flagsNow = T && sh ? ((b) => b[0] | b[1] << 8)(s2.lab.sim.read(T.record.table + T.record.entry * sh.id, 2)) : null;
+          ok(T && sh && used.includes('H-SHOTALLOC') && sh.id >= 1 && sh.id < T.record.ids && (sh.flags & 0x55) === 0x55 && [2, 10, 12, 16, 24].every((o) => h16(o) !== 0)
+            && sh.record === setRuns[0] && sh.record === ((eb[T.record.at] | eb[T.record.at + 1] << 8 | eb[T.record.at + 2] << 16 | eb[T.record.at + 3] << 24) >>> 0) && flagsNow === 0,
+            `H-SHOTALLOC: the shot ${sh?.id} of TAKE's table (ids below ${T?.record.ids}), its flags 0x${sh?.flags?.toString(16)} (want the bits 0x55), its handles ${[2, 10, 12, 16, 24].map((o) => `+${o} 0x${h16(o).toString(16)}`).join(' ')} (each not 0), its record ${hx8(sh?.record)} the EXIF set's block ${hx8(setRuns[0])}; the entry's flags after the shot ${flagsNow} (want 0: freed)`);
           // the still path's coverage (STILL_PATH; docs/hle-gaps.md 4.3.12): each landmark's runs in the shot, the
           // control (the per-shot EXIF fill) once, so an observer that never fires cannot pass
           const runs = still ? still.at.map(([what, , n]) => [what, n, still.runs.get(what)]) : [];

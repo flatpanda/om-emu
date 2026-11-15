@@ -47,7 +47,7 @@ import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
-  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure } from '../src/fw/facts.mjs';
+  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -559,6 +559,19 @@ const TAKE_EXPOSURE_FOUND = {
   E143: TAKE_EXPOSURE_E143,
   E146: { record: { size: 96, fill: 0x503BFE9C, flags: null, reads: EXP_READS }, range: { fn: 0x5057A795, low: 37818, high: 37820 }, copy: EXP_COPY_E14X },
   E147: { record: { size: 96, fill: 0x503C9DB8, flags: null, reads: EXP_READS }, range: { fn: 0x5058ABD3, low: 37818, high: 37820 }, copy: EXP_COPY_E14X },
+};
+// TAKE's shot for a still (take_shot; src/fw/facts.mjs takeShot) where recFile reads: E143's as H-SHOTALLOC uses it,
+// E146's and E147's as read in their code by hand (D, 2026-11-14: api_rec's allocation, the function that opens with
+// its API trace's `mov 0x20019,d0`, E146 0x5040b014 / E147 0x5041911b, reads setting 49698 at E146 0x5040b043 / E147
+// 0x5041914a and calls TAKE's allocation E146 0x503af63e / E147 0x503b98cf with 1 where it reads 2, else 0; api_rec's
+// free, `mov d0,d2; mov 0x2001a,d0`, E146 0x5040b108 / E147 0x5041920f, calls TAKE's free E146 0x503af8b1 / E147
+// 0x503b9b42 at E146 0x5040b157 / E147 0x5041925e; TAKE's record lookup E146 0x503afcfa (`cmp 233,d0`, an imm16; its
+// table 0x62a75c34) / E147 0x503b9f81 (`cmp 110,d0`; 0x62a72fbc), each `asl 5`, `btst 4` and `mov (20,a0),a0`)
+const SHOT_KIND = { setting: 49698, value: 2 };
+const TAKE_SHOT_FOUND = {
+  E143: TAKE_SHOT_E143,
+  E146: { alloc: 0x5040B014, free: 0x5040B108, kind: SHOT_KIND, take: { alloc: 0x503AF63E, free: 0x503AF8B1 }, record: { fn: 0x503AFCFA, table: 0x62A75C34, entry: 32, ids: 233, flag: 4, at: 20 } },
+  E147: { alloc: 0x5041911B, free: 0x5041920F, kind: SHOT_KIND, take: { alloc: 0x503B98CF, free: 0x503B9B42 }, record: { fn: 0x503B9F81, table: 0x62A72FBC, entry: 32, ids: 110, flag: 4, at: 20 } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1235,6 +1248,22 @@ export function factsTests() {
       const copy = refused(0x503bcdb7, 0x73, /takepic's copy at 0x503bcdac is not E143's form/);
       const range = refused(0x503bbf75, 0x5e, /no shutter range copy/);
       ok(tv === true && copy === true && range === true, `takeExposure: the fill without the shutter's read, takepic's copy through another register and the range copied through another register refused: ${tv}, ${copy}, ${range}`);
+    }
+    // TAKE's shot for a still (take_shot, src/fw/facts.mjs takeShot) where recFile reads: E143's equals the values
+    // H-SHOTALLOC uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.take_shot, TAKE_SHOT_FOUND[code]), `${code}: take_shot ${hx(placed?.take_shot ?? placed)}, found ${hx(TAKE_SHOT_FOUND[code] ?? 'none')}`);
+    // and refuses a form it does not know: E143's image with the allocation's kind for the setting's value made 2
+    // (0x5040f47d: mov 1,d0 -> mov 2,d0), with the lookup testing the entry's bit 2 (0x503afc54: btst 4,d1 -> btst
+    // 2,d1) and with the free handing on d3 (0x5040f57c: mov d2,d0 -> mov d3,d0)
+    if (code === 'E143' && placed?.take_shot) {
+      const refused = (o, v, re) => {
+        const m = run.slice();
+        m[o - 0x50000000] = v;
+        try { takeShot(m); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const kind = refused(0x5040f47e, 0x02, /selects no kind by a setting/), look = refused(0x503afc56, 0x02, /no lookup of a shot's record by the entry's bit 4/);
+      const free = refused(0x5040f57c, 0x8c, /hands its id to no free/);
+      ok(kind === true && look === true && free === true, `takeShot: another kind for the setting's value, a lookup by another bit and the free handing on another register refused: ${kind}, ${look}, ${free}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

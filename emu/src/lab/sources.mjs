@@ -5,16 +5,18 @@
 // what is drawn. The two pages carry SOURCES verbatim (web/play.html, web/index.html: test/test_sources.mjs checks
 // it) and pick from it as the functions below do.
 // - a frame is the lab's: the VSC model's composite of the planes the firmware programmed for the shown device, never a
-//   capture of a panel. Its image plane is S-SCENE's drawn scene once a scene input turned S-SCENE on in the session
-//   (the live view; the frame S-RECVIEW and S-PLAYVIEW hold for the rec view and playback), and holds no live-view
-//   image before that.
+//   capture of a panel. Once a scene input has turned S-SCENE's live view on in the session (the player's scene_used,
+//   which stays: S-SCENE among the stand-ins in use), what its image plane holds is S-SCENE's: the drawn scene (the
+//   live view; the frame S-RECVIEW and S-PLAYVIEW hold for the rec view and playback) or black (the live view turned
+//   off again, the through image stopped under S-THROUGH, a played picture taken without the live view: src/lab/play.mjs
+//   scene_blank, scene_frame, scene_playview). Before that it holds no live-view image.
 // - a picture taken in the session has the lab's pixels (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8
 //   block its mean; black without the live view), under the firmware's own file header where its recorder runs
 //   (S-JPEGENC, the Exif from S-EXIFPRM's inputs) and as the lab's whole file elsewhere (S-RECFILE, no EXIF).
 // Worker-safe: no import.
 const FRAME = (dev) => `the lab's ${dev} frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel`;
-const SCENE_ON = 'S-SCENE has been on in this session: the image plane (the live view, and the frame held for the rec view and playback) is its drawn scene, not a sensor image and not the camera\'s development';
-const SCENE_OFF = 'no scene input yet (S-SCENE off): it holds no live-view image';
+const SCENE_ON = 'S-SCENE\'s live view has been on in this session: what the image plane holds (the live view, and the frame held for the rec view and playback) is S-SCENE\'s, its drawn scene or black (its live view off or stopped, a picture taken without it), not a sensor image and not the camera\'s development';
+const SCENE_OFF = 'S-SCENE\'s live view has not been on in this session: it holds no live-view image';
 const PIXELS = 'S-SCENE\'s frame at the capture with each 8 x 8 block its mean (black without the live view), not the camera\'s development';
 const ELSEWHERE = 'A file put on the card from elsewhere is what it was.';
 export const SOURCES = {

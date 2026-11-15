@@ -1,9 +1,10 @@
 // What a picture is, said at the picture (src/lab/sources.mjs: the pages' line under the screen and Card panel note,
 // a scripted session's shot record):
-//   sourcesUnits    (firmware-free) the sentences: a frame is the lab's composite for the device shown, with S-SCENE's
-//                   drawn scene on its image plane once S-SCENE has been on and no live-view image before, never a
-//                   sensor image; a picture taken in the session by the stand-ins in use (the firmware's header and
-//                   the lab's JPEG under S-JPEGENC for both forms of the recorder, S-RECFILE's whole file without it,
+//   sourcesUnits    (firmware-free) the sentences: a frame is the lab's composite for the device shown, its image
+//                   plane S-SCENE's (the drawn scene, or black) once S-SCENE's live view has been on and no live-view
+//                   image before, never a sensor image; a picture taken in the session by the stand-ins in use (the
+//                   firmware's header and the lab's JPEG under S-JPEGENC for both forms of the recorder, S-RECFILE's
+//                   whole file without it,
 //                   nothing on a body that writes none); every stand-in a sentence names has a row in the Stand-ins
 //                   tab; both pages carry the table verbatim, pick from it as the module's functions do (the page's
 //                   own function run on a made-up status for every device, scene and recorder), and no longer say a
@@ -11,7 +12,8 @@
 //   sourcesSession  (the process's model; E147 in bin/test.mjs's child) through host/session.mjs: a shot's record
 //                   carries the sentence for its device without S-SCENE; after a scene input turns the live view on
 //                   (the module API's input) the next shot's says S-SCENE's drawn scene and the frame has changed;
-//                   control: the two sentences differ
+//                   control: the two sentences differ; with the live view turned off again the sentence stays (the
+//                   session still reports S-SCENE) and the picture is no longer the live view's (the sentence's black)
 //   node emu/test/test_sources.mjs [--units] [--session]       (OM_EMU_MODEL=E147 for the OM-3)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,8 +34,8 @@ export async function sourcesUnits() {
   // the frame's sentences
   for (const [dev, name] of [['tft', 'TFT'], ['evf', 'EVF']]) {
     const off = frameSource(dev, false), on = frameSource(dev, true);
-    ok(off === `the lab's ${name} frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; no scene input yet (S-SCENE off): it holds no live-view image`, `${dev} without S-SCENE: ${off}`);
-    ok(on.startsWith(`the lab's ${name} frame: `) && on.includes('S-SCENE has been on in this session') && on.endsWith('is its drawn scene, not a sensor image and not the camera\'s development') && on !== off, `${dev} with S-SCENE: ${on}`);
+    ok(off === `the lab's ${name} frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; S-SCENE's live view has not been on in this session: it holds no live-view image`, `${dev} without S-SCENE: ${off}`);
+    ok(on.startsWith(`the lab's ${name} frame: `) && on.includes('S-SCENE\'s live view has been on in this session') && on.endsWith('is S-SCENE\'s, its drawn scene or black (its live view off or stopped, a picture taken without it), not a sensor image and not the camera\'s development') && on !== off, `${dev} with S-SCENE: ${on}`);
   }
   ok(thrown(() => frameSource('hdmi', false)) instanceof RangeError && thrown(() => frameSource(undefined, true)) instanceof RangeError, 'a device that is neither display is refused');
   // a taken picture's, by the stand-ins in use: both forms of the recorder, no recorder, no card
@@ -83,6 +85,12 @@ export async function sourcesSession() {
     ok(!r.error && w2.ok && b.ok && b.source === frameSource('tft', true) && s.summary().stand_ins.includes('S-SCENE'), `${MODEL} a shot after a scene input: ${JSON.stringify({ ok: b.ok, source: b.source, error: b.error ?? r.error })}`);
     ok(a.source !== b.source && /no live-view image$/.test(a.source) && /not a sensor image/.test(b.source) && w.frame !== w2.frame && !fs.readFileSync(a.file).equals(fs.readFileSync(b.file)),
       `${MODEL} control: the two shots' sentences and pictures differ (frames ${w.frame} ${w2.frame})`);
+    // the live view turned off again: the session still reports S-SCENE and the sentence stays, and the plane is no
+    // longer the drawn scene (the sentence's 'or black'): the picture differs from the live view's
+    const r3 = s.input({ type: 'scene', change: { liveview: false } });
+    const w3 = s.step('wait:500'), c = s.step('shot:off.png');
+    ok(!r3.error && w3.ok && c.ok && c.source === b.source && / or black \(its live view off or stopped/.test(c.source) && !fs.readFileSync(c.file).equals(fs.readFileSync(b.file)),
+      `${MODEL} the live view off again: the sentence stays and the picture is not the live view's: ${JSON.stringify({ ok: c.ok, same: c.source === b.source, error: c.error ?? r3.error })}`);
   } finally {
     try { s?.close(); } finally { fs.rmSync(out, { recursive: true, force: true }); }
   }

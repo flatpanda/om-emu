@@ -11,21 +11,26 @@
 //                    both as candidates. The reader's answer is the whole file's, walkBytes is walk. --main's core on
 //                    the same files: a modified container's patches are the bare block's with not_applied saying the
 //                    other blocks are not read (and the checksum, when not recomputed), in the overlay's summary and
-//                    line; the stock container refused as the stock block is; another body's container or stock block,
-//                    another version's container refused by name. The lab's gate (labFirmware, the run's model): a
+//                    line; the stock container refused; another body's container or stock block, another version's
+//                    container refused by name. The lab's gate (labFirmware, the run's model): a
 //                    container of nobody's, bytes of no container and a container with the model's own head around
 //                    another main block are refused as before, each now naming what the file is; a reader's own
-//                    failure (the browser's NotReadableError, a plain Error, a TypeError) passes through as it came
+//                    failure (the browser's NotReadableError, a plain Error, a TypeError) passes through as it came.
+//                    A release's head and stock main block are 'stock' only with the release's blocks uncut and in
+//                    place (cut inside the resource block, or the main block alone: 'unknown'), and the reason says
+//                    the other blocks' bodies are not read (a changed resource block is still 'stock'); --main
+//                    refuses a stock container saying so
 //   identifyFiles    (the .BINs and unpacked blocks at hand; a body without either is a counted skip) each MODELS
 //                    body's .BIN is its 'stock' container with the checksum 0 and its unpacked block its 'stock' block:
 //                    the head rule (model field: the body's digits and 0; version field: the .BIN name's digits)
 //   identifySession  (the process's model through bin/session.mjs; E147 in bin/test.mjs's child) --main with the
-//                    stock .BIN refused as the stock block; a .BIN the test makes from it (16 bytes of the main block's
-//                    0xFF tail padding changed, the checksum not recomputed, written outside the tree and removed)
-//                    runs: its steps' lab times and frames are those of --main with the bare block and the frames
-//                    those of the stock session, the summary's patch and audit the bare block's but for the file and
-//                    what is not applied; the same .BIN with the checksum recomputed has no checksum note; the lab's
-//                    gate refuses both naming them modified, and another body's .BIN is refused by --main by name
+//                    stock .BIN refused (nothing to patch, the other blocks not read); a .BIN the test makes from it
+//                    (16 bytes of the main block's 0xFF tail padding changed, the checksum not recomputed, written
+//                    outside the tree and removed) runs: its steps' lab times and frames are those of --main with the
+//                    bare block and the frames those of the stock session, the summary's patch and audit the bare
+//                    block's but for the file and what is not applied; the same .BIN with the checksum recomputed has
+//                    no checksum note; the lab's gate refuses both naming them modified, and another body's .BIN is
+//                    refused by --main by name
 //   node emu/test/test_identify.mjs [--units] [--files] [--session]      (OM_EMU_MODEL=E147 for the OM-3)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,14 +88,14 @@ export async function identifyUnits() {
   const is = (r, status, kind, model, re) => r.status === status && r.kind === kind && r.model === model && re.test(r.reason);
   const show = (r) => JSON.stringify({ ...r, main: r.main ? r.main.length : null });
   const cases = [
-    ['a release\'s container', container(A), (r) => is(r, 'stock', 'container', 'E901', /^E901 \(Made-up A\)'s v1\.2 release container \(OLY_E_901_1200_0000_0000\.BIN\)$/) && r.checksum_ok === true && r.version === '1.2' && r.blocks === 2 && same(r.main, A) && r.rom_sha256 === M.E901.rom_sha256],
+    ['a release\'s container', container(A), (r) => is(r, 'stock', 'container', 'E901', /^a container with E901 \(Made-up A\)'s v1\.2 release head and stock main code block \(OLY_E_901_1200_0000_0000\.BIN\); the bodies of its 1 other block\(s\) are not read$/) && r.checksum_ok === true && r.version === '1.2' && r.blocks === 2 && same(r.main, A) && r.rom_sha256 === M.E901.rom_sha256],
     ['its bare block', A, (r) => is(r, 'stock', 'block', 'E901', /^E901 \(Made-up A\)'s v1\.2 main code block as unpacked$/) && r.checksum_ok === null && r.head === null && r.main === null && r.blocks === 0],
     ['a head with another version field', container(Amod, { ver: 0x1300 }), (r) => is(r, 'other-version', 'container', 'E901', /^a container of E901 \(Made-up A\) at version field 0x1300, not the 0x1200 of the v1\.2 release MODELS holds$/) && r.head.ver === 0x1300],
     ['a changed main block, the checksum recomputed', container(Amod), (r) => is(r, 'modified', 'container', 'E901', /^a container of E901 \(Made-up A\) v1\.2 with another main code block \(the release's place and length, sha256 [0-9a-f]{16}\.\.\., the release's [0-9a-f]{16}\.\.\.\): modified firmware$/) && r.checksum_ok === true && same(r.main, Amod)],
     ['a changed main block, the checksum not recomputed', container(Amod, { cks: false }), (r) => is(r, 'modified', 'container', 'E901', /modified firmware; its main block's checksum total is 0x[0-9a-f]{8}, not 0$/) && r.checksum_ok === false && same(r.main, Amod)],
-    ['the stock block under a head whose checksum field is wrong', container(A, { cks: false }), (r) => is(r, 'stock', 'container', 'E901', /release container .*; its main block's checksum total is 0x[0-9a-f]{8}, not 0$/) && r.checksum_ok === false],
+    ['the stock block under a head whose checksum field is wrong', container(A, { cks: false }), (r) => is(r, 'stock', 'container', 'E901', /release head and stock main code block .*; its main block's checksum total is 0x[0-9a-f]{8}, not 0$/) && r.checksum_ok === false],
     // the rule's reason: B's files are B's, never a modified A, though the main blocks have one length
-    ['the other body of that length, its container', container(B, { model: '9020', ver: 0x1101 }), (r) => is(r, 'stock', 'container', 'E902', /^E902 \(Made-up B\)'s v1\.1 release container/)],
+    ['the other body of that length, its container', container(B, { model: '9020', ver: 0x1101 }), (r) => is(r, 'stock', 'container', 'E902', /^a container with E902 \(Made-up B\)'s v1\.1 release head and stock main code block/)],
     ['the other body of that length, its bare block', B, (r) => is(r, 'stock', 'block', 'E902', /^E902 \(Made-up B\)'s v1\.1 main code block as unpacked$/)],
     ['the other body\'s changed container', container(Amod, { model: '9020', ver: 0x1101 }), (r) => is(r, 'modified', 'container', 'E902', /^a container of E902 \(Made-up B\) v1\.1 with another main code block/)],
     ['a bare changed block of the shared length', Amod, (r) => is(r, 'modified', 'block', null, /^a block of the length of E901's and E902's main code block \(4096 bytes\) whose sha256 \([0-9a-f]{16}\.\.\.\) is none of theirs: a modified main code block of one of them, as far as a bare block shows \(it names no body\)$/) && r.candidates.join() === 'E901,E902'],
@@ -104,6 +109,12 @@ export async function identifyUnits() {
     ['a container without a main block', cat(res(), res()), (r) => is(r, 'unknown', 'container', null, /^a container of 2 block\(s\) with 0 main code blocks \(OE, flags 0x0100\), not one$/) && r.blocks === 2],
     ['a container with two main blocks', cat(block(0x0100, A), block(0x0100, A)), (r) => is(r, 'unknown', 'container', null, /with 2 main code blocks/)],
     ['a container cut inside its main block', container(A).subarray(0, 2000), (r) => is(r, 'unknown', 'container', 'E901', /^a container cut inside its main code block \(body overruns file: the head gives 4096 bytes\)$/) && r.head.len === 4096],
+    // a release's head and stock main block are not the release's container: a cut after the main block, no resource
+    // block, and a resource block of other bytes, which is not read (the reason says so)
+    ['a release\'s container cut inside its resource block', container(A).subarray(0, 64 + N + 100), (r) => is(r, 'unknown', 'container', 'E901', /^a container cut inside its block at 0x00001040 \(body overruns file: the head gives 256 bytes\); its head and main code block are E901 \(Made-up A\)'s v1\.2 release's$/) && r.version === null && r.blocks === 2],
+    ['a release\'s main block alone', block(0x0100, A), (r) => is(r, 'unknown', 'container', 'E901', /^a container whose blocks are not the release's \(the main code block at 0x00000000, 4096 bytes; the release's at 0, 4096 bytes, the resource block at 0x00001040\); its head and main code block are E901 \(Made-up A\)'s v1\.2 release's$/) && r.blocks === 1],
+    ['a release\'s container with another resource block', cat(block(0x0100, A), block(0x0101, random(256, 7), { load: 0x2000, ver: 0x0100 })), (r) => is(r, 'stock', 'container', 'E901', /; the bodies of its 1 other block\(s\) are not read$/)],
+    ['a modified container cut inside its resource block', container(Amod).subarray(0, 64 + N + 100), (r) => is(r, 'unknown', 'container', 'E901', /^a container cut inside its block at 0x00001040 \(body overruns file: the head gives 256 bytes\); its head names E901 \(Made-up A\) v1\.2$/)],
     ['bytes of no known length', random(1000, 6), (r) => is(r, 'unknown', null, null, /^1000 bytes that start with no container head \(OE, OM, OA, OL\) and are not the length of a main code block MODELS holds$/)],
     ['an empty file', new Uint8Array(0), (r) => is(r, 'unknown', null, null, /^0 bytes that start with no container head/)],
   ];
@@ -139,9 +150,11 @@ export async function identifyUnits() {
   }
   ok(strip(main(Amod)) === strip(bare) && main(Amod).every((p) => !('not_applied' in p)) && !('not_applied' in applyPatches({ main: A }, main(Amod), { layout: patchLayout(M.E901), createHash }).summary),
     'control: --main a bare modified block: mainPatches\' patches, nothing listed as not applied');
-  refused(container(A), /^f\.BIN: the stock main code block itself \(nothing to patch\)$/, 'the stock container (as the stock block)');
+  refused(container(A), /^f\.BIN: a container with E901 \(Made-up A\)'s v1\.2 release head and stock main code block \(OLY_E_901_1200_0000_0000\.BIN\); the bodies of its 1 other block\(s\) are not read: nothing to patch in the main code block; a change in another block is not seen here \(give it as --patch on that block\)$/, 'the stock container');
+  refused(cat(block(0x0100, A), block(0x0101, random(256, 7), { load: 0x2000, ver: 0x0100 })), /: nothing to patch in the main code block; a change in another block is not seen here/, 'a container with a changed resource block (not read: said)');
+  refused(container(A).subarray(0, 64 + N + 100), /^f\.BIN: a container cut inside its block at 0x00001040 .*: not a \.BIN of E901's firmware as the lab runs it/, 'a stock container cut inside its resource block');
   refused(A, /^f\.BIN: the stock main code block itself \(nothing to patch\)$/, 'the stock block');
-  refused(container(B, { model: '9020', ver: 0x1101 }), /^f\.BIN: E902 \(Made-up B\)'s v1\.1 release container \(OLY_E_902_1101_0000_0000\.BIN\): not a \.BIN of E901's firmware as the lab runs it, stock or modified$/, 'another body\'s container');
+  refused(container(B, { model: '9020', ver: 0x1101 }), /^f\.BIN: a container with E902 \(Made-up B\)'s v1\.1 release head and stock main code block \(OLY_E_902_1101_0000_0000\.BIN\); the bodies of its 1 other block\(s\) are not read: not a \.BIN of E901's firmware as the lab runs it, stock or modified$/, 'another body\'s container');
   refused(container(Amod, { model: '9020', ver: 0x1101 }), /^f\.BIN: a container of E902 \(Made-up B\) v1\.1 with another main code block .*: not a \.BIN of E901's firmware/, 'another body\'s modified container');
   refused(container(Amod, { ver: 0x1300 }), /^f\.BIN: a container of E901 \(Made-up A\) at version field 0x1300, .*: not a \.BIN of E901's firmware as the lab runs it/, 'another version\'s container');
   refused(container(Amod, { model: '1234' }), /a body MODELS does not hold .*: not a \.BIN of E901's firmware/, 'a container of no body');
@@ -230,7 +243,8 @@ export async function identifySession() {
   try {
     // --main with the stock .BIN: the stock block itself, as --main with the unpacked block
     const s0 = cli(['--main', stockBin, 'wait:100']), s1 = cli(['--main', stockBlk, 'wait:100']);
-    ok(s0.rc === 1 && s0.last === `session.mjs: --main refused: ${stockBin}: the stock main code block itself (nothing to patch)` && s1.rc === 1 && s1.last === `session.mjs: --main refused: ${stockBlk}: the stock main code block itself (nothing to patch)`,
+    ok(s0.rc === 1 && s0.last.startsWith(`session.mjs: --main refused: ${stockBin}: a container with ${MODEL} (${MODEL_INFO.name})'s v${MODEL_INFO.version} release head and stock main code block (${MODEL_INFO.bin}); the bodies of its `) &&
+      s0.last.endsWith(' other block(s) are not read: nothing to patch in the main code block; a change in another block is not seen here (give it as --patch on that block)') && s1.rc === 1 && s1.last === `session.mjs: --main refused: ${stockBlk}: the stock main code block itself (nothing to patch)`,
       `--main with the stock .BIN and with the stock block: rc ${s0.rc} ${s0.last} | rc ${s1.rc} ${s1.last}`);
     // a .BIN with 16 bytes of the main block's 0xFF tail padding changed: the file as it is, and its checksum recomputed
     const TAIL = MODEL_INFO.rom_len - 0x100, NEW = Buffer.from('om-emu container');
@@ -281,7 +295,8 @@ export async function identifySession() {
     if (!otherCode) skipped.push('no other body\'s .BIN at hand');
     else {
       const o = cli(['--main', binOf(MODELS[otherCode]), 'wait:100']);
-      ok(o.rc === 1 && o.last === `session.mjs: --main refused: ${binOf(MODELS[otherCode])}: ${otherCode} (${MODELS[otherCode].name})'s v${MODELS[otherCode].version} release container (${MODELS[otherCode].bin}): not a .BIN of ${MODEL}'s firmware as the lab runs it, stock or modified`,
+      ok(o.rc === 1 && o.last.startsWith(`session.mjs: --main refused: ${binOf(MODELS[otherCode])}: a container with ${otherCode} (${MODELS[otherCode].name})'s v${MODELS[otherCode].version} release head and stock main code block (${MODELS[otherCode].bin}); the bodies of its `) &&
+        o.last.endsWith(` other block(s) are not read: not a .BIN of ${MODEL}'s firmware as the lab runs it, stock or modified`),
         `--main with ${otherCode}'s .BIN: rc ${o.rc} ${o.last}`);
     }
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }

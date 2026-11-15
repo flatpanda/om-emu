@@ -259,9 +259,10 @@ export function mainPatches(stock, block, source) {
 // --main FILE's bytes as patches against the stock block: a main code block as unpacked, or the .BIN container that
 // holds one. id: what the file is (src/fw/identify.mjs identifyBytes' answer); code: the run's model.
 // - a container: its head must name the run's model at the release's version, with the main code block at the
-//   release's place and length (identify's 'stock' or 'modified'; the stock one is then refused as the bare stock block
-//   is); its main block, descrambled, is compared, whatever its checksum. Only that block is taken: the container's
-//   other blocks are not read and a checksum total that is not 0 does not stop the run. Each patch carries a
+//   release's place and length (identify's 'stock' or 'modified'); a 'stock' one is refused (nothing to patch in its
+//   main code block, and a change in another block is not seen here: identify does not read those blocks); its main
+//   block, descrambled, is compared, whatever its checksum. Only that block is taken: the container's other blocks
+//   are not read and a checksum total that is not 0 does not stop the run. Each patch carries a
 //   not_applied list that says both (applyPatches puts it in the summary), so a run on it checks the main code block's
 //   changes, not the file an updater would take;
 // - a bare block that is another body's stock block (bodies share lengths) is refused by name; any other goes to
@@ -269,6 +270,7 @@ export function mainPatches(stock, block, source) {
 export function mainFilePatches(stock, bytes, source, id, code) {
   if (id.kind === 'container') {
     if (id.model !== code || (id.status !== 'stock' && id.status !== 'modified')) throw new PatchRefused(`${source}: ${id.reason}: not a .BIN of ${code}'s firmware as the lab runs it, stock or modified`);
+    if (id.status === 'stock') throw new PatchRefused(`${source}: ${id.reason}: nothing to patch in the main code block; a change in another block is not seen here (give it as --patch on that block)`);
     const not_applied = [{ file: source, field: 'container', why: `only its main code block is taken: its ${id.blocks - 1} other block(s) are not read, the lab loads the stock resource block` },
       ...(id.checksum_ok ? [] : [{ file: source, field: 'checksum', why: 'the main code block\'s checksum total is not 0 (not recomputed after the change); the lab does not check it' }])];
     return mainPatches(stock, id.main, source).map((p) => ({ ...p, not_applied }));

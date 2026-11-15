@@ -60,6 +60,7 @@
 // lookhooksUnits), and the caduceus-om3 release pins' checks on made-up folders (test_caduceus.mjs caduceusUnits), and
 // the session's card:out / card:in tokens (test_nocard.mjs nocardUnits).
 // bin/test.mjs runs all of these too, with everything else.
+// Also here and there, the small units: the memory map's rules at addRegion (test_mem.mjs memUnits).
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
 import { coreTests } from '../test/test_core.mjs';
@@ -69,6 +70,7 @@ import { shaTests, bodyTests, driverTests, resultBoxTests, pageTests, cardTests 
 import { sceneUnits } from '../test/test_scene.mjs';
 import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
+import { memUnits } from '../test/test_mem.mjs';
 import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
@@ -147,6 +149,7 @@ report('the boot\'s section loader: the rules, what the boot loads, the unloaded
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
 report('command-line parser', argsTests());
+report('the memory map\'s rules at addRegion: offset alignment, the physical space, overlaps (src/core/mem.mjs)', await memUnits());
 report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
 report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());

@@ -59,6 +59,7 @@
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
+// Also: the memory map's rules at addRegion (test_mem.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -848,6 +849,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`PER_SIO IIC and the TG-5's charger: units ${su.checks - su.bad.length}/${su.checks}`);
   su.bad.forEach((x) => console.log('  ', x));
   bad += su.bad.length;
+}
+// the memory map's rules at addRegion (src/core/mem.mjs), without firmware
+{
+  const { memUnits } = await import('../test/test_mem.mjs');
+  const mu = await memUnits();
+  console.log(`the memory map's rules at addRegion: units ${mu.checks - mu.bad.length}/${mu.checks}`);
+  mu.bad.forEach((x) => console.log('  ', x));
+  bad += mu.bad.length;
 }
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {

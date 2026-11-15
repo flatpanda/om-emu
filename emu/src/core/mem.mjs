@@ -137,9 +137,25 @@ export function allocWindow(size) {
 export function setStub(s) { stub = s; }
 
 // A region: { base, size, kind, off (RAM-like: physical offset), dev (MMIO: read/write; ROMD: romdWrite) }.
+// Three rules, each a RangeError here before anything is mapped:
+// - a RAM-like region's offset is the base's modulo 4: the halfword and word views index the buffer by offset >> 1 and
+//   offset >> 2, so any other offset gives a word access other bytes than the four byte accesses at its address;
+// - a RAM-like region lies inside this machine's physical space [0, TOTAL): the code-page marks and a snapshot's layout
+//   are TOTAL's, and past the buffer a store is dropped and a load is not a number;
+// - no address of it is another region's in the current page table: the fast path would take the last one added and
+//   the slow path, the debugger and the code fetch the first. (Two regions on one physical range are fine: the DRAM's
+//   two views. remapPages and a core's own pages clear their pages first.)
 export function addRegion(r) {
   r.base >>>= 0;
   r.end = r.base + r.size;
+  const what = () => `addRegion: ${r.name ?? 'a region'} at 0x${r.base.toString(16).padStart(8, '0')}+0x${r.size.toString(16)}`;
+  if (r.kind !== K_MMIO) {
+    if (!Number.isInteger(r.off) || ((r.off - r.base) & 3) !== 0) throw new RangeError(`${what()}: the physical offset ${r.off} is not the base's modulo 4 (the word views would not show the bytes' words)`);
+    if (r.off < 0 || r.off + r.size > TOTAL) throw new RangeError(`${what()}: the physical range ${r.off}+${r.size} is outside the machine's ${TOTAL} bytes`);
+  }
+  for (let p = r.base >>> 16; p <= (r.end - 1) >>> 16; p++) {
+    for (const x of PAGES[p] ?? []) if (x.base < r.end && r.base < x.end) throw new RangeError(`${what()}: overlaps ${x.name ?? 'a region'} at 0x${x.base.toString(16).padStart(8, '0')}+0x${x.size.toString(16)}`);
+  }
   for (let p = r.base >>> 16; p <= (r.end - 1) >>> 16; p++) {
     (PAGES[p] ||= []).push(r);
     const whole = r.base <= p * 0x10000 && r.end >= (p + 1) * 0x10000;

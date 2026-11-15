@@ -8786,7 +8786,7 @@ and a close click at S-RELSEQ's START_EXPOSE and END_EXPOSE (`docs/om1-shutter-s
 
 ## 8. Hardware evidence and what it unblocks
 
-None of these needs flashing.
+None of these needs flashing, but the last row, which needs code run on a camera.
 
 | Evidence | Unblocks |
 |---|---|
@@ -8803,6 +8803,7 @@ None of these needs flashing.
 | Timing: VD period per mode, shot-to-card, S2 to rec view, key latencies | the time model; completion times at the capture and storage seams |
 | Photos or video of the rear screen: rec view, AF frames in S-AF / C-AF / tracking, the recording screen with audio meters, Connection Setup | checks for the capture, AF, movie and wireless displays |
 | A dump of store F (flash `0x400a0000`, 128 KiB) | per-unit adjustment values, for a full boot |
+| **Needs code run on a camera** (a patched build that copies memory to the card): a still's development job from an OM-3 (E147), for one COLOR shot and one shot in another picture mode, taken at the stage wrapper's entry `0x504f8e1c` (before the YC packing) and again after the stage list `0x504f8694` returns (`0x504f8e2e`). The job record C (192 bytes, a0); the request R (C+4; 4 KiB covers every offset read so far, the highest R+1756); the register image (C+8; 16 KiB: the stages' output O is its +2832 or the request's own block, the second block follows O at +4396, and the set-up's dispatch hands out parts of the image up to its +11860); and after the call the tables O points at (the pointers at O+3172..O+3184, O+3828 and O+4344..O+4392; 32 to 4096 entries each). The offsets are 4.3.12's and 4.8.13's ("The development's pages"). A dump stays out of the tree and is read at run time, as a Caduceus checkout is; it may hold a body's calibration, so its owner decides what to share | the stage checks from "an assumed job" to "a camera's job": the lab calls the still's stages on a job a test writes (`emu/test/test_lookhooks.mjs`, 4.3.12), and no call can show that the camera's request holds what the test wrote or 0 where the test left 0. One dump gives R's fields the stages read, whether the request names its own block and so which flags the stage list gets (C+60), the unit masks a development request sets (the image's words 0 to 2, 4.8.13) and a stock output to compare with, without the native TAKE, white-balance and parameter-set work of 4.3.13. It is E147's layout and says nothing of another body's |
 
 ## 9. Facts settled between the surveys
 

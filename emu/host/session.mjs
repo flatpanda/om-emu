@@ -335,6 +335,7 @@ export async function openSession(o = {}) {
   const { nvramChoice, fileNvram } = await import('./nvram.mjs');
   const { pngRaw } = await import('./server.mjs');
   const { callSpec } = await import('../src/debug/call.mjs');
+  const { frameSource } = await import('../src/lab/sources.mjs');
   const say = o.say ?? (() => {});
   const settle = o.settle ?? SETTLE_MS;
   const out = o.out ? path.resolve(o.out) : null;
@@ -617,6 +618,7 @@ export async function openSession(o = {}) {
         rec.file = file;
         rec.size = [frame.w, frame.h];
         rec.device = frame.device;
+        rec.source = frameSource(frame.device, !!pl.scene_used);     // what the picture is, in words (src/lab/sources.mjs)
       } else if (st.kind === 'dump') dump(st, rec);
       else if (st.kind === 'card-ls') rec.card = listing();
       else if (st.kind === 'card-get') {

@@ -63,6 +63,7 @@
 // What a firmware file is, on made-up bodies and on the .BINs and blocks at hand, and --main with a .BIN container on
 // E143 and E147 (test_identify.mjs).
 // The Stand-ins tab's rows against the labels a session can report, and does report on E143 and E147 (test_standins.mjs).
+// What a picture is, said at the picture, and a shot's source on E143 and E147 (test_sources.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -883,6 +884,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const r = spawnSync(process.execPath, [new URL('../test/test_standins.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
   const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
   console.log(`the Stand-ins tab's rows: units ${su.checks - su.bad.length}/${su.checks}; a session's labels on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
+}
+// what a picture is, said at the picture (src/lab/sources.mjs; test_sources.mjs): the sentences and the pages' copies,
+// then a scripted session's shots before and after S-SCENE's live view on E143 here and on E147 in a process of its own
+{
+  const { sourcesUnits, sourcesSession } = await import('../test/test_sources.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const su = await sourcesUnits(), ss = await sourcesSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_sources.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`what a picture is: units ${su.checks - su.bad.length}/${su.checks}; a session's shots on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
 }

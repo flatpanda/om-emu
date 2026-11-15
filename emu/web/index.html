@@ -266,6 +266,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <span class="last"><b>last</b> <span id="s-last">–</span></span>
 </div>
 <div id="s-a15" class="a15line"></div>
+<div id="s-source" class="note"></div>
 <div id="s-patch" class="patchline"></div>
 <div id="errbox"></div>
 <div class="toolbar">
@@ -332,8 +333,8 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   and the firmware unmounts and mounts the card; E143). The list is the card's sectors read between the lab's steps with
   the independent FAT and exFAT readers (refs/fat.mjs, refs/exfat.mjs: refs/volume.mjs picks one by the card's boot
   sector), not through the firmware: a file being written can show as it was before, and the card out of the slot is
-  the settled view. Pictures are decoded with the independent JPEG decoder (refs/jpeg.mjs);
-  a picture's file is S-RECFILE's, S-SCENE's frame at the capture with each 8 x 8 block its mean.</p>
+  the settled view. Pictures are decoded with the independent JPEG decoder (refs/jpeg.mjs).
+  <span id="card-source"></span></p>
   <div id="card-files" class="cardfiles"></div>
   <div class="cardview" id="card-view" hidden><div class="note" id="card-caption"></div><canvas id="card-canvas" width="1" height="1"></canvas></div>
 </details>
@@ -631,8 +632,17 @@ async function gone() {
   await new Promise((r) => setTimeout(r, 500));
 }
 let lastLogged = 0, lastInputError = null;
+// What the frame and a taken picture are, in words: src/lab/sources.mjs SOURCES, verbatim (test/test_sources.mjs checks
+// it), picked as its frameSource and pictureSource pick, by the device shown and the stand-ins in use
+const SOURCES = {"frame":{"tft":{"off":"the lab's TFT frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; no scene input yet (S-SCENE off): it holds no live-view image","on":"the lab's TFT frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; S-SCENE has been on in this session: the image plane (the live view, and the frame held for the rec view and playback) is its drawn scene, not a sensor image and not the camera's development"},"evf":{"off":"the lab's EVF frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; no scene input yet (S-SCENE off): it holds no live-view image","on":"the lab's EVF frame: the VSC model's composite of the planes the firmware programmed, not a capture of a panel; S-SCENE has been on in this session: the image plane (the live view, and the frame held for the rec view and playback) is its drawn scene, not a sensor image and not the camera's development"}},"picture":{"header":"A picture taken in this session is the firmware's own file header (its Exif filled from S-EXIFPRM's inputs) followed by the lab's JPEG (S-JPEGENC): S-SCENE's frame at the capture with each 8 x 8 block its mean (black without the live view), not the camera's development. A file put on the card from elsewhere is what it was.","file":"A picture taken in this session is S-RECFILE's file, a JPEG the lab encodes, with no EXIF: S-SCENE's frame at the capture with each 8 x 8 block its mean (black without the live view), not the camera's development. A file put on the card from elsewhere is what it was."}};
+function showSources(s) {
+  const used = new Set(s.stand_ins || []), dev = s.device === 'evf' ? 'evf' : 'tft';
+  $('s-source').textContent = s.device ? 'What this picture is: ' + SOURCES.frame[dev][used.has('S-SCENE') ? 'on' : 'off'] : '';
+  $('card-source').textContent = used.has('S-JPEGENC') ? SOURCES.picture.header : used.has('S-RECFILE') ? SOURCES.picture.file : '';
+}
 function showStatus(s) {
   failures = 0;
+  showSources(s);
   const ph = $('phase'); ph.textContent = s.phase; ph.className = 'phase ' + s.phase;
   $('status').classList.toggle('busy', s.phase === 'busy' || s.phase === 'waiting-gui' || s.phase === 'starting');
   $('s-gui').textContent = s.gui ? `${s.gui} ${s.gui_name}` : '–';

@@ -64,6 +64,7 @@
 // What a firmware file is, --main's patches from a .BIN container and the gate's reasons, on made-up bodies
 // (test_identify.mjs identifyUnits).
 // The Stand-ins tab's rows: one for every label a session can report in use (test_standins.mjs standinsUnits).
+// What a picture is, said at the picture: the sentences and the two pages' copies (test_sources.mjs sourcesUnits).
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
 import { coreTests } from '../test/test_core.mjs';
@@ -76,6 +77,7 @@ import { argsTests } from '../test/test_args.mjs';
 import { memUnits } from '../test/test_mem.mjs';
 import { identifyUnits } from '../test/test_identify.mjs';
 import { standinsUnits } from '../test/test_standins.mjs';
+import { sourcesUnits } from '../test/test_sources.mjs';
 import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
@@ -157,6 +159,7 @@ report('command-line parser', argsTests());
 report('the memory map\'s rules at addRegion: offset alignment, the physical space, overlaps (src/core/mem.mjs)', await memUnits());
 report('what a firmware file is: stock, another version, modified, unknown; --main on a .BIN container; the gate\'s reasons (src/fw/identify.mjs)', await identifyUnits());
 report('the Stand-ins tab: a row for every label a session can report in use (src/lab/playapi.mjs standInRows)', await standinsUnits());
+report('what a picture is, said at the picture: the frame\'s and a taken picture\'s sentences, the pages\' copies (src/lab/sources.mjs)', await sourcesUnits());
 report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
 report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());

@@ -60,6 +60,7 @@
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
 // Also: the memory map's rules at addRegion (test_mem.mjs).
+// What a firmware file is, on made-up bodies and on the .BINs and blocks at hand (test_identify.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -857,6 +858,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the memory map's rules at addRegion: units ${mu.checks - mu.bad.length}/${mu.checks}`);
   mu.bad.forEach((x) => console.log('  ', x));
   bad += mu.bad.length;
+}
+// what a firmware file is (src/fw/identify.mjs; test_identify.mjs): the units, then the .BINs and unpacked blocks at
+// hand; a body without its .BIN is a skip the line counts
+{
+  const { identifyUnits, identifyFiles } = await import('../test/test_identify.mjs');
+  const iu = await identifyUnits(), fi = await identifyFiles();
+  console.log(`firmware identity: units ${iu.checks - iu.bad.length}/${iu.checks}; the files at hand ${fi.checks - fi.bad.length}/${fi.checks}${fi.skipped.length ? `, ${fi.skipped.length} SKIPPED` : ''}`);
+  [...iu.bad, ...fi.bad, ...fi.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+  bad += iu.bad.length + fi.bad.length;
 }
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {

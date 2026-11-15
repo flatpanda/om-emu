@@ -3,22 +3,28 @@
 // MODEL_INFO: rom_sha256, BLOBS.sha256's digest of the main code block, and res_sha256, the resource prefix's). The
 // lab runs one model's release (its addresses are translated for that build), so any other .BIN that unpacks cleanly (a
 // newer release, or another body's) is refused here, before anything is cached, with a message that names the .BIN the
-// model needs and, when the main code block is another body's of MODELS, that body.
+// model needs and, when the main code block is another body's of MODELS, that body; any other refused file is named
+// by what src/fw/identify.mjs finds it to be (another release, a modified container, a bare block, no container).
 // Worker-safe: the reader and the hash come in as arguments.
 import { labBlocks } from './olyfw.mjs';
+import { bodyOfDigest, identifyFirmware } from './identify.mjs';
 import { nandSourceAsync, nandExtract, encodeExtract } from './nand.mjs';
 import { resPrefix } from './resprefix.mjs';
 import { MODEL, MODEL_INFO } from './model.mjs';
 import { MODELS } from './models.mjs';
 
+// what a refusal of modified firmware adds: how the lab does run it
+const overlayHint = (id) => (id?.status === 'modified' ? ' (modified firmware runs as a patch overlay on the stock .BIN: the Patch option, node\'s --patch or --main)' : '');
+// id: what the file is (src/fw/identify.mjs), for a main code block that is no MODELS body's stock one
 export class WrongFirmware extends Error {
-  constructor(what, got) {
+  constructor(what, got, id = null) {
     const want = what === 'the main code block' ? MODEL_INFO.rom_sha256 : MODEL_INFO.res_sha256;
-    const other = what === 'the main code block' ? Object.keys(MODELS).find((k) => MODELS[k].rom_sha256 === got) : undefined;
+    const other = what === 'the main code block' ? bodyOfDigest(got) : null;
     super(`${what} is not ${MODEL}'s (sha256 ${String(got).slice(0, 16)}..., ${MODEL} ${want.slice(0, 16)}...)` +
-      (other ? `: this .BIN is ${other}'s (${MODELS[other].name}) firmware` : '') +
-      `; the lab runs ${MODEL} (${MODEL_INFO.name}) on the firmware ${MODEL_INFO.bin}: choose that .BIN`);
+      (other ? `: this .BIN is ${other}'s (${MODELS[other].name}) firmware` : id ? `: this file is ${id.reason}` : '') +
+      `; the lab runs ${MODEL} (${MODEL_INFO.name}) on the firmware ${MODEL_INFO.bin}: choose that .BIN${overlayHint(id)}`);
     this.name = 'WrongFirmware';
+    this.id = id;
   }
 }
 
@@ -30,11 +36,20 @@ export function checkFirmware(rom_sha256, res_sha256) {
 
 // {rom, res (the prefix), rom_sha256, res_sha256, res_full (the whole resource block's length)}, or throws (a damaged
 // container, a block missing, a checksum, a cut, WrongFirmware). The main code block is checked before the prefix is cut.
+// A file refused before its digest is known (no container, a block missing, a checksum) is refused with the same
+// error, its message followed by what the file is (identifyFirmware; e.id); what is accepted does not change.
 export async function labFirmware(read, size, createHash, { onBlock = null } = {}) {
   const hex = (b) => createHash('sha256').update(b).digest('hex');
-  const { rom, res, blocks } = await labBlocks(read, size, { onBlock });
+  let unpacked;
+  try { unpacked = await labBlocks(read, size, { onBlock }); } catch (e) {
+    const id = await identifyFirmware(read, size, createHash);
+    e.message += `; this file is ${id.reason}${overlayHint(id)}`;
+    e.id = id;
+    throw e;
+  }
+  const { rom, res, blocks } = unpacked;
   const rom_sha256 = hex(rom.data);
-  if (rom_sha256 !== MODEL_INFO.rom_sha256) throw new WrongFirmware('the main code block', rom_sha256);
+  if (rom_sha256 !== MODEL_INFO.rom_sha256) throw new WrongFirmware('the main code block', rom_sha256, bodyOfDigest(rom_sha256) ? null : await identifyFirmware(read, size, createHash));
   const prefix = resPrefix(res.data, { load: res.block.load });
   const res_sha256 = hex(prefix);
   checkFirmware(rom_sha256, res_sha256);

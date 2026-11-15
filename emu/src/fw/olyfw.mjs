@@ -69,15 +69,33 @@ export async function walk(read, size) {
   return { blocks, end: off };
 }
 
+// walk over a file held whole (the node tools' --main FILE): the same list, without a reader's awaits
+export function walkBytes(u8) {
+  const blocks = [];
+  let off = 0;
+  while (off + 32 <= u8.length) {
+    if (!TYPES.includes(String.fromCharCode(u8[off], u8[off + 1]))) break;
+    const b = { off, ...parseHead(u8, off) };
+    blocks.push(b);
+    if (off + 32 + b.len + 32 > u8.length) { b.error = 'body overruns file'; break; }
+    off += 64 + b.len;
+  }
+  return { blocks, end: off };
+}
+
 // One walked block: the body as stored and descrambled, the checksum total and whether it is 0 (olyfw.walk's fields).
-export async function readBlock(read, b) {
+// decodeBlock: from its bytes all (head, body, tail), read or sliced by the caller.
+export function decodeBlock(all, b) {
   if (b.error) throw new Error(`block at 0x${hex(b.off, 8)}: ${b.error}`);
-  const all = await read(b.off, 64 + b.len);
   const head = all.subarray(0, 32), body = all.subarray(32, 32 + b.len), tail = all.subarray(32 + b.len, 64 + b.len);
   const scrambled = b.flags !== 0;
   const data = scrambled ? descramble(body) : body.slice();
   const total = (sum32(head) + sum32(data) + sum32(tail)) >>> 0;
   return { data, scrambled, cksum_tot: total, cksum_ok: total === 0, tail_cks: parseHead(tail, 0).cks };
+}
+export async function readBlock(read, b) {
+  if (b.error) throw new Error(`block at 0x${hex(b.off, 8)}: ${b.error}`);
+  return decodeBlock(await read(b.off, 64 + b.len), b);
 }
 
 // The file name olyfw.py --dump writes a block's body to.

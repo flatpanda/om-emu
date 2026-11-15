@@ -6,7 +6,7 @@
 // taken from --bin, else from its path in BLOBS.sha256 (fw/ or fw/old/), $OM_FW_DIR/<its name>, or $OM_BIN when that
 // file has its name (the browser gates' variables), else downloaded from the vendor's updater API (src/fw/updater.mjs;
 // it serves only each body's latest release, so one other than the release MODELS pins is refused), checked against
-// its BLOBS.sha256 pin,
+// its BLOBS.sha256 pin (a file that is not the pinned one is refused with what src/fw/identify.mjs finds it to be),
 // unpacked with the JS unpacker (src/fw/olyfw.mjs labBlocks), and both blocks and the extract checked against MODELS
 // (src/fw/labfw.mjs checkFirmware, labNand) before any is written. Node only.
 import fs from 'node:fs';
@@ -18,6 +18,7 @@ import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
 import { labBlocks, blockName } from '../src/fw/olyfw.mjs';
 import { resPrefix } from '../src/fw/resprefix.mjs';
 import { checkFirmware, checkNand, labNand } from '../src/fw/labfw.mjs';
+import { identifyBytes } from '../src/fw/identify.mjs';
 import { ask, replyTag } from '../src/fw/updater.mjs';
 
 const sha = (b) => createHash('sha256').update(b).digest('hex');
@@ -65,8 +66,9 @@ export async function provision(prog, { make = true, verify = false, bin = null 
     const local = [path.join(REPO, pin.rel), OM_FW_DIR && path.join(OM_FW_DIR, MODEL_INFO.bin), OM_BIN && path.basename(OM_BIN) === MODEL_INFO.bin && OM_BIN];
     if (bin && !fs.existsSync(bin)) throw new Error(`no such file: ${bin}`);
     const file = bin ?? local.find((f) => f && fs.existsSync(f)) ?? await download(pin, say);
-    const got = sha(fs.readFileSync(file));
-    if (got !== pin.sha256) throw new Error(`${file}: sha256 ${got.slice(0, 16)}..., BLOBS.sha256 pins ${pin.sha256.slice(0, 16)}... for ${MODEL_INFO.bin} (not ${MODEL}'s v${MODEL_INFO.version} release)`);
+    const whole = new Uint8Array(fs.readFileSync(file)), got = sha(whole);
+    // a file that is not the pinned release: refused as before, and named by what it is (src/fw/identify.mjs)
+    if (got !== pin.sha256) throw new Error(`${file}: sha256 ${got.slice(0, 16)}..., BLOBS.sha256 pins ${pin.sha256.slice(0, 16)}... for ${MODEL_INFO.bin} (not ${MODEL}'s v${MODEL_INFO.version} release): this file is ${identifyBytes(whole, createHash).reason}`);
     const rel = path.relative(REPO, file);
     say(`unpacking ${rel.startsWith('..') ? file : rel} into ${dir}/`);
     const fd = fs.openSync(file, 'r'), size = fs.fstatSync(fd).size;

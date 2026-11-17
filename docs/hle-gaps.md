@@ -4630,6 +4630,11 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   the third fill `0x503bd1fa` come after takepic in the states' order: run past it in a probe they return without
   a log, but REC_IMAGE then divides by the zero crop areas (`0x50542a62`, fault 6), so they are not landed apart from
   takepic. E146 and E147 call the same AF fill from takepic (`0x509c965d`, `0x509ce3c7` by the port; not run there).
+- **Golden for H-TAKEFILLS (X, 2026-11-16).** The full check reported the same 23 sessions as H-SHOTALLOC's move,
+  on their output layer alone (keys also on its stops and harness); no screen and no devices layer moved. With the
+  name H-TAKEFILLS left out of the Player's list of stand-ins (the fills still run), tokens, keys, playback and the
+  three power sessions were identical on screen, devices and output (keys' stops and harness alone differ: the
+  fills' calls), so the move is the list's name. Re-recorded with evidence 'firmware'.
 - **Sized plan to a development hook, revised (I).** (1) done. (1b) TAKE's own fills natively on the allocated shot
   in place of S-EXIFPRM's copies, in the still states' order and on TAKE's own context: the mode bytes (the Rdy
   states' builder and its two copies, with Standby's clear of the frame count), StlRdy1's exposure request, the

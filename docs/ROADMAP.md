@@ -571,8 +571,13 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    entries carry `lab_ns` and `n`; `halt` ends a paused standalone continue; traces take a `filter` (exec pcs, an MMIO
    range and direction, an interrupt kind or IRQ list). Left: the browser player's Worker cannot hold a debug stop (its
    queue does not block, so break and stopping watchpoints are refused there, and it offers no trace files or
-   disassembler); a step at a debug stop accepts no interrupt; `--attach` sends one request at a time, so a `cont`
-   without `maxMs` holds the client until the next stop.
+   disassembler); `--attach` sends one request at a time, so a `cont` without `maxMs` holds the client until the next
+   stop. A step at a debug stop accepts no interrupt, and needs none (D, 2026-11-16): the debugger steps CPU 0, whose
+   gate admits one only at the idle point `IDLE_DONE` (mode 1, `src/lab/kernel.mjs`; mode 0 none; GATE_ANY is set by
+   nothing in `src/lab`, FIDELITY 2.1), and that pc is the idle hook's (`hook_rt(IDLE_DONE)`), a harness breakpoint,
+   before which the step op ends (`harness: true`); the continue that `cont` or `resume` then makes accepts there as it
+   would have without the stop. A step that looked at every boundary is a different question, interrupt acceptance at
+   any boundary (FIDELITY 2.1-2.2, the phase 3 item "Interrupt acceptance" below), not the debug API's.
 5. **Protocol rough edges:** fixed (2026-10-23). `cont {stops: "0x502d0341"}`, `setReg d0 0x1ffffffff` and `step {n:
    0}` / `{n: -1}` answer BadRequest, and so do their siblings: every list field (`pcs`, `list`, `filter.exec.pcs`,
    `irqs`) that is not a list, `regs` or a watch entry that is not an object, every address outside 32 bits (they were
@@ -612,10 +617,13 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    at a breakpoint's stop puts back the CPU's whole context (`cpuContext`) and the harness stack, and ends as
    `CallHooked` before any lab hook but memset, memcpy and `prop_get` answers (`src/debug/call.mjs` AT_STOP_HOOKS):
    that list grows only by read-only stand-ins with the evidence that they change nothing but their own logs. Probes
-   take `stack` (words from `sp` at each hit), and the session's `dump:` reads up to 64 MiB. Left: a call at a
-   watchpoint's stop is refused (a single step's watch hit leaves a pending stop that a nested continue would take);
-   register writes at a stop clear the flags' undefined bits and the PSW hazard (`src/core/cpu.mjs` `setRegs`), the
-   user's to judge. Seen on this machine under heavy load (load average 45 to 74 on 16 cores, from other jobs): some
+   take `stack` (words from `sp` at each hit), and the session's `dump:` reads up to 64 MiB. A call at a watchpoint's
+   stop: done (2026-11-16), with the stopping watchpoint cleared first; where the harness's own single step met the
+   watchpoint the call drops the pending stop it left and the CPU context puts it back (`src/debug/call.mjs`), the run
+   after the call the run without it (E143, X: a continue's watch stop and the step of `obs-vt4`, every later step, the
+   harness stack and 64 MiB of DRAM; `emu/test/test_tools.mjs`, `test_call.mjs`, `test_live.mjs`). Left: register
+   writes at a stop clear the flags' undefined bits and the PSW hazard (`src/core/cpu.mjs` `setRegs`), the user's to
+   judge. Seen on this machine under heavy load (load average 45 to 74 on 16 cores, from other jobs): some
    `bin/session.mjs` children of `test_tools` and `test_trace` went idle until their spawn timeouts, and the same
    commands passed alone (X, 5 of 5); the cause is not known (?).
 
@@ -839,8 +847,8 @@ follow-ups):
   ranges not shown loaded are guarded as unloaded with a `?` (FIDELITY 4.8); a camera probe of E147's
   `0x60129000..0x60134000` would settle the class.
 - Scripted sessions (`bin/session.mjs`): no free `sp` or `mdr` for a call (the harness's frame); a call at a stop
-  reaching a lab hook other than memset, memcpy and `prop_get` ends as `CallHooked`, and at a watchpoint's stop it is
-  refused (Debug API follow-ups 9); no language option.
+  reaching a lab hook other than memset, memcpy and `prop_get` ends as `CallHooked` (Debug API follow-ups 9); no
+  language option.
 - Waits: the camera application's stand-ins deliver at a Player input's end (FIDELITY 1.5). `bin/session.mjs` sends
   waits in 50 ms slices; play's own `WAIT:MS` token is still one input, and whether the other paths that take a long
   wait as one input (`bin/nav.mjs`, the replayed scenarios) show the effect is not checked.

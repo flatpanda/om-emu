@@ -716,7 +716,10 @@ before the hook answers, so it adds no visit of the run loop: its record names t
 are the hook's, and the hook answers after the stop unless the pc was moved; `src/lab/hle.mjs` `_loop1`) and a stopping
 watchpoint make a debug stop inside a tick, where the session is held (the harness's continue or step waits in the
 Simulator's debug hook) while debug inputs run: `step {n?}` single-steps there (no interrupt accepted; it stops before
-an instruction at one of the harness's own breakpoints, `harness: true`, which a `cont` then lets the harness take);
+an instruction at one of the harness's own breakpoints, `harness: true`, which a `cont` then lets the harness take; the
+lab's gate admits an interrupt only at the idle point `IDLE_DONE`, mode 1, `src/lab/kernel.mjs`, whose idle hook makes
+it such a breakpoint, so a step never passes a boundary where the continue would accept one: `docs/ROADMAP.md` "Debug
+API follow-ups" 4);
 `cont {stops?, maxMs?}` runs on and answers at the next debug stop or halt (stop `break`, `watch` or `halt`, the
 registers, the watch hit, `lab_ns`, `at: run` or `tick`, the stderr lines since), `maxMs` halting at the first tick
 boundary after that much wall time; `resume` runs on and answers at once; `detach` turns breakpoints, watchpoints and
@@ -752,8 +755,8 @@ so `break` and stopping watchpoints are accepted there; it runs its own tokens a
 (it does not script `cont`, whose answer is deferred).
 
 **Calling a firmware function (`call`).** On the live route, `call` runs one firmware function natively between ticks
-(the session running or halted) or at a breakpoint's debug stop (below; refused at a watchpoint's stop, and while a
-stopping watchpoint is armed) through the lab's own call (`src/lab/hle.mjs` `HLE.call`), so the session's hooks and
+(the session running or halted) or at a breakpoint's or a watchpoint's debug stop (below; refused while a stopping
+watchpoint is armed) through the lab's own call (`src/lab/hle.mjs` `HLE.call`), so the session's hooks and
 stand-ins answer as they do for the lab's own calls: a function whose path reaches the lab's memcpy, memset or a
 stand-in works there, where a debugger single-stepping a stub of its own runs past them (on E147, X 2026-11-13: the
 settings getter 0x603f0111 for id 901 returns 54 through the call, memset answered by its hook, and single-stepped from
@@ -825,7 +828,7 @@ a callee that reaches one answers `UnloadedCode`, its message saying the session
 false`, and every later run or write answers `HostStopped`. A standalone machine (`--serve`) refuses `call`: it has no
 harness; write a stub, `reset {regs}` and `cont {stops}` there.
 
-**A call at a breakpoint's stop.** A debug stop is inside a tick: the lab is inside a call of its own (its `call_depth`
+**A call at a debug stop.** A debug stop (a breakpoint's or a watchpoint's) is inside a tick: the lab is inside a call of its own (its `call_depth`
 is 1 or more), whose frames are live on the harness stack below the top where a call's CALL writes, the CPU may hold
 state the 16 registers do not show (the flags' undefined bits and the PSW hazard a `mov` to `psw` leaves, which a
 register write clears: `src/core/cpu.mjs` `setRegs`), and the stand-ins are in the middle of their work. So a call there
@@ -837,8 +840,15 @@ naming the hook, with everything put back. Measured (X, `test/test_tools.mjs`, 2
 for id 24 called at a breakpoint on it gives 3, as between ticks, and every later step's lab time and frame, the harness
 stack at the stop and 64 MiB of DRAM at the end equal the run without the call; with the harness stack not put back the
 resumed step faults (fault 3), and on E147 a call of the getter at the EXIF fill site's stop in S2 leaves the rest of
-the shot and its Exif unchanged. At a watchpoint's stop the call is refused: a single step's watch hit leaves a pending
-stop that a nested continue would take.
+the shot and its Exif unchanged. At a watchpoint's stop (since 2026-11-16) the call runs the same way once the stopping
+watchpoint is cleared (the session's `break:off`, the live op's `watch` without it); where the harness's own single
+step met the watchpoint (a pass-through observer's instruction, `src/lab/sim.mjs` `s`), the step left a debug stop
+pending that the call's own continue would take at once, so the call drops it and the context puts it back. Measured
+(X, `test/test_tools.mjs`): on E143 the getter called at a continue's watch stop on the stack and at the watch stop in
+the step of `obs-vt4` (its `movm` pushing, in the MENU press) gives 3, and every later step, the harness stack and 64
+MiB of DRAM at the end equal the run without the call; with the pending stop left the call ends at the trampoline at
+once (`FirmwareError` "stopped at 0xa2100000"). The live op answers the same (`test/test_call.mjs`, `test/test_live.mjs`
+over `--attach`).
 
 The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
 
@@ -1248,7 +1258,7 @@ to the untraced one (control: 100 ms shorter told apart), its first hit's words 
 the same arrival; a dump across 64 KiB reads, a slice equal to a `read:`, and under `--loaded on` one across a gap with
 its `unloaded` range and the fill; a break at the S-HEAP malloc hook with a dump there and the run after `resume` the
 unstopped run's; a call at a breakpoint's stop (above) against the run without it, one reaching another hook
-(`CallHooked`) and one at a watchpoint's stop refused; `--a15 off` publishing no frame and `on` one; `--device evf` and
+(`CallHooked`), and calls at a continue's and a single step's watch stop against the runs without them; `--a15 off` publishing no frame and `on` one; `--device evf` and
 the eye sensor's switches with `shot:` taking each display's frame (EVF 1600 x 1200, TFT 900 x 600); `--osd-errors`
 failing a step with an engine refusal by default and only reporting it with `report`, and on E118, whose stock INFO
 meets BMP_LUT refusals, `report` as the default and `fail` failing the step; on E147 a 32-word capture at the EXIF fill

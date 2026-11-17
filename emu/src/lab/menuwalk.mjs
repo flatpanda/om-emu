@@ -3,10 +3,12 @@
 // the walker reads the lab's observers (src/lab/menu.mjs draw_log: every DrawText call's string and box, every
 // rectangle fill) and the composed frame, and presses keys.
 //   screenTexts   the texts on the screen: the DrawText calls since the text layer's last full clear (a rectangle of
-//                 the clear colour over the whole frame on the text layer), a later draw at a place replacing the
+//                 the clear colour over the whole canvas on the text layer), a later draw at a place replacing the
 //                 earlier one and a partial clear removing what it covers; each with its box on the screen (the
 //                 call's box moved by the graphics context's origin, which the firmware keeps negated, and the draw
-//                 offset)
+//                 offset), on the GUI's canvas
+//   canvasOf      the canvas behind the frame: its size and a box's pixels on the frame, by the OSD planes' scaler
+//                 (one to one but on the TG-5s, whose 640-wide canvas the VSC scales to their 960-wide TFT, X)
 //   rowsOf        a list's rows: the texts drawn with one text's left edge and box size at its pitch, from the top
 //   bandColour    a row's band: the colour most pixels have in the strip left of its text, inside its box's height
 //   cursorOf      the row under the cursor, by its band (the bodies' menus draw the cursor as a bar or a frame over
@@ -17,10 +19,10 @@
 //   MenuWalk.to   walks to the last of `goals`, in order: {row: [texts]} a row to put the cursor on and take with OK,
 //                 {pass: [titles], key} a screen to leave with a key where it shows up (the two-slot bodies' card
 //                 choice, whose rows are pictures). At each step the deepest goal on the screen decides; where none
-//                 is, and the cursor is not in a list, DOWN goes to the next tab (until the first screen's texts come
-//                 back: refused); a goal's row with the cursor outside the list takes RIGHT, another row UP or DOWN,
-//                 one press at a time, the screen read again after each. The keys, the reads and what they found are
-//                 kept in `log`
+//                 is, and the cursor is not in the screen's longest list (MenuWalk.longest), DOWN goes to the next
+//                 tab (until the first screen's texts come back: refused); a goal's row with the cursor outside the
+//                 list takes RIGHT, another row UP or DOWN, one press at a time, the screen read again after each.
+//                 The keys, the reads and what they found are kept in `log`
 // Worker-safe.
 import { LabError } from './errors.mjs';
 
@@ -102,29 +104,53 @@ export function cursorOf(bands, above, bar) {
   return { cursor: one(offOf(bar), `the bar colour ${hx(bar)}`), bar };
 }
 
+// The GUI's canvas on the composite: the OSD planes' scaler [sh, sv] (source steps per output pixel in 1/4096, the
+// compositors' sampling: column round_half_up(i sh / 4096), row floor(j sv / 4096), src/dev/vsccompose.mjs osdCol) gives
+// the canvas's size behind a frame of [width, height] and the frame's box [x0, y0, x1, y1] of a canvas box (the output
+// pixels that sample it). [4096, 4096] is one canvas pixel per frame pixel
+export function canvasOf([width, height], [sh, sv]) {
+  const size = [Math.floor(((width - 1) * sh + 2048) / 4096) + 1, Math.floor((height - 1) * sv / 4096) + 1];
+  const box = ([x0, y0, x1, y1]) => [Math.max(0, Math.ceil((x0 * 4096 - 2048) / sh)), Math.ceil(y0 * 4096 / sv),
+    Math.floor((x1 * 4096 + 2047) / sh), Math.floor(((y1 + 1) * 4096 - 1) / sv)];
+  return { size, box };
+}
+
 export class MenuWalk {
   // io: {press(key): presses and releases the key and lets the screen settle, frame(): [width, height, words],
-  // draws(): the session's draw_log}
+  // draws(): the session's draw_log, steps(): the OSD planes' scaler [sh, sv] (optional: one canvas pixel per frame
+  // pixel; null refused)}
   constructor(io, { limit = 40 } = {}) {
-    this.io = io; this.limit = limit; this.bar = null; this.log = [];
+    this.io = io; this.limit = limit; this.bar = null; this.top = null; this.log = [];
   }
   read() {
-    const frame = this.io.frame(), texts = screenTexts(this.io.draws(), frame);
-    return { frame, texts };
+    const frame = this.io.frame(), steps = this.io.steps ? this.io.steps() : [4096, 4096];
+    if (!steps) throw new MenuWalkError('menu walk: the OSD planes\' scaler is not read (unwritten, or the planes differ): where the canvas lies on the frame is not known');
+    const canvas = canvasOf(frame, steps), texts = screenTexts(this.io.draws(), canvas.size);
+    return { frame, texts, box: canvas.box };
   }
-  // the list `one` is a row of, and its cursor
+  // the list `one` is a row of, and its cursor (the rows' boxes on the canvas, their bands read on the frame)
   list(scr, one) {
     const rows = rowsOf(scr.texts, one), [x0, y0, x1, y1] = rows[0].box;
     const pitch = rows.length > 1 ? rows[1].box[1] - y0 : y1 - y0 + 1;
-    const r = cursorOf(rows.map((row) => bandColour(scr.frame, row.box)), bandColour(scr.frame, [x0, y0 - pitch, x1, y1 - pitch]), this.bar);
+    const r = cursorOf(rows.map((row) => bandColour(scr.frame, scr.box(row.box))), bandColour(scr.frame, scr.box([x0, y0 - pitch, x1, y1 - pitch])), this.bar);
     this.bar = r.bar;
     return { rows, cursor: r.cursor };
   }
-  // the longest list on the screen (most texts drawn alike), for a screen with no goal on it
+  // the longest list on the screen, for a screen with no goal on it: the most texts drawn alike at a pitch of less than
+  // twice their height (a title and a footer drawn alike, far apart, are no list: the TG-5s' menu pages, X), of lists
+  // as long the one of the smallest pitch; where none has two rows, the text at the first row's place a list of two
+  // or more showed before (`top`, its top edge: a tab of one row, the TG-5s' Custom Menu, X), as a list of one
   longest(scr) {
     let best = [];
-    for (const t of scr.texts) { const rows = rowsOf(scr.texts, t); if (rows.length > best.length) best = rows; }
-    return best;
+    const pitch = (rows) => rows[1].box[1] - rows[0].box[1];
+    for (const t of scr.texts) {
+      const rows = rowsOf(scr.texts, t);
+      if (rows.length < 2 || pitch(rows) >= 2 * (t.box[3] - t.box[1] + 1)) continue;
+      if (rows.length > best.length || (rows.length === best.length && pitch(rows) < pitch(best))) best = rows;
+    }
+    if (best.length) { this.top = best[0].box[1]; return best; }
+    const at = this.top === null ? [] : scr.texts.filter((t) => t.box[1] === this.top).sort((a, b) => a.box[0] - b.box[0]);
+    return at.length ? [at[0]] : [];
   }
   press(key, why) { this.log.push(`${key}: ${why}`); this.io.press(key); }
   to(goals) {
@@ -139,7 +165,7 @@ export class MenuWalk {
       });
       if (at < 0) {
         const rows = this.longest(scr);
-        if (rows.length < LEARN_ROWS) throw new MenuWalkError(`menu walk: none of the goals on a screen with no list (${JSON.stringify(names.slice(0, 12))})`);
+        if (!rows.length) throw new MenuWalkError(`menu walk: none of the goals on a screen with no list (${JSON.stringify(names.slice(0, 12))})`);
         const { cursor } = this.list(scr, rows[0]);
         if (cursor !== null) throw new MenuWalkError(`menu walk: none of the goals in the list the cursor is in (${JSON.stringify(rows.map((r) => r.text))})`);
         const key = names.join('\n');

@@ -420,6 +420,23 @@ export class VscDebug {
     }
     return new Map(listed.map(([off, name]) => [name, values.has(off) ? values.get(off) : null]));
   }
+  // The OSD planes' scaler on channel c, as the firmware wrote it: [sh, sv], the source steps per output pixel in
+  // 1/4096 (4096 where the control word's bit 0, horizontal, or bit 4, vertical, is clear), where all three OSD planes
+  // have the same; null where one is unwritten or they differ. The words are the compositors' (src/dev/vsccompose.mjs
+  // OSD_RSZ1, src/dev/vsccompose2.mjs RSZ: the control, +4 the horizontal step, +12 the vertical, a plane every 0x18
+  // bytes), read from the written bank, which a channel the firmware does not reconfigure latches unchanged (I). For a
+  // reader of the GUI's canvas on the composite (src/lab/menuwalk.mjs): the TG-5s scale their 640-wide canvas to
+  // their 960-wide TFT area, 0x1 and 2728 (X)
+  osd_steps(c) {
+    const first = LATER ? 0x148 : 0x534, flags = this.flags(c, 'w'), at = (off) => (flags[off >> 2] ? this.sim.u32(VSC_CHANNEL[c] + off) : null);
+    const steps = [0, 1, 2].map((q) => {
+      const off = first + 0x18 * q, ctl = at(off);
+      if (ctl === null) return null;
+      const sh = ctl & 1 ? at(off + 4) : 4096, sv = ctl & 0x10 ? at(off + 12) : 4096;
+      return sh === null || sv === null ? null : [sh, sv];
+    });
+    return steps.every((x) => x !== null && x[0] === steps[0][0] && x[1] === steps[0][1]) ? steps[0] : null;
+  }
   // 6 banks x 256 words (sel 0..2, bank 0..1) and their written flags: [words, flags]
   palette(c) {
     const data = this.sim.read(VSC_CHANNEL[c] + PAL_BASE, 0x1800);

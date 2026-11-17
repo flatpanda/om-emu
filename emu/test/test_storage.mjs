@@ -89,7 +89,7 @@ import { jpegOfFrame } from '../src/lab/jpeg.mjs';
 import { decodeJpeg } from '../refs/jpeg.mjs';
 import { readExif, jpegSegments } from '../refs/exif.mjs';
 import { MODELS } from '../src/fw/models.mjs';
-import { screenTexts, rowsOf, bandColour, cursorOf, MenuWalk, TEXT_LAYER, CLEAR_COLOUR } from '../src/lab/menuwalk.mjs';
+import { screenTexts, rowsOf, bandColour, cursorOf, canvasOf, MenuWalk, TEXT_LAYER, CLEAR_COLOUR } from '../src/lab/menuwalk.mjs';
 
 const throwsLike = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
 const cmd = (index, rt, acmd = false) => index | (acmd ? 0x40 : 0) | rt << 8;
@@ -559,6 +559,33 @@ function menuWalkUnits(ok) {
   ok(throwsLike(() => new MenuWalk({ press: none.press, frame: none.frame, draws: () => none.draws }).to([{ row: ['Sensor Cleaning'] }]), /none of the goals on any of the 2 tabs/) && none.keys.join() === 'down,down', `a goal on no tab: refused after the tabs came round: ${none.keys}`);
   lone.at = 'card'; lone.press('down'); lone.press('down');
   ok(throwsLike(() => walk(lone), /no bar colour learned/) && lone.keys.length === 2, 'a walk that starts in a list of two bars: refused, no key pressed');
+  // a canvas the VSC scales onto a wider frame (the TG-5s: their 640-wide canvas on a 960-wide TFT area, the
+  // horizontal step 2728, X): the canvas's size behind the frame, a canvas box's frame pixels (those whose sampled
+  // column is in the box: 60..359 for 40..239), one to one at 4096
+  const c1 = canvasOf([W, H], [4096, 4096]), c2 = canvasOf([960, 480], [2728, 4096]);
+  ok(c1.size.join() === `${W},${H}` && c1.box([X, 40, X + 199, 59]).join() === [X, 40, X + 199, 59].join() && c2.size.join() === '640,480' && c2.box([40, 40, 239, 59]).join() === '60,40,359,59',
+    `canvasOf: one to one at 4096; 640 x 480 behind 960 x 480 at 2728, the box 40..239 on 60..359: ${c2.size}, ${c2.box([40, 40, 239, 59])}`);
+  // the Menu_Viewer look on a frame 1.5 times as wide (320 to 480, the step 4 ceil(319 x 1024 / 480) = 2724, as the
+  // firmware's form): walked with the steps; without them the canvas's full clear does not cover the frame
+  const wide = (m, sh) => ({ ...m, frame: () => { const [, , words] = m.frame(), out = new Uint32Array(480 * H); for (let y = 0; y < H; y++) for (let i = 0; i < 480; i++) out[y * 480 + i] = words[y * W + Math.floor((i * sh + 2048) / 4096)]; return [480, H, out]; } });
+  const ws = viewer(), wsm = wide(ws, 2724), wn = viewer(), wnm = wide(wn, 2724);
+  const ww = new MenuWalk({ press: ws.press, frame: wsm.frame, draws: () => ws.draws, steps: () => [2724, 4096] });
+  ww.to(GOALS);
+  ok(ws.done && ws.keys.join() === 'down,right,down,ok,down,ok,up,ok' && throwsLike(() => new MenuWalk({ press: wn.press, frame: wnm.frame, draws: () => wn.draws }).to(GOALS), /no full clear/)
+    && throwsLike(() => new MenuWalk({ press: wn.press, frame: wnm.frame, draws: () => wn.draws, steps: () => null }).to(GOALS), /scaler is not read/),
+  `a scaled canvas: walked with the OSD steps (${ws.keys}); without them refused (no full clear covers the frame), with an unread scaler refused`);
+  // a tab of one row (the TG-5s' Custom Menu, X): read at the first row's place a longer tab showed; a walk that starts
+  // there has no such place and is refused
+  const oneTab = (start) => menu('frame', {
+    shoot: { title: 'Shooting Menu 1', rows: ['Reset', 'Picture Mode', 'Image Aspect'], cursor: null, top: 40, page: 0, next: 'custom' },
+    custom: { title: 'Custom Menu', rows: ['MF Assist'], cursor: null, top: 40, page: 0, next: 'setup' },
+    setup: { title: 'Setup Menu', rows: ['Clock', 'Card Setup', 'Language', 'Firmware'], cursor: null, top: 40, page: 0, next: 'shoot', ok: { 'Card Setup': 'card' } },
+    card: { title: 'Card Setup', rows: ['All Erase', 'Format'], cursor: 0, top: 100, page: 0x0a0a0a, ok: { Format: 'yes' } },
+    yes: { title: 'Format', rows: ['Yes', 'No'], cursor: 1, top: 120, page: 0x0a0a0a, ok: { Yes: 'done' } },
+  }, start);
+  const ot = oneTab('shoot'), os = oneTab('custom');
+  ok(walk(ot) && ot.done && ot.keys.join() === 'down,down,right,down,ok,down,ok,up,ok' && throwsLike(() => walk(os), /screen with no list/) && os.keys.length === 0,
+    `a tab of one row: passed at the place of a longer tab's first row (${ot.keys}); a walk starting there refused`);
 }
 
 // (firmware) the play session's card on the model of OM_EMU_MODEL (E143 by default), a body whose file system runs
@@ -929,7 +956,7 @@ const FORMAT_GOALS = [{ row: ['Card Formatting', 'Card Setup'] }, { pass: ['Sele
 // from the menu MENU opened to the Format's Yes taken: the keys and what the walker read for each
 async function walkToFormat(s, press) {
   const { MenuWalk } = await import('../src/lab/menuwalk.mjs');
-  const walk = new MenuWalk({ press: (k) => press(s, k), frame: () => s.frame('boundary'), draws: () => s.lab.draw_log });
+  const walk = new MenuWalk({ press: (k) => press(s, k), frame: () => s.frame('boundary'), draws: () => s.lab.draw_log, steps: () => s.osd_steps() });
   walk.to(FORMAT_GOALS);
   return walk.log;
 }
@@ -1056,7 +1083,22 @@ async function hlsOutIn(card, tag, ok, bad, notes) {
 // Menu's first row, five tabs down; Card Setup offers All Erase and Format while the card holds a picture, and the
 // confirm's cursor is on No (X, the walker's notes). The path is checked by what the application does at its end: the
 // media control's start with the format's command, which S-MDAEND reads where the application makes it
-const familyPress = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 600e6); };
+const familyPress = (s, k, probe = () => {}) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 150e6); probe(); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 600e6); probe(); };
+// The bodies whose start ends in the date and time setting on an unset clock (GUI state 0x1103), and the keys that
+// leave it, as bin/modelcheck.mjs START_PROMPT answers it (docs/model-survey.md findings 17 and 24; X, frames): the
+// TG-7's and the TG-5's Cancel on MENU, the industrial TG-5's five fields given their first values with UP and taken
+// with OK, the fifth OK setting the clock. S1 then leaves the clock warning (familyStart)
+const START_PROMPT = { E145: ['menu'], E129: ['menu'], E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'] };
+// the start, its date and time setting answered where the body opens one (held strictly: a start that ends elsewhere
+// fails), then S1 where it did (the clock warning off)
+const familyStart = (s, model) => {
+  s.idle_slice(s.lab.lab_time() + 1500e6);
+  const keys = START_PROMPT[model];
+  if (!keys) return;
+  if (s.lab.state() !== 0x1103) throw new Error(`${model}: the start ended in GUI state 0x${s.lab.state().toString(16)}, not the date and time setting 0x1103`);
+  for (const k of keys) familyPress(s, k);
+  familyPress(s, 's1'); s.idle_slice(s.lab.lab_time() + 1000e6);
+};
 const familyPlayer = async (card) => {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
@@ -1071,34 +1113,42 @@ const familyPlayer = async (card) => {
 // docs/model-survey.md finding 129); then S2's picture lands on the card as the first file again
 async function hlsFormatFamily(card, tag, ok, bad, notes) {
   const { runtime } = await import('../src/lab/hle.mjs');
-  const { A } = await import('../src/fw/model.mjs');
+  const { A, MODEL } = await import('../src/fw/model.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
   const { SHOTS } = cardQueries(A), names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`;
   const read = (lba, n) => card.read(lba, n), pl = await familyPlayer(card);
   try {
     pl.open_session();
     const s = pl.session, lab = s.lab, media = s.camapp.media;
-    s.idle_slice(lab.lab_time() + 1500e6);
+    familyStart(s, MODEL);
     const first = openVolume(read), fresh = first.freeClusters(), shots0 = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
     familyPress(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
     const vol0 = openVolume(read), shooting = lab.state();
     ok(vol0.find(FILE1) && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `${tag}: before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
     familyPress(s, 'menu');
     ok(lab.state() !== shooting, `${tag}: MENU left the shooting screen (state 0x${lab.state().toString(16)})`);
-    notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, familyPress)).join('; ')}`);
-    // the format runs (S-MDAEND's start seen, its end not yet): the card input is refused, as E143's during S-MDACTRL
-    let held = false;
-    try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { held = /media layer is busy/.test(e.message); }
-    ok(media.mda !== null && media.started?.cmd === media.f.cab.format && media.started.media === 0 && held && s.storage.card.present, `${tag}: the application's start with the format's command for the first card; while the format runs the card input is refused (start ${JSON.stringify(media.started)})`);
-    notes.push(`${tag}: the media control's start (the application's own): ${JSON.stringify(media.mda)}`);   // camapp's pump takes the log meanwhile
-    const t0 = lab.lab_time();
+    // the format runs (S-MDAEND's start seen, its end not yet): the card input is refused, as E143's during S-MDACTRL.
+    // Tried at the first look after the start, within the key's press: E133's format ends 0.2 to 0.4 s after Yes's
+    // press, before the press's settling is over (X)
+    // The format's time: from the press of the key whose press saw the start (Yes) to the first look that sees its end
+    let held = null, pressed = null, yes = null, done = null;
+    const probe = () => {
+      if (yes === null && media.started) yes = pressed;
+      if (done === null && media.formats) done = lab.lab_time();
+      if (held !== null || media.mda === null) return;
+      held = false;
+      try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { held = /media layer is busy/.test(e.message); }
+    };
+    notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, (x, k) => { pressed = lab.lab_time(); familyPress(x, k, probe); })).join('; ')}`);
+    ok(media.started?.cmd === media.f.cab.format && media.started.media === 0 && held === true && s.storage.card.present, `${tag}: the application's start with the format's command for the first card; while the format runs the card input is refused (start ${JSON.stringify(media.started)}, the input ${held === null ? 'not tried' : held ? 'refused' : 'taken'})`);
+    notes.push(`${tag}: the media control's start (the application's own): ${JSON.stringify(media.started)}, the format ${media.mda === null ? 'over' : 'running'} after the walk`);   // camapp's pump takes the log meanwhile
     for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
-    const took = lab.lab_time() - t0;
+    const took = (done ?? lab.lab_time()) - (yes ?? NaN);
     s.idle_slice(lab.lab_time() + 1000e6);
     const log = media.log.concat(s.camapp.log.filter(([k]) => k.startsWith('media')).map(([k, d]) => [k.slice(6), d]));
     ok(media.formats === 1 && media.ended === 1 && media.mda === null, `${tag}: Format, Yes: the application's media control started the format and S-MDAEND ran its end: ${JSON.stringify(media.status())}`);
     const vol = openVolume(read);
-    notes.push(`${tag}: the menu's format done within ${(took / 1e6).toFixed(0)} ms of lab time after Yes (50 ms steps): ${layout(mbrPartition(read(0, 1)), vol)}`);
+    notes.push(`${tag}: the menu's format done within ${(took / 1e6).toFixed(0)} ms of lab time after Yes's press (looks 150 and 750 ms into the press, then every 50 ms): ${layout(mbrPartition(read(0, 1)), vol)}`);
     ok(vol.type === first.type && vol.label === first.label && vol.list().length === 0, `${tag}: read back: a ${vol.type} '${vol.label.trim()}' volume (the insertion's ${first.type} '${first.label.trim()}') with an empty root: ${JSON.stringify(vol.list().map((e) => e.name))}`);
     ok(!vol.find(FILE1) && vol.freeClusters() === fresh, `${tag}: the picture is gone: ${vol.freeClusters()} clusters free, a fresh volume's ${fresh}`);
     if (vol.type === 'exFAT') ok(vol.check().length === 0 && vol.backupMatches(), `${tag}: the formatted exFAT volume is consistent`);
@@ -1124,7 +1174,7 @@ async function hlsFormatFamily(card, tag, ok, bad, notes) {
 // application's); in, the card initialised and mounted again without a format, the screen as before (the whole frame)
 // and the count the same; then S2's picture lands on the card
 async function hlsOutInFamily(card, tag, ok, bad, notes) {
-  const { A } = await import('../src/fw/model.mjs');
+  const { A, MODEL } = await import('../src/fw/model.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
   const { SHOTS } = cardQueries(A), names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`;
   const read = (lba, n) => card.read(lba, n), pl = await familyPlayer(card);
@@ -1132,7 +1182,7 @@ async function hlsOutInFamily(card, tag, ok, bad, notes) {
   try {
     pl.open_session();
     const s = pl.session, lab = s.lab, st = s.storage, media = s.camapp.media, slot = media.f.slots[0];
-    s.idle_slice(lab.lab_time() + 1500e6);
+    familyStart(s, MODEL);
     familyPress(s, 's1'); s.idle_slice(lab.lab_time() + 1000e6);
     const before = screen(s), shots = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0, cmds = st.commands;
     const detect = lab.sim.read(st.f.detect, 2)[0], boot = openVolume(read).boot.slice();

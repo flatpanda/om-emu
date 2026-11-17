@@ -1749,6 +1749,9 @@ export class PlaySession extends N.NavSession {
     const nb = this.next_boundary();
     if (nb !== null && nb > this.lab.lab_time()) this.idle_slice(nb);
   }
+  // The OSD planes' scaler on the shown device's channel ([sh, sv] or null; display.mjs VscDebug osd_steps), where
+  // the GUI's canvas lies on frame()'s composite
+  osd_steps() { return this.lab.vsc.osd_steps(lookup(D.DEVICE, this.device).channel); }
   // Composite of the shown device: [width, height, words or raw bytes] or raises.
   frame(policy = 'boundary', raw = false) {
     let dev = this.device;

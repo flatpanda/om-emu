@@ -31,8 +31,10 @@ import zlib from 'node:zlib';
 // the bodies whose eraseCurrent runs natively (X, 2026-11-11; the rule's calls and REC_FILE's or the recorder's
 // registration in the DCF database, src/lab/camapp.mjs erase_native), held strictly both ways; E130, E133, E129 and
 // E122 since REC_FILE runs natively there too (e130-recfile, e118-recfile; X at the round's merge: their DCF database
-// holds the session's pictures; E118 and E120 have no erase fact)
-export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E129', 'E122']);
+// holds the session's pictures; E118 and E120 have no erase fact); E145 and E132 since their REC_FILE runs natively
+// (2026-11-16, docs/model-survey.md finding 156; X: 30 of 30 checks on each, no Delete dialog, as E129's)
+export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E129',
+  'E145', 'E132', 'E122']);
 // the bodies whose Delete in playback opens the erase dialog in the lab (X; finding 138 for E143 and, with the media
 // status at the word the setter's SD case stores, E137 and E125, finding 111 for the others), held strictly: on a
 // body outside them Delete is pressed and must open nothing (or, on NO_DELETE_KEY's, be refused by the player), and on

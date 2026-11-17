@@ -3745,9 +3745,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     `0x50ca4ae1` and `0x50c78b0e` (X). The site joins CMP_MODULE9_READERS (`emu/src/lab/camapp.mjs`); taken out
     again, the same step stops at the guard (the test's control). 4.2.4's S1 release after a menu and a PLAY pass
     runs too: the read returns 0 with the word at 1 and the sequence is back in phase 101 (X).
-  - *What remains in keys.* After S2 camapp 1's GUI shows panel 0 to the session's end (S2's rec view, I: ROADMAP's
-    panel 0) and camapp 3's keeps panel 10; the multi-selector's press and its up and right reach the GUI in
-    camapp 1 (`0xf835`, `0xf83c`, `0xf858`, `0x9005`, `0xf85b`, `0x900b`) and not in camapp 3. Not followed here:
+  - *What remains in keys.* After S2 camapp 1's GUI shows panel 0 to the session's end (S2's rec view: the GUI's rec
+    view screen with no panel while S-RVSTANDBY answers no rec view, D, menu spec section 14; that END_RECVIEW's lab
+    time is not reached in the scenario, run with idle off, is I) and camapp 3's keeps panel 10; the multi-selector's
+    press and its up and right reach the GUI in camapp 1 (`0xf835`, `0xf83c`, `0xf858`, `0x9005`, `0xf85b`, `0x900b`) and not in camapp 3. Not followed here:
     the shot under camapp 3 (S1 is refused by the sequence parts' guard before a menu pass, 4.3.2, 4.1.7) and MF
     (4.3.7) are the tracks take-111 and af-gate (4.1.12, 4.3.8).
 - **Group 4, the menu's entry takes lab time (tokens, play-perf, pace-wall): no defect.** OPEN (the GUI's menu

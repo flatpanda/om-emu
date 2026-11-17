@@ -590,12 +590,15 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    WebKitGTK runs the same path uncached. Left: Safari itself (its OPFS and sync access handles, which WebKitGTK cannot
    stand in for: switched on, its `getDirectory` rejects in an automation session and `createSyncAccessHandle` is not
    supported outside one), which needs `safaridriver` enabled by the user on a Mac; mobile browsers; the drop of a
-   `.BIN` and the start options (debug API, card size, HDMI, kept settings) outside Chrome. Found by the gate's runs (X, in
-   node too, and on the lab of 2026-11-01): LV in the about 0.2 lab s after S2's rec view, where E143's GUI has shown
-   panel 0 and not yet the shooting screen's panel 10, stops the session ("SWITCH:evf: the re-entry landed on GUI
-   state 0x0108 panel 10, not the screen the switch left (0x0108 panel 0)", `src/lab/play.mjs` live_switch); the
-   Card panel's read can hold the lab there, so the gate takes LV 1.5 lab s past the picture. What panel 0 is, and
-   which screen the switch should hold the re-entry to there, is not read.
+   `.BIN` and the start options (debug API, card size, HDMI, kept settings) outside Chrome. Found by the gate's runs and
+   fixed (2026-11-16): LV in S2's rec view (the 0.5 lab s from START_RECVIEW to END_RECVIEW), where the GUI showed
+   panel 0 and not yet the shooting screen's panel 10, stopped the session ("SWITCH:evf: the re-entry landed on GUI
+   state 0x0108 panel 10, not the screen the switch left (0x0108 panel 0)", `src/lab/play.mjs` live_switch), on E143,
+   E146 and E147 alike (X). Panel 0 is the GUI's rec view screen with no panel: getRecViewState answers no rec view
+   while the rec view component is in standby (S-RVSTANDBY), and the screen then calls ShowPanelEx(0) (D); the
+   application's re-entry builds the shooting screen there, as from the shooting screen (X), and the switch now takes
+   that as its screen (`docs/om1-menu-spec.md` section 14; `emu/test/test_dispswitch.mjs`, with the mutant
+   `recview-unheld` as its control). The gate still takes LV 1.5 lab s past the picture (not re-run since).
 8. **Stops, traces and mid-function calls headless:** done (2026-11-13, `emu/README.md` "The debug API", "Scripted
    sessions"). A host may hold a debug stop by a callback (`holdStop`, `src/debug/live.mjs`) instead of a blocking
    queue, so the scripted session takes `break:` and stopping watchpoints and runs its own tokens at the stop; logging

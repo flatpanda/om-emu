@@ -1019,9 +1019,9 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    `0x51051493`'s HFW query: the UI_IN switch codes `0x2402`, `0x2403`, `0x2401`) refuses it. In camapp mode the lab's
    switch therefore keeps its DISPLAY OPEN, H-RESEND, H-EYESTATE and H-CONNECT but drops S-OUTSEQ's end and re-entry
    requests (the application, told of the change, ends and re-enters the screen itself: shooting, menu, Super Control
-   Panel, direct WB and playback land where they were), and S-OUTDISP answers getOutputDisplay with 6 (INTERNAL_EVF)
-   while the EVF is open (I). Which monitor position the camera reports in normal use, and so whether its eye sensor
-   switches on its own here, is open.
+   Panel, direct WB and playback land where they were; S2's rec view lands on the shooting screen, menu spec section
+   14), and S-OUTDISP answers getOutputDisplay with 6 (INTERNAL_EVF) while the EVF is open (I). Which monitor
+   position the camera reports in normal use, and so whether its eye sensor switches on its own here, is open.
 54. **The menu stops the through image (D, S-THROUGH).** As the menu opens the application calls
    OlyHfwOpeShoot::ctrlAutoThrough (`0x50abd373`) with 0 and as it closes with 1 (its own log). S-SCENE's frames
    followed neither, so the menu stood over the live scene; S-THROUGH stops them and shows black meanwhile (I: what the

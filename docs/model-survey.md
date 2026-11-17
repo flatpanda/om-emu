@@ -3214,6 +3214,39 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    their end, and so do E145's and E132's (finding 156). The bodies that ran it before pass with the changed walker and
    test (X: E122, E139 and E130 `--hls` 21 of 21; E143, E146, E147 `--session` 68 of 68, E144 53 of 53). Finding
    154's other points stay open, and an SDXC card on these four's HLS side is not tried.
+158. **The built-in lenses' focal length in the picture's record** (2026-11-16, `src/fw/facts.mjs` builtinFocal, fact
+   `lens.focal`; `src/lab/camapp.mjs` lens_focal, S-ZOOMNO; `test/test_playinfo.mjs`; D unless tagged). INFO showed 0 mm
+   on E145, E129 and E132 (finding 80): S-CARD kept no focal length at a capture where no lens is on a mount. *Where the
+   firmware takes it.* The EXIF set stores FocalLength (the tag table's `0x920a`, E145 +4184, the TG-5's +1880) from one
+   call, `call G,[],4; mov (8,sp),a0; add F,a0; mov d0,(a0); mov 100,d0; mov d0,(4,a0)`: E145 G `0x500f4e9d` at
+   `0x502edd6c`, E129 `0x500e476b` at `0x502d9732`, E132 `0x500e470e` at `0x502dba13`, the denominator 100
+   (FocalLengthIn35mm +4232 / +1928 the same way from `0x500f4eb5`, E129 `0x500e4a40`, E132 `0x500e49e3`, divided by
+   100). Where E143's takes the mounted lens's record (the lens step `0x5011fcf4`, the record's +4184,
+   `docs/hle-gaps.md` 4.3.3), E145's lens fill (`0x50286d72`, E143's `0x503bd137`) has no such branch. G answers
+   hundredths of a mm from a zoom table. E145 (through `0x500f4943`): the zoom number of the position word `0x61c67b3e`
+   (`0x500f1bea`: how many of the table `0x601b1f38`'s 21 positions 0, 3, 8, 13 .. 100 are at or below it; 1 at 0), the
+   row of the table `0x601b278c`, 56 bytes a zoom number, its column by setting 17649 (`0x500f4ba1`); column 0 runs 450,
+   470, 505 .. 1800 at the zoom numbers 1 to 21, the TG-7's 4.5 to 18 mm, the others 765, 333 and 135 at the wide end
+   (I: the converter lenses, 1.7x and 0.74x, the third ?). The lens's setup writes the word 0 (`0x500e8bf8`,
+   `0x500e8d23`), its zoom commands others (`0x500e91dd`, `0x500e92c2`). The TG-5's G reads the zoom number itself, the
+   byte `0x625af788` (E129 `0x500e477d`, E132 `0x500e4720`), times 52 into the table `0x6058365c` (E132 `0x605836bc`;
+   450, 480, 514 .. 1800 at 1 to 21), its column by setting 17649 as well (4 and 1 the other two). The lens module's
+   variable init stores 1 there first (E129 `0x500e5a69`, E132 `0x500e5a0c`), called by the lens init (`0x500e41af`,
+   `0x500e4152`) that the boot calls after its trace `1_p` (`0x50022c6c`, `0x50022d28`) and before it starts ZOOM_MAIN.
+   The rule builtinFocal reads G by the store's form at the tag table's offset, and on the TG-5 the zoom byte (G's
+   `movbu (Z),d0` before its return) and the init (`mov 1,d0; movbu d0,(Z)` at a call's target); on the 16 bodies with a
+   mount it reads none (X, `test/test_facts.mjs` BUILTIN_FOCAL_FOUND). *What the lab gives it.* G runs natively at a
+   capture (S-CARD's lens_focal) and its answer / 100 is the picture's record, which S-PLAYCOMP and S-PLAYSEQ write. On
+   E145 the position word is 0 in the lab (X, from the start to after S2; the setup's own value) and setting 17649 is 0:
+   G answers 450, 4.5 mm (X). On the TG-5 the lab does not run the boot's lens init, so the zoom byte is 0 and G reads
+   row 0, the low half of a pointer in the table's head: 2203 on E129, 2110 on E132 (X). Running the variable init
+   natively at the start stops it at a divide by zero (`0x500e833e`, E129: a rate another init sets, not read, X), so
+   S-ZOOMNO stands in for its first store: the byte is 1 before the application starts, and G answers 450 on both (X).
+   The lab moves no zoom (the zoom lever and ZOOM_MAIN are not run), so every picture is at the wide end. INFO's record
+   then carries 45 (tenths of a mm) on the three, and `test/test_playinfo.mjs` holds 4.5 mm there (BUILTIN_FOCAL_MM)
+   where it held 0. Open: the picture's Exif FocalLength on the three, which the EXIF set would store from the same G
+   (the set does not run on them, finding 136); a zoom other than the wide end; the column's setting 17649 (the
+   converter lens).
 
 
 

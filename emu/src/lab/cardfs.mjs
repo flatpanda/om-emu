@@ -308,6 +308,23 @@ export class FatWriter extends Writer {
     this._entry(at, name11, attr, clusters[0] ?? 0, bytes.length, stamp);
     return { replaced: !!old, size: bytes.length, clusters: clusters.length, first: clusters[0] ?? 0 };
   }
+  // A full card (test/test_storage.mjs's Auto Switch): a new file in the root over every free cluster, chained as put()
+  // chains a file and its size theirs, whose sectors are not written (they read as the card holds them: zeros on a
+  // card the firmware formatted). FAT32 only: a file's size must stay below 4 GiB, so on a card whose free space
+  // does not the file is refused
+  fill(name, { stamp = FIXED_STAMP } = {}) {
+    return this._do(() => {
+      const root = this._root();
+      if (this._find(root, name)) throw new CardFsError(`${name}: the file is there already`);
+      const at = this._slot(root);
+      let n = 0;
+      for (let c = 2; c < this.clusters + 2; c++) if (this.next(c) === 0) n++;
+      if (!n || n * this.per > U32_MAX) throw new CardFsError(`fill: ${n} free clusters of ${this.per} bytes: no file of that size on FAT32`);
+      const clusters = this._alloc(n);
+      this._entry(at, shortName(name), ATTR_ARCHIVE, clusters[0], n * this.per, stamp);
+      return { op: 'fill', path: name, size: n * this.per, clusters: n };
+    });
+  }
   // the short entry and the long-name entries just before it marked deleted, its clusters given back
   _rm(dir, name) {
     const e = this._find(dir, name);

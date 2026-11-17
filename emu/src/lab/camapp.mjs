@@ -839,6 +839,7 @@ export class CamApp {
     this.log = [];             // [kind, detail] of every stand-in action, the session's record
     this.reactive = null;
     this.timed = [];           // [due lab ns, CBS name, param] posts
+    this.in_recview = false;   // S-RELSEQ: START_RECVIEW posted and END_RECVIEW not yet (play.mjs live_switch)
     this.long_timers = new Map();   // S-LONGTIMER: timer number -> due lab ns
     this.movie_rate_answered = 0;   // S-MOVRATE: the record time's calls answered while the frame rate is 0
     this.funcs = [];           // function direct ids the application started in the step
@@ -1901,7 +1902,10 @@ export class CamApp {
     s.settle(`S-RELSEQ ${list.map(([name]) => name).join(', ')}`);
     this.pump();
     for (const [name] of list) {
-      if (name === 'START_RECVIEW' || name === 'END_RECVIEW') s.scene_recview?.(name === 'START_RECVIEW');   // S-RECVIEW
+      if (name === 'START_RECVIEW' || name === 'END_RECVIEW') {
+        this.in_recview = name === 'START_RECVIEW';
+        s.scene_recview?.(this.in_recview);                                          // S-RECVIEW
+      }
       // S-CARD: the card the picture goes to, by the firmware's save settings (the first slot's where the lab models
       // one slot)
       const drive = name === 'END_SHOOTING_PICTURE' && s.storage?.f.slots ? this.save_slot() : 0;

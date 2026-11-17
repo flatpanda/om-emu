@@ -2118,9 +2118,20 @@ export class PlaySession extends N.NavSession {
     const reads = lab.module9_reads.slice(m9).map(([, site]) => site);
     const problems = [];
     const panel1 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
-    const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state()) : lab.state() === state0 && panel1 === panel0;
+    // From S2's rec view (S-RELSEQ's START_RECVIEW to END_RECVIEW) the GUI is in 0x0108 on its rec view screen (E143
+    // 0x511f9fc1: its panel word 0x60371628 set to 475, 477 or 481 by 0x511fa2fb), which asks getRecViewState (API
+    // 0x20146) and, with the rec view component in standby (S-RVSTANDBY: no rec view), shows no panel, ShowPanelEx(0)
+    // at 0x511fa2e0 (D; X on E143, E146 and E147). The application's re-entry ends that screen (ShowPanelEx(0) at
+    // 0x512054a6) and builds the shooting screen, panel 10 (0x511eb186), as it does from the shooting screen (X): the
+    // switch holds it to the shooting screen, not the rec view. The mutant recview-unheld leaves the rule out
+    // (test/test_dispswitch.mjs's control).
+    const recview = state0 === STATE_SHOOTING && panel0 === 0 && this.camapp?.in_recview === true && this.opts.mutant !== 'recview-unheld';
+    const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state())
+      : recview ? lab.state() === STATE_SHOOTING && panel1 === SHOOT_PANEL
+        : lab.state() === state0 && panel1 === panel0;
     if (!same) {
-      problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not the screen the switch left (${h4(state0)} panel ${panel0})` +
+      const left = recview ? `the shooting screen the application re-enters from S2's rec view (${h4(STATE_SHOOTING)} panel ${SHOOT_PANEL})` : `the screen the switch left (${h4(state0)} panel ${panel0})`;
+      problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not ${left}` +
         (chain.asleep.length ? `; task(s) ${show(chain.asleep)} still sleep after ${Math.round(chain.ns / 1e6)} ms of lab time (H-CHAINREST's bound)` : '') +
         // E146's and E147's touch close waits for the touch task before its release (src/fw/models.mjs)
         (!this.touch_on && D.HAS_TOUCH ? '; the touch task does not run (touch off): where the touch driver\'s close waits for it (E146, E147), the application\'s event task stays in that close and the screen is not built again; run with the touch on' : ''));
@@ -2142,7 +2153,7 @@ export class PlaySession extends N.NavSession {
     for (const d of Object.keys(D.DEVICE)) ctrl3[d] = lab.vsc.bank(D.DEVICE[d].channel, true).get('CTRL3') ?? null;
     const rec = { cause, connect: info, layout_before: layout0, layout_after: layout, module9_reads: reads.map(h8), eye, engine, problems,
       panels_on_connect: on_connect, ctrl3, resend: sends.map(([c, d, r]) => [c, bytesHex(d), h8(r)]),
-      ...(chain.slices ? { chain_rest: chain } : {}) };
+      ...(chain.slices ? { chain_rest: chain } : {}), ...(recview ? { from_recview: true } : {}) };
     const indices = [CONNECT_INDEX];
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
   }

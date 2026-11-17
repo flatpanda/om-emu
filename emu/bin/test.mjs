@@ -36,7 +36,7 @@
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
 // refused on E143 and moved on E147 (test_smswitch.mjs), the display switch both ways with a shot on each display and
-// the TFT's frame at idle on E146 and E147 (test_dispswitch.mjs), the scripted session through
+// the TFT's frame at idle on E146 and E147, LV in S2's rec view on all three (test_dispswitch.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
 // watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop,
 // display options and OSD policy on E143 and E147 (test_tools.mjs), a Caduceus film's values below the pixels on E147
@@ -713,7 +713,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the display switch and the TFT's frame at idle on the bodies whose touch driver's close waits for the touch task
 // and sleeps in its wake (test_dispswitch.mjs, H-CHAINREST): E146 and E147 each in a process of its own, through
-// bin/session.mjs with the controls (the touch task not run, no chain rest); E143 here, which gets no lab time from it
+// bin/session.mjs with the controls (the touch task not run, no chain rest); E143 here, which gets no lab time from it;
+// on each, LV in S2's rec view landing on the shooting screen, with the control recview-unheld
 {
   const { dispswitchSession } = await import('../test/test_dispswitch.mjs');
   const { spawnSync } = await import('node:child_process');

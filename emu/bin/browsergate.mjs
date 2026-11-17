@@ -177,10 +177,10 @@ async function runBrowser(name) {
     }
 
     // ---- LV (V) to the EVF and back: the screen's layout class and the canvas follow the frames' device, the EVF's
-    // 1600 x 1200 canvas read back equal to the Worker's RGBA. First 1.5 lab s past S2's picture: the lab's switch
-    // stops the session when LV comes in the about 0.2 lab s after the rec view where E143's GUI has shown panel 0 and
-    // not yet the shooting screen's panel 10 (docs/ROADMAP.md, Debug API follow-ups item 7), and the Card panel's
-    // read can leave the lab there
+    // 1600 x 1200 canvas read back equal to the Worker's RGBA. First 1.5 lab s past S2's picture: until 2026-11-16 the
+    // lab's switch stopped the session when LV came in S2's rec view, where the GUI shows panel 0 (docs/ROADMAP.md,
+    // Debug API follow-ups item 7), and the Card panel's read can leave the lab there; the wait is kept, the gate not
+    // run again since the fix
     if (shot1 && !await S.until(`window.__playPage.status.lab_ns > ${shot1.lab_ns + 1.5e9}`, 60000)) fail(`the lab 1.5 s past S2: ${JSON.stringify(await state()).slice(0, 600)}`);
     for (const dev of ['evf', 'tft']) {
       await S.key('v');

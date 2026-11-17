@@ -13,7 +13,11 @@
 //                      close; without H-CHAINREST (the mutant no-chain-rest) the open ends at the power-on state
 //                      with no frame to compose, the switch to the EVF passes and the one back to the TFT fails its
 //                      re-entry check. E143 (bin/test.mjs's process), which has neither difference: the switch both
-//                      ways with a shot on each runs with no lab time of H-CHAINREST's and does not list it
+//                      ways with a shot on each runs with no lab time of H-CHAINREST's and does not list it. On every
+//                      body, in this process: LV 100 ms after S2, in its rec view (the GUI's panel 0), lands on the
+//                      shooting screen, panel 10, recorded as from_recview, and LV back after END_RECVIEW keeps it;
+//                      control: the mutant recview-unheld (the check before 2026-11-16) fails that switch's re-entry
+//                      check (docs/ROADMAP.md, Debug API follow-ups item 7)
 //   node emu/test/test_dispswitch.mjs              (OM_EMU_MODEL=E147 or E146 for those bodies)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -42,6 +46,37 @@ export async function dispswitchSession() {
   const press = (pl, k) => { const s = pl.session; s.key(k, 'down'); s.camapp.pump(); idle(pl, 150); s.key(k, 'up'); s.camapp.pump(); idle(pl, 600); };
   const frameOf = (pl) => { try { const [w, h] = pl.session.frame('boundary', true); return `${w}x${h}`; } catch (e) { return `error: ${e.message.split('\n')[0]}`; } };
   const size = (d) => MODEL_INFO.panels[d].join('x');
+
+  // ---- LV in S2's rec view (every body): the GUI's rec view screen shows no panel (0) until END_RECVIEW; the
+  // application's re-entry builds the shooting screen (panel 10), which the switch takes as its screen
+  // (play.mjs live_switch; docs/om1-menu-spec.md section 14). Control: the mutant recview-unheld, the check before
+  // 2026-11-16, stops the session there
+  const recviewSwitch = (more = {}) => {
+    const pl = open(more), s = pl.session;
+    idle(pl, 1500);
+    s.key('s2', 'down'); s.camapp.pump(); idle(pl, 150); s.key('s2', 'up'); s.camapp.pump(); idle(pl, 100);
+    const at = { inside: s.camapp.in_recview, panel: s.lab.panels.at(-1)?.[1] };
+    let rec = null;
+    const e = thrown(() => { rec = s.display_input('lv'); });
+    return { pl, s, at, e, rec };
+  };
+  {
+    const { pl, s, at, e, rec } = recviewSwitch();
+    ok(at.inside === true && at.panel === 0, `${MODEL}: 100 ms after S2 the rec view runs with panel 0: ${JSON.stringify(at)}`);
+    const sw = rec?.switch;
+    ok(e === null && rec.device === 'evf' && sw?.from_recview === true && s.lab.state() === 0x0108 && s.lab.panels.at(-1)?.[1] === 10,
+      `${MODEL}: LV in the rec view lands on the shooting screen: ${e ?? `${rec.device}, from_recview ${sw?.from_recview}, 0x${s.lab.state().toString(16)} panel ${s.lab.panels.at(-1)?.[1]}`}`);
+    idle(pl, 600);
+    const back = thrown(() => s.display_input('lv'));
+    ok(s.camapp.in_recview === false && back === null && s.device === 'tft' && s.lab.panels.at(-1)?.[1] === 10,
+      `${MODEL}: after END_RECVIEW LV back to the TFT keeps panel 10: ${back ?? `${s.device} panel ${s.lab.panels.at(-1)?.[1]}, rec view ${s.camapp.in_recview}`}`);
+    pl.close_session();
+  }
+  {
+    const { pl, e } = recviewSwitch({ x_mutant: 'recview-unheld' });
+    ok(e !== null && /re-entry landed on GUI state 0x0108 panel 10, not the screen the switch left \(0x0108 panel 0\)/.test(e), `${MODEL} control, recview-unheld: LV in the rec view fails its re-entry check: ${e}`);
+    try { pl.close_session(); } catch { /* the session ended on the control's error */ }
+  }
 
   if (!MODEL_INFO.chain_sleeps) {
     // a body with neither difference (E143): the switch both ways and a shot on each, no lab time of H-CHAINREST's

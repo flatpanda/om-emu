@@ -507,7 +507,7 @@ export class MenuLab extends T.TextDisplayLab {
     // lets the kernel start without being the lab's (K.LabTask: the model's extra_tasks, src/fw/models.mjs, which the
     // display task init starts on E146, E147 and the E118 family, E125's battery manager thread; HLS_EYEFI, whose
     // singleton the E144 family's GUI creation reaches through API 0x10125, X on E144, docs/model-survey.md finding
-    // 156). E143 starts none of them (X), and the kernel refuses any other task (K.LabTask _task_start)
+    // 160). E143 starts none of them (X), and the kernel refuses any other task (K.LabTask _task_start)
     // The empty task is the display task init's task whose entry returns at once (E143's EMPTY_TASK, `retf [],0`, D):
     // the one bare-return entry started, wherever it lies (E134's, where the port places E143's at another
     // bare return, X); none where the build has no such task (the E118 family: E143's unplaced, no bare return started,

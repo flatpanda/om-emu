@@ -946,7 +946,7 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // E145's 18 (D: 0x50de87bf, after the load at 0x50de87ae)
 const STATES_FOUND = { E143: 12, E145: 18 };
 // The nav bring-up's facts (src/fw/facts.mjs menuState, iconStores, apiObject, guiDevices; docs/model-survey.md
-// finding 156): E143's (D: the state table's SS_MENU row 0x0b and its ID_ST_MENU child 2; the icon stores at
+// finding 160): E143's (D: the state table's SS_MENU row 0x0b and its ID_ST_MENU child 2; the icon stores at
 // 0x51257d46..53; the API getter 0x50b4e3f0's `mov (0x603613b0),a0`; the device loop 0x510bbcc7..0x510bbd1d), E144's
 // (D: its 0x1102; the stores at 0x50f1eb09..14; its getter 0x508cdd5d, the hand override's word; the loop 0x50d30aa9),
 // E148's (D: the stores at 0x50ef8e7e..88, its getter 0x508cddb3) and E137's and E122's device loops (D: 0x50c730a6,

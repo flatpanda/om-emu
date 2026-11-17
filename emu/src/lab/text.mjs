@@ -25,7 +25,7 @@ export const API_VTABLE = A(0x60E38124), CUR_FONT = A(0x62B3E36C), STRING_LIST =
 export const ICON_TABLE = A(0x62B3E364), ICON_AUX = A(0x60370AF8), DEVICES = A(0x62B3DC94), GPI_TEXT_CALLBACK = A(0x510BC7D8);
 // GUI_BUFFER_TABLES: GUI layer L's table of its buffers' records, one word per record of kind (L + 1) % 3 in their order
 // (E143's two a kind, the E144 family's four where its banks hold four: src/lab/osd.mjs GUI.banks; X, the words after
-// the GUI's creation on every body, docs/model-survey.md finding 156)
+// the GUI's creation on every body, docs/model-survey.md finding 160)
 export const GUI_BUFFER_TABLES = [A(0x62B3DFDC), A(0x62B3DFE4), A(0x62B3DFEC)], OFFSCREEN_RECORD = A(0x62B3DFF4);
 // The icon words' contents (src/fw/facts.mjs iconStores, fact 'icons'): ICON_TABLE holds the icons record's word at
 // table_at, or the record's own address ('record'), ICON_AUX its word at aux_at. E143's word 0 and word 4 (the stores

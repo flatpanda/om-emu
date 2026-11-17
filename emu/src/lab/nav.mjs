@@ -30,7 +30,7 @@ export const SHOW_PANEL = A(0x5124F726), VAR_SET = A(0x51090EA1), VAR_MENU = 226
 // message (MESSAGES; NavSession.index_of, the rule of S-TOUCHMAP, src/lab/play.mjs): the event maps of E137, E142,
 // E140, E125, E130, E133 and the E118 family lack E143's 107 and 108, so from there on each message sits two indices
 // lower (OPEN's 0x9624 at 0x85, E143's 0x87 being 0x9628 there; X, each image's map, docs/model-survey.md findings 75
-// and 156), while the keys', INFO's and the dials' indices are E143's on every body (X)
+// and 160), while the keys', INFO's and the dials' indices are E143's on every body (X)
 export const KEYS = { UP: 8, DOWN: 11, LEFT: 14, RIGHT: 17, OK: 20, MENU: 23 };
 export const INFO = [37, 38];
 export const DIALS = { MAIN: [59, 2], SUB: [60, 3] };

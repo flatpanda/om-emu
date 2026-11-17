@@ -1264,7 +1264,7 @@ export class DisplayLab extends OsdLab {
   // Registers (both banks), palette in use, routing: what the composite was made from. The palettes and the output
   // block are read in E143's VSC's layout (PAL_BASE, OSDCP2, VSC_OUTBLOCK); on kinds 2 and 3, whose palettes lie
   // elsewhere (src/dev/vsccompose2.mjs) and which have no output block, they are not read: palette null, the displayed
-  // palettes and out_ctrl empty (a nav screenshot on the E144 and E118 families, docs/model-survey.md finding 156)
+  // palettes and out_ctrl empty (a nav screenshot on the E144 and E118 families, docs/model-survey.md finding 160)
   dump(device) {
     const c = lookup(DEVICE, device).channel;
     const written = this.vsc.bank(c), mirror = this.vsc.bank(c, true);

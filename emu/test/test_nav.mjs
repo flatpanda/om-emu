@@ -1,4 +1,4 @@
-// bin/nav.mjs's session (src/lab/nav.mjs NavSession) on the body of OM_EMU_MODEL (docs/model-survey.md finding 156):
+// bin/nav.mjs's session (src/lab/nav.mjs NavSession) on the body of OM_EMU_MODEL (docs/model-survey.md finding 160):
 //   navSession  (firmware) a nav session in time mode on the TFT: its own GUI bring-up passes its checks, which read
 //               the body's shape by rules (src/fw/facts.mjs: the GUI buffer tables' records per kind, the icon words
 //               iconStores, the API object apiObject, the device records guiDevices, the tasks started); OPEN posts the
@@ -14,7 +14,7 @@
 import { createHash } from 'node:crypto';
 
 // the bodies besides E143 whose nav session the test covers (bin/test.mjs runs each in a child): every ported body
-// whose nav bring-up and menu open run (X, 2026-11-16). Not among them (docs/model-survey.md finding 156): E145, E129
+// whose nav bring-up and menu open run (X, 2026-11-16). Not among them (docs/model-survey.md finding 160): E145, E129
 // and E132, whose GUI state is 0 after the lab's creation of the GUI (not POWER_ON; why is not read), and E118 and
 // E120, whose GUI takes OPEN's message 0x9624 in POWER_ON and stays there (why is not read)
 export const NAV_BODIES = ['E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E122'];

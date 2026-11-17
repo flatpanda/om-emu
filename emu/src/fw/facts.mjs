@@ -483,7 +483,7 @@ export function stateTableBound(img, table) {
 // SS_MENU/ID_ST_MENU, parent << 8 | child, among the table's first `parents` rows (stateTableBound; the rows as
 // src/lab/menu.mjs state_names reads them: u16 parent, its name, its children's table of {u16 child, name} rows ending
 // at 0xffff). E143's and E148's ListMenu `0x0b02`, E144's Menu_Viewer `0x1102` (X: the state each menu open reaches,
-// docs/model-survey.md findings 66 to 68 and 156). Returns undefined where no row holds the two names.
+// docs/model-survey.md findings 66 to 68 and 160). Returns undefined where no row holds the two names.
 export const MENU_STATE_NAMES = ['SS_MENU', 'ID_ST_MENU'];
 export function menuState(img, table, parents) {
   const { base } = imageBase(img), at = (a) => (a >= base && a + 4 <= base + img.length ? a - base : null);

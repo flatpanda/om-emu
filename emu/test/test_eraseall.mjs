@@ -1,4 +1,4 @@
-// The playback menu's Erase All, natively (src/lab/media.mjs S-MDACTRL's erase all; docs/hle-gaps.md 4.8.14):
+// The playback menu's Erase All, natively (src/lab/media.mjs S-MDACTRL's erase all; docs/hle-gaps.md 4.8.15):
 //   eraseAllSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): start, S1 and S2 three
 //                    times (three pictures on the card), the first one locked by the firmware's own DCF edit
 //                    (FILECLBK's DCFED_OBJ_LOCK, the test's own action, as test_erase.mjs's), MENU, the sub dial to the

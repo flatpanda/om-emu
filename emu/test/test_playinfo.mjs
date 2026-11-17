@@ -15,7 +15,7 @@
 //                    camapp's clock(): the clock is not set in the lab, so each build's default), the size of its
 //                    file's JPEG (S-RECFILE, read back from the card by refs/volume.mjs and decoded by refs/jpeg.mjs),
 //                    the focal length of the lens at the capture (S-LENS's zoom step, the native lens's, or on a body
-//                    with a built-in lens the getter its EXIF set calls, in tenths of a mm: 4.5 mm, finding 156) and the
+//                    with a built-in lens the getter its EXIF set calls, in tenths of a mm: 4.5 mm, finding 158) and the
 //                    release's exposure time (1/125 s without S-SCENE); and the histogram request answered empty.
 //                    Between LEFT and INFO, OK opens the playback wizard (SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY, its
 //                    screen drawn: the frame changes) where the body's OK opens one (not on OK_OPENS_NOTHING's),
@@ -44,7 +44,7 @@ const GUI = { year: 0, month: 2, day: 3, width: 8, height: 10, exp: 40, focal: 5
 // the built-in lens's focal length at a capture, the getter's answer / 100 (src/fw/facts.mjs builtinFocal; the zoom
 // number 1's row of its table, D: E145 0x601b278c, E129 0x6058365c, E132 0x605836bc, each 450; the TG-7 and TG-5
 // at their wide end, 4.5 mm; on E129 and E132 with S-ZOOMNO's zoom number, X: 0 without it reads a pointer's half,
-// 2203 and 2110): docs/model-survey.md finding 156
+// 2203 and 2110): docs/model-survey.md finding 158
 const BUILTIN_FOCAL_MM = { E145: 4.5, E129: 4.5, E132: 4.5 };
 // a start that waits at a prompt S1 does not leave: the keys that answer it (bin/modelcheck.mjs START_PROMPT: E132's
 // date and time setting has no Cancel, UP and OK five times set the clock; E145's and E129's S1 leaves theirs)

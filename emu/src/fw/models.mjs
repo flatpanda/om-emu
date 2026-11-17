@@ -285,7 +285,7 @@ export const MODELS = {
         // erase_all: the command the playback menu's Erase All sends (X: its Erase and Yes send command 3, media 0;
         // the start table's command 3 is executeEraseAllStart 0x50cebba1, getMediaProgress and executeEraseAllEnd
         // 0x50cebc19, X; getMediaCtrlCBC gives 54; the same command from E146's, E147's and E148's menus, X; docs/hle-gaps.md
-        // 4.8.14)
+        // 4.8.15)
         ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
           api: 0x503F0820, reply_queue: 0x600431D0, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503F0BD7, flag: [0x50AB4F75, 15261] },
@@ -1123,7 +1123,7 @@ export const MODELS = {
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
-    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 156)
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 157)
     card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
     rec_native: true,
@@ -1172,7 +1172,7 @@ export const MODELS = {
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
-    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 156)
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 157)
     card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
     rec_native: true,

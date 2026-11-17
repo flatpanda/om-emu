@@ -17,7 +17,7 @@
 //              result (its class is not read; a remount, I). The component sends 1513 / 1514 through the reception's
 //              asynchronous slot, to the reactive's OXF main thread, which does not run in camapp 1: the synchronous
 //              slot stands in for that thread's dispatch (I). Since 2026-11-16 the erase all (command 3, the
-//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps.md 4.8.14) as well, where the build's
+//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps.md 4.8.15) as well, where the build's
 //              erase-all call is read (src/fw/facts.mjs pictureErase, fact erase.erase_all) and the DCF database
 //              holds the pictures: executeEraseAllStart's call of the picture file API's erase all natively (it
 //              posts FILECLBK the DCF edit's ALL_DELETE, which erases every picture but the locked ones natively,

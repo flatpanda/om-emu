@@ -3521,7 +3521,7 @@ the issue's own test, not from its key matrix.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `E-PL9`;
 findings 131 to 135); since the round's merge (2026-11-12) Delete's eraseCurrent runs natively (X, `test/test_erase.mjs`
 ERASE_NATIVE).
-Since 2026-11-16 its application's Format and the card out and in run (finding 156).
+Since 2026-11-16 its application's Format and the card out and in run (finding 157).
 
 **E129 (TG-5).** Ported through E145 (2.61M instructions paired, against 0.94M directly). The TG-5's panel driver (E129
 `0x5015b466`) sends its command list over serial channel 2 with GPIO 117 around each send and waits on a completion
@@ -3542,7 +3542,7 @@ setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `TG-5`;
 findings 131 to 135); since the round's merge (2026-11-12) eraseCurrent runs natively (X, `test/test_erase.mjs`
 ERASE_NATIVE; the TG-5 has no Delete key, finding 111).
-Since 2026-11-16 its application's Format and the card out and in run (finding 156).
+Since 2026-11-16 its application's Format and the card out and in run (finding 157).
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
 wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132

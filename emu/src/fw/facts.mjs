@@ -3346,7 +3346,7 @@ export function dcfCounts(img) {
 // - erase_all (id 0x70010, 0x503fdaf6: d0 the media; 2 or more returns 0) builds the DCF edit's ALL_DELETE request:
 //   +2 the media, +12 0, FILECLBK's code 37 (0x25: `mov 37,d0; mov d0,(40,sp)`, 0x503fdba2), and posts it through
 //   the API's sender with the API's reply queue (0x503fdbdc), returning the token (src/lab/media.mjs S-MDACTRL's
-//   erase all; docs/hle-gaps.md 4.8.14). An image without it gives erase_all null.
+//   erase all; docs/hle-gaps.md 4.8.15). An image without it gives erase_all null.
 // The entry of each is the greatest call target within API_ENTRY bytes before its id's load. One load of each id
 // in d0 on 17 images, none on E118 and E120 (X, a byte scan; E144's and E130's functions read as E143's, D: E144
 // 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all}, or null where the first two ids are

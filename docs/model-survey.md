@@ -3163,7 +3163,57 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    shots, E132 9999, one file read back each), `test/test_playinfo.mjs` (17 checks each) and `test/test_erase.mjs`,
    where eraseCurrent now runs natively on both (ERASE_NATIVE; 30 of 30 checks each, no Delete dialog, as E129's).
    Open on the two as on the others (finding 136): REC_IMAGE's own task, the thumbnail and the shooting values in Exif, RAW, the shot's DCF
-   checkout; the HLS side on both.
+   checkout; the HLS side on both is finding 157.
+157. **The HLS side on E133, E145, E129 and E132** (2026-11-16, X: `test/test_storage.mjs --hls` per body, 21 of 21
+   checks on each, the family's checks; `src/fw/models.mjs` card_fs.hls 'rule'; answers finding 154's "not tried").
+   The rule's facts (finding 151) run unchanged on the four: no stop was the firmware's or the rule's. Four were the
+   test's, each read to its cause:
+   - *The start's date and time setting.* The TG-7 and both TG-5s start in it on an unset clock (GUI `0x1103`,
+     findings 17 and 24), which the family's test did not answer: on E145 its S2 there (the GUI at `0x0108`, the
+     clock warning's state) ran S-RELSEQ's START_SHOOTING_PICTURE past its 400,000 stub calls; on E132, whose setting
+     has Set and no Cancel, neither MENU nor S1 left it (the state stayed `0x1103`, X), so MENU did not leave the
+     shooting screen and the card out did not change the screen; on E129 and E145 the card in did not bring back the
+     screen of before the removal (the count the same; what differed is not read, and with the setting answered it
+     does). The test now answers it as `bin/modelcheck.mjs` START_PROMPT does (MENU on E145 and E129, UP and OK on
+     each of E132's five fields), then S1 for the clock warning (`familyStart`).
+   - *The TG-5s' canvas.* Their GUI draws on a 640 x 480 canvas (the text layer's full clear `0,0 640x480`, X) which
+     the VSC scales to the TFT's 960 x 480 area: the three OSD planes' scaler control 1 and horizontal step 2728, 4
+     ceil(639 x 1024 / 960), the vertical one to one (X: the written words; the composite 960 x 480). So no clear
+     covered the frame and the walker refused every screen. It now takes the OSD planes' scaler
+     (`src/lab/display.mjs` VscDebug osd_steps, from the written bank: that the channel latches it unchanged is I) and
+     reads the texts on the canvas and each row's band on the frame at the pixels that sample it
+     (`src/lab/menuwalk.mjs` canvasOf, the compositors' sampling). One to one on the other bodies' TFTs (X: E143's
+     channel 2, E144, E148, E122).
+   - *Short tabs.* The TG-5s' Shooting Menu 2 has two rows and their Custom Menu one (X, frames), where the walker
+     read a tab with no goal only as a list of three rows or more; and their pages' title and footer, drawn alike at
+     the same left edge 431 pixels apart, made a "list" of two. A screen with no goal is now read by its longest list
+     of two rows or more at a pitch under twice the rows' height (of lists as long, the smallest pitch), and where
+     there is none, by the text at the first row's place a longer tab showed, as a list of one (its cursor read
+     against the page above it, as a short list's).
+   - *E133's fast format.* The test tried the card input after the walk, when E133's format had ended (X: running
+     about 190 ms into Yes's press, over by 400 ms), so the input was taken: the card went out, the shots query
+     answered 0 and S2 after the format wrote nothing. The test now tries it at the first look after the start,
+     150 ms into the key's press; the format is then running on all four (X).
+   In play, on a blank 8 GiB card after S2's picture: Card Setup is the Setup Menu's first row, five tabs below the
+   first on all four (E133: Shooting Menu 1, a second shooting tab, Movie, Playback, Custom; E145 and E129: Shooting Menu
+   1 and 2, Movie, Playback, Custom; E132: a tab of its own first, Normal, Off, CALS, then Shooting Menu 1, Movie,
+   Playback, Custom); All Erase and Format, no card choice (one slot); Yes from the confirm's No. The application's
+   start with command 1, media 0, the card input refused while the format runs; the first request to the camera base
+   logged without a closure, the second's closure run through its class's vt[0], which takes the application from
+   Busy to the shooting screen: 611 and 590 on E145 (E144's ids), 12986 and 12965 (E122's) on E133, E129 and E132;
+   the closure functions E133 `0x506f0071`, E145 `0x506b7c5d`, E129 `0x50688b46`, E132 `0x50688db7`. The format
+   over within 783 ms of Yes's press on all four (the looks at 150 and 750 ms into it). Read back independently
+   (`refs/volume.mjs`): the insertion's FAT32 volume again (`OM SYSTEM` on E145, `NO NAME` on the three others) at
+   8192 with 32 KiB clusters, the root empty, the picture gone, 260,351 of 260,352 clusters free in the FAT and
+   FSInfo; the firmware's image count 0, its next file 1, the remaining shots the fresh card's (E133 2018); S2 then
+   writes the first file again. The card out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's
+   `0x02021506` with the level 1, the screen changed, a second removal refused. The card in: sd_mount initialises the
+   card again, the FAT mount 265 ms after the insertion on E133, E129 and E132 and 35 ms on E145, the boot sector
+   unchanged, the count and the whole screen as before the removal (E129 2629 shots, E145 1362); S2 then writes its
+   picture. E133's and E129's sessions in `bin/test.mjs` (`--session`, 54 of 54 each) now run the HLS checks at
+   their end, and so do E145's and E132's (finding 156). The bodies that ran it before pass with the changed walker and
+   test (X: E122, E139 and E130 `--hls` 21 of 21; E143, E146, E147 `--session` 68 of 68, E144 53 of 53). Finding
+   154's other points stay open, and an SDXC card on these four's HLS side is not tried.
 
 
 
@@ -3385,6 +3435,7 @@ card's file system native and the count probe included (X).
 Its REC_FILE's form is read (2026-11-11, finding 136): the family's version with an inlined loop. Since 2026-11-16
 REC_FILE's own task records S2's file natively by recFileQueue, which reads that loop, with the firmware's Exif header
 (Make `OM Digital Solutions`, Model `TG-7`, maker notes `OM SYSTEM`, XMP; finding 156).
+Since 2026-11-16 its application's Format and the card out and in run (finding 157).
 
 **E130 (E-M10 III).** Ported through E142 (the map from E142 pairs 2.11M instructions against 1.02M from E143; through
 E142 118 overrides carry and 14 fail; through E145 the start stops earlier, at the settings store's unplaced init, X)
@@ -3424,6 +3475,7 @@ the issue's own test, not from its key matrix.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `E-PL9`;
 findings 131 to 135); since the round's merge (2026-11-12) Delete's eraseCurrent runs natively (X, `test/test_erase.mjs`
 ERASE_NATIVE).
+Since 2026-11-16 its application's Format and the card out and in run (finding 156).
 
 **E129 (TG-5).** Ported through E145 (2.61M instructions paired, against 0.94M directly). The TG-5's panel driver (E129
 `0x5015b466`) sends its command list over serial channel 2 with GPIO 117 around each send and waits on a completion
@@ -3444,6 +3496,7 @@ setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `TG-5`;
 findings 131 to 135); since the round's merge (2026-11-12) eraseCurrent runs natively (X, `test/test_erase.mjs`
 ERASE_NATIVE; the TG-5 has no Delete key, finding 111).
+Since 2026-11-16 its application's Format and the card out and in run (finding 156).
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
 wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132
@@ -3478,6 +3531,7 @@ passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 
 Its REC_FILE's form is read (2026-11-11, finding 136): another record step, rec_file_destination_record. Since
 2026-11-16 REC_FILE's own task records S2's file natively by recFileInline, which reads that step, with the
 firmware's Exif header (Model `TG-5K`; finding 156).
+Since 2026-11-16 its application's Format and the card out and in run (finding 157).
 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** Until 2026-10-30 they stopped at import on 18 board facts their
 family scaffold left unread (`intc.irq_osd_engine` first, X). The board is read since (finding 28): E122's start runs

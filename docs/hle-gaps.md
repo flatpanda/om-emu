@@ -7320,7 +7320,8 @@ the firmware's code for a card above 32 GiB is not read (?).
   (4.8.5; X: mode 1 at 60, the logs `0x3a040001` and `0x39000105`).
 - **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component; the
   media control process, finding 127), both done on 2026-11-11 but for what `docs/model-survey.md` finding 154
-  lists (the second slot, the other commands, E133, E145, E129 and E132, an SDXC card there); a
+  lists (the second slot, the other commands, an SDXC card there; E133, E145, E129 and E132 since 2026-11-16,
+  finding 157); a
   real E144's movie mode at the factory; the hardware's DIVU by 0 (a capture would settle 3.2).
 
 #### 4.8.8 The E118 family's card, round 7 (2026-10-30; D unless tagged, addresses E122's)

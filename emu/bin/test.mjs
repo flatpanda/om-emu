@@ -44,7 +44,8 @@
 // with OM_CADUCEUS (test_lookhooks.mjs), its Grain's camera route to combiner 1's gain and its halation pass on pixels
 // by calls with OM_CADUCEUS (test_lookcode.mjs), E147's still set-up at each creative-dial position and, with
 // OM_CADUCEUS, Caduceus' .hook_su run by S2 at COLOR (test_stillsetup.mjs), TAKE's shot allocated and freed over 20
-// pictures on E143, E146 and E147 (test_shotalloc.mjs), the still's stage builders called standalone on stock E122,
+// pictures on E143, E146 and E147 (test_shotalloc.mjs), TAKE's own fills of the shot against S-EXIFPRM's copies
+// on the same three (test_takefills.mjs), the still's stage builders called standalone on stock E122,
 // E143 and E147 on a job the test writes, with their read sets (test_stages.mjs, A-STAGEJOB), every caduceus-om3
 // release against its pins when
 // OM_CADUCEUS names a checkout
@@ -859,6 +860,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
     const lines = (r.stdout + r.stderr).trim().split('\n');
     console.log(lines.find((l) => /^H-SHOTALLOC over/.test(l)) ?? `H-SHOTALLOC over 20 pictures (${m}): FAILED`);
     if (r.status !== 0) { lines.filter((l) => l.startsWith('   ') || !/^H-SHOTALLOC over/.test(l)).forEach((l) => console.log('  ', `${m}: ${l.trim()}`)); bad += 1; }
+  }
+}
+// H-TAKEFILLS (test_takefills.mjs): TAKE's own fills of the shot natively against S-EXIFPRM's copies, the record
+// compared byte for byte, on E143, E146 and E147, each in a process of its own; on E143 also takepic's stop
+{
+  const { spawnSync } = await import('node:child_process');
+  for (const m of ['E143', 'E146', 'E147']) {
+    const r = spawnSync(process.execPath, [new URL('../test/test_takefills.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    const lines = (r.stdout + r.stderr).trim().split('\n');
+    console.log(lines.find((l) => /^H-TAKEFILLS \(/.test(l)) ?? `H-TAKEFILLS (${m}): FAILED`);
+    if (r.status !== 0) { lines.filter((l) => l.startsWith('   ') || !/^H-TAKEFILLS \(/.test(l)).forEach((l) => console.log('  ', `${m}: ${l.trim()}`)); bad += 1; }
   }
 }
 // the still's stage builders on stock firmware (test_stages.mjs, A-STAGEJOB): the units, then each builder called

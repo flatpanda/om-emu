@@ -87,6 +87,27 @@
 //               their pixels gets what MM's memory holds (the lab's DRAM, zero unless something else wrote there).
 //               TAKE's lock of the entry for the take (its +26, TAKE_MAIN's on taking the request) is not set: TAKE_MAIN
 //               does not run
+//   H-TAKEFILLS (where the rule reads them, fact 'take_fills', src/fw/facts.mjs takeFills: E143, E146, E147, with
+//               H-SHOTALLOC's shot; docs/hle-gaps.md 4.3.13) TAKE's own fills of the shot natively, before the rest of
+//               S-EXIFPRM, in the still states' order on TAKE's context (0x62a4a358) and a take-picture packet of the
+//               lab's (+0 the shot's id, +8 the flags 0 of api_rec's takePicture for a single still, +60 the exposure
+//               record): RdyStart's mode bytes (0x503c28c7 on the packet), RdyFcsTake's copy (0x503c4509), Standby's
+//               entry (0x503b09dd) with the copy and no packet, which copies them into the context and clears the
+//               frame count (its tail, which takes the packet into the still states, 0x503b0de6, is not run: I, the
+//               entry's own no-packet path); StlRdy1's exposure record from TAKE's ring (0x503baeb6; TAKE_MAIN's init
+//               of the slots' indices does not run, so each shot takes slot 0) filled (S-EXIFPRM's fill, its request
+//               to the strobe sequence 0x503b8126 not run: docs/hle-gaps.md 4.3.13 item 1c); the packet word
+//               (0x62a4a350) set to the packet, as Standby's tail keeps it; StlRdy2's shot-record fill (0x503bba51:
+//               the template's copy, the settings fields, the shutter range); StlTake's capture fill (0x503bcaa2: the
+//               camera's clock read into +37800 among its fields), the key (0x503baa2d), the frame count's step
+//               (0x503b23e3) and the fill after the key (0x503bc4fe). Each must log no error. takepic is not run: it
+//               stops in its AF maker-note fill (0x509b08f0 -> 0x508c9bfe), whose `calls (a1)` goes through a word
+//               (0xa33b262c) that TAKE_FOCUS's release-take start sets (0x509a847a) and the default session leaves 0
+//               (X); so S-EXIFPRM keeps takepic's copy of the exposure record, the crop areas and the EXIF set. The
+//               ring slot is freed after the EXIF set (0x503baf23, StlEnd's)
+//   S-EXIFPRM   (with H-TAKEFILLS: the crop areas, takepic's copy of the exposure record H-TAKEFILLS' ring slot holds,
+//               and the EXIF set alone; the template's copy, the clock read, the settings fields below and the
+//               shutter range are TAKE's own fills' there, whose fields exif_param checks against the settings)
 //   S-EXIFPRM   the shot's EXIF parameter block (pExifParam, the packet's +28; on the camera TAKE's per-shot record,
 //               0x503afc3e(HandleTarget), 92252 bytes; with H-SHOTALLOC that record, else a block of the lab's), as
 //               TAKE's takepic hands it to REC, whose shooting values
@@ -231,7 +252,7 @@ import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
-import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143 } from '../fw/facts.mjs';
+import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143 } from '../fw/facts.mjs';
 
 export class RecError extends FirmwareError {}
 
@@ -309,6 +330,9 @@ const CTX = { dcf: 8, fnode: 36, status: 84 }, DCF_STAMP = 16;
 // and its reply of a message put back on its queue (src/lab/storage.mjs REQUEUE)
 const DCF_FNODE = 24, MSG = { code: 8, block: 12 }, REQUEUE = 0xFFF0;
 const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
+// the take-picture request's packet as H-TAKEFILLS hands it TAKE's fills: the bytes TAKE_MAIN keeps of it (its +0..+63;
+// I: the fills read +0, +8 and +60, D) and the exposure record's word, which StlRdy1's entry keeps at +60 (0x503b12e0)
+const TAKE_PACKET = 64, TAKE_PACKET_RECORD = 60;
 // HeaderSize: rec_jpeg_make_header's (0x5054a5b9), and the header area rec_jpeg_exec reserves before the encode: its
 // buffer's size estimate adds it (0x5054a7b3) and its clear covers it (0x5054986f); the encoder's stream follows it
 // (I). E143's here; each body's is the rule's (jpeg.header: 41984 on E146 and E147 too)
@@ -341,11 +365,15 @@ export class RecFile {
     this.imgpro_init = false;      // H-RECIMGPRO run (the application's start had not run the image library's init)
     this.precon_init = false;      // H-RECPRECON run (H-EXPINIT had not run IMG_PRECON's init)
     this.exif_sets = 0;            // the EXIF set's native runs (S-EXIFPRM, where the rule reads it)
+    this.take_fill_runs = 0;       // H-TAKEFILLS' runs
     // TAKE's exposure for the shot's record (S-EXIFPRM, where the EXIF set runs natively: fact 'take_exposure',
     // src/fw/facts.mjs takeExposure)
     this.exposure = this.image && this.exif_set() ? fact('take_exposure', TAKE_EXPOSURE_E143) : null;
     // TAKE's shot for the picture (H-SHOTALLOC, on the same bodies: fact 'take_shot', src/fw/facts.mjs takeShot)
     this.shot = this.image ? fact('take_shot', TAKE_SHOT_E143) : null;
+    // TAKE's own fills of the shot (H-TAKEFILLS, where the exposure and the shot are read: fact 'take_fills',
+    // src/fw/facts.mjs takeFills)
+    this.fills = this.exposure && this.shot ? fact('take_fills', TAKE_FILLS_E143) : null;
     this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
@@ -434,23 +462,72 @@ export class RecFile {
     const b = lab.sim.read(T.record.table + T.record.entry * shot.id, 2), flags = b[0] | b[1] << 8;
     if (flags !== 0) throw new RecError(`H-SHOTALLOC: api_rec's free ${h8(T.free)} left the shot ${shot.id}'s flags 0x${flags.toString(16)}`);
   }
+  // H-TAKEFILLS: TAKE's own fills of the shot natively, in the still states' order, on TAKE's context and the
+  // take-picture request's packet (a block of the lab's: +0 the shot's id, +8 the flags 0 of api_rec's takePicture
+  // for a single still, +60 the exposure record, as TAKE_MAIN keeps them): RdyStart's builder of the mode bytes from
+  // the packet, RdyFcsTake's copy of them, Standby's entry with them and no packet (its context part; the tail that
+  // takes the packet into the still states is not run); StlRdy1's exposure record taken from TAKE's ring and filled
+  // (its request to the strobe sequence not run, docs/hle-gaps.md 4.3.13 item 1c), the packet word set to the packet
+  // (Standby's tail's keep); StlRdy2's shot-record fill (the template's copy, the settings fields, the shutter range);
+  // StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
+  // frame count and its fill after the key. takepic is not run: it stops in its AF maker-note fill, whose callback
+  // TAKE_FOCUS's release-take start sets (docs/hle-gaps.md 4.3.13). Each call must log nothing. Returns {record}, the
+  // exposure record (freed into the ring by exif_param at its end, as StlEnd frees it)
+  take_fills(shot) {
+    const lab = this.lab, sim = lab.sim, F = this.fills, T = this.exposure, e0 = lab.kernel.errors.length;
+    const run = (what, fn, regs, calls = false) => {
+      const r = calls ? lab.calls(fn, regs, undefined, undefined, 2000000) : lab.call(fn, regs, null, null, 2000000);
+      if (lab.kernel.errors.length !== e0) throw new RecError(`H-TAKEFILLS: ${what} ${h8(fn)} logged ${lab.kernel.errors.slice(e0).map(([c]) => h8(c)).join(' ')}`);
+      return r;
+    };
+    const u8 = (a) => sim.read(a, 1)[0];
+    const pk = lab.alloc(new Uint8Array(TAKE_PACKET), 4);
+    sim.write(pk, pack('<I', shot.id));
+    run("RdyStart's mode bytes", F.mode.build, { a0: pk, a1: F.mode.bytes });
+    run("RdyFcsTake's copy of them", F.mode.copy, {});
+    const hand = lab.alloc(new Uint8Array(8), 4);
+    sim.write(hand, pack('<II', 0, F.mode.record));
+    run("Standby's entry", F.mode.standby, { d1: hand }, true);
+    const record = run("the exposure ring's getter", F.ring.get, {}).a0 >>> 0;
+    if (!record) throw new RecError(`H-TAKEFILLS: the exposure ring's getter ${h8(F.ring.get)} gave no slot`);
+    run("StlRdy1's exposure fill", T.record.fill, { a0: record, ...(T.record.flags !== null && { d0: T.record.flags }) });
+    sim.write(pk + TAKE_PACKET_RECORD, pack('<I', record));
+    sim.write(F.packet, pack('<I', pk));
+    const [b1, b2] = F.record.modes;
+    run("StlRdy2's shot-record fill", F.record.fn, { d0: shot.id, a0: u8(b1), d1: u8(b2) });
+    run("StlTake's capture fill", F.take.capture, { d0: shot.id, a0: F.context });
+    run("StlTake's key", F.take.key, { d0: shot.id, a0: F.context });
+    const c = sim.read(F.take.count, 2);
+    sim.write(F.take.count, pack('<H', ((c[0] | c[1] << 8) + 1) & 0xFFFF));
+    run("StlTake's fill after the key", F.take.after, { d0: shot.id, a0: F.context });
+    this.take_fill_runs += 1;
+    return { record };
+  }
   // S-EXIFPRM: the shot's EXIF parameter block (the shot's record where H-SHOTALLOC allocated one, else a block of the
   // lab's); returns its address and the capture's clock record
   exif_param(shot = null) {
     const lab = this.lab, sim = lab.sim, X = this.R.exif, D = X.date, x = shot ? shot.record : lab.alloc(new Uint8Array(X.size), 64);
-    lab.call(X.copy, { a0: x }, null, null, 2000000);
-    lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
+    const fills = this.fills && shot ? this.take_fills(shot) : null;
+    if (!fills) {
+      lab.call(X.copy, { a0: x }, null, null, 2000000);
+      lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
+    }
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
     // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
     // runs natively); the EXIF set reads the aspect too (0x5042c356)
     // (an entry [id, at, n, when, other]: other's value instead where id gives when, the picture mode's fill)
     const take = {};
     const read = (id, n) => lab.call(this.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 & (n === 1 ? 0xFF : 0xFFFF);
+    // (with H-TAKEFILLS the shot-record fill wrote them: the record must hold what the settings give)
     for (const [id, at, n, when, other] of this.image?.take ?? []) {
       let v = read(id, n);
       take[id] = v;
       if (other !== undefined && v === when) take[other] = v = read(other, n);
-      sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
+      if (!fills) sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
+      else {
+        const b = sim.read(x + at, n), got = n === 1 ? b[0] : b[0] | b[1] << 8;
+        if (got !== v) throw new RecError(`H-TAKEFILLS: the shot-record fill ${h8(this.fills.record.fn)} left the record's +${at} ${got}, the setting ${id} reads ${v}`);
+      }
     }
     // TAKE's exposure, in the order of TAKE's still states: StlRdy1's exposure record (a record of the lab's in place
     // of a slot of TAKE's ring) filled natively from the settings store, where the exposure plan published it; the
@@ -458,9 +535,11 @@ export class RecFile {
     // offsets). The record's values are kept for the picture's record
     const exposure = {};
     if (this.exposure) {
-      const T = this.exposure, r = lab.alloc(new Uint8Array(T.record.size), 4);
-      lab.call(T.record.fill, { a0: r, ...(T.record.flags !== null && { d0: T.record.flags }) }, null, null, 2000000);
-      lab.call(T.range.fn, { a0: x + T.range.low, a1: x + T.range.high }, null, null, 2000000);
+      const T = this.exposure, r = fills ? fills.record : lab.alloc(new Uint8Array(T.record.size), 4);
+      if (!fills) {
+        lab.call(T.record.fill, { a0: r, ...(T.record.flags !== null && { d0: T.record.flags }) }, null, null, 2000000);
+        lab.call(T.range.fn, { a0: x + T.range.low, a1: x + T.range.high }, null, null, 2000000);
+      }
       for (const [from, to] of T.copy) {
         const v = sim.read(r + from, 2);
         sim.write(x + to, v);
@@ -476,6 +555,8 @@ export class RecFile {
       for (const to of [D.created, D.modified]) lab.call(D.copy, { a0: x + to, a1: x + D.original }, null, null, 2000000);
       if (X.tags.zoom !== null) sim.write(x + X.tags.zoom, pack('<II', 1, 1));
     }
+    // StlEnd's free of the exposure record's ring slot (H-TAKEFILLS)
+    if (fills) lab.call(this.fills.ring.free, { a0: fills.record }, null, null, 2000000);
     const t = sim.read(x + X.time, 10);
     return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take, exposure };
   }
@@ -740,7 +821,7 @@ export class RecFile {
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
 // H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

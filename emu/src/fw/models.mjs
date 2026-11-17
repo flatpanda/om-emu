@@ -282,7 +282,11 @@ export const MODELS = {
         // 697 {1, media} (0x50cec334), stores kind 72 and result 0, and for the format starts a request whose
         // completion (cbMediaCtrlResult 0x50ceb6c1) sends 1514 {CBC, 72, 0, 0} (0x50ceb71e); each progress event
         // sends 1513 {CBC, 3, percent, 0} (0x50cebeb4). An error status ends in kinds 70 / 71 / 118 (0x50cec268..)
-        ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
+        // erase_all: the command the playback menu's Erase All sends (X: its Erase and Yes send command 3, media 0;
+        // the start table's command 3 is executeEraseAllStart 0x50cebba1, getMediaProgress and executeEraseAllEnd
+        // 0x50cebc19, X; getMediaCtrlCBC gives 54; the same command from E146's, E147's and E148's menus, X; docs/hle-gaps.md
+        // 4.8.14)
+        ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
           api: 0x503F0820, reply_queue: 0x600431D0, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503F0BD7, flag: [0x50AB4F75, 15261] },
         // The HLS mount state words, by media kind (getter 0x50aca51d, setter 0x50aca6b1(kind d0, a0 -> value)):
@@ -561,7 +565,7 @@ export const MODELS = {
         reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
         events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },
         ids: { progress: 1511, result: 1512 },
-        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50CFC765, progress: 0x50CFC1E7,
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50CFC765, progress: 0x50CFC1E7,
           api: 0x503ECA4D, reply_queue: 0x6004320E, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503ECE04, flag: [0x50ABEF30, 15261] },
         mount: { get: 0x50AD4AF7, set: 0x50AD4C8B, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
@@ -661,7 +665,7 @@ export const MODELS = {
         reception: 0x50AD0628, sync_slot: 2, new: 0x50DB82B6,
         events: { result: [0x50ADD60E, 44], media: [0x50ADD2F9, 36], mount: [0x50ADD571, 40] },
         ids: { progress: 1511, result: 1512 },
-        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50D07D2E, progress: 0x50D077B0,
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50D07D2E, progress: 0x50D077B0,
           api: 0x503FA7E4, reply_queue: 0x60043180, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503FAB9B, flag: [0x50AC8F6B, 15261] },
         mount: { get: 0x50ADEE2B, set: 0x50ADEFBF, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
@@ -797,7 +801,7 @@ export const MODELS = {
         reception: 0x5083BF33, sync_slot: 2, new: 0x50B1BB11,
         events: { result: [0x5084A01D, 44], media: [0x50849D08, 36], mount: [0x50849F80, 40] },
         ids: { progress: 1514, result: 1515 },
-        ctrl: { request: 1512, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50A6C407, progress: 0x50A6BE89,
+        ctrl: { request: 1512, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50A6C407, progress: 0x50A6BE89,
           api: 0x502D60F6, reply_queue: 0x600417F8, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x502D64AD, flag: [0x50834A90, 15261] },
         mount: { get: 0x50849183, set: 0x50849317, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },

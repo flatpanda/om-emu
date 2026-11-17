@@ -34,7 +34,7 @@
 // around a removal on E143 and E147 (test_nocard.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
-// (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
+// (test_erase.mjs), the playback menu's Erase All natively on E143, E146, E147 and E148 (test_eraseall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
 // refused on E143 and moved on E147 (test_smswitch.mjs), the display switch both ways with a shot on each display and
 // the TFT's frame at idle on E146 and E147, LV in S2's rec view on all three (test_dispswitch.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
@@ -617,6 +617,25 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the erase in playback: E143 ${er.checks - er.bad.length}/${er.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
   [...er.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += er.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the playback menu's Erase All (S-MDACTRL's erase all with the picture file API's own call, the DCF edit's ALL_DELETE
+// in FILECLBK): three pictures, one locked by the DCF edit, Erase All through the menu, the card read back by the
+// independent FAT reader, the locked one kept; unlocked, all gone; Save's command refused: E143 here, E146, E147 and
+// E148 each in a process of its own, and E144 and E122 (no S-MDACTRL: ERASE_ALL held the other way)
+{
+  const { eraseAllSession, ERASE_ALL_BODIES } = await import('../test/test_eraseall.mjs');
+  const { spawn } = await import('node:child_process');
+  const r = await eraseAllSession();
+  const one = (m) => new Promise((done) => {
+    const c = spawn(process.execPath, [new URL('../test/test_eraseall.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m } });
+    let out = '';
+    c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
+    c.on('close', (rc) => done([m, rc, out.trim().split('\n')]));
+  });
+  const others = await Promise.all(ERASE_ALL_BODIES.map(one));
+  console.log(`the menu's erase all: E143 ${r.checks - r.bad.length}/${r.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
+  [...r.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += r.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here, E146, E147 and
 // the E144 and E118 families' bodies with a touch panel each in a process of its own, four at a time (on the

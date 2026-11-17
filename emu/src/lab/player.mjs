@@ -574,7 +574,7 @@ export class Player {
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0
     const media = this.session?.camapp?.media;
-    if (media?.f.ctrl && (media.formats || media.ctrl)) used.push('S-MDACTRL');            // a Card Formatting from the menu (media.mjs)
+    if (media?.f.ctrl && (media.formats || media.erases || media.ctrl)) used.push('S-MDACTRL');   // a Card Formatting or Erase All from the menu (media.mjs)
     if (media?.ended) used.push('S-MDAEND');                                                 // the application's own media control's end (media.mjs)
     // a card taken out or put back (media.mjs): the first slot's, or the second slot's where no media manager runs
     const card2 = this.session?.storage?.second, media2 = !media?.manager() && (card2?.removals || card2?.insertions);

@@ -1632,6 +1632,15 @@ export class CamApp {
     this.play_list = [];
     this.play_cur = null;
   }
+  // S-CARD, after an erase all from the menu (media.mjs S-MDACTRL; the DCF edit's ALL_DELETE ran natively): the
+  // records of the pictures the database no longer lists are gone (a locked picture stays), and no image is shown
+  card_erased() {
+    const kept = this.card_list(), n = this.images.length;
+    this.images = this.images.filter((im) => kept.some((p) => p.folder === im.folder && p.number === im.number));
+    this.log.push(['card', `erase all: ${n - this.images.length} image(s) gone, ${kept.length} left on the card`]);
+    this.play_list = [];
+    this.play_cur = null;
+  }
   // S-PLAYSEQ: one play request finished as the play module would (an asynchronous request through its notify), or
   // the end of the play service
   play_finish(p) {

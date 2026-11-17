@@ -3260,6 +3260,49 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    control itself (findings 124 to 129, 151): their erase all goes through S-MDAEND's path, which reads the start's
    command and stops at any but the format; its process's erase-all side is not read (open), and so is where the E118
    family's Card Setup All Erase starts (finding 129).
+160. **`bin/nav.mjs` on the other bodies: the bring-up's shape and the menu's events by rules** (2026-11-16,
+   `src/fw/facts.mjs` menuState, iconStores, apiObject and guiDevices; `src/lab/text.mjs` check_init, `src/lab/menu.mjs`
+   bring_up, `src/lab/nav.mjs` index_of; `test/test_nav.mjs`). Answers finding 68's open item. nav's own GUI bring-up
+   (the lab creates the GUI from its task, where a play session's application does, H-GUIBYAPP) checked E143's shape;
+   each check now reads the body's from its firmware:
+   - *The GUI buffer tables.* Layer L's table holds one word per record of kind (L + 1) % 3, as many as the kind's
+     bank holds (E143 two, the E144 family's four-record banks four; X, the words after the GUI's creation on every
+     body), where the check read two.
+   - *The icon words* (iconStores, fact `icons`). From the resource API's call in the icon load (E143 `0x51257d3b`)
+     the rule reads the next two stores and what each holds. E143, E146, E147 and E148 store the icons record's word 0
+     and word 4 (E143 `0x51257d46..53`; E148 `0x50ef8e7e..88`); the other E144-family bodies and the E118 family store
+     the record's own address and its word 16 (E144 `0x50f1eb09..14`, E122 `0x50cfbcf5..00`; D, the same API method,
+     their vtable lacking E143's slot 0). E148's icon table was unplaced; the rule places it (`0x62353eec`).
+   - *The API object* (apiObject, fact `api_object`). The getter the icon load calls first (E143 `0x50b4e3f0`) loads
+     the object's word with its first instruction. The port had placed E143's `0x603613b0` 4 to 16 bytes off on 14
+     bodies (E148 `0x61e44378` where its getter `0x508cddb3` loads `0x61e44380`, D; the word read 0, X); E144's
+     override already gave the rule's word.
+   - *The device records* (guiDevices, fact `gui_devices`). The GUI's set-up fills a callbacks struct on its stack and
+     copies it into each of three device records (E143 `0x510bbcc7..0x510bbd1d`: 168 bytes a record, the text
+     callback at +108); E137, E142 and E140 have records of 164 bytes, E125 164 with the callback at +108, the TG-5s,
+     E133, E130 and the E118 family 160 bytes with the callback at +104 (D: E137 `0x50c730a6`, E122 `0x50baad72`).
+   - *The tasks started.* Besides the lab's own tasks once each, a task the lab task lets start may start once (the
+     model's extra_tasks, which the display task init starts on E146, E147 and the E118 family, and E125's battery
+     manager thread; HLS_EYEFI, whose singleton E144's GUI creation reaches through API 0x10125's handler
+     `0x5087d40e` -> `0x5083ca8c` -> the getter `0x508393b8` -> its constructor `0x50839288`, X); the empty task is the
+     one bare-return entry the display init starts (E143's `0x50023a0c` is `retf [],0`, D; E134's port placed it at
+     another bare return, the E118 family starts none, X).
+   With those the bring-up passes on 17 bodies (not E145, E129 and E132, whose GUI state is 0 after the lab's creation
+   of the GUI: why is not read). The menu: STATE_MENU is the state the firmware's table names SS_MENU/ID_ST_MENU
+   (menuState, fact `gui_states.menu`): `0x0b02` on E143, E146, E147 and E148, `0x1102` on the 15 others (D). nav
+   posts each key, INFO, dial, OPEN and CLOSE at the build's index of E143's message (S-TOUCHMAP's rule, finding 75):
+   the keys', INFO's and the dials' indices are E143's on every body, OPEN's `0x9624` and CLOSE's `0x9625` are two
+   lower on E137, E142, E140, E125, E130, E133 and the E118 family (X, each map), where E143's `0x87` posted `0x9628`
+   and the GUI went to SS_MENU_MAIN/ID_ST_HIDE_MODE (X, E122 and E137). The register dump beside each PNG no longer
+   reads E143's palette layout on VSC kinds 2 and 3 (it read the E144 family's VSC at `0x9c004400`, a fault, X).
+   X (`test/test_nav.mjs`, time mode, TFT): OPEN reaches the menu's state, DOWN draws and keeps it, MENU, MENU close
+   to `0x0104` on E143 and 13 bodies (E146, E147, E144, E148, E139, E134, E137, E142, E140, E125, E130, E133, E122;
+   E146's and E147's open sleeps in lab time, ID_ST_MENU_ENTRY until a WAIT, and without `--time` it stops at that
+   timed wait). On E137, E142, E140, E125, E130, E133 and E122 the frame stays blank: their GUI's updates are display
+   requests of type 3 (E137's from `0x507d537c`, E122's from `0x502c076a`, X), which stay pending until an image sync
+   that only the application sends (S-DISPSYNC in play, `src/lab/camapp.mjs`); nav runs no application. Open: that
+   release in nav; E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
+   of E145, E129 and E132; nav's menu fields (`var226`, E143's viewer record, observed on E143 only).
 
 
 

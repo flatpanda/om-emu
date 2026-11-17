@@ -259,9 +259,13 @@ the survey table.
   Three lab causes, each read: the kind-2 OSD planes' stacking, which E144 and E148 set the other way round (the word
   at `+0x1a4`), the event storm guard counting GESetEvent's coalesced sets, and the OSD engine's guards refusing E137's
   and E125's buffer sync across two records; E122's and E120's MENU on the EVF runs since the kind-3 VSC's line
-  compare (finding 70). Left: E146's and E147's EVF menu composite (PLANC 0xb2, as their EVF playback), and `bin/nav.mjs` on these bodies: its own GUI bring-up's checks are E143's shape (finding
-  68: the GUI buffer tables' record pairs, the icon table, the tasks started), then its menu open expects E143's
-  `0x0b02` and its keys are E143's event indices.
+  compare (finding 70). `bin/nav.mjs` runs on these bodies since 2026-11-16 (model-survey finding 156): its bring-up's
+  checks read each body's shape by rules (`src/fw/facts.mjs` menuState, iconStores, apiObject, guiDevices; the tasks
+  started), STATE_MENU is the state the firmware names SS_MENU/ID_ST_MENU, and its events go at the build's index of
+  E143's message; OPEN, DOWN, MENU, MENU run in time mode on 13 bodies (`test/test_nav.mjs`). Left: E146's and E147's
+  EVF menu composite (PLANC 0xb2, as their EVF playback); nav's frames on E137, E142, E140, E125, E130, E133 and E122,
+  whose GUI's updates wait for the application's display sync (S-DISPSYNC in play); nav's OPEN on E118 and E120 (the
+  GUI stays at POWER_ON) and its bring-up on E145, E129 and E132 (GUI state 0).
 - **The card on the other bodies:** done for nine (2026-10-25, hle-gaps.md 4.8.4) and E145 (2026-10-29): a rule reads the file system's
   seams in each image (`src/fw/facts.mjs` fileSystem), and E146, E147, E144, E139, E137, E142, E140, E125, E130 and E145
   format a blank card, mount it, count from it and write S2's file (`src/fw/models.mjs` card_fs, S-SDPOWER for the
@@ -876,7 +880,10 @@ follow-ups):
   from it (hle-gaps.md 4.1.13). E146's and E147's live display switch passes since 2026-11-14 (H-CHAINREST, hle-gaps.md
   4.4.4); the rest's end condition is the lab's (FIDELITY 1.6), other steps there still end inside a 1 ms sleep, and
   `chain_sleeps` is set by hand for the two bodies, the others not surveyed.
-- `bin/nav.mjs` on E146 and E147 (Next stops above): its bring-up check stops at start on E147, stock too (X).
+- `bin/nav.mjs` on the other bodies (Next stops above, model-survey finding 156): no frame on the seven bodies whose
+  GUI waits for the application's display sync, OPEN without effect on E118 and E120, the bring-up on E145, E129 and
+  E132 (GUI state 0, why not read), nav's menu fields (E143's viewer record only); E146's and E147's menu open needs
+  `--time` and a WAIT.
 - The exFAT case of the card writer's "S2 leaves the writer's files intact" check has no negative control.
 
 ## Open unknowns and assumptions

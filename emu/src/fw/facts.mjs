@@ -4275,6 +4275,94 @@ export function takeShot(img) {
   };
 }
 
+// TAKE's own fills of a still's shot as H-TAKEFILLS runs them (fact 'take_fills', src/lab/rec.mjs; docs/hle-gaps.md
+// 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the still states by name in
+// TAKE_MAIN's state table (as takeExposure reads it), each fill a function of TAKE's context and the take-picture
+// request's packet or its shot id:
+// - context, packet: TAKE's context (StlTake's entry opens with `mov CTX,a2`, 0x503b1e3f: 0x62a4a358) and the word
+//   that holds the packet (P, 0x62a4a350), the same in each of StlTake's three fill calls, StlRdy2's shot-record fill
+//   call and Standby's store `mov d2,(P)` (0x503b0af3)
+// - mode {build, bytes, copy, record, standby}: RdyStart's entry builds the Rdy states' mode bytes, `mov a2,a0; mov
+//   BYTES,a1; call BUILD` (0x503c27be: 0x503c28c7 on 0x62a4ce68, a0 the request); RdyFcsTake's exit copies them into
+//   the record it hands Standby, the one function that opens `movhu (BYTES),d0; movhu d0,(REC)` (0x503c4509: REC
+//   0x62a4ce80; E146 and E147 put REC 26 bytes on, X); Standby's entry (STANDBY, 0x503b09dd) takes {packet, REC} by
+//   d1, `movm [d2,a2],(sp); add -4,sp; mov d1,a1; mov (a1),a2; mov (4,a1),a1` (a function reached by `calls` from
+//   TAKE_MAIN's table), and copies the record into TAKE's context (0x503b09e4..0x503b0af1)
+// - ring {get, free}: the exposure ring's getter (takeExposure's G, the call before `mov (P),a1; [mov F,d0;] mov
+//   a0,(60,a1)`, 0x503baeb6; its first `movbu (IDX),d0`) and its
+//   free, the one function `clr d0; movbu d0,(92,a0); movbu (93,a0),d0; movbu d0,(IDX); retf` (0x503baf23, StlEnd's)
+// - record {fn, modes}: StlRdy2's shot-record fill, `mov (P),a1; movbu (B1),d3; mov (a1),d0; mov d3,a0; movbu (B2),d1;
+//   call FN` (0x503b14fa: 0x503bba51 with the shot's id and the context bytes 0x62a4b190 and 0x62a4b1bc)
+// - take {capture, key, count, after}: StlTake's entry's three calls `mov (P),a0; mov (a0),d0; mov a2,a0; call F`, in
+//   order its capture fill (0x503b22dc: 0x503bcaa2, the clock read into the record's +37800 among them), the shot's
+//   key (0x503b23dc: 0x503baa2d) and its fill after the key (0x503b240b: 0x503bc4fe); after the key's call, `movhu
+//   (C),d1; inc d1; movhu d1,(C)` steps the frame count C (0x503b23e3: 0x62a4af68, the context's +3088)
+// Throws where a form is missing or found twice
+export const TAKE_FILLS_E143 = { context: 0x62A4A358, packet: 0x62A4A350,
+  mode: { build: 0x503C28C7, bytes: 0x62A4CE68, copy: 0x503C4509, record: 0x62A4CE80, standby: 0x503B09DD },
+  ring: { get: 0x503BAEB6, free: 0x503BAF23 }, record: { fn: 0x503BBA51, modes: [0x62A4B190, 0x62A4B1BC] },
+  take: { capture: 0x503BCAA2, key: 0x503BAA2D, count: 0x62A4AF68, after: 0x503BC4FE } };
+const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20;
+const STANDBY_FORM = [0xcf, 0xa0, 0xf8, 0xfe, 0xfc, 0xf1, 0xe5, 0xf0, 0x09, 0xf8, 0x25, 0x04];
+export function takeFills(img, at) {
+  const rule = 'takeFills', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
+  const main = at(TAKE_MAIN_E143);
+  if (main === null) throw new Error(`${rule}: TAKE_MAIN's loop (E143 ${h8(TAKE_MAIN_E143)}) is not placed`);
+  if (!bytesAt(img, main - 0x50000000, MAIN_FORM)) throw new Error(`${rule}: TAKE_MAIN's loop at ${h8(main)} is not E143's form`);
+  const table = u32(img, main - 0x50000000 + 17) - base;
+  const str = (a) => { let s = ''; for (let k = a - base; k >= 0 && k < img.length && img[k] && s.length < 32; k++) s += String.fromCharCode(img[k]); return s; };
+  const entry = (name) => {
+    const n = [...Array(TAKE_STATES).keys()].filter((k) => str(u32(img, table + TAKE_STATE_BYTES * k + 4)) === name);
+    if (n.length !== 1) throw new Error(`${rule}: ${n.length} states named ${name} in TAKE_MAIN's table ${h8(table + base)}, want one`);
+    return u32(img, table + TAKE_STATE_BYTES * n[0] + 8) - base;
+  };
+  const all = (pat, from, to) => { const out = []; for (let o = img.indexOf(pat[0], from); o >= 0 && o + pat.length <= to; o = img.indexOf(pat[0], o + 1)) if (bytesAt(img, o, pat)) out.push(o); return out; };
+  // StlTake: its context and its three fill calls through P
+  const st = entry('StlTake');
+  const cx = oneAt(img, [0xfc, 0xde], rule, 'context loads in StlTake\'s entry', st, st + TAKE_CTX_SPAN);
+  if (cx === null) throw new Error(`${rule}: StlTake's entry ${D(st)} loads no context into a2`);
+  const context = u32(img, cx + 2);
+  const calls = all([0xfc, 0xa0, null, null, null, null, 0x70, 0x98], st, st + TAKE_FILL_SPAN).filter((o) => callAt(img, o + 8));
+  if (calls.length !== 3) throw new Error(`${rule}: StlTake's entry ${D(st)} makes ${calls.length} fill calls with the packet's id and the context, want 3`);
+  const packet = u32(img, calls[0] + 2);
+  if (calls.some((o) => u32(img, o + 2) !== packet)) throw new Error(`${rule}: StlTake's fill calls read the packet from ${calls.map((o) => h8(u32(img, o + 2))).join(', ')}`);
+  const [capture, key, after] = calls.map((o) => callAt(img, o + 8).to);
+  const kc = calls[1] + 8 + callAt(img, calls[1] + 8).len;
+  const cnt = oneAt(img, [0xfc, 0xad, null, null, null, null, 0x44, 0xfc, 0x87], rule, 'frame count steps after the key', kc, kc + TAKE_COUNT_SPAN);
+  if (cnt === null || u32(img, cnt + 2) !== u32(img, cnt + 9)) throw new Error(`${rule}: no step of the frame count after the key's call ${D(calls[1])}`);
+  // StlRdy2's shot-record fill
+  const s2 = entry('StlRdy2');
+  const rf = oneAt(img, [0xfc, 0xa1, ...le32(packet), 0xfc, 0xab, null, null, null, null, 0x71, 0xf1, 0xec, 0xfc, 0xa9], rule, 'shot-record fill calls in StlRdy2\'s entry', s2, s2 + TAKE_FILL_SPAN);
+  if (rf === null || !callAt(img, rf + 21)) throw new Error(`${rule}: StlRdy2's entry ${D(s2)} makes no shot-record fill call through ${h8(packet)}`);
+  // the mode bytes: RdyStart's builder, RdyFcsTake's copy, Standby's entry
+  const rs = entry('RdyStart');
+  const bd = all([0x98, 0xfc, 0xdd], rs, rs + TAKE_FILL_SPAN).filter((o) => callAt(img, o + 7));
+  if (bd.length !== 1) throw new Error(`${rule}: RdyStart's entry ${D(rs)} makes ${bd.length} calls with the request and a mode block, want 1`);
+  const bytes = u32(img, bd[0] + 3);
+  const cp = oneAt(img, [0xfc, 0xac, ...le32(bytes), 0xfc, 0x83], rule, 'copies of the mode bytes');
+  if (cp === null) throw new Error(`${rule}: no copy of the mode bytes ${h8(bytes)}`);
+  const sb = entry('Standby');
+  if (!bytesAt(img, sb, STANDBY_FORM)) throw new Error(`${rule}: Standby's entry ${D(sb)} does not take {packet, record} by d1`);
+  if (all([0xfc, 0x89, ...le32(packet)], sb, sb + TAKE_FILL_SPAN).length !== 1) throw new Error(`${rule}: Standby's entry ${D(sb)} does not store the packet word ${h8(packet)} once`);
+  // the exposure ring's getter (StlRdy1's, as takeExposure reads it) and its free
+  const s1 = entry('StlRdy1');
+  const gs = all([0xfc, 0xa1, ...le32(packet)], s1, s1 + TAKE_EXP_SPAN).map((o) => o - 7)
+    .filter((o) => img[o] === 0xdd && bytesAt(img, o + 13 + (bytesAt(img, o + 13, [0xfc, 0xcc]) ? 6 : 0), [0xf8, 0x31, 0x3c]));
+  if (gs.length !== 1) throw new Error(`${rule}: StlRdy1's entry ${D(s1)} has ${gs.length} ring getter calls before its packet keep, want 1`);
+  const get = callAt(img, gs[0]).to;
+  if (!bytesAt(img, get, [0xfc, 0xa8])) throw new Error(`${rule}: the ring's getter ${D(get)} does not open with its index read`);
+  const idx = u32(img, get + 2);
+  const fr = oneAt(img, [0x00, 0xf8, 0x50, 0x5c, 0xf8, 0x40, 0x5d, 0xfc, 0x82, ...le32(idx), 0xde, 0x00, 0x00], rule, 'frees of the ring\'s slots');
+  if (fr === null) throw new Error(`${rule}: no free of the ring's slots by its index ${h8(idx)}`);
+  return {
+    context, packet,
+    mode: { build: 0x50000000 + callAt(img, bd[0] + 7).to, bytes, copy: 0x50000000 + cp, record: u32(img, cp + 8), standby: 0x50000000 + sb },
+    ring: { get: 0x50000000 + get, free: 0x50000000 + fr },
+    record: { fn: 0x50000000 + callAt(img, rf + 21).to, modes: [u32(img, rf + 8), u32(img, rf + 17)] },
+    take: { capture: 0x50000000 + capture, key: 0x50000000 + key, count: u32(img, cnt + 2), after: 0x50000000 + after },
+  };
+}
+
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
 // reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
@@ -6036,6 +6124,8 @@ export function readPlacedFacts({ img, at }) {
   if (recF !== undefined) facts.take_exposure = takeExposure(img, at);
   // TAKE's shot for a still as H-SHOTALLOC allocates it, on the same bodies
   if (recF !== undefined) facts.take_shot = takeShot(img);
+  // TAKE's own fills of a still's shot as H-TAKEFILLS runs them, on the same bodies
+  if (recF !== undefined) facts.take_fills = takeFills(img, at);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

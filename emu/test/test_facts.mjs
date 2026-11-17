@@ -49,7 +49,8 @@ import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileQueue, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
-  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot } from '../src/fw/facts.mjs';
+  TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot,
+  TAKE_FILLS_E143, takeFills } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -604,6 +605,23 @@ const TAKE_SHOT_FOUND = {
   E143: TAKE_SHOT_E143,
   E146: { alloc: 0x5040B014, free: 0x5040B108, kind: SHOT_KIND, take: { alloc: 0x503AF63E, free: 0x503AF8B1 }, record: { fn: 0x503AFCFA, table: 0x62A75C34, entry: 32, ids: 233, flag: 4, at: 20 } },
   E147: { alloc: 0x5041911B, free: 0x5041920F, kind: SHOT_KIND, take: { alloc: 0x503B98CF, free: 0x503B9B42 }, record: { fn: 0x503B9F81, table: 0x62A72FBC, entry: 32, ids: 110, flag: 4, at: 20 } },
+};
+// TAKE's own fills of a still's shot (take_fills; src/fw/facts.mjs takeFills) where recFile reads: E143's as
+// H-TAKEFILLS runs them, E146's and E147's as read in their code by hand (D, 2026-11-16: StlTake's entry E146
+// 0x503b2397 / E147 0x503bc5fc opens with `mov CTX,a2` and calls its capture fill, the key and the fill after it
+// through P at E146 0x503b2849, 0x503b2949, 0x503b2978 / E147 0x503bcaae, 0x503bcbae, 0x503bcbdd, the frame count's
+// step at E146 0x503b2958 / E147 0x503bcbbd; StlRdy2's shot-record fill call E146 0x503b1a15 / E147 0x503bbc97;
+// RdyStart's builder call E146 0x503c2fce / E147 0x503ccee1; the mode bytes' copy, called from RdyFcsTake at E146
+// 0x503c41d6 / E147 0x503ce0e9, 26 bytes on where E143's is 24; Standby's entry with E143's prologue and its store
+// of P at E146 0x503b0f33 / E147 0x503bb19e; the ring's free right after its getter, by the getter's index word)
+const TAKE_FILLS_FOUND = {
+  E143: TAKE_FILLS_E143,
+  E146: { context: 0x62A77988, packet: 0x62A77980, mode: { build: 0x503C30D7, bytes: 0x62A7B964, copy: 0x503C4CDB, record: 0x62A7B97E, standby: 0x503B0E14 },
+    ring: { get: 0x503BB6F1, free: 0x503BB75E }, record: { fn: 0x503BC37E, modes: [0x62A78840, 0x62A78894] },
+    take: { capture: 0x503BD3D7, key: 0x503BB24E, count: 0x62A78664, after: 0x503BCE2B } },
+  E147: { context: 0x62A73DB0, packet: 0x62A73DA8, mode: { build: 0x503CCFEA, bytes: 0x62A76870, copy: 0x503CEBEE, record: 0x62A7688A, standby: 0x503BB07F },
+    ring: { get: 0x503C597F, free: 0x503C59EC }, record: { fn: 0x503C660C, modes: [0x62A74C68, 0x62A74CBC] },
+    take: { capture: 0x503C7667, key: 0x503C54DC, count: 0x62A74A8C, after: 0x503C70BB } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1311,6 +1329,23 @@ export function factsTests() {
       const kind = refused(0x5040f47e, 0x02, /selects no kind by a setting/), look = refused(0x503afc56, 0x02, /no lookup of a shot's record by the entry's bit 4/);
       const free = refused(0x5040f57c, 0x8c, /hands its id to no free/);
       ok(kind === true && look === true && free === true, `takeShot: another kind for the setting's value, a lookup by another bit and the free handing on another register refused: ${kind}, ${look}, ${free}`);
+    }
+    // TAKE's own fills (take_fills, src/fw/facts.mjs takeFills) where recFile reads: E143's equals the values
+    // H-TAKEFILLS uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.take_fills, TAKE_FILLS_FOUND[code]), `${code}: take_fills ${hx(placed?.take_fills ?? placed)}, found ${hx(TAKE_FILLS_FOUND[code] ?? 'none')}`);
+    // and refuses a form it does not know: E143's image with the frame count's step made a decrement (0x503b23e9:
+    // inc d1 -> inc d0), with Standby's entry taking its block by d0 (0x503b09e2: mov d1,a1 -> mov d0,a1) and with
+    // the ring's free storing its index elsewhere (0x503baf2c: the index word's low byte 0x50 -> 0x51)
+    if (code === 'E143' && placed?.take_fills) {
+      const refused = (o, v, re) => {
+        const m = run.slice();
+        m[o - 0x50000000] = v;
+        try { takeFills(m, at); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const count = refused(0x503b23e9, 0x40, /no step of the frame count after the key's call/);
+      const standby = refused(0x503b09e3, 0xe4, /Standby's entry 0x503b09dd does not take \{packet, record\} by d1/);
+      const free = refused(0x503baf2c, 0x51, /no free of the ring's slots/);
+      ok(count === true && standby === true && free === true, `takeFills: the frame count not stepped, Standby's block by another register and the ring's free on another index refused: ${count}, ${standby}, ${free}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

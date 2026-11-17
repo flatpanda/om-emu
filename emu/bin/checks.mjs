@@ -8,7 +8,10 @@
 //
 // A run may set its own environment variables (runs.json "env", ENV_WHITELIST); the child runs under a pinned terminal
 // (refenv TERMINAL: NO_COLOR) and refuses the run variables inherited from the caller (refenv childEnv).
-// Its output files go under OM_CHECK_OUT, emu/out/checks/js/<run>/, removed after a pass unless --keep.
+// Its output files go under OM_CHECK_OUT, emu/out/checks/js/<run>/, removed after a pass unless --keep. There every run
+// also writes its comparisons' results (check-results.json, checks/lib/eq.mjs OM_CHECK_RESULTS: per site the passes,
+// fails and first failing got and want) and its RNG tape (rng-tape.json, checks/lib/rngtape.mjs OM_RNG_TAPE); a FAIL
+// names the sites whose comparisons failed. Neither file is a declared output, so bin/golden.mjs records neither.
 //
 //   node emu/bin/checks.mjs [CHECK | RUN ...] [--jobs N] [--keep] [--measure N]
 //     --keep       keep the outputs of the runs that pass
@@ -58,6 +61,16 @@ export function runEnv(run) {
   if (bad.length) throw new Refusal(`run ${run.id} sets ${bad.join(', ')}: not in the run env whitelist ${ENV_WHITELIST.join(', ')}`);
   return { ...env };
 }
+const RESULTS = 'check-results.json', TAPE = 'rng-tape.json';
+// The sites of a finished run whose comparisons failed (its check-results.json), as 'site xN: got G, want W', the first
+// failing pair of each; [] when the run wrote no results.
+export function failedSites(dir) {
+  const f = path.join(dir, RESULTS);
+  if (!fs.existsSync(f)) return [];
+  const show = (v) => { const s = JSON.stringify(v); return s.length > 120 ? `${s.slice(0, 120)}...` : s; };
+  return Object.entries(JSON.parse(fs.readFileSync(f, 'utf8')).sites).filter(([, s]) => s.fail)
+    .map(([site, s]) => `${site} x${s.fail}: got ${show(s.first[0].got)}, want ${show(s.first[0].want)}`);
+}
 const subst = (args, dir) => args.map((a) => a.replaceAll('{out}', dir));
 
 // A run's fresh output directory, environment and node arguments.
@@ -65,7 +78,7 @@ function invocation(check, run, { extraEnv = {}, dirName = run.id } = {}) {
   const dir = path.join(JS, dirName);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const env = { ...childEnv(), ...runEnv(run), OM_CHECK_OUT: dir, ...extraEnv };
+  const env = { ...childEnv(), ...runEnv(run), OM_CHECK_OUT: dir, OM_CHECK_RESULTS: path.join(dir, RESULTS), OM_RNG_TAPE: path.join(dir, TAPE), ...extraEnv };
   const args = [path.join('emu/checks', `${check}.mjs`), ...subst(run.args, path.relative(REPO, dir))];
   return { dir, env, args };
 }
@@ -149,6 +162,7 @@ async function main(argv) {
       if (why) bad++;
       else if (!keep) fs.rmSync(js.dir, { recursive: true, force: true });
       console.log(`${why ? 'FAIL' : 'ok  '} ${run.id} (${check}, ${js.wall.toFixed(1)} s)${why ? `: ${why}` : ''}`);
+      if (why) for (const s of failedSites(js.dir).slice(0, 5)) console.log(`      ${s}`);
     }
   };
   await Promise.all(Array.from({ length: Math.min(jobs, sels.length) }, worker));

@@ -2,7 +2,7 @@
 // The live-view checks: M7's live view through the firmware's own API (the TH API 0x501c3f4d, the
 // bus window 0x50036da4, the live-view banks) on the JS lab, checked against the register formulas and the CMM table
 // readers of refs/liveview.mjs and, for composites, check_display's reference(). Groups G1..G8 with their report lines;
-// every assert is a predicate of checks/lib/pred.mjs. Pinned observations compare with checks/fixtures/check_liveview_notes.txt;
+// every assert is a comparison of checks/lib/eq.mjs. Pinned observations compare with checks/fixtures/check_liveview_notes.txt;
 // --write-notes writes them to OM_NOTES_DIR (refused without it). PNGs go to OM_CHECK_OUT.
 //   node emu/checks/check_liveview.mjs [--seed N] [--write-notes | --only G3,G5] [--kernel native|none]
 import fs from 'node:fs';
@@ -10,7 +10,7 @@ import path from 'node:path';
 import { REPO, FIXTURES, labEnv, loadImage, runMain, SystemExit } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { newRandom } from './lib/rngtape.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { write_png } from './lib/png.mjs';
 import * as CD from './check_display.mjs';
 import * as D from '../src/lab/display.mjs';
@@ -40,7 +40,7 @@ const hx = (v) => (regValue(v) >>> 0).toString(16);           // f'{v:x}'
 const env = () => labEnv();
 const withLab = (lab, fn) => { try { return fn(lab); } finally { lab.close(); } };
 function check(cond, what = null) {
-  if (!pred(!!cond, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
+  if (!eq(!!cond, true, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
 }
 const note = (key, value) => NOTES.push([key, asText(value)]);
 const sortStr = (xs) => [...xs].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
@@ -111,7 +111,7 @@ function g1_bus(lab) {
   check(CD.cpu(lab, STORE, D.BUS_WINDOW_REG, 0x13161515).fault === 2);
   check(lab.sim.u32(D.BUS_WINDOW_REG) === 0x17161514);
   check(CD.cpu(lab, STORE, 0x9810004C, 0).fault === 2);
-  if (fault('liveview-winreg')) CD.cpu(lab, STORE, D.BUS_WINDOW_REG, 0x14161514);   // JS-only fault point (pred.mjs)
+  if (fault('liveview-winreg')) CD.cpu(lab, STORE, D.BUS_WINDOW_REG, 0x14161514);   // JS-only fault point (eq.mjs)
   check(CD.cpu(lab, LOAD, 0x98100058).d0 === 0x17161514);
   n += 6;
   return [n, rows];
@@ -248,7 +248,7 @@ function g3_registers(lab, device, rng, nDomain = 60, nOutside = 20) {
     const expect = new Map(w0);
     for (const [kk, v] of want) expect.set(kk, v);
     const bad = new Map();
-    for (const [n, v] of w1) if (!pred(v === expect.get(n))) bad.set(n, [v !== null ? hex(v) : null, expect.get(n) !== null ? hex(expect.get(n)) : null]);
+    for (const [n, v] of w1) if (!eq(v, expect.get(n))) bad.set(n, [v !== null ? hex(v) : null, expect.get(n) !== null ? hex(expect.get(n)) : null]);
     check(!bad.size, () => `${device} case ${k} (${cat}) ${show(req)}: register (written, formula) ${show(bad)}`);
     check(img0(lab, c) === start, () => [k, hex(img0(lab, c)), hex(start)]);
     const latched = [...m1.keys()].filter((n) => m1.get(n) !== m0.get(n) && m1.get(n) !== w1.get(n));
@@ -262,7 +262,7 @@ function g3_registers(lab, device, rng, nDomain = 60, nOutside = 20) {
     for (let k = 0; k < recorded.length; k++) {
       const [, req, w0, w1, la] = recorded[k];
       const [want] = LV.th_formula(c, req, w0, { last_area: la, mutant });
-      if (pred([...want].some(([n, v]) => w1.get(n) !== v))) { killed.set(mutant, k); break; }
+      if (eq([...want].some(([n, v]) => w1.get(n) !== v), true)) { killed.set(mutant, k); break; }
     }
   }
   check(applicable.every((m) => killed.has(m)) && killed.size === applicable.length, () => ['mutants not detected', applicable.filter((m) => !killed.has(m))]);
@@ -282,7 +282,7 @@ function g3_registers(lab, device, rng, nDomain = 60, nOutside = 20) {
   const exp = new Map(w0);
   for (const [k, v] of want) exp.set(k, v);
   const bad = new Map();
-  for (const [n, v] of exp) if (!pred(w1.get(n) === v || n === 'IMG1PLANC')) bad.set(n, [w1.get(n), v]);
+  for (const [n, v] of exp) if (!eq(w1.get(n) === v || n === 'IMG1PLANC', true)) bad.set(n, [w1.get(n), v]);
   check(!bad.size && img0(lab, c) === start, () => bad);
   check(((w1.get('IMG1PLANC') ^ w0.get('IMG1PLANC')) & ~0x3000) === 0);
   const fmtLine = `layer_format 0 after IMG1FMT format 3: IMG1FMT 0x${hx(w0.get('IMG1FMT'))}, IMG1PLANC and IMG1DMASADR2 kept; layer_format 1 then == formulas (format 0)`;

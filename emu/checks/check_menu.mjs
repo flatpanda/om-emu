@@ -3,8 +3,8 @@
 // refs/menuref.mjs predicts them. The lab sessions run first; the references (refs/menuref.mjs with refs/font.mjs,
 // refs/settings.mjs) are imported with import() only after they ended (asserted with a check-side flag),
 // and they read only firmware data and formats (src/lab/menudata.mjs and src/lab/resources.mjs injected). Composites
-// are compared with check_display's reference(). Groups 0..10 with their report lines; every pass/fail predicate (the exit code and the --mutants verdicts included) goes through
-// checks/lib/pred.mjs. --jobs N runs the sessions in N worker_threads (each worker imports this module);
+// are compared with check_display's reference(). Groups 0..10 with their report lines; every pass/fail comparison (the exit code and the --mutants verdicts included) goes through
+// checks/lib/eq.mjs. --jobs N runs the sessions in N worker_threads (each worker imports this module);
 // --mutants first checks that a child spinning the guest on bra ., killed on timeout, leaves no process and no
 // temporary directory (a node child running a JS Simulator), then reruns
 // the check (--quick) under each mutant in a node child.
@@ -18,7 +18,7 @@ import { createHash } from 'node:crypto';
 import { REPO, FIXTURES, labEnv, loadImage, loadBlock, runMain, SystemExit, resultHook } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { flushCoverage } from './lib/coverage.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { isValueError, hasStack } from './lib/errors.mjs';
 import { encode, decode } from './lib/wire.mjs';
 import { Stats } from '../src/lab/sim.mjs';
@@ -159,7 +159,7 @@ export function run_lab(spec, mutant = null) {
   const t0 = performance.now();
   const [lab, r] = MM.run_session(env(), { page, lang, device, u1, cursor, seed, lab_hook: MUTANT_HOOKS.get(mutant) ?? null, store: STORE, evf_layout: layout0, a15: layout0 });
   try {
-    // JS-only fault point (checks/lib/pred.mjs): the GUI state's child byte in guest memory set to 0x03 after the menu opened, so
+    // JS-only fault point (checks/lib/eq.mjs): the GUI state's child byte in guest memory set to 0x03 after the menu opened, so
     // lab.state() reads 0x0b03; only group 2's state predicate looks at it
     if (fault('menu-gui-state')) lab.sim.write(lab.sim.u32(MM.GUICALLER) + 1, new Uint8Array([0x03]));
     const draws = lab.menu_draws();
@@ -254,11 +254,11 @@ function s_send_rule(lab) {
   const f = new Finish();
   lab._sync_send(f, { ...base });
   const last = lab.dropped_sends.slice(-1);
-  if (!pred(deepEqual(f.done, [{ d0: 0 }]) && deepEqual(last, [[q10, 10, '0x50045474']]))) problems.push(`listed send not dropped: ${show(f.done)} ${show(lab.dropped_sends)}`);
+  if (!eq([f.done, last], [[{ d0: 0 }], [[q10, 10, '0x50045474']]])) problems.push(`listed send not dropped: ${show(f.done)} ${show(lab.dropped_sends)}`);
   for (const bad of [{ ...base, d1: 11 }, { ...base, mdr: runtime(0x50045478) }]) {
     try {
       lab._sync_send(new Finish(), bad);
-      if (!pred(false)) problems.push(`unlisted send ${show(bad)} accepted`);
+      if (!eq(false, true)) problems.push(`unlisted send ${show(bad)} accepted`);
     } catch (e) { if (!(e instanceof MM.MenuError)) throw e; }
   }
   return problems;
@@ -347,18 +347,18 @@ export function compare_calls(s, ref, model, elements = null) {
     margins: [...e.data.margins], edge: e.data.edge, local: [...e.data.local], origin: [...e.data.origin] }));
   let got = want.length ? lt.map((t) => Object.fromEntries(keys.map((k) => [k, t[k]]))) : lt;
   const first = (g, w) => { const n = Math.min(g.length, w.length); const k = range(0, n).find((i) => !deepEqual(g[i], w[i])); return k === undefined ? n : k; };
-  if (!pred(deepEqual(got, want))) {
+  if (!eq(got, want)) {
     const k = first(got, want);
     problems.push(`${s.label}: DrawText ${got.length} calls vs ${want.length} predicted; first difference #${k}: lab ${show(k < got.length ? got[k] : null)} reference ${show(k < want.length ? want[k] : null)}`);
   }
   const bad = lt.filter((t) => t.mode684 !== 0 || !t.attr || t.gc_id !== 1);
-  if (!pred(!bad.length)) problems.push(`${s.label}: DrawText gc state (mode 0, attribute gc, gc id 1) differs: ${show(bad[0])}`);
+  if (!eq(bad.length, 0)) problems.push(`${s.label}: DrawText gc state (mode 0, attribute gc, gc id 1) differs: ${show(bad[0])}`);
   const ri = elements.filter((e) => e.kind === 'image');
   const li = s.images.filter((i) => !masked([i.x, i.y, i.x, i.y], model));
   const skipped_i = s.images.length - li.length;
   want = ri.map((e) => [e.layer, e.data.data, e.data.x, e.data.y, hexOf(e.data.lut), [0, 0]]);
   got = li.map((i) => [i.layer, i.data, i.x, i.y, i.lut, i.scale]);
-  if (!pred(deepEqual(got, want))) {
+  if (!eq(got, want)) {
     const k = first(got, want);
     const g = k < got.length ? got[k] : null, w = k < want.length ? want[k] : null;
     const head = (t) => show(t ? t.slice(0, 4) : null);
@@ -367,7 +367,7 @@ export function compare_calls(s, ref, model, elements = null) {
   }
   want = elements.filter((e) => e.kind === 'fill').map((e) => [e.layer, e.data.x, e.data.y, e.data.w, e.data.h, e.data.colour]);
   got = s.fills.map((f) => [f.layer, f.x, f.y, f.w, f.h, f.colour]);
-  if (!pred(deepEqual(got, want))) problems.push(`${s.label}: FILLs ${show(got)} vs predicted ${show(want)}`);
+  if (!eq(got, want)) problems.push(`${s.label}: FILLs ${show(got)} vs predicted ${show(want)}`);
   return [problems, skipped_t + skipped_i];
 }
 export function mask_window(data, rects) {
@@ -388,7 +388,7 @@ export function compare_buffers(s, raster, model) {
   const rects = unverified_rects(model);
   for (let layer = 0; layer < 3; layer++) {
     const got = mask_window(s.windows.get(layer), rects), want = mask_window(raster.window(layer), rects);
-    if (!pred(bytesEq(got, want))) {
+    if (!eq(bytesEq(got, want), true)) {
       const w = Math.floor(want.length / 600);
       if (got.length !== want.length) { problems.push(`${s.label}: GUI layer ${layer} window ${got.length} bytes, reference ${want.length}`); continue; }   // not a predicate: the message of the one above
       let i = 0;
@@ -417,7 +417,7 @@ export function notes_problems(notes, got) {
   const out = [];
   for (const kind of sortStr(new Set([...notes.keys(), ...got.keys()]))) {
     const a = notes.get(kind) ?? new Set(), b = got.get(kind) ?? new Set();
-    if (!pred(setEq(a, b))) out.push(`${kind}: new ${show(sortStr([...b].filter((x) => !a.has(x))).slice(0, 3))} missing ${show(sortStr([...a].filter((x) => !b.has(x))).slice(0, 3))}`);
+    if (!eq(setEq(a, b), true)) out.push(`${kind}: new ${show(sortStr([...b].filter((x) => !a.has(x))).slice(0, 3))} missing ${show(sortStr([...a].filter((x) => !b.has(x))).slice(0, 3))}`);
   }
   return out;
 }
@@ -495,7 +495,7 @@ export async function check(mode = 'default', write_notes = false) {
   const failures = [], notes_out = [];
   const group = (name, problems, ran = true, why = null) => {
     if (!ran && !problems.length) { console.log(`[skip] ${name}: ${why || `no session of this kind in ${mode} mode`}`); return; }
-    console.log(`[${pred(!problems.length) ? 'ok' : 'FAIL'}] ${name}`);
+    console.log(`[${eq(problems.length, 0) ? 'ok' : 'FAIL'}] ${name}`);
     for (const p of problems) console.log('      ' + cut(p, 600));
     failures.push(...problems);
   };
@@ -503,7 +503,7 @@ export async function check(mode = 'default', write_notes = false) {
   // ---- 0. offline
   const p0 = [];
   const img = new M.Image(loadImage());
-  try { M.check(img); } catch (e) { if (!(e instanceof AssertionError)) throw e; if (!pred(false)) p0.push(`src/lab/menudata.mjs check: ${e.message}`); }
+  try { M.check(img); } catch (e) { if (!(e instanceof AssertionError)) throw e; if (!eq(false, true)) p0.push(`src/lab/menudata.mjs check: ${e.message}`); }
   const t = M.tab_entry(img, MM.SETUP_TAB);
   const strings = new M.Strings(LANGS, loadImage(), loadBlock());
   const handlers = M.custom_value_handlers(img);
@@ -512,16 +512,16 @@ export async function check(mode = 'default', write_notes = false) {
     const g = M.groups(img).get(page_id);
     for (const lab_item of g.labels) {
       rows += 1;
-      for (const lang of LANGS) if (!pred(M.render(lab_item, strings, lang))) p0.push(`page 0x${page_id.toString(16)} mode ${lab_item.key}: empty ${lang} label`);
+      for (const lang of LANGS) if (!eq(!!M.render(lab_item, strings, lang), true)) p0.push(`page 0x${page_id.toString(16)} mode ${lab_item.key}: empty ${lang} label`);
       const mode_ = lab_item.key;
-      if (!pred(!(g.values.has(mode_) && !handlers.has(mode_) && !g.values.get(mode_).length))) p0.push(`page 0x${page_id.toString(16)} mode ${mode_}: empty value list`);
+      if (!eq(!(g.values.has(mode_) && !handlers.has(mode_) && !g.values.get(mode_).length), true)) p0.push(`page 0x${page_id.toString(16)} mode ${mode_}: empty value list`);
     }
   }
   try {
     MM.validate_seed(img, M.page_of(img, MM.SETUP_TAB, 5)[0], BAD_SEED);
-    if (!pred(false)) p0.push(`seed ${show(BAD_SEED)} accepted`);
+    if (!eq(false, true)) p0.push(`seed ${show(BAD_SEED)} accepted`);
   } catch (e) { if (!isValueError(e)) throw e; }
-  if (!pred(deepEqual(MM.validate_seed(img, M.page_of(img, MM.SETUP_TAB, 5)[0], SEED), SEED))) p0.push('seed not accepted as given');
+  if (!eq(MM.validate_seed(img, M.page_of(img, MM.SETUP_TAB, 5)[0], SEED), SEED)) p0.push('seed not accepted as given');
 
   // ---- lab sessions
   const specs = sessions(mode);
@@ -535,7 +535,7 @@ export async function check(mode = 'default', write_notes = false) {
       const [, name, args] = jobs[k++];
       process.stdout.write(out);
       process.stderr.write(err);
-      if (!pred(!guard)) failures.push('refs/menuref.mjs, refs/font.mjs or refs/settings.mjs imported while lab sessions run');
+      if (!eq(!guard, true)) failures.push('refs/menuref.mjs, refs/font.mjs or refs/settings.mjs imported while lab sessions run');
       if (name === 'g2_session') {
         if (status === 'ok') g2.push(value); else crashed.push(`G2 ${args[0]}: ${cut(value, 400)}`);
       } else if (status === 'ok') { results.push(value); sessionLine(args[0][0], value); }
@@ -543,7 +543,7 @@ export async function check(mode = 'default', write_notes = false) {
     }
   }
   for (const spec of JOBS <= 1 ? specs : []) {
-    if (!pred(!REFS_LOADED)) failures.push('refs/menuref.mjs, refs/font.mjs or refs/settings.mjs imported while lab sessions run');
+    if (!eq(REFS_LOADED, false)) failures.push('refs/menuref.mjs, refs/font.mjs or refs/settings.mjs imported while lab sessions run');
     try {
       results.push(run_lab(spec, mutant));
       sessionLine(spec[0], results.at(-1));
@@ -571,7 +571,7 @@ export async function check(mode = 'default', write_notes = false) {
     for (const r of [...results].sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0))) doc[r.label] = r.words.length ? wordsSha(r.words) : null;
     fs.writeFileSync(process.env.OM_COMPOSITES, JSON.stringify(doc, null, 1));
   }
-  if (!pred(!REFS_LOADED)) failures.push('reference imported before the sessions ended');
+  if (!eq(REFS_LOADED, false)) failures.push('reference imported before the sessions ended');
   const refs = await Refs.load();
   const FT = await import('../refs/font.mjs');
   p0.push(...alignment_vectors(FT), ...cursor_range(refs), ...lut_rule(refs));
@@ -583,39 +583,39 @@ export async function check(mode = 'default', write_notes = false) {
   // ---- 1. bring-up and G2
   const p1 = [];
   for (const r of results) {
-    if (!pred(r.lab_task === 160)) p1.push(`${r.label}: lab task ${r.lab_task}`);
+    if (!eq(r.lab_task, 160)) p1.push(`${r.label}: lab task ${r.lab_task}`);
     // with the native store, PER_SCPU too, started at the store init over the sub-CPU link (src/lab/scpulink.mjs),
     // whose start prints the firmware's "SCPU RST!" and leaves the task waiting
     const link = r.link_prints !== null;
-    if (!pred(setEq(r.started, link ? new Set([...STARTED, PER_SCPU_TASK]) : STARTED))) p1.push(`${r.label}: tasks started ${show(hex_sorted(r.started))}`);
-    if (link && !pred(deepEqual(r.link_prints, ['SCPU RST!']))) p1.push(`${r.label}: PER_SCPU's start printed ${show(r.link_prints)}`);
+    if (!eq(setEq(r.started, link ? new Set([...STARTED, PER_SCPU_TASK]) : STARTED), true)) p1.push(`${r.label}: tasks started ${show(hex_sorted(r.started))}`);
+    if (link && !eq(r.link_prints, ['SCPU RST!'])) p1.push(`${r.label}: PER_SCPU's start printed ${show(r.link_prints)}`);
     const live = [...r.tasks].filter(([, [, st]]) => st !== 'DMT').map(([, [, st]]) => st);
-    if (!pred(deepEqual(sortStr(live), ['RUN', 'WAI', 'WAI', 'WAI', 'WAI', ...(link ? ['WAI'] : [])]) && !r.timed.length)) p1.push(`${r.label}: task states ${show(r.tasks)} timed ${show(r.timed)}`);
-    if (!pred(!r.prints.length)) p1.push(`${r.label}: kernel prints ${show(r.prints.slice(0, 3))}`);
-    if (!pred(!r.ctors.length && r.n_ctors === 112)) p1.push(`${r.label}: CTORS ${r.n_ctors} run, failed ${show(r.ctors.slice(0, 2))}`);
+    if (!eq(!!(deepEqual(sortStr(live), ['RUN', 'WAI', 'WAI', 'WAI', 'WAI', ...(link ? ['WAI'] : [])]) && !r.timed.length), true)) p1.push(`${r.label}: task states ${show(r.tasks)} timed ${show(r.timed)}`);
+    if (!eq(r.prints.length, 0)) p1.push(`${r.label}: kernel prints ${show(r.prints.slice(0, 3))}`);
+    if (!eq(!!(!r.ctors.length && r.n_ctors === 112), true)) p1.push(`${r.label}: CTORS ${r.n_ctors} run, failed ${show(r.ctors.slice(0, 2))}`);
     const extraStub = [...r.rtos_stub.keys()].filter((k) => !['OlyTaSS', 'iOlyEvSt', 'OlyEvCl', 'OlyEvWt'].includes(k));
-    if (!pred(!extraStub.length)) p1.push(`${r.label}: RTOS wrapper stand-ins outside the vsync flags / display clock: ${showCounts(r.rtos_stub)}`);
-    if (!pred(!r.chgwait.length)) p1.push(`${r.label}: S-CHGWAIT used on K-native ${show(r.chgwait)}`);
-    if (!pred(deepEqual(r.dropped, DROPPED))) p1.push(`${r.label}: S-SEND drops ${show(r.dropped)}, expected ${show(DROPPED)}`);
+    if (!eq(extraStub.length, 0)) p1.push(`${r.label}: RTOS wrapper stand-ins outside the vsync flags / display clock: ${showCounts(r.rtos_stub)}`);
+    if (!eq(r.chgwait.length, 0)) p1.push(`${r.label}: S-CHGWAIT used on K-native ${show(r.chgwait)}`);
+    if (!eq(r.dropped, DROPPED)) p1.push(`${r.label}: S-SEND drops ${show(r.dropped)}, expected ${show(DROPPED)}`);
     const props = [...r.gui_props.keys()];
     const propOk = props.some((k) => k[0] === r.prop_device && k[1] === '0x503eff61') && props.every((k) => k[0] === r.prop_device && PROP_SITES.has(k[1]));
-    if (!pred(propOk)) p1.push(`${r.label}: S-PROP reads ${show(r.gui_props)}`);
-    if (STORE === 'native' && !pred(deepEqual(r.store_prints, MM.REGISTRY_PRINTS) && !r.store_phases.some(([, ok, err]) => !ok || err.length))) {
+    if (!eq(!!propOk, true)) p1.push(`${r.label}: S-PROP reads ${show(r.gui_props)}`);
+    if (STORE === 'native' && !eq(!!(deepEqual(r.store_prints, MM.REGISTRY_PRINTS) && !r.store_phases.some(([, ok, err]) => !ok || err.length)), true)) {
       p1.push(`${r.label}: store init prints ${show(r.store_prints)}, phases ${show(r.store_phases)}`);
     }
-    if (!pred(!r.unvalued.length)) p1.push(`${r.label}: native settings reads without a recorded value ${show(r.unvalued.slice(0, 3))}`);
+    if (!eq(r.unvalued.length, 0)) p1.push(`${r.label}: native settings reads without a recorded value ${show(r.unvalued.slice(0, 3))}`);
     const extra = [...r.gui_hooks.keys()].filter((n) => !GUI_PATH_HOOKS.has(n) && !n.endsWith('(native)') && !n.endsWith('(scoped)'));
-    if (!pred(!extra.length)) p1.push(`${r.label}: hooks on the GUI path not listed as stand-ins: ${show(sortStr(extra))}`);
+    if (!eq(extra.length, 0)) p1.push(`${r.label}: hooks on the GUI path not listed as stand-ins: ${show(sortStr(extra))}`);
     notes_out.push(`PROP4513 ${r.label} ` + [...r.gui_props].sort((a, b) => cmpItems(a[0][1], b[0][1])).map(([[, site], n]) => `${site}:${n}`).join(' '));
   }
   const langs = new Map(R.languages(img.d, loadBlock()).map((e) => [e.lang, e]));
   const want_loaded = [[langs.get(first.lang).font_record, 0], [langs.get(first.lang).strings_record, 2], [0, 1]];
-  if (!pred(deepEqual(first.init_loaded, want_loaded))) p1.push(`S-RES calls ${show(first.init_loaded)}, expected ${show(want_loaded)}`);
+  if (!eq(first.init_loaded, want_loaded)) p1.push(`S-RES calls ${show(first.init_loaded)}, expected ${show(want_loaded)}`);
   for (const g of g2) {
-    if (!pred(!(g.ref.startsWith('MISMATCH') || g.comp.status !== 'NONE' || g.comp.error_total))) p1.push(`G2 ${g.device}: composite ${g.comp.status} ${g.comp.error_total} errors; ${cut(g.ref, 300)}`);
-    if (!pred(deepEqual(g.errlog, CD.ERRLOG[g.device]))) p1.push(`G2 ${g.device}: error log ${show(g.errlog)} != check_display ${show(CD.ERRLOG[g.device])}`);
-    if (!pred(!g.chgwait.length)) p1.push(`G2 ${g.device}: S-CHGWAIT used`);
-    if (!pred(setEq(g.started, new Set([MM.CHANGE_TASK, MM.EMPTY_TASK])))) p1.push(`G2 ${g.device}: tasks started ${show(hex_sorted(g.started))}`);
+    if (!eq(!(g.ref.startsWith('MISMATCH') || g.comp.status !== 'NONE' || g.comp.error_total), true)) p1.push(`G2 ${g.device}: composite ${g.comp.status} ${g.comp.error_total} errors; ${cut(g.ref, 300)}`);
+    if (!eq(g.errlog, CD.ERRLOG[g.device])) p1.push(`G2 ${g.device}: error log ${show(g.errlog)} != check_display ${show(CD.ERRLOG[g.device])}`);
+    if (!eq(g.chgwait.length, 0)) p1.push(`G2 ${g.device}: S-CHGWAIT used`);
+    if (!eq(setEq(g.started, new Set([MM.CHANGE_TASK, MM.EMPTY_TASK])), true)) p1.push(`G2 ${g.device}: tasks started ${show(hex_sorted(g.started))}`);
     p1.push(...g.s_send.map((x) => `G2 ${g.device}: S-SEND rule: ${x}`));
   }
   group('1 bring-up on K-native: lab task 160, only allowed tasks started (CHANGE, empty display task 70, GUI_TASK, Genifa timer, HLS_EYEFI; with the native store PER_SCPU, whose start prints SCPU RST!) and all waiting forever, no kernel print, 112 constructors, src/lab/text.mjs\'s post-init '
@@ -631,11 +631,11 @@ export async function check(mode = 'default', write_notes = false) {
     const [probs, n] = compare_calls(r, ref, model);
     p2.push(...probs);
     skipped.set(r.label, n);
-    if (!pred(r.state === MM.STATE_MENU)) p2.push(`${r.label}: GUI state 0x${r.state.toString(16).padStart(4, '0')}`);
+    if (!eq(r.state, MM.STATE_MENU)) p2.push(`${r.label}: GUI state 0x${r.state.toString(16).padStart(4, '0')}`);
     const pal = new Map(r.palettes.map(([layer, ids]) => [layer, ids]));
     const want_pal = [[0, 86], [1, 87], [2, 85]];
-    if (!pred(!(want_pal.some(([k, v]) => !(pal.get(k) ?? []).includes(v)) || !r.palette_kinds.includes(PALETTE_KIND)))) p2.push(`${r.label}: palettes ${show(r.palettes)} kinds ${show(r.palette_kinds)}`);
-    if (!pred(deepEqual(sortStr(new Set(r.rpc.map(([, o]) => o))), ['background-jpeg', 'finder-style']))) p2.push(`${r.label}: RPC origins ${show(r.rpc)}`);
+    if (!eq(!(want_pal.some(([k, v]) => !(pal.get(k) ?? []).includes(v)) || !r.palette_kinds.includes(PALETTE_KIND)), true)) p2.push(`${r.label}: palettes ${show(r.palettes)} kinds ${show(r.palette_kinds)}`);
+    if (!eq(sortStr(new Set(r.rpc.map(([, o]) => o))), ['background-jpeg', 'finder-style'])) p2.push(`${r.label}: RPC origins ${show(r.rpc)}`);
   }
   group(`2 calls of the first paint pass == reference: DrawText (text, colour, +4/+8, align, margins, edge, box, origin, gc), image draws (layer, data, screen x/y, LUT bytes, no scaling), FILLs; palettes 86/87/85 by kind 8; `
     + `RPC from the two expected call sites; state 0x0b02 (${[...skipped.values()].reduce((a, b) => a + b, 0)} calls in unverified cells not compared)`, p2);
@@ -669,10 +669,10 @@ export async function check(mode = 'default', write_notes = false) {
     for (const x of r.refused) if (x[1] !== 'kind3' && !masked([x[2], x[3], x[2], x[3]], model)) got.set(JSON.stringify(x), x);      // not a predicate: the lab's unmasked refusals, compared whole with the prediction below
     const got_k3 = r.refused.filter((x) => x[1] === 'kind3');
     const got_masked = r.refused.length - got.size - got_k3.length;
-    if (!pred(got.size === want.size && [...got.keys()].every((k) => want.has(k)))) {
+    if (!eq(new Set(got.keys()), new Set(want.keys()))) {
       p4.push(`${r.label}: refused direct BITMAPs: ${got.size} vs ${want.size} predicted; lab only ${show(sortedItems([...got].filter(([k]) => !want.has(k)).map(([, v]) => v)).slice(0, 3))}, reference only ${show(sortedItems([...want].filter(([k]) => !got.has(k)).map(([, v]) => v)).slice(0, 3))}`);
     }
-    if (!pred(![...r.engine_errors.keys()].some((k) => k !== 'BMP_TRANSPARENCY'))) p4.push(`${r.label}: engine errors ${showCounts(r.engine_errors)}`);
+    if (!eq(![...r.engine_errors.keys()].some((k) => k !== 'BMP_TRANSPARENCY'), true)) p4.push(`${r.label}: engine errors ${showCounts(r.engine_errors)}`);
     notes_out.push(`REFUSE ${r.label} first pass: direct ${got.size} as predicted, ${got_masked} in unverified cells, ${got_k3.length} on the kind-3 path (not predicted)`);
   }
   group('4 default U1 model (refuse): refused BITMAPs drawn directly into a layer == reference prediction; no other engine error (kind-3 path refusals counted, not predicted)', p4, results.some((r) => r.u1 === 'refuse'));
@@ -680,16 +680,16 @@ export async function check(mode = 'default', write_notes = false) {
   // ---- 5. composites and U1 report
   const p5 = [];
   for (const r of results) {
-    if (!pred(!r.vsc_ref.startsWith('MISMATCH'))) p5.push(`${r.label}: ${cut(r.vsc_ref, 300)}`);
+    if (!eq(!r.vsc_ref.startsWith('MISMATCH'), true)) p5.push(`${r.label}: ${cut(r.vsc_ref, 300)}`);
     const names = r.vsc_errors.map((e) => e.name);
-    if (!pred(!(r.comp_status !== 'NONE' || !deepEqual(names, ['PAL_UNWRITTEN']) || !deepEqual(r.vsc_errors[0].args.slice(0, 2), [4, 255])))) {
+    if (!eq(!(r.comp_status !== 'NONE' || !deepEqual(names, ['PAL_UNWRITTEN']) || !deepEqual(r.vsc_errors[0].args.slice(0, 2), [4, 255])), true)) {
       p5.push(`${r.label}: composite ${r.comp_status}, VSC errors ${show(r.vsc_errors.map(D.format_vsc_error))}`);
     }
     const raster = rasters.get(r.label);
     const [, model] = models.get(r.label);
     if (raster && !model.unverified.length && r.device === 'tft' && r.vsc_errors.length) {
       const want = predicted_unwritten(raster);
-      if (!pred(r.vsc_errors[0].value === want)) p5.push(`${r.label}: PAL_UNWRITTEN count ${r.vsc_errors[0].value}, predicted ${want}`);
+      if (!eq(r.vsc_errors[0].value, want)) p5.push(`${r.label}: PAL_UNWRITTEN count ${r.vsc_errors[0].value}, predicted ${want}`);
     }
   }
   for (const r of results) {
@@ -710,7 +710,7 @@ export async function check(mode = 'default', write_notes = false) {
       const tk = r.takeover || {};
       const conn = tk.connect || {};
       const tft = by.get(r.label.replace('-evflayout', ''));
-      if (!pred(!(r.layout_byte !== 0 || !deepEqual(conn.after ?? null, EVF_CONNECT_AFTER[STORE]) || (conn.rpc ?? []).length || !(r.assumed & 1)))) {
+      if (!eq(!(r.layout_byte !== 0 || !deepEqual(conn.after ?? null, EVF_CONNECT_AFTER[STORE]) || (conn.rpc ?? []).length || !(r.assumed & 1)), true)) {
         p6.push(`${r.label}: mode byte ${r.layout_byte}, H-CONNECT ${show(conn.after ?? null)} rpc ${show(conn.rpc ?? null)}, composite assumed ${r.assumed}`);
       }
       const sameAsTft = tft !== undefined && range(0, 3).every((k) => {
@@ -718,13 +718,13 @@ export async function check(mode = 'default', write_notes = false) {
         for (let y = 0; y < 600; y++) crop.set(w.subarray(y * 900, y * 900 + 800), y * 800);
         return bytesEq(r.windows.get(k), crop);
       });
-      if (!pred(!(tft === undefined || sameAsTft))) p6.push(`${r.label}: the layout-0 buffers equal the layout-1 buffers (or no TFT session)`);
+      if (!eq(!(tft === undefined || sameAsTft), true)) p6.push(`${r.label}: the layout-0 buffers equal the layout-1 buffers (or no TFT session)`);
       notes_out.push(`EVFLAYOUT ${r.label} mode byte ${r.layout_byte} after H-CONNECT ${show(conn.after ?? null)} composite sha256 ${wordsSha(r.words)}`);
       continue;
     }
     const tft = by.get(r.label.replace('-evf', ''));
-    if (!pred(tft !== undefined)) { p6.push(`${r.label}: no TFT session to compare`); continue; }
-    for (let layer = 0; layer < 3; layer++) if (!pred(bytesEq(r.windows.get(layer), tft.windows.get(layer)))) p6.push(`${r.label}: GUI layer ${layer} buffer differs from the TFT session's`);
+    if (!eq(tft !== undefined, true)) { p6.push(`${r.label}: no TFT session to compare`); continue; }
+    for (let layer = 0; layer < 3; layer++) if (!eq(bytesEq(r.windows.get(layer), tft.windows.get(layer)), true)) p6.push(`${r.label}: GUI layer ${layer} buffer differs from the TFT session's`);
   }
   group('6 EVF: without the B2 inputs the TFT layout (same GUI buffers as the TFT session, composite == reference); with S-TAKEOVER and H-CONNECT (p1-en-evflayout-A) mode byte 0 at the menu, the 800-wide layout-0 buffers == '
     + 'refs/menuref.mjs (layout 0) (groups 2/3), composite == reference under A15 (group 5)', p6, results.some((r) => r.device === 'evf'));
@@ -736,16 +736,16 @@ export async function check(mode = 'default', write_notes = false) {
     if (STORE === 'native') {
       const persisted = new Map(r.persist.filter((x) => x.why === 'seed').map((x) => [x.id, x.after]));
       const reads = new Map(r.settings.filter(([s, , k]) => k === 'native' && r.seed.has(s)).map(([s, v]) => [s, v]));
-      if (!pred(deepEqual(persisted, r.seed) && deepEqual(reads, r.seed))) p7.push(`${r.label}: S-PERSIST seed ${show(persisted)}, native reads ${show(reads)}, seed ${show(r.seed)}`);
+      if (!eq([persisted, reads], [r.seed, r.seed])) p7.push(`${r.label}: S-PERSIST seed ${show(persisted)}, native reads ${show(reads)}, seed ${show(r.seed)}`);
     } else {
       const reads = new Map(r.settings.filter(([, , k]) => k === 'seed').map(([s, v]) => [s, v]));
-      if (!pred(setEq(new Set(reads.keys()), new Set(r.seed.keys())))) p7.push(`${r.label}: seed reads ${show(reads)}`);
+      if (!eq(setEq(new Set(reads.keys()), new Set(r.seed.keys())), true)) p7.push(`${r.label}: seed reads ${show(reads)}`);
     }
     const [, model] = models.get(r.label);
     const texts = model.elements.filter((e) => e.kind === 'text').map((e) => e.data.text);
     const images = model.elements.filter((e) => e.kind === 'image').map((e) => e.data.image);
-    for (const want of ['Body Battery', 'Hold', '1min', '4h']) if (!pred(texts.includes(want))) p7.push(`${r.label}: reference has no ${show(want)}`);
-    if (!pred(images.includes(6440))) p7.push(`${r.label}: reference has no image 6440`);
+    for (const want of ['Body Battery', 'Hold', '1min', '4h']) if (!eq(texts.includes(want), true)) p7.push(`${r.label}: reference has no ${show(want)}`);
+    if (!eq(images.includes(6440), true)) p7.push(`${r.label}: reference has no image 6440`);
   }
   group(`7 seeded store ${show(SEED)} on page 5: calls and buffers as predicted (groups 2/3); "Body Battery", image 6440, "Hold", "1min", "4h"`, p7, results.some((r) => r.seed && r.seed.size));
 
@@ -762,7 +762,7 @@ export async function check(mode = 'default', write_notes = false) {
     if (STORE === 'native') {
       for (const row of refs.MR.ROW_STATE_DEFAULTS.get(r.page) ?? []) if (row === r.cursor - 1) for (const c of [41 + row, 48 + row, 55 + row, 62 + row]) allowed.add(c);      // not a predicate: the allowed row backgrounds (reference data)
     }
-    if (!pred(diff.size && [...diff].every((c) => allowed.has(c)))) p8.push(`${r.label}: reference elements changed outside the row backgrounds: ${show(sortedItems(diff))}`);
+    if (!eq(!!(diff.size && [...diff].every((c) => allowed.has(c))), true)) p8.push(`${r.label}: reference elements changed outside the row backgrounds: ${show(sortedItems(diff))}`);
   }
   group('8 cursor rows 3 (page 1) and 7 (page 5): only the row backgrounds change (state and LUT), and on a row with s != 0 its label and value style (7 -> 8); calls and buffers as predicted (groups 2/3)', p8, results.some((r) => r.cursor !== 1));
 
@@ -807,7 +807,7 @@ export async function check(mode = 'default', write_notes = false) {
   group('10 unverified cells, U1 differences, refusals, error-log and S-PROP counts == check_menu_notes.txt', p10, mode === 'default' && STORE === 'native',
     'the notes pin the default matrix with the native store and are compared only there');
 
-  const passed = pred(!failures.length);
+  const passed = eq(failures.length, 0);
   console.log(`${passed ? 'all groups passed' : 'FAILED'} (${failures.length} problem(s), ${results.length} sessions${g2.length ? ' + G2' : ''}, ${Math.round((performance.now() - t0) / 1000)} s)`);
   return passed ? 0 : 1;
 }
@@ -841,13 +841,13 @@ function alignment_vectors(FT) {
   const tup = (v) => (Array.isArray(v) ? [...v] : v);
   for (const [text, box, align, want] of cases) {
     const got = FT.align_box(font, null, text, box, align, 62, 0);
-    if (!pred(deepEqual(got[0], want[0]) && deepEqual(got[1], want[1]))) problems.push(`align ${show(text)} ${show(tup(box))} ${show(tup(align))}: ${show([got[0], got[1]])} != ${show([want[0], want[1]])}`);
+    if (!eq([got[0], got[1]], [want[0], want[1]])) problems.push(`align ${show(text)} ${show(tup(box))} ${show(tup(align))}: ${show([got[0], got[1]])} != ${show([want[0], want[1]])}`);
   }
   try {
     FT.align_box(font, null, 'A', [0, 0, 99, 99], [0, 1], 0, 0);
-    if (!pred(false)) problems.push('align_box predicts a line height of 0');
+    if (!eq(false, true)) problems.push('align_box predicts a line height of 0');
   } catch (e) { if (!isValueError(e)) throw e; }
-  if (!pred(FT.div0(-7, 2) === -3 && FT.div0(7, -2) === -3)) problems.push('div0 does not truncate toward zero');
+  if (!eq([FT.div0(-7, 2), FT.div0(7, -2)], [-3, -3])) problems.push('div0 does not truncate toward zero');
   return problems;
 }
 
@@ -860,15 +860,15 @@ function lut_rule(refs) {
     const n = ref.img.u32(a), ptr = ref.img.u32(a + 8);
     if (ptr && !(ptr >= 0x61000000 && ptr < 0x62000000)) break;
     if (ptr) {
-      if (!pred(n === 256)) problems.push(`LUT ${lut}: n = ${n}, not 256`);
+      if (!eq(n, 256)) problems.push(`LUT ${lut}: n = ${n}, not 256`);
       else if (ref.img.u8(ptr)) nonzero.push([lut, ref.img.u8(ptr)]);      // not a predicate: the maps with map[0] != 0 (image data), counted below
     }
   }
-  if (!pred(nonzero.length === 12)) problems.push(`${nonzero.length} maps with map[0] != 0, expected 12: ${show(nonzero.map((x) => [...x]))}`);
+  if (!eq(nonzero.length, 12)) problems.push(`${nonzero.length} maps with map[0] != 0, expected 12: ${show(nonzero.map((x) => [...x]))}`);
   for (const [lut, m0] of nonzero) {
     for (const [word, want] of [[0, m0], [m0, 0]]) {
       const got = ref.lut_bytes(lut, 0, { kind: 14, word20: word })[0];
-      if (!pred(got === want)) problems.push(`LUT ${lut} word ${word}: table[0] = ${got}, want ${want}`);
+      if (!eq(got, want)) problems.push(`LUT ${lut} word ${word}: table[0] = ${got}, want ${want}`);
     }
   }
   const [lut] = nonzero.length ? nonzero[0] : [27, 0];
@@ -880,9 +880,9 @@ function lut_rule(refs) {
       const table = ref.lut_bytes(lut, 0, { kind: 14, word20: word });
       const want = Uint8Array.from([...mp.map((v) => (v === word ? 0 : v)), ...range(16, 256)]);
       if ((word & 0xFF) >= 16) want[word & 0xFF] = 0;
-      if (!pred(bytesEq(table, want))) problems.push(`LUT ${lut} cut to 16, word 0x${word.toString(16)}: table differs at ${show(range(0, 256).filter((i) => table[i] !== want[i]).slice(0, 4))}`);
+      if (!eq(bytesEq(table, want), true)) problems.push(`LUT ${lut} cut to 16, word 0x${word.toString(16)}: table differs at ${show(range(0, 256).filter((i) => table[i] !== want[i]).slice(0, 4))}`);
       const untyped = ref.lut_bytes(lut, 0, { kind: 12, word20: word });
-      if (!pred(bytesEq(untyped, Uint8Array.from([...mp, ...range(16, 256)])))) problems.push(`LUT ${lut} cut to 16, untyped record: a word rule applied`);
+      if (!eq(bytesEq(untyped, Uint8Array.from([...mp, ...range(16, 256)])), true)) problems.push(`LUT ${lut} cut to 16, untyped record: a word rule applied`);
     }
   } finally { ref.img.u32 = realU32; }
   return problems;
@@ -893,14 +893,14 @@ function lut_rule(refs) {
 function cursor_range(refs) {
   const ref = refs.get('en'), problems = [];
   for (const [page, cursor] of [[2, 0], [2, 4], [2, 5], [1, 7], [1, -1]]) {
-    try { ref.page(page, cursor); if (!pred(false)) problems.push(`reference predicts page ${page} cursor ${cursor}`); } catch (e) { if (!isValueError(e)) throw e; }
+    try { ref.page(page, cursor); if (!eq(false, true)) problems.push(`reference predicts page ${page} cursor ${cursor}`); } catch (e) { if (!isValueError(e)) throw e; }
   }
-  try { ref.page(1, 3, null, 5); if (!pred(false)) problems.push('reference predicts tab 5 page 1 cursor 3 (the lab draws its labels in styles 7/8)'); } catch (e) { if (!isValueError(e)) throw e; }
-  try { ref.record_widgets(new Map(), 0, 1, { type: 4, id: 0, literal: null, style: 1 }, 8); if (!pred(false)) problems.push('reference predicts a type-4 record with string id 0'); } catch (e) { if (!isValueError(e)) throw e; }
+  try { ref.page(1, 3, null, 5); if (!eq(false, true)) problems.push('reference predicts tab 5 page 1 cursor 3 (the lab draws its labels in styles 7/8)'); } catch (e) { if (!isValueError(e)) throw e; }
+  try { ref.record_widgets(new Map(), 0, 1, { type: 4, id: 0, literal: null, style: 1 }, 8); if (!eq(false, true)) problems.push('reference predicts a type-4 record with string id 0'); } catch (e) { if (!isValueError(e)) throw e; }
   for (const [page, cursor] of [[2, 3], [1, 6], [5, 7]]) {
     try { ref.page(page, cursor); } catch (e) {
       if (!isValueError(e)) throw e;
-      if (!pred(false)) problems.push(`reference refuses page ${page} cursor ${cursor}: ${e.message}`);
+      if (!eq(false, true)) problems.push(`reference refuses page ${page} cursor ${cursor}: ${e.message}`);
     }
   }
   return problems;
@@ -916,7 +916,7 @@ function negative_controls(refs, by, models, rasters) {
   const detected = (elements, label, buffers = true) => {
     const [probs] = compare_calls(s, ref, model, elements);
     if (buffers) probs.push(...compare_buffers(s, new MR.Raster(ref, 'skip').run(elements), model));      // not a predicate: a mode switch: compare_buffers' own predicates decide
-    if (!pred(probs.length)) problems.push(`negative control "${label}" was not detected`);
+    if (!eq(!!probs.length, true)) problems.push(`negative control "${label}" was not detected`);
   };
   const clone = (e, kw = {}) => new MR.Element(e.layer, e.kind, e.child, { ...e.data, ...kw });
   const els = model.elements;
@@ -942,7 +942,7 @@ function negative_controls(refs, by, models, rasters) {
   const b = by.get('p1-ja-B');
   if (b !== undefined) {
     const [ref_ja, model_ja] = models.get('p1-ja-B');
-    if (!pred(compare_buffers(b, new MR.Raster(ref_ja, 'skip').run(model_ja.elements), model_ja).length)) problems.push('negative control "ja page 1: A reference against the B lab" was not detected');
+    if (!eq(compare_buffers(b, new MR.Raster(ref_ja, 'skip').run(model_ja.elements), model_ja).length > 0, true)) problems.push('negative control "ja page 1: A reference against the B lab" was not detected');
   }
   return problems;
 }
@@ -1005,34 +1005,34 @@ export async function timeout_cleanup(timeout = 8) {
   for (const group_kill of [true, false]) {
     const code = (fault('menu-cleanup-survivor') ? SURVIVOR : '') + ENDLESS_CHILD;
     const [rc, out, tmp] = await run_child((dir) => [process.execPath, '--input-type=module', '-e', code, '--', dir], process.env, timeout, group_kill);
-    if (!pred(rc === null)) problems.push(`group_kill=${group_kill}: the endless child finished (exit ${rc}): ${out.trim().slice(-300)}`);
-    else if (!pred(out.includes('RUNNING'))) problems.push(`group_kill=${group_kill}: the child did not reach the guest run within ${timeout} s`);
+    if (!eq(rc, null)) problems.push(`group_kill=${group_kill}: the endless child finished (exit ${rc}): ${out.trim().slice(-300)}`);
+    else if (!eq(out.includes('RUNNING'), true)) problems.push(`group_kill=${group_kill}: the child did not reach the guest run within ${timeout} s`);
     const left = await leftover(tmp);
-    if (!pred(!left.length)) problems.push(`group_kill=${group_kill}: processes left ${show(left)}`);
+    if (!eq(left.length, 0)) problems.push(`group_kill=${group_kill}: processes left ${show(left)}`);
     for (const pid of left) try { process.kill(pid, 'SIGKILL'); } catch { /* gone */ }
-    if (!pred(!fs.existsSync(tmp))) problems.push(`group_kill=${group_kill}: ${tmp} left`);
+    if (!eq(!fs.existsSync(tmp), true)) problems.push(`group_kill=${group_kill}: ${tmp} left`);
   }
   return problems;
 }
 async function run_mutants() {
   let bad = 0;
   const problems = await timeout_cleanup();
-  const clean = pred(!problems.length);
+  const clean = eq(problems.length, 0);
   bad += clean ? 0 : 1;
   console.log(`[${clean ? 'ok' : 'FAIL'}] a child spinning the guest on bra . killed on timeout leaves no child and no temporary directory (process-group kill, and child-only kill with the parent-death signal)`);
   for (const p of problems) console.log('      ' + p);
   for (const [name, what] of MUTANTS) {
     const envv = { ...process.env, OM_MENU_MUTANT: name };
-    delete envv.OM_RNG_TAPE;
+    delete envv.OM_RNG_TAPE; delete envv.OM_CHECK_RESULTS;
     const [rc, text] = await run_child([process.execPath, new URL(import.meta.url).pathname, '--quick'], envv, 900);
     const out = splitlines(text.trim());
     const fails = out.filter((line) => line.startsWith('[FAIL]'));
-    const ok = pred(rc === 1 && !hasStack(out) && out.length && out.at(-1).startsWith('FAILED') && fails.length);
+    const ok = eq(!!(rc === 1 && !hasStack(out) && out.length && out.at(-1).startsWith('FAILED') && fails.length), true);
     bad += ok ? 0 : 1;
     console.log(`[${ok ? 'ok' : 'FAIL'}] mutant ${name} (${what}): exit ${rc}, ${fails.length} [FAIL] group(s); last line ${show(out.length ? cut(out.at(-1), 140) : null)}`);
     if (!ok) console.log(out.slice(-15).map((line) => '      ' + line).join('\n'));
   }
-  const allOk = pred(!bad);
+  const allOk = eq(bad, 0);
   console.log(`${allOk ? 'all mutants reported' : 'FAILED'} (${bad} problem(s))`);
   return allOk ? 0 : 1;
 }

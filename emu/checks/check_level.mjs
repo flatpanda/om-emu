@@ -33,7 +33,7 @@
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
 import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
-import { pred } from './lib/pred.mjs';
+import { eq } from './lib/eq.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PLAYER_PARSER } from '../scenarios/session_replay.mjs';
 import { MODEL, MODEL_INFO, A } from '../src/fw/model.mjs';
@@ -66,8 +66,8 @@ const EXIF_INDEX = { 1: 1, 6: 2, 3: 3, 8: 4 };     // the getter's table {11, 1,
 
 class Group {
   constructor(name) { this.name = name; this.problems = []; this.cases = 0; }
-  eq(label, got, want) { this.cases += 1; if (!pred(deepEqual(got, want), 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`); }
-  true(label, ok, detail = '') { this.cases += 1; if (!pred(ok, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`); }
+  eq(label, got, want) { this.cases += 1; if (!eq(got, want, 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`); }
+  true(label, ok, detail = '') { this.cases += 1; if (!eq(!!ok, true, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`); }
 }
 const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
 function withPlayer(mutant, fn, extra = {}) {

@@ -3,7 +3,7 @@
 // (src/lab/nav.mjs). The lab sessions run first; the references (refs/menuref.mjs with its Nav rules, refs/settings.mjs,
 // refs/font.mjs) are imported with import() only after they ended (asserted with a check-side flag). They
 // read firmware data only (src/lab/menudata.mjs and src/lab/resources.mjs injected). Groups 0..10 and N3T with their
-// report lines; every pass/fail predicate (the exit code and the --mutants verdicts included) goes through checks/lib/pred.mjs. Class patching (native_init,
+// report lines; every pass/fail comparison (the exit code and the --mutants verdicts included) goes through checks/lib/eq.mjs. Class patching (native_init,
 // store_init, dial_init, resend_palettes, MenuLab._follow_language, NavLab.skip_defer) is prototype patching,
 // restored in finally; the module globals NAV_PRI and WAIT_SLICE_MS are set through nav.mjs's setters. --jobs N runs the
 // sessions in N worker_threads; --mutants runs this file again under each mutant in a node child. Group 1's bare
@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto';
 import { REPO, FIXTURES, labEnv, loadImage, loadBlock, runMain, SystemExit, resultHook } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { flushCoverage } from './lib/coverage.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { isValueError, hasStack, regValue } from './lib/errors.mjs';
 import { encode, decode } from './lib/wire.mjs';
 import { write_outputs } from './lib/png.mjs';
@@ -246,7 +246,7 @@ export function run_script(name, mutant = null) {
         } catch (e) {
           if (!(e instanceof FirmwareError || isValueError(e))) throw e;
           out.steps.push({ token, error: cut(e.message, 1500), awaited: lab.sim.u32(AWAITED), flags });
-          if (!pred(flags.startsWith('error'))) out.problems.push(`${name} ${token}: ${cut(e.message, 500)}`);
+          if (!eq(flags.startsWith('error'), true)) out.problems.push(`${name} ${token}: ${cut(e.message, 500)}`);
           break;
         }
         rec.flags = flags;
@@ -260,7 +260,7 @@ export function run_script(name, mutant = null) {
         if (flags.includes('cap')) rec.capture = capture(nav, B2_SCRIPTS.includes(name) || SWITCH_SCRIPTS.includes(name));
         if (B2_SCRIPTS.includes(name)) rec.layout = lab.b2_snapshot();
         out.steps.push(rec);
-        if (!pred(!flags.startsWith('error'))) out.problems.push(`${name} ${token}: expected a stop (${flags}), the step completed`);
+        if (!eq(flags.startsWith('error'), false)) out.problems.push(`${name} ${token}: expected a stop (${flags}), the step completed`);
       }
       if (B2_SCRIPTS.includes(name)) { out.b2.trace = [...(lab.b2_trace ?? [])]; out.b2.module9_reads = [...(lab.module9_reads ?? [])]; }
       out.observed = observed;
@@ -342,11 +342,11 @@ const windowsText = (win) => new TextEncoder().encode(show(win));
 function language_group(run, control) {
   const problems = [...run.problems, ...control.problems];
   if (problems.length) return problems;
-  if (!pred(deepEqual(run.changes, [['en', 'zh-CN', 19, 0]]) && run.lang === 'zh-CN')) problems.push(`S-RES followed ${show(run.changes)}, session language ${run.lang}`);
-  if (!pred(deepEqual(run.loaded.slice(-2), [[19, 0], [1, 2]]))) problems.push(`records loaded by the change ${show(run.loaded.slice(-2))}, expected zh-CN's font 19 and strings 1`);
-  if (!pred(run.lang_reads.includes(5))) problems.push(`native reads of 3009 ${show(run.lang_reads)}: the store never said zh-CN (5)`);
-  if (!pred(run.steps.at(-1)[1] === 329 && run.steps.at(-2)[1] === 439)) problems.push(`panels ${show(run.steps.slice(-2))}: the OK in panel 439 did not return to the page`);
-  if (!pred(run.windows === control.windows)) problems.push('displayed windows after the change != the zh-CN control session at (7, 6, 3)');
+  if (!eq(!!(deepEqual(run.changes, [['en', 'zh-CN', 19, 0]]) && run.lang === 'zh-CN'), true)) problems.push(`S-RES followed ${show(run.changes)}, session language ${run.lang}`);
+  if (!eq(run.loaded.slice(-2), [[19, 0], [1, 2]])) problems.push(`records loaded by the change ${show(run.loaded.slice(-2))}, expected zh-CN's font 19 and strings 1`);
+  if (!eq(run.lang_reads.includes(5), true)) problems.push(`native reads of 3009 ${show(run.lang_reads)}: the store never said zh-CN (5)`);
+  if (!eq(!!(run.steps.at(-1)[1] === 329 && run.steps.at(-2)[1] === 439), true)) problems.push(`panels ${show(run.steps.slice(-2))}: the OK in panel 439 did not return to the page`);
+  if (!eq(run.windows, control.windows)) problems.push('displayed windows after the change != the zh-CN control session at (7, 6, 3)');
   return problems;
 }
 
@@ -355,7 +355,7 @@ function long_wait_group(run, notes, one = null) {
   for (const bad of [-5.0, 0.0, 1e-7, Infinity, NaN]) {
     try {
       N.NavSession.prototype.wait.call(null, bad);
-      if (!pred(false)) problems.push(`WAIT:${bad} accepted`);
+      if (!eq(false, true)) problems.push(`WAIT:${bad} accepted`);
     } catch (e) { if (!isValueError(e)) throw e; }
   }
   problems.push(...run.problems);
@@ -364,9 +364,9 @@ function long_wait_group(run, notes, one = null) {
   if (!(w && down)) return [...problems, `long WAIT: steps ${show(run.steps.map((s) => s.token))}`];
   const wait = w.wait;
   const budget = N.STORM + Math.ceil(10500 * N.WAIT_STORM_PER_MS);
-  if (!pred(wait.slices === 2 && wait.end === wait.target && wait.target - wait.start === 10500000000)) problems.push(`long WAIT: ${show(wait)}, expected 2 slices ending at start + 10.5 s`);
-  if (!pred(N.STORM < w.gesetevent && w.gesetevent <= budget)) problems.push(`long WAIT: ${w.gesetevent} GESetEvent calls, expected above STORM ${N.STORM} (the fixed step budget this test guards against) and at most ${budget}`);
-  if (!pred(down.row === 1)) problems.push(`long WAIT: DOWN after the wait left row ${down.row}, expected 1`);
+  if (!eq(!!(wait.slices === 2 && wait.end === wait.target && wait.target - wait.start === 10500000000), true)) problems.push(`long WAIT: ${show(wait)}, expected 2 slices ending at start + 10.5 s`);
+  if (!eq(!!(N.STORM < w.gesetevent && w.gesetevent <= budget), true)) problems.push(`long WAIT: ${w.gesetevent} GESetEvent calls, expected above STORM ${N.STORM} (the fixed step budget this test guards against) and at most ${budget}`);
+  if (!eq(down.row, 1)) problems.push(`long WAIT: DOWN after the wait left row ${down.row}, expected 1`);
   problems.push(...long_wait_control(w, down, one));
   notes.push(`LONG-WAIT WAIT:10500 slices ${wait.slices} GESetEvent ${w.gesetevent} hook stops ${w.hook_stops} idle log ${show(sortedItems(Object.entries(wait.log)))}; DOWN row ${down.row}`);
   return problems;
@@ -378,9 +378,9 @@ function long_wait_control(w, down, one) {
   const w1 = steps.get('WAIT:10500'), down1 = steps.get('DOWN');
   if (!(w1 && down1)) return [`long WAIT one-slice: steps ${show(one.steps.map((s) => s.token))}`];
   const problems = [];
-  if (!pred(w1.wait.slices === 1 && w1.wait.end === w1.wait.target)) problems.push(`long WAIT one-slice: ${show(w1.wait)}, expected 1 slice ending at its target`);
+  if (!eq(!!(w1.wait.slices === 1 && w1.wait.end === w1.wait.target), true)) problems.push(`long WAIT one-slice: ${show(w1.wait)}, expected 1 slice ending at its target`);
   const a = [w.gesetevent, w.wait.log.irq ?? null, down.row], b = [w1.gesetevent, w1.wait.log.irq ?? null, down1.row];
-  if (!pred(deepEqual(a, b))) problems.push(`long WAIT: (GESetEvent, acceptances, DOWN row) ${show(a)} with 2 slices, ${show(b)} with 1`);
+  if (!eq(a, b)) problems.push(`long WAIT: (GESetEvent, acceptances, DOWN row) ${show(a)} with 2 slices, ${show(b)} with 1`);
   return problems;
 }
 
@@ -390,16 +390,16 @@ function b7_group(run, notes) {
   const b7s = run.steps.filter((s) => s.token === 'B7' && 'b7' in s);
   if (!b7s.length) return [...problems, `N3T: no B7 bracket (${show(run.steps.map((s) => s.token ?? null))})`];
   const b7 = b7s[0].b7, before = b7.before, at = b7.at;
-  if (!pred(before.awaited === EV_10MS_WIZARD_MENU && before.clock - b7.g0 === B7_MS - GENIFA_STEP)) {
+  if (!eq(!!(before.awaited === EV_10MS_WIZARD_MENU && before.clock - b7.g0 === B7_MS - GENIFA_STEP), true)) {
     problems.push(`N3T B7: at T_pred - 1 = ${b7.t_pred - 1} the GUI awaits 0x${before.awaited.toString(16)} with the Genifa clock at start + ${before.clock - b7.g0}, expected 0x9ac6 and + ${B7_MS - GENIFA_STEP}`);
   }
-  if (!pred(at.awaited === 0 && at.clock - b7.g0 === B7_MS)) {
+  if (!eq(!!(at.awaited === 0 && at.clock - b7.g0 === B7_MS), true)) {
     problems.push(`N3T B7: at T_pred = ${b7.t_pred} the GUI awaits 0x${at.awaited.toString(16)} with the Genifa clock at start + ${at.clock - b7.g0}, expected the event taken (0) and + ${B7_MS}`);
   }
   notes.push(`B7 N3T slot count ${b7.count} period ${b7.slot_period}, Genifa clock ${b7.g0} at timer 522's start (${b7.genifa_ticks_done} ticks before the bracket), channel 21 next ${b7.t1} period ${b7.P} ns: `
     + `T_pred ${b7.t_pred} ns; before ${hx(before.awaited)}/${before.clock}, at ${hx(at.awaited)}/${at.clock}, lab time after ${at.t}`);
   const menu = run.steps.filter((s) => s.token === 'MENU' && 'state' in s);
-  if (!pred(menu.length && menu.at(-1).state.screen === 'closed')) problems.push(`N3T: MENU after B7 did not close the menu: ${menu.length ? menu.at(-1).state.screen : '[]'}`);
+  if (!eq(!!(menu.length && menu.at(-1).state.screen === 'closed'), true)) problems.push(`N3T: MENU after B7 did not close the menu: ${menu.length ? menu.at(-1).state.screen : '[]'}`);
   return problems;
 }
 function soft_slots(sim) {
@@ -453,22 +453,22 @@ function stand_in_rules(lab) {
     ['S-FLASHSAVE unlisted caller', (h, r) => lab._s_flash_save(h, r), { d0: 0, mdr: runtime(0x503C5534) }, MM.MenuError]]) {
     try {
       fn(new Finish(), regs);
-      if (!pred(false)) problems.push(`${label} accepted`);
+      if (!eq(false, true)) problems.push(`${label} accepted`);
     } catch (e) { if (!(e instanceof error)) throw e; }
   }
   try {
     lab.persist(1914, 2, 'input');
-    if (!pred(false)) problems.push('S-PERSIST accepted after GUI creation');
+    if (!eq(false, true)) problems.push('S-PERSIST accepted after GUI creation');
   } catch (e) { if (!(e instanceof MM.MenuError)) throw e; }
   try {
     const k = lab.scalar_keys(2, 'SET');
-    if (!pred(false)) problems.push(`SET/S-PERSIST validation accepts key-selected id 2: ${show(k)}`);
+    if (!eq(false, true)) problems.push(`SET/S-PERSIST validation accepts key-selected id 2: ${show(k)}`);
   } catch (e) {
     if (!(e instanceof MM.MenuError)) throw e;
-    if (!pred(e.message.includes('key selector 0x503c589b'))) problems.push(`id 2 refused for another reason: ${e.message}`);
+    if (!eq(e.message.includes('key selector 0x503c589b'), true)) problems.push(`id 2 refused for another reason: ${e.message}`);
   }
   const k32 = lab.scalar_keys(32, 'SET');
-  if (!pred(deepEqual(k32, [0, 60, 180, 300]))) problems.push(`SET 32 allowed list ${show(k32)}`);
+  if (!eq(k32, [0, 60, 180, 300])) problems.push(`SET 32 allowed list ${show(k32)}`);
   return problems;
 }
 
@@ -488,7 +488,7 @@ function device_group() {
       const v = (0x5A000000 | off << 8 | 0xA5) >>> 0;
       const w = access(new Uint8Array([0x60]), MM.SCPU + off, v);
       const r = access(new Uint8Array([0x70]), MM.SCPU + off);
-      if (!pred(!(w.fault || r.fault || r.d0 !== v))) problems.push(`0x${off.toString(16).padStart(2, '0')}: store fault ${w.fault}, load fault ${r.fault} d0 0x${r.d0.toString(16)}`);
+      if (!eq(!(w.fault || r.fault || r.d0 !== v), true)) problems.push(`0x${off.toString(16).padStart(2, '0')}: store fault ${w.fault}, load fault ${r.fault} d0 0x${r.d0.toString(16)}`);
     }
     // the clock ticks with the lab clock: 2.5 s on, 0xe8 has counted two seconds and 0xec holds the half second in bits
     // 14..5; a store of 0 to 0xec restarts the phase at the second, a store of another value is a bus error
@@ -500,25 +500,25 @@ function device_group() {
     clock.advance(clock.t + 0.25e9);
     const restarted = [load(0xE8), load(0xEC)];
     const odd = access(new Uint8Array([0x60]), MM.SCPU + 0xEC, 1);
-    if (!pred(deepEqual([ticked, zero.fault, restarted, odd.fault], [[e8 + 2, 512 << 5], 0, [e8 + 2, 256 << 5], 2]))) {
+    if (!eq([ticked, zero.fault, restarted, odd.fault], [[e8 + 2, 512 << 5], 0, [e8 + 2, 256 << 5], 2])) {
       problems.push(`clock: 2.5 s on ${show(ticked.map((v) => hx(v)))}, store 0 to 0xec fault ${zero.fault}, 0.25 s on ${show(restarted.map((v) => hx(v)))}, store 1 to 0xec fault ${odd.fault}`);
     }
     const w = access(new Uint8Array([0x60]), MM.SCPU + 0xF4, 0x20041001);
-    // JS-only fault point (checks/lib/pred.mjs): a second command store, so om1.scpu prints two command lines; only the stderr
+    // JS-only fault point (checks/lib/eq.mjs): a second command store, so om1.scpu prints two command lines; only the stderr
     // predicate counts them (the stored command reads back the same)
     if (fault('nav-scpu-command')) access(new Uint8Array([0x60]), MM.SCPU + 0xF4, 0x20041001);
     const r = access(new Uint8Array([0x70]), MM.SCPU + 0xF4);
-    if (!pred(!(w.fault || r.fault || r.d0 !== 0 || sim.u32(MM.SCPU + 0xF4) !== 0x20041001))) {
+    if (!eq(!(w.fault || r.fault || r.d0 !== 0 || sim.u32(MM.SCPU + 0xF4) !== 0x20041001), true)) {
       problems.push(`0xf4: write fault ${w.fault}, read ${hx(r.d0)} fault ${r.fault}, stored 0x${sim.u32(MM.SCPU + 0xF4).toString(16).padStart(8, '0')}`);
     }
     for (const [label, code, off] of [['byte load 0x00', [0xF0, 0x40], 0x00], ['byte store 0x00', [0xF0, 0x50], 0x00], ['load 0x04', [0x70], 0x04],
       ['store 0xf0', [0x60], 0xF0], ['load 0xf8', [0x70], 0xF8], ['load 0x80', [0x70], 0x80]]) {
       const rr = access(new Uint8Array(code), MM.SCPU + off);
-      if (!pred(rr.fault === 2)) problems.push(`${label}: fault ${rr.fault}, expected a bus error (2)`);
+      if (!eq(rr.fault, 2)) problems.push(`${label}: fault ${rr.fault}, expected a bus error (2)`);
     }
     const err = sim.stderrLines().join('\n') + '\n';
     const count = (s, sub) => s.split(sub).length - 1;
-    if (!pred(count(err, 'scpu UNKNOWN') === 7 && count(err, 'om-emu: scpu command 0x20041001') === 1 && err.includes('#1 '))) problems.push(`stderr: ${err.slice(-600)}`);
+    if (!eq([count(err, 'scpu UNKNOWN'), count(err, 'om-emu: scpu command 0x20041001'), err.includes('#1 ')], [7, 1, true])) problems.push(`stderr: ${err.slice(-600)}`);
   } finally { sim.close(); }
   return problems;
 }
@@ -544,7 +544,7 @@ export function compare_capture(run, rec, refs, store, problems, notes) {
   const cap = rec.capture;
   if (!cap) return;
   const st = rec.state, m = st.menu ?? {};
-  if (!pred(!(cap.comp !== 'NONE' || cap.vsc.some((v) => v !== 'PAL_UNWRITTEN')))) problems.push(`${run.name} ${rec.token}: composite ${cap.comp} ${show(cap.vsc)}`);
+  if (!eq(!(cap.comp !== 'NONE' || cap.vsc.some((v) => v !== 'PAL_UNWRITTEN')), true)) problems.push(`${run.name} ${rec.token}: composite ${cap.comp} ${show(cap.vsc)}`);
   if (st.screen !== 'page' || (m.tab_id ?? null) !== MM.SETUP_TAB) {
     notes.push(`CAPTURE ${run.name} ${pad2(rec.n)}-${rec.token} not compared (${st.screen}, tab ${show(m.tab_id ?? null)}): pixels pinned by the composite only`);
     return;
@@ -614,18 +614,18 @@ function compare_run(run, refs, mutant, problems, notes) {
     const tag = 'n' in rec ? `${name} ${pad2(rec.n)}-${tok}` : `${name} ${tok}`;
     if ('error' in rec) {
       notes.push(`STOP ${tag}: ${cut(splitlines(rec.error)[0], 160)}; awaited 0x${rec.awaited.toString(16).padStart(4, '0')}`);
-      if (flags.startsWith('error:') && !pred(rec.error.includes(flags.slice(6)))) problems.push(`${tag}: stopped with ${cut(rec.error, 200)}, expected ${show(flags.slice(6))}`);
+      if (flags.startsWith('error:') && !eq(rec.error.includes(flags.slice(6)), true)) problems.push(`${tag}: stopped with ${cut(rec.error, 200)}, expected ${show(flags.slice(6))}`);
       continue;
     }
     const st = rec.state, m = st.menu ?? {};
     const writes = sortedItems(rec.writes.map((w) => [w.id, w.a1]));
     const bad_w = rec.writes.filter((w) => w.d1 !== 0 || w.ret !== 0);
-    if (!pred(!bad_w.length)) problems.push(`${tag}: vt+4 writes with d1/return != 0: ${show(bad_w)}`);
+    if (!eq(bad_w.length, 0)) problems.push(`${tag}: vt+4 writes with d1/return != 0: ${show(bad_w)}`);
     const apply_writes = () => {
       for (const w of rec.writes) store.over.set(w.id, w.a1);
       if (tok.startsWith('SET:')) { const [sid, v] = tok.slice(4).split('=').map((x) => Number.parseInt(x, 10)); store.over.set(sid, v); }
     };
-    if (!pred(!(rec.errlog && Object.keys(rec.errlog).length))) problems.push(`${tag}: firmware error log ${show(rec.errlog)}`);
+    if (!eq(!(rec.errlog && Object.keys(rec.errlog).length), true)) problems.push(`${tag}: firmware error log ${show(rec.errlog)}`);
     notes.push(`STEP ${tag} ${st.screen} panel ${st.panel} hooks ${rec.hook_stops} sets ${rec.gesetevent} engine ${rec.engine_commands}`);
     if (flags.includes('free')) {
       apply_writes();
@@ -641,7 +641,7 @@ function compare_run(run, refs, mutant, problems, notes) {
     }
     apply_writes();
     if (p.screen === 'ok') {
-      if (!pred(st.screen === 'sub' || st.screen === 'popup')) problems.push(`${tag}: OK gave screen ${st.screen}, expected a sub-screen or popup`);
+      if (!eq(!!(st.screen === 'sub' || st.screen === 'popup'), true)) problems.push(`${tag}: OK gave screen ${st.screen}, expected a sub-screen or popup`);
       notes.push(`SUBSCREEN ${name} page ${show(m.page ?? null)} row ${show(m.cursor_row ?? null)}: ${st.screen} panel ${st.panel}`);
       nav.screen = st.screen;
       p.screen = st.screen;
@@ -650,11 +650,11 @@ function compare_run(run, refs, mutant, problems, notes) {
     const got = { screen: st.screen, tab_id: closed ? null : m.tab_id ?? null, page: closed ? null : m.page ?? null, row: closed ? null : m.cursor_row ?? null };
     const want = { screen: p.screen, tab_id: p.tab_id, page: p.page, row: p.row };
     const pw = sortedItems(p.writes);
-    if (!pred(deepEqual(got, want) && deepEqual(writes, pw))) problems.push(`${tag}: lab ${show(got)} writes ${show(writes)}; reference ${show(want)} writes ${show(pw)}`);
+    if (!eq([got, writes], [want, pw])) problems.push(`${tag}: lab ${show(got)} writes ${show(writes)}; reference ${show(want)} writes ${show(pw)}`);
     if (st.screen !== 'closed' && (m.tab_id ?? null) !== null) {
       const mem = st.store;
       const g = mem.has(1881) ? mem.get(1881) : null;
-      if (!pred(deepEqual(g, store.get(1881)))) problems.push(`${tag}: getter 1881 ${show(mem)} vs store ${store.get(1881)}`);
+      if (!eq(g, store.get(1881))) problems.push(`${tag}: getter 1881 ${show(mem)} vs store ${store.get(1881)}`);
     }
     compare_capture(run, rec, refs, store, problems, notes);
   }
@@ -680,7 +680,7 @@ function check_defaults_rows(runs, refs, problems, notes) {
         const g = { type: got.type, literal: got.literal, id: [3, 12, 7, 8].includes(got.type) ? got.image : got.type ? got.string : 0 };
         const w = { type: want.type, literal: [1, 2, 5, 6, 7, 8, 9, 10, 11].includes(want.type) ? want.literal : null, id: want.id };
         if ([3, 12, 4].includes(got.type)) { g.literal = null; w.literal = null; }
-        if (!pred(deepEqual(g, w))) problems.push(`page ${m.page} row ${r} mode ${row.mode}: variable 226 value ${show(g)}, reference (${row.source}) ${show(w)}`);
+        if (!eq(g, w)) problems.push(`page ${m.page} row ${r} mode ${row.mode}: variable 226 value ${show(g)}, reference (${row.source}) ${show(w)}`);
       });
     }
   }
@@ -700,13 +700,13 @@ function offline_group(refs) {
       const allowed = refs.settings.allowed(mode);
       if (allowed === null) {      // not a predicate: the modes without a descriptor list (data)
         nodesc.push(mode);
-        if (mode === 3009 && !pred(deepEqual(sortNum(info.keys), langs))) problems.push(`3009: value-list keys ${show(sortNum(info.keys))} != language settings ${show(langs)}`);
+        if (mode === 3009 && !eq(sortNum(info.keys), langs)) problems.push(`3009: value-list keys ${show(sortNum(info.keys))} != language settings ${show(langs)}`);
         continue;
       }
-      if (!pred(deepEqual(allowed, info.keys))) problems.push(`store id ${mode} (page 0x${p.toString(16)} row ${info.row}): descriptor list ${show(allowed)} != value-list keys ${show(info.keys)}`);
+      if (!eq(allowed, info.keys)) problems.push(`store id ${mode} (page 0x${p.toString(16)} row ${info.row}): descriptor list ${show(allowed)} != value-list keys ${show(info.keys)}`);
     }
   }
-  if (!pred(deepEqual(nodesc, [1072, 3009]))) problems.push(`ids without a descriptor ${show(nodesc)}, expected [1072, 3009]`);
+  if (!eq(nodesc, [1072, 3009])) problems.push(`ids without a descriptor ${show(nodesc)}, expected [1072, 3009]`);
   const d = img.d, offs = new Map();
   for (let i = indexOf3(d, 0); i >= 0; i = indexOf3(d, i + 1)) inc(offs, d[i - 1]);
   const modelled = sortNum([...offs.keys()].filter((o) => SCPU_OFFSETS.has(o)));
@@ -718,23 +718,23 @@ function offline_group(refs) {
   for (const [tok, want] of [['OPEN', [6, 1, 0]], ['UP', [6, 1, 5]], ['DOWN', [6, 1, 0]], ['LEFT', [5, 5, 0]], ['RIGHT', [6, 1, 0]],
     ['SUB-1', [7, 1, null]], ['RIGHT', [0, 1, 0]], ['MAIN-1', [7, 1, null]], ['SUB+1', [6, 1, 0]]]) {
     const p = nav.predict(tok);
-    if (!pred(deepEqual(pt(p), want))) problems.push(`Nav ${tok}: ${show(p)} != ${show(want)}`);
+    if (!eq(pt(p), want)) problems.push(`Nav ${tok}: ${show(p)} != ${show(want)}`);
   }
   for (const tok of ['UP:long', 'OPEN']) {
-    try { nav.predict(tok); if (!pred(false)) problems.push(`Nav predicts ${tok} (not observed)`); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
+    try { nav.predict(tok); if (!eq(false, true)) problems.push(`Nav predicts ${tok} (not observed)`); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
   }
   nav.predict('INFO');
-  try { nav.predict('LEFT'); if (!pred(false)) problems.push('Nav predicts LEFT with the help shown (not observed)'); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
+  try { nav.predict('LEFT'); if (!eq(false, true)) problems.push('Nav predicts LEFT with the help shown (not observed)'); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
   nav.predict('INFO');
   nav.predict('DOWN');
   nav.predict('DOWN');
-  try { nav.predict('OK'); if (!pred(false)) problems.push('Nav predicts OK on an unselectable row'); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
+  try { nav.predict('OK'); if (!eq(false, true)) problems.push('Nav predicts OK on an unselectable row'); } catch (e) { if (!(e instanceof MR.NavRefusal)) throw e; }
   const seqCheck = (label, store, seq) => {
     const nv = new MR.Nav(store, { image: loadImage(), M });
     for (const [tok, want, writes] of seq) {
       const p = nv.predict(tok);
       const gotWrites = tok === 'OPEN' ? p.writes.length : p.writes;
-      if (!pred(deepEqual(pt(p), want) && deepEqual(gotWrites, writes))) problems.push(`Nav ${label}${tok}: ${show(p)} != ${show(want)} writes ${show(writes)}`);
+      if (!eq([pt(p), gotWrites], [want, writes])) problems.push(`Nav ${label}${tok}: ${show(p)} != ${show(want)} writes ${show(writes)}`);
     }
   };
   seqCheck('(1914 = 6) ', mk(new Map([[1881, 7], [1882, 1], [1914, 6]])), [['OPEN', [6, 1, 5], 4], ['RIGHT', [6, 2, 0], []], ['LEFT', [6, 1, 0], []], ['SUB-1', [7, 1, null], []],
@@ -745,10 +745,10 @@ function offline_group(refs) {
     const nv = new MR.Nav(mk(values), { image: loadImage(), M });
     try {
       for (const tok of tokens) nv.predict(tok);
-      if (!pred(false)) problems.push(`Nav predicts ${label} (not observed)`);
+      if (!eq(false, true)) problems.push(`Nav predicts ${label} (not observed)`);
     } catch (e) {
       if (e instanceof MR.NavRefusal) return;
-      if (!pred(false)) problems.push(`Nav ${label}: ${e?.name}: ${e?.message}`);
+      if (!eq(false, true)) problems.push(`Nav ${label}: ${e?.name}: ${e?.message}`);
     }
   };
   refused('OPEN on My Menu with 1882 = 3', new Map([[1881, 8], [1882, 3]]), ['OPEN']);
@@ -758,7 +758,7 @@ function offline_group(refs) {
   refused('OK on My Menu (no rows)', new Map([[1881, 8], [1882, 1]]), ['OPEN', 'OK']);
   const persist = MM.persist_ids(img);
   const missing = sortNum(new Set(M.tabs(img).flatMap((tt) => tt.aux).filter((sid) => !persist.has(sid))));
-  if (!pred(!missing.length)) problems.push(`S-PERSIST does not list the cursor memories ${show(missing)}`);
+  if (!eq(missing.length, 0)) problems.push(`S-PERSIST does not list the cursor memories ${show(missing)}`);
   return [problems, rows, modelled, unknown, offs];
 }
 // d.find(b'\x00\xe0\x98', from)
@@ -779,43 +779,43 @@ function b2_group(n7, n7c, notes) {
   const want = [['ConnectChangePlay', 7, null], ['vt+56', 0x50AFCF14, null], ['vt+56 ret', 1, null], ['0x510c91eb ret', 0, null], ['vt+20', 16, null], ['vt+20 ret', 0, null],
     ['SetConnectState', 5, 0x510C6C76], ['SetLayoutMode', 2, null]];
   const got = tr.slice(0, want.length).map(([n, d0, ra], i) => [n, d0, want[i][2] ? ra : null]);
-  if (!pred(!(!tk.takeover || !deepEqual(got, want) || tr.length !== want.length || (conn.rpc ?? []).length || !deepEqual(conn.after ?? null, { layout: 2, connect: 5 })))) {
+  if (!eq(!(!tk.takeover || !deepEqual(got, want) || tr.length !== want.length || (conn.rpc ?? []).length || !deepEqual(conn.after ?? null, { layout: 2, connect: 5 })), true)) {
     problems.push(`N7 H-CONNECT: trace ${show(tr.map(([n, d0, ra]) => [n, hx(d0), ra && hx(ra)]))}, rpc ${show(conn.rpc ?? null)}, after ${show(conn.after ?? null)}, takeover ${show(tk.takeover ?? null)}`);
   }
   const q = trace.find((x) => x[1] === 'vt+56 ret') ?? null;
   const gateE = trace.find((x) => x[1] === '0x510c91eb ret');
   const gate = gateE ? gateE[3] : null;
-  if (!pred(gate === 0)) problems.push(`N7 H-CONNECT: gate word 0x60375a9c at 0x510c4235 = ${show(gate)}, not 0`);
+  if (!eq(gate, 0)) problems.push(`N7 H-CONNECT: gate word 0x60375a9c at 0x510c4235 = ${show(gate)}, not 0`);
   notes.push(`B2 N7 ConnectChangePlay: vt+56 0x50afcf14 (query 65803) -> ${show(q && q[2])}, 0x510c91eb locals (settings 304/1265/288, id 44) ${show(q && q[3])}, gate word 0x60375a9c ${show(gate)}`);
   const pads = n7.observed?.get('edge_pad') ?? [];
   const padKeys = sortedItems(pads.map(([t, p, , w, h]) => [p, t, w, h]));
   const wantPads = [0, 0, 1, 1, 2, 2].map((p) => [p, '00-OPEN', 800, 600]);
-  if (!pred(deepEqual(n7.pad_widths ?? null, [900, 900, 900]) && deepEqual(padKeys, wantPads))) problems.push(`N7 edge pad: bring-up width words ${show(n7.pad_widths ?? null)}, copies ${show(pads)}`);
+  if (!eq([n7.pad_widths ?? null, padKeys], [[900, 900, 900], wantPads])) problems.push(`N7 edge pad: bring-up width words ${show(n7.pad_widths ?? null)}, copies ${show(pads)}`);
   for (const [t, plane, buf, w, h, value] of pads) notes.push(`B2 N7 edge pad ${t} plane ${plane} buffer ${h8(buf)} width ${w} rows ${h} byte 0x${value.toString(16).padStart(2, '0')}`);
-  if (n7c && !n7c.problems.length && !pred(!(!deepEqual(n7c.pad_widths ?? null, [900, 900, 900]) || (n7c.observed?.get('edge_pad') ?? []).length))) {
+  if (n7c && !n7c.problems.length && !eq(!(!deepEqual(n7c.pad_widths ?? null, [900, 900, 900]) || (n7c.observed?.get('edge_pad') ?? []).length), true)) {
     problems.push(`N7C edge pad: bring-up width words ${show(n7c.pad_widths ?? null)}, copies ${show(n7c.observed?.get('edge_pad') ?? null)}`);
   }
   const steps = n7.steps.filter((r) => 'n' in r);
   const b2trace = b2.trace ?? [];
   const first_open = b2trace.filter((x) => x[0].startsWith('00-OPEN'));
   const cfs = first_open.filter((x) => x[1] === 'ChangeFinderStyle'), slm = first_open.filter((x) => x[1] === 'SetLayoutMode');
-  if (!pred(deepEqual(cfs.map((x) => [x[2], x[3], x[4]]), [[3, 1, 0x5120CCDF]]) && deepEqual(slm.map((x) => x[2]), [0]))) problems.push(`N7 OPEN: ChangeFinderStyle ${show(cfs)}, SetLayoutMode ${show(slm)}`);
+  if (!eq([cfs.map((x) => [x[2], x[3], x[4]]), slm.map((x) => x[2])], [[[3, 1, 0x5120CCDF]], [0]])) problems.push(`N7 OPEN: ChangeFinderStyle ${show(cfs)}, SetLayoutMode ${show(slm)}`);
   const layouts = steps.map((r) => [r.token, (r.layout ?? {}).layout ?? null]);
-  if (!pred(!layouts.some(([, v]) => v !== 0))) problems.push(`N7 mode byte per step ${show(layouts)}`);
+  if (!eq(!layouts.some(([, v]) => v !== 0), true)) problems.push(`N7 mode byte per step ${show(layouts)}`);
   const bad_reads = (b2.module9_reads ?? []).filter((x) => !MM.TAKEOVER_READERS.includes(x[1]));
-  if (!pred(!bad_reads.length)) problems.push(`N7 module-9 reads outside ChangeOutline ${show(bad_reads)}`);
+  if (!eq(bad_reads.length, 0)) problems.push(`N7 module-9 reads outside ChangeOutline ${show(bad_reads)}`);
   const caps = steps.filter((r) => 'capture' in r);
   const pages = sortNum(new Set(caps.filter((r) => r.var).map((r) => r.var.page)));
-  if (!pred(deepEqual(pages, [1, 2, 3, 4, 5, 6]))) problems.push(`N7 captured pages ${show(pages)}`);
+  if (!eq(pages, [1, 2, 3, 4, 5, 6])) problems.push(`N7 captured pages ${show(pages)}`);
   for (const r of caps) {
     const c = r.capture;
-    if (!pred(!(c.ref.startsWith('MISMATCH') || c.comp !== 'NONE' || !deepEqual(c.errors.map((e) => [e[0], e[1]]), [['PAL_UNWRITTEN', [4, 255]]]) || !(c.assumed & 1) || c.bank.get('CTRL3') !== 0x41))) {
+    if (!eq(!(c.ref.startsWith('MISMATCH') || c.comp !== 'NONE' || !deepEqual(c.errors.map((e) => [e[0], e[1]]), [['PAL_UNWRITTEN', [4, 255]]]) || !(c.assumed & 1) || c.bank.get('CTRL3') !== 0x41), true)) {
       problems.push(`N7 ${pad2(r.n)}-${r.token}: composite ${c.comp} ${show(c.errors)} assumed ${c.assumed} CTRL3 ${hx(c.bank.get('CTRL3'))}: ${cut(c.ref, 200)}`);
     }
     notes.push(`B2 N7 ${pad2(r.n)}-${r.token} page ${r.var ? r.var.page : null} composite sha256 ${c.sha}`);
   }
   const errStr = (m) => [...m].sort((a, b) => cmpItems(a[0], b[0])).map(([k, v]) => `${k}x${v}`).join(' ');
-  if (!pred(!((conn.errlog ?? []).length || (n7c && !n7c.problems.length && !deepEqual(n7.errlog_all, n7c.errlog_all))))) {
+  if (!eq(!((conn.errlog ?? []).length || (n7c && !n7c.problems.length && !deepEqual(n7.errlog_all, n7c.errlog_all))), true)) {
     problems.push(`N7 error log: H-CONNECT ${show(conn.errlog ?? null)}, session ${show(n7.errlog_all)}, N7C ${show(n7c ? n7c.errlog_all : null)}`);
   }
   notes.push(`B2 N7 error log ${errStr(n7.errlog_all)}`);
@@ -825,11 +825,11 @@ function b2_group(n7, n7c, notes) {
     for (const [k, v] of a) if (v !== b.get(k)) diff.set(k, [b.get(k) ?? null, v]);      // not a predicate: the differing registers, compared whole below
     notes.push('B2 N7 registers vs N7C (layout 1 -> layout 0): ' + sortStr(diff.keys()).map((k) => { const [v0, v1] = diff.get(k); return `${k}=${v0 === null ? null : hx(v0)}->${v1 === null ? null : hx(v1)}`; }).join(' '));
     const dk = sortStr(diff.keys());
-    if (!pred(deepEqual(dk, ['CTRL3', 'OSDDMASPOS']) && deepEqual(diff.get('CTRL3'), [1, 0x41]) && !(diff.get('OSDDMASPOS')[1] & 0xFFFFFF))) {
+    if (!eq(!!(deepEqual(dk, ['CTRL3', 'OSDDMASPOS']) && deepEqual(diff.get('CTRL3'), [1, 0x41]) && !(diff.get('OSDDMASPOS')[1] & 0xFFFFFF)), true)) {
       problems.push(`N7 registers vs N7C: ${show(new Map([...diff].map(([k, v]) => [k, [...v]])))}`);
     }
     const cc = n7c.steps.filter((r) => 'capture' in r)[0].capture;
-    if (!pred(!(cc.ref.startsWith('MISMATCH') || cc.assumed || cc.layout.layout !== 1))) problems.push(`N7C: ${cut(cc.ref, 200)} assumed ${cc.assumed} layout ${show(cc.layout)}`);
+    if (!eq(!(cc.ref.startsWith('MISMATCH') || cc.assumed || cc.layout.layout !== 1), true)) problems.push(`N7C: ${cut(cc.ref, 200)} assumed ${cc.assumed} layout ${show(cc.layout)}`);
   } else if (n7c) problems.push(...n7c.problems.map((x) => `N7C: ${x}`));
   return problems;
 }
@@ -840,10 +840,10 @@ function switch_group(n8, refs, notes) {
   const problems = [];
   const caps = n8.steps.filter((r) => 'capture' in r);
   const devs = caps.map((r) => r.capture.device);
-  if (!pred(deepEqual(devs, ['tft', 'evf', 'evf', 'tft', 'tft']))) problems.push(`N8 capture devices ${show(devs)}`);
+  if (!eq(devs, ['tft', 'evf', 'evf', 'tft', 'tft'])) problems.push(`N8 capture devices ${show(devs)}`);
   for (const r of caps) {
     const c = r.capture;
-    if (!pred(!(c.comp !== 'NONE' || !deepEqual(c.errors.map((e) => [e[0], e[1]]), [['PAL_UNWRITTEN', [4, 255]]]) || !deepEqual(c.planc, [0x100, 0x100, 0x100]) || c.ref.startsWith('MISMATCH') || !c.palette.endsWith('formula')))) {
+    if (!eq(!(c.comp !== 'NONE' || !deepEqual(c.errors.map((e) => [e[0], e[1]]), [['PAL_UNWRITTEN', [4, 255]]]) || !deepEqual(c.planc, [0x100, 0x100, 0x100]) || c.ref.startsWith('MISMATCH') || !c.palette.endsWith('formula')), true)) {
       problems.push(`N8 ${pad2(r.n)}-${r.token} (${c.device}): ${c.comp} ${show(c.errors)} PLANC ${show(c.planc)} palettes ${c.palette}: ${cut(c.ref, 200)}`);
     }
     notes.push(`SWITCH N8 ${pad2(r.n)}-${r.token} ${c.device} assumed ${c.assumed} sha256 ${c.sha}`);
@@ -856,23 +856,23 @@ function switch_group(n8, refs, notes) {
     for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) diff.push(i);      // not a predicate: the differing words, compared whole below
   }
   const pads = n8.observed?.get('edge_pad') ?? [];
-  if (!pred(deepEqual(n8.pad_widths ?? null, [800, 800, 800]))) problems.push(`N8: bring-up edge-pad width words ${show(n8.pad_widths ?? null)}, expected [800, 800, 800]`);
-  if (!pred(!(!pads.length || pads.some(([t, , , w, h]) => t !== '02-SWITCH:evf' || w !== 800 || h !== 600)))) problems.push(`N8: edge pad 0x501db6d5 calls (step, plane, buffer, width, rows, byte) ${show(pads)}`);
+  if (!eq(n8.pad_widths ?? null, [800, 800, 800])) problems.push(`N8: bring-up edge-pad width words ${show(n8.pad_widths ?? null)}, expected [800, 800, 800]`);
+  if (!eq(!(!pads.length || pads.some(([t, , , w, h]) => t !== '02-SWITCH:evf' || w !== 800 || h !== 600)), true)) problems.push(`N8: edge pad 0x501db6d5 calls (step, plane, buffer, width, rows, byte) ${show(pads)}`);
   for (const [t, plane, buf, w, h, value] of pads) notes.push(`SWITCH N8 edge pad ${t} plane ${plane} buffer ${h8(buf)} width ${w} rows ${h} byte 0x${value.toString(16).padStart(2, '0')}`);
   const assumed = caps.map((r) => r.capture.assumed);
-  if (!pred(deepEqual(assumed, [1, 0, 0, 0, 0]))) problems.push(`N8: A15 in use per capture ${show(assumed)}, expected [1, 0, 0, 0, 0]`);
-  if (!pred(!(diff === null || !diff.length || diff.some((i) => i % 900 !== 800)))) {
+  if (!eq(assumed, [1, 0, 0, 0, 0])) problems.push(`N8: A15 in use per capture ${show(assumed)}, expected [1, 0, 0, 0, 0]`);
+  if (!eq(!(diff === null || !diff.length || diff.some((i) => i % 900 !== 800)), true)) {
     problems.push(`N8: the third SHOT differs from the first outside column 800 or not at all (${(diff ?? []).length} px, columns ${show(sortNum(new Set((diff ?? []).map((i) => i % 900))).slice(0, 8))})`);
   } else notes.push(`SWITCH N8 third SHOT vs first: ${diff.length} px differ, all in column 800 (rows ${Math.floor(Math.min(...diff) / 900)}..${Math.floor(Math.max(...diff) / 900)})`);
   const obs = n8.observed ?? new Map();
-  if (!pred(!((obs.get('level_apply') ?? []).length || !deepEqual(obs.get('level_step') ?? null, [[16, 0x501C4F54]])))) problems.push(`N8: 0x501c67aa calls ${show(obs.get('level_step') ?? null)}, 0x501c69e5 calls ${show(obs.get('level_apply') ?? null)}`);
+  if (!eq(!((obs.get('level_apply') ?? []).length || !deepEqual(obs.get('level_step') ?? null, [[16, 0x501C4F54]])), true)) problems.push(`N8: 0x501c67aa calls ${show(obs.get('level_step') ?? null)}, 0x501c69e5 calls ${show(obs.get('level_apply') ?? null)}`);
   const kinds = n8.kinds ?? new Map();
   const img = new M.Image(loadImage());
   const table = new Map([...DISPLAY_KINDS.values()].map((sid) => [sid, img.u16(KIND_TABLE + 4 * sid)]));
-  if (!pred(deepEqual(table, new Map([...DISPLAY_KINDS].map(([k, sid]) => [sid, k]))))) problems.push(`N8: data-object kinds of 587/1947/449/31 in 0x${KIND_TABLE.toString(16)}: ${show(table)}`);
+  if (!eq(table, new Map([...DISPLAY_KINDS].map(([k, sid]) => [sid, k])))) problems.push(`N8: data-object kinds of 587/1947/449/31 in 0x${KIND_TABLE.toString(16)}: ${show(table)}`);
   const want = new Map([...DISPLAY_KINDS].map(([k, sid]) => [k, refs.settings.default(sid)[0]]));
-  if (!pred(deepEqual(kinds, want) && deepEqual(want, new Map([[0xE831, 1], [0x4671, 1], [0xD7F9, 0], [0x8279, 0]])))) problems.push(`N8 state kinds ${show(kinds)}, refs/settings.mjs defaults ${show(want)}`);
-  if (!pred(!n8.errlog_all.has(h8(TIMER_ERRLOG)))) problems.push(`N8 error log ${show(n8.errlog_all)}`);
+  if (!eq([kinds, want], [want, new Map([[0xE831, 1], [0x4671, 1], [0xD7F9, 0], [0x8279, 0]])])) problems.push(`N8 state kinds ${show(kinds)}, refs/settings.mjs defaults ${show(want)}`);
+  if (!eq(!n8.errlog_all.has(h8(TIMER_ERRLOG)), true)) problems.push(`N8 error log ${show(n8.errlog_all)}`);
   notes.push(`SWITCH N8 kinds ${sortNum(kinds.keys()).map((k) => `0x${k.toString(16).padStart(4, '0')}=${kinds.get(k)}`).join(' ')} error log ${[...n8.errlog_all].sort((a, b) => cmpItems(a[0], b[0])).map(([k, v]) => `${k}x${v}`).join(' ')}`);
   return problems;
 }
@@ -883,7 +883,7 @@ export function notes_problems(notes, got) {
   const out = [];
   for (const kind of sortStr(new Set([...notes.keys(), ...got.keys()]))) {
     const a = notes.get(kind) ?? new Set(), b = got.get(kind) ?? new Set();
-    if (!pred(setEq(a, b))) out.push(`${kind}: new ${show(sortStr([...b].filter((x) => !a.has(x))).slice(0, 3))} missing ${show(sortStr([...a].filter((x) => !b.has(x))).slice(0, 3))}`);
+    if (!eq(setEq(a, b), true)) out.push(`${kind}: new ${show(sortStr([...b].filter((x) => !a.has(x))).slice(0, 3))} missing ${show(sortStr([...a].filter((x) => !b.has(x))).slice(0, 3))}`);
   }
   return out;
 }
@@ -958,7 +958,7 @@ export async function check(mode = 'default', write_notes = false) {
   const failures = [], notes = [];
   const group = (name, problems, ran = true, why = null) => {
     if (!ran && !problems.length) { console.log(`[skip] ${name}: ${why}`); return; }
-    console.log(`[${pred(!problems.length) ? 'ok' : 'FAIL'}] ${name}`);
+    console.log(`[${eq(problems.length, 0) ? 'ok' : 'FAIL'}] ${name}`);
     for (const p of problems) console.log('      ' + cut(p, 700));
     failures.push(...problems);
   };
@@ -978,7 +978,7 @@ export async function check(mode = 'default', write_notes = false) {
       const [, func, args] = jobs[k++];
       process.stdout.write(out);
       process.stderr.write(err);
-      if (!pred(!guard)) failures.push('reference modules imported while lab sessions run');
+      if (!eq(!guard, true)) failures.push('reference modules imported while lab sessions run');
       if (status !== 'ok') throw new FirmwareError(run);
       if (func === 'run_language') { if (args.length) lang_control = run; else lang_run = run; continue; }
       if (func === 'run_long_wait') { if (args.length) long_one = run; else long_run = run; continue; }
@@ -987,7 +987,7 @@ export async function check(mode = 'default', write_notes = false) {
     }
   }
   for (const name of JOBS <= 1 ? names : []) {
-    if (!pred(!REFS_LOADED)) failures.push('reference modules imported while lab sessions run');
+    if (!eq(REFS_LOADED, false)) failures.push('reference modules imported while lab sessions run');
     const run = run_script(name, MUTANT);
     runs.push(run);
     sessionLine(name, run);
@@ -997,7 +997,7 @@ export async function check(mode = 'default', write_notes = false) {
   if (lang_run !== null) console.log(`  session language change: ${lang_run.seconds.toFixed(1)} s; zh-CN control ${lang_control.seconds.toFixed(1)} s`);
   if (long_run !== null) console.log(`  session long WAIT: ${long_run.steps.length} steps, ${long_run.seconds.toFixed(1)} s; one-slice control ${long_one ? long_one.seconds.toFixed(1) : null} s`);
   const p1 = mode === 'quick' && MUTANT ? [] : device_group();
-  if (!pred(!REFS_LOADED)) failures.push('reference modules imported before the sessions ended');
+  if (!eq(REFS_LOADED, false)) failures.push('reference modules imported before the sessions ended');
   const refs = await Refs.load();
   const by = new Map(runs.map((r) => [r.name, r]));
 
@@ -1012,16 +1012,16 @@ export async function check(mode = 'default', write_notes = false) {
   let p2 = [];
   for (const run of runs) {
     const s = run.store;
-    if (!pred(!!s)) { p2.push(`${run.name}: no store record`); continue; }
-    if (!pred(deepEqual(s.phases.map((x) => x[2]), [MM.REGISTRY_PRINTS, [], []]) && !s.phases.some((x) => x[3].length))) p2.push(`${run.name}: store phases ${show(s.phases)}`);
-    if (!pred(deepEqual(sortStr(s.waits.map((w) => w.flag)), ['0xf5', '0xf6', '0xf7']) && s.waits.every((w) => w.rc === 0)
-      && deepEqual(s.requests.map((q) => q.request.slice(0, 2)), ['06', '01', '86']))) p2.push(`${run.name}: S-SCPU requests ${show(s.requests)}, waits ${show(s.waits)}`);
-    if (!pred(deepEqual(s.crt, ['0x5005a6d2']) && deepEqual(s.flash, ['0x503c5537']) && deepEqual(s.cflush, new Map([[MM.K_CFLUSH_RETURN, 4]])))) p2.push(`${run.name}: K-CRT-134D ${show(s.crt)}, S-FLASHSAVE ${show(s.flash)}, K-CFLUSH ${show(s.cflush)}`);
-    if (!pred(deepEqual([s.scpu['0x00'] ?? null, s.scpu['0xe8'] ?? null, s.scpu['0xec'] ?? null], [0xA8, 0, 0]) && deepEqual(run.scpu_commands.slice(0, 1).map((c) => [c[0], c[2]]), [[0x20041001, 1]]))) {
+    if (!eq(!!s, true)) { p2.push(`${run.name}: no store record`); continue; }
+    if (!eq(!!(deepEqual(s.phases.map((x) => x[2]), [MM.REGISTRY_PRINTS, [], []]) && !s.phases.some((x) => x[3].length)), true)) p2.push(`${run.name}: store phases ${show(s.phases)}`);
+    if (!eq(!!(deepEqual(sortStr(s.waits.map((w) => w.flag)), ['0xf5', '0xf6', '0xf7']) && s.waits.every((w) => w.rc === 0)
+      && deepEqual(s.requests.map((q) => q.request.slice(0, 2)), ['06', '01', '86'])), true)) p2.push(`${run.name}: S-SCPU requests ${show(s.requests)}, waits ${show(s.waits)}`);
+    if (!eq([s.crt, s.flash, s.cflush], [['0x5005a6d2'], ['0x503c5537'], new Map([[MM.K_CFLUSH_RETURN, 4]])])) p2.push(`${run.name}: K-CRT-134D ${show(s.crt)}, S-FLASHSAVE ${show(s.flash)}, K-CFLUSH ${show(s.cflush)}`);
+    if (!eq([[s.scpu['0x00'] ?? null, s.scpu['0xe8'] ?? null, s.scpu['0xec'] ?? null], run.scpu_commands.slice(0, 1).map((c) => [c[0], c[2]])], [[0xA8, 0, 0], [[0x20041001, 1]]])) {
       p2.push(`${run.name}: SCPU after init ${show(s.scpu)}, commands ${show(run.scpu_commands)}`);
     }
-    if (!pred(!s.cover.length)) p2.push(`${run.name}: lab-stub pages over the SCPU block ${show(s.cover)}`);
-    if (!pred(deepEqual(s.dial, { board: 0, table: '0x60223dbc' }))) p2.push(`${run.name}: dial table ${show(s.dial)}`);
+    if (!eq(s.cover.length, 0)) p2.push(`${run.name}: lab-stub pages over the SCPU block ${show(s.cover)}`);
+    if (!eq(s.dial, { board: 0, table: '0x60223dbc' })) p2.push(`${run.name}: dial table ${show(s.dial)}`);
     notes.push(`STORE ${run.name} K-CFLUSH ${show(sortedItems([...s.cflush].map(([k, v]) => [h8(k), v])))} replies ${show(s.replies.map((r) => [r.reader, r.bytes]))} requests ${s.requests.length} `
       + `SCPU commands ${show(run.scpu_commands.map((c) => [hx(c[0]), hx(disasm(c[1])), c[2]]))}`);
   }
@@ -1029,7 +1029,7 @@ export async function check(mode = 'default', write_notes = false) {
     + `0xa8, e8 = ec = 0, one command 0x20041001; dial table 0x60223dbc (${names.join(', ')})`, p2);
   p2 = [];
   const blank = by.get('N2');
-  if (names.includes('N2') && !pred(!!(blank && 'reads' in blank))) p2.push('N2: the blank-camera session recorded no getter reads');
+  if (names.includes('N2') && !eq(!!(blank && 'reads' in blank), true)) p2.push('N2: the blank-camera session recorded no getter reads');
   if (blank && 'reads' in blank) {
     const bad = [];
     for (const [sid, v] of blank.reads) {
@@ -1039,20 +1039,20 @@ export async function check(mode = 'default', write_notes = false) {
         notes.push(`DEFAULT-UNPREDICTED ${sid} lab ${v}: ${e.message}`);
         continue;
       }
-      if (!pred(v === want)) bad.push([sid, v, want]);
+      if (!eq(v, want)) bad.push([sid, v, want]);
     }
-    if (!pred(!bad.length)) p2.push(`native getter != refs/settings.mjs default for (id, lab, reference) ${show(bad)}`);
+    if (!eq(bad.length, 0)) p2.push(`native getter != refs/settings.mjs default for (id, lab, reference) ${show(bad)}`);
     p2.push(...(blank.rules ?? []));
     const fw = blank.descriptors ?? new Map();
     const py = new Map();
     for (let sid = 0; sid < DESC_IDS; sid++) { const d = refs.settings.descriptor(sid); if (d) py.set(sid, d.address); }
     const ids = sortNum(new Set([...fw.keys(), ...py.keys()]));
     const diff = ids.filter((sid) => fw.get(sid) !== py.get(sid)).map((sid) => [sid, '0x' + (fw.get(sid) ?? 0).toString(16), '0x' + (py.get(sid) ?? 0).toString(16)]);
-    if (!pred(!(diff.length || fw.size < 1500))) p2.push(`descriptor lookup 0x503da999 != refs/settings.mjs descriptor for ${diff.length} of ${fw.size} ids (id, firmware, reference): ${show(diff.slice(0, 6))}`);
+    if (!eq(!(diff.length || fw.size < 1500), true)) p2.push(`descriptor lookup 0x503da999 != refs/settings.mjs descriptor for ${diff.length} of ${fw.size} ids (id, firmware, reference): ${show(diff.slice(0, 6))}`);
     const kf = blank.key_fns ?? new Map();
     const want_kf = new Map();
     for (const sid of refs.settings.custom.keys()) { if (!py.has(sid)) continue; const ks = refs.settings.key_selector(sid); if (ks) want_kf.set(sid, ks[0]); }
-    if (!pred(deepEqual(kf, want_kf) && setEq(new Set(kf.values()), new Set(MM.KEY_SELECTORS.keys())))) {
+    if (!eq(!!(deepEqual(kf, want_kf) && setEq(new Set(kf.values()), new Set(MM.KEY_SELECTORS.keys()))), true)) {
       p2.push(`key selectors (custom object +20) firmware ${show(sortNum(kf.keys()).map((k) => [k, kf.get(k)]))} != refs/settings.mjs ${show(sortNum(want_kf.keys()).map((k) => [k, want_kf.get(k)]))}`);
     }
     notes.push(`DESCRIPTORS ${fw.size} ids: firmware lookup == refs/settings.mjs (first record in table order)`);
@@ -1073,15 +1073,15 @@ export async function check(mode = 'default', write_notes = false) {
   if (n3) {
     const steps = new Map(n3.steps.filter((s) => 'n' in s).map((s) => [s.n, s]));
     const sets = [...steps.values()].filter((s) => s.token.startsWith('SET:'));
-    if (!pred(sets.length && sets[0].set.read_back === 180)) p3.push(`N3: SET:32=180 read back ${sets.length ? show(sets[0].set) : '[]'}`);
+    if (!eq(!!(sets.length && sets[0].set.read_back === 180), true)) p3.push(`N3: SET:32=180 read back ${sets.length ? show(sets[0].set) : '[]'}`);
     const cap = [...steps.values()].filter((s) => s.token === 'LEFT' && 'capture' in s);
     const has3min = cap.length && (cap[0].texts.includes('3min') || asText(cap[0].model?.var ?? null).includes('3min'));
-    if (!pred(has3min)) p3.push('N3: page 5 after the SET does not draw "3min"');
+    if (!eq(!!has3min, true)) p3.push('N3: page 5 after the SET does not draw "3min"');
     const popup = [...steps.values()].filter((s) => s.token === 'OK' && s.writes.length);
     const w = popup.flatMap((s) => s.writes);
-    if (!pred(!(w.length !== 1 || w[0].id !== 32 || ![0, 60, 180, 300].includes(w[0].a1) || w[0].a1 === 180))) p3.push(`N3: popup OK writes ${show(w)}, expected one write of 32 with a listed value != 180`);
-    else if (!pred(popup[0].reads.get(32) === w[0].a1)) p3.push(`N3: getter 32 after the popup write ${show(popup[0].reads)}`);
-    else if (!pred(popup[0].awaited === EV_10MS_WIZARD_MENU)) p3.push(`N3: after the popup OK the GUI awaits 0x${popup[0].awaited.toString(16)}, not 0x9ac6`);
+    if (!eq(!(w.length !== 1 || w[0].id !== 32 || ![0, 60, 180, 300].includes(w[0].a1) || w[0].a1 === 180), true)) p3.push(`N3: popup OK writes ${show(w)}, expected one write of 32 with a listed value != 180`);
+    else if (!eq(popup[0].reads.get(32), w[0].a1)) p3.push(`N3: getter 32 after the popup write ${show(popup[0].reads)}`);
+    else if (!eq(popup[0].awaited, EV_10MS_WIZARD_MENU)) p3.push(`N3: after the popup OK the GUI awaits 0x${popup[0].awaited.toString(16)}, not 0x9ac6`);
     else notes.push(`POPUP-WRITE N3 32 = ${w[0].a1}; GUI awaits 0x9ac6 EVT_10MS_WIZARD_MENU (Genifa timer 522)`);
   }
   const n3t = by.get('N3T');
@@ -1091,15 +1091,15 @@ export async function check(mode = 'default', write_notes = false) {
     const caps = n4.steps.filter((s) => 'capture' in s);
     const texts = caps.map((s) => s.var.clock[1]);
     const wantT = [clock_text(EPOCH1), clock_text(EPOCH2)];
-    if (!pred(caps.length === 2 && deepEqual(texts, wantT))) p3.push(`N4: clock row strings ${show(texts)}, expected ${show(wantT)}`);
-    else if (!pred(!range(0, 3).every((l) => bytesEq(caps[0].capture.windows.get(l), caps[1].capture.windows.get(l))))) p3.push('N4: the second epoch did not change the page');
+    if (!eq(!!(caps.length === 2 && deepEqual(texts, wantT)), true)) p3.push(`N4: clock row strings ${show(texts)}, expected ${show(wantT)}`);
+    else if (!eq(!range(0, 3).every((l) => bytesEq(caps[0].capture.windows.get(l), caps[1].capture.windows.get(l))), true)) p3.push('N4: the second epoch did not change the page');
     else {
       const a = caps[0].capture.windows, b = caps[1].capture.windows;
       const xs = [], ys = [];
       for (let layer = 0; layer < 3; layer++) { const A = a.get(layer), B = b.get(layer); for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) { xs.push(i % 900); ys.push(Math.floor(i / 900)); } }
       const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
       notes.push(`CLOCK-DIFF N4 second epoch changes ${xs.length} bytes in ${show(box)}`);
-      if (!pred(586 <= box[0] && box[2] <= 899 && 205 <= box[1] && box[3] <= 266)) p3.push(`N4: the second epoch changed pixels outside the clock value cell: ${show(box)}`);
+      if (!eq(!!(586 <= box[0] && box[2] <= 899 && 205 <= box[1] && box[3] <= 266), true)) p3.push(`N4: the second epoch changed pixels outside the clock value cell: ${show(box)}`);
     }
   }
   const n1 = by.get('N1');
@@ -1107,7 +1107,7 @@ export async function check(mode = 'default', write_notes = false) {
     const p6 = n1.steps.filter((s) => s.var && s.var.page === 6 && s.var.tab_id === 7);
     if (p6.length) notes.push(`CLOCK-EPOCH0 N1 row 1 strings ${show(p6[0].var.clock[1])}`);
   }
-  for (const name of ['N3', 'N4', 'N6']) if (names.includes(name) && !pred(by.has(name))) p3.push(`${name}: no run record`);
+  for (const name of ['N3', 'N4', 'N6']) if (names.includes(name) && !eq(by.has(name), true)) p3.push(`${name}: no run record`);
   group(`3 navigation ${names.join(' ')}: screen, tab, page, row and vt+4 writes == the Nav reference after every predicted step; Setup pages: displayed buffers == refs/menuref.mjs raster (U1 A, store = defaults + inputs + writes)`
     + (names.includes('N3') ? '; N3 SET 32 = 180 -> "3min", one popup write of 32 read back by the getter, then the GUI awaits 0x9ac6 and MENU is deferred into an event storm (B7)' : '')
     + (names.includes('N3T') ? '; N3T (lab time) B7: at T_pred - 1 the GUI awaits 0x9ac6 with the Genifa clock at start + 90, at T_pred it took the event (clock + 100) and closed the popup (popup_confirm), page 5 raster with the written value, '
@@ -1176,7 +1176,7 @@ export async function check(mode = 'default', write_notes = false) {
     }
   }
   group('6 notes == check_nav_notes.txt', p6n, mode === 'default' && !MUTANT, 'compared in the default run only');
-  const passed = pred(!failures.length);
+  const passed = eq(failures.length, 0);
   console.log(`${passed ? 'all groups passed' : 'FAILED'} (${failures.length} problem(s), ${runs.length} sessions, ${Math.round((performance.now() - t0) / 1000)} s)`);
   return passed ? 0 : 1;
 }
@@ -1185,21 +1185,21 @@ const setEq = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
 async function run_mutants() {
   let bad = 0;
   const problems = await CM.timeout_cleanup();
-  const clean = pred(!problems.length);
+  const clean = eq(problems.length, 0);
   bad += clean ? 0 : 1;
   console.log(`[${clean ? 'ok' : 'FAIL'}] a child spinning the guest on bra . killed on timeout leaves no child and no temporary directory`);
   for (const [name, what] of MUTANTS) {
     const envv = { ...process.env, OM_NAV_MUTANT: name };
-    delete envv.OM_RNG_TAPE;
+    delete envv.OM_RNG_TAPE; delete envv.OM_CHECK_RESULTS;
     const [rc, text] = await CM.run_child([process.execPath, new URL(import.meta.url).pathname, '--quick'], envv, 900);
     const out = splitlines(text.trim());
     const fails = out.filter((line) => line.startsWith('[FAIL]'));
-    const ok = pred(rc === 1 && !hasStack(out) && out.length && out.at(-1).startsWith('FAILED') && fails.length);
+    const ok = eq(!!(rc === 1 && !hasStack(out) && out.length && out.at(-1).startsWith('FAILED') && fails.length), true);
     bad += ok ? 0 : 1;
     console.log(`[${ok ? 'ok' : 'FAIL'}] mutant ${name} (${what}): exit ${rc}, ${fails.length} [FAIL] group(s)`);
     if (!ok) console.log(out.slice(-12).map((line) => '      ' + line).join('\n'));
   }
-  const allOk = pred(!bad);
+  const allOk = eq(bad, 0);
   console.log(`${allOk ? 'all mutants reported' : 'FAILED'} (${bad} problem(s))`);
   return allOk ? 0 : 1;
 }

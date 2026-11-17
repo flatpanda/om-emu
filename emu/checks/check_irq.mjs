@@ -16,7 +16,7 @@ import { PRINTS, ERRLOG } from '../src/lab/rtos.mjs';
 import { MenuLab } from '../src/lab/menu.mjs';
 import * as IRQ from '../src/lab/irq.mjs';
 import { AssertionError, RuntimeError } from '../src/lab/errors.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { deepEqual } from '../src/util/equal.mjs';
 import { show } from '../src/util/show.mjs';
 import { pack, unpack } from '../src/util/bytes.mjs';
@@ -44,11 +44,11 @@ class Group {
   constructor(name) { this.name = name; this.problems = []; this.cases = 0; }
   eq(label, got, want) {
     this.cases += 1;
-    if (!pred(deepEqual(got, want), 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`);
+    if (!eq(got, want, 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`);
   }
   true(label, ok, detail = '') {
     this.cases += 1;
-    if (!pred(ok, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`);
+    if (!eq(!!ok, true, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`);
   }
 }
 // the Simulator / HLE with ORIGINAL; `with` closes it. machine: the machine options of the group's labs (labEnv)
@@ -791,7 +791,7 @@ function i10(machine = {}) {
     g.eq('+0x808 ORs (0x50, then 0x10: one repeat counted), a CPU read returns the bits, debugger reads too',
       [r.fault, r.d0, sim.u32(IRQ.BANKS[1] + 0x808), intc.u32(IRQ.D_IPI_REPEATS)], [5, 0x50, 0x50, 1]);
     IRQ.cpu_store(sim, IRQ.BANKS[1] + 0x80C, 0x40);
-    // JS-only fault point (checks/lib/pred.mjs, for I10): a second store clears every pending bit of bank 1
+    // JS-only fault point (checks/lib/eq.mjs, for I10): a second store clears every pending bit of bank 1
     if (fault('ipi-80c-clear-all')) IRQ.cpu_store(sim, IRQ.BANKS[1] + 0x80C, 0xFFFFFFFF);
     g.eq('+0x80c clears the written bits', intc.ipi_pending(1), 0x10);
     const e0 = intc.errors()[0];

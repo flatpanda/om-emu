@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The display checks: the om1-vsc model, the lab stub and the display harness checked on the JS lab
 // (src/lab/display.mjs over the VSC port) against the register formulas and the independent reference compositor of
-// refs/display.mjs, group by group, each with its report lines. Every assert is a predicate of checks/lib/pred.mjs
+// refs/display.mjs, group by group, each with its report lines. Every assert is a comparison of checks/lib/eq.mjs
 // (check()); an assert that fails raises AssertionError (uncaught: its stack, exit 1). The inputs besides the
 // firmware are the fixtures under checks/fixtures/: om1-vsc-tables.c, the class tables of the C VSC model the JS device
 // mirrors (group 12a parses them; test_dev vsc-classes pins the JS device to the same parse), om1-vsc-regs.h (group 13,
@@ -16,7 +16,7 @@ import path from 'node:path';
 import { REPO, FIXTURES, labEnv, loadImage, runMain, SystemExit } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { newRandom } from './lib/rngtape.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import * as RES from './lib/resources_scan.mjs';
 import { write_outputs, read_png } from './lib/png.mjs';
 import { render as renderVscRegs } from './gen_vsc_regs.mjs';
@@ -56,9 +56,9 @@ let ENV = null;
 const env = () => (ENV ??= labEnv());
 const newLab = (opts = {}) => new DisplayLab(env(), opts);
 const withLab = (lab, fn) => { try { return fn(lab); } finally { lab.close(); } };
-// An assert through the predicate seam: AssertionError with `what` (a value or a thunk) as its text
+// An assert through the result seam: AssertionError with `what` (a value or a thunk) as its text
 function check(cond, what = null) {
-  if (!pred(!!cond, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
+  if (!eq(!!cond, true, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
 }
 const range = (a, b) => Array.from({ length: b - a }, (_, i) => a + i);
 const sortNum = (xs) => [...xs].sort((a, b) => a - b);
@@ -80,7 +80,7 @@ function class_partition(lab) {
   for (const n of names) here.set(n, REG_MODEL.has(n) ? ['MODEL', null] : REG_STORED.has(n) ? ['STORED', null] : FEATURES.has(n) ? ['FEATURES', FEATURES.get(n)] : ['UNWRITTEN', null]);
   const model = model_classes(lab.vsc.names);
   const bad = new Map();
-  for (const n of names) if (!pred(JSON.stringify(here.get(n)) === JSON.stringify(model.get(n)))) bad.set(n, [here.get(n), model.get(n)]);
+  for (const n of names) if (!eq(JSON.stringify(here.get(n)), JSON.stringify(model.get(n)))) bad.set(n, [here.get(n), model.get(n)]);
   check(!bad.size, () => `om1-vsc.c classes differ from check_display (here, model): ${show(bad)}`);
   const counts = new Map();
   for (const [c] of here.values()) counts.set(c, (counts.get(c) ?? 0) + 1);
@@ -128,7 +128,7 @@ function _compare(lab, device, comp, label, nonvacuous, assume, fetch) {
   const modelDrawn = PLANES.filter((p, i) => (hd.drawn >>> i) & 1);
   check(deepEqual(sortStr(modelDrawn), sortStr(drawn)), () => [label, modelDrawn, drawn, skipped]);
   const words = comp.words;
-  if (!pred(wordsEq(words, ref))) {
+  if (!eq(wordsEq(words, ref), true)) {
     const first = ref.findIndex((v, i) => words[i] !== v);
     throw new AssertionError(`${label}: model and reference differ at x=${first % width} y=${Math.floor(first / width)}: model 0x${(words[first] >>> 0).toString(16).padStart(6, '0')} reference 0x${ref[first].toString(16).padStart(6, '0')}`);
   }
@@ -193,7 +193,7 @@ function check_registers(lab, device, attached) {
   const sources = { OSD1: lab.surfaces[2].base, OSD2: lab.surfaces[4].base, OSD3: lab.surfaces[0].base };
   const want = REF.registers_want(device, c, sources, attached, IMG_BASE);
   const bad = new Map();
-  for (const [k, v] of want) if (!pred(w.get(k) === v)) bad.set(k, [w.get(k) === null ? null : hex(w.get(k)), v === null ? null : hex(v)]);
+  for (const [k, v] of want) if (!eq(w.get(k), v)) bad.set(k, [w.get(k) === null ? null : hex(w.get(k)), v === null ? null : hex(v)]);
   check(!bad.size, () => `${device}: register (written, expected): ${show(bad)}`);
   return want.size;
 }
@@ -345,7 +345,7 @@ function timer_negative_control() {
 function mirror_equals_written(lab, c) {
   const w = lab.vsc.bank(c), m = lab.vsc.bank(c, true);
   const diff = new Map();
-  for (const [k, v] of m) if (!pred(w.get(k) === v)) diff.set(k, [w.get(k), v]);
+  for (const [k, v] of m) if (!eq(w.get(k), v)) diff.set(k, [w.get(k), v]);
   check(!diff.size, () => `mirror differs from the written bank after the update: ${show(diff)}`);
   return m.size;
 }
@@ -394,7 +394,7 @@ function register_level(lab) {
   }
   n += 1;
   lab.install_stub();
-  if (fault('display-stub-preset')) lab.sim.write(STUB + 0x400 + 4, pack('<I', 0x16));   // JS-only fault point (pred.mjs)
+  if (fault('display-stub-preset')) lab.sim.write(STUB + 0x400 + 4, pack('<I', 0x16));   // JS-only fault point (eq.mjs)
   check(cpu(lab, LOAD, 0x9A900474).d0 === 0x15);
   cpu(lab, STORE, 0x9A900010, 0x1234);
   check(cpu(lab, LOAD, 0x9A900010).d0 === 0x1234 && cpu(lab, LOAD, 0x9A900020).d0 === 0);
@@ -1010,7 +1010,7 @@ export function check_notes(device, record) {
   const bad = new Map();
   for (const k of keys) {
     const g = got.get(k) ?? new Set(), w = want.get(k) ?? new Set();
-    if (!pred(g.size === w.size && [...g].every((x) => w.has(x)))) bad.set(k, [sortStr([...g].filter((x) => !w.has(x))), sortStr([...w].filter((x) => !g.has(x)))]);
+    if (!eq(g, w)) bad.set(k, [sortStr([...g].filter((x) => !w.has(x))), sortStr([...w].filter((x) => !g.has(x)))]);
   }
   check(!bad.size, () => `${device}: notes differ from check_display_notes.txt (new, missing): ${show(bad)}`);
 }

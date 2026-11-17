@@ -36,7 +36,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { FIXTURES, ISA_VECTORS, ORIGINAL, labEnv, envMachine, formatMachine, loadImage, loadBlock, loadNand, createHash, runMain, readBytes } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { newRandom } from './lib/rngtape.mjs';
 import * as I from './lib/isa.mjs';
 import { Simulator, Stats, REGS } from '../src/lab/sim.mjs';
@@ -122,16 +122,16 @@ function p1(machine = {}, cases = null) {
         if (brk !== null) {
           if (result.fault === 5 && result.pc === brk && result.insns === 2) result = { ...result, fault: 0 };
           else {
-            if (!pred(false)) problems.push(`#${c.id} ${c.form} code=${c.code}: stopped fault ${result.fault} pc 0x${x(result.pc)} insns ${result.insns}, want the BREAK at 0x${x(brk)} after 2`);
+            if (!eq(false, true)) problems.push(`#${c.id} ${c.form} code=${c.code}: stopped fault ${result.fault} pc 0x${x(result.pc)} insns ${result.insns}, want the BREAK at 0x${x(brk)} after 2`);
             continue;
           }
-        } else if (!pred(result.insns === 1)) {
+        } else if (!eq(result.insns, 1)) {
           problems.push(`#${c.id} ${c.form}: faulting case ran ${result.insns} instructions`);
           continue;
         }
       }
       const bad = I.compare(c, result, memory);
-      if (!pred(!bad.length)) problems.push(`#${c.id} ${c.form} code=${c.code}: ${bad.join('; ')}`);
+      if (!eq(bad.length, 0)) problems.push(`#${c.id} ${c.form} code=${c.code}: ${bad.join('; ')}`);
     }
   } finally { sim.close(); }
   return [problems, nCont];
@@ -761,8 +761,8 @@ function fixed_run(machine = {}) {
   try {
     const stats = path.join(tmp, 'stats.json'), comps = path.join(tmp, 'composites.json');
     const env = { ...process.env, OM_STATS: stats, OM_COMPOSITES: comps, TMPDIR: tmp, OM_MACHINE: formatMachine({ ...envMachine(), ...machine }) };
-    delete env.OM_RNG_TAPE;                          // the parent's tape only: children are not taped
-    delete env.OM_PRED_REC; delete env.OM_PRED_MUT;
+    delete env.OM_RNG_TAPE;                          // the parent's tape and results only: children are not taped
+    delete env.OM_CHECK_RESULTS; delete env.OM_EQ_MUT;
     const p = spawnSync(process.execPath, [CHECK_MENU, '--quick'], { env, encoding: 'utf8', timeout: 1200 * 1000, maxBuffer: 1 << 26 });
     const data = fs.existsSync(stats) ? JSON.parse(fs.readFileSync(stats, 'utf8')) : {};
     const drawn = fs.existsSync(comps) ? JSON.parse(fs.readFileSync(comps, 'utf8')) : {};
@@ -812,7 +812,7 @@ function playRun(stale = false) {
 }
 function playChild(env) {
   const childEnv = { ...process.env, ...env };
-  delete childEnv.OM_RNG_TAPE;                     // the parent's tape only: children are not taped
+  delete childEnv.OM_RNG_TAPE; delete childEnv.OM_CHECK_RESULTS;      // the parent's tape and results only
   const p = spawnSync(process.execPath, [new URL(import.meta.url).pathname, '--play-run', '--detail'], { env: childEnv, encoding: 'utf8', maxBuffer: 1 << 28 });
   const lines = (p.stdout ?? '').split('\n').filter((l) => l.startsWith('{'));
   if (p.status || !lines.length) throw new Error(`play workload child exit ${p.status}: ${(p.stderr || p.stdout || '').slice(-1500)}`);
@@ -902,13 +902,13 @@ function main(argv) {
   const t0 = performance.now();
   let bad = 0;
   const report = (ok, text, problems = []) => {
-    ok = pred(ok, 2);
+    ok = eq(!!ok, true, 2);
     if (!ok) bad += 1;
     console.log(`[${ok ? 'ok' : 'FAIL'}] ${text}`);
     for (const p of problems.slice(0, 10)) console.log('      ' + p);
   };
   const cases = p1Cases();
-  // JS-only fault point (checks/lib/pred.mjs, for P1): the default P1 run with the interpreter's inline SUB/CMP
+  // JS-only fault point (checks/lib/eq.mjs, for P1): the default P1 run with the interpreter's inline SUB/CMP
   // carry mutant (mutant 1), an ISA flag fault in the machine
   let [probs, nCont] = p1(fault('p1-isa-flags') ? { mutant: 1 } : {}, cases);
   const cmpCases = cases.filter((c) => continuePlan(c)[0] && /^(cmp|sub|asl2)/.test(c.form));

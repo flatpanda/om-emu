@@ -21,7 +21,7 @@ import { CMDBUF, DEBUG, DRV_CMDBUF, DRV_MODE, ENGINE_ISR, EXPECTED_RECORDS, GPI_
 import { DRAW_PATH_RTOS } from '../src/lab/rtos.mjs';
 import { MAX_READ, MAX_WRITE } from '../src/lab/sim.mjs';
 import { LabError, AssertionError, FirmwareError, EngineError, KeyError, ValueError, RuntimeError } from '../src/lab/errors.mjs';
-import { pred, fault } from './lib/pred.mjs';
+import { eq, fault } from './lib/eq.mjs';
 import { isValueError } from './lib/errors.mjs';
 import { deepEqual } from '../src/util/equal.mjs';
 import { show, asText } from '../src/util/show.mjs';
@@ -33,10 +33,10 @@ const BUFFERS = [0, 1, 2, 3, 4, 5];
 const RANGE6 = { range: 6 };              // rng.choice(BUFFERS): BUFFERS is range(6)
 let REC = null;                           // env.rec of the running check (osdcalls' recorder), or null
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
-// An assert through the predicate seam: AssertionError with `what` (a value, or a thunk built only on failure) as its
+// An assert through the result seam: AssertionError with `what` (a value, or a thunk built only on failure) as its
 // text.
 function check(cond, what = null) {
-  if (!pred(!!cond, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
+  if (!eq(!!cond, true, 2)) { const w = typeof what === 'function' ? what() : what; throw new AssertionError(w === null ? '' : asText(w)); }
 }
 const bytesEq = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
 const cat = (...parts) => { const o = new Uint8Array(parts.reduce((s, p) => s + p.length, 0)); let k = 0; for (const p of parts) { o.set(p, k); k += p.length; } return o; };
@@ -161,7 +161,7 @@ function native_init(s) {
   lab.sim.write(SCRATCH, hexBytes('60'));
   lab.sim.reset({ pc: SCRATCH, a0: DEBUG + 0x200, d0: 1 });
   check(lab.sim.run([], true).fault === 2);
-  // JS-only fault point (checks/lib/pred.mjs): the CPU store into the engine's debug window
+  // JS-only fault point (checks/lib/eq.mjs): the CPU store into the engine's debug window
   // once more, so the OSD engine records a second DEBUG_CPU_WRITE
   if (fault('osd-debug-write')) { lab.sim.reset({ pc: SCRATCH, a0: DEBUG + 0x200, d0: 1 }); lab.sim.run([], true); }
   check(deepEqual(lab.engine.errors().map((e) => e.name), ['DEBUG_CPU_WRITE']), () => lab.engine.errors());

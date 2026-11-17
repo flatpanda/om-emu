@@ -16,8 +16,9 @@
 //            changes another number of the 392 cmp/sub/asl2 cases than 22
 //   NOTES    (D11) check_display, check_liveview, check_text, check_menu and check_nav --write-notes with
 //            OM_NOTES_DIR: the notes files are byte-identical to the pinned emu/checks/fixtures/check_*_notes.txt
-//   FAULT    (D17) per check one JS-only fault point (OM_FAULT) that trips a predicate (exit 1), and the tautology
-//            at that site (OM_PRED_MUT) that turns it into a pass (exit 0)
+//   FAULT    (D17) per check one JS-only fault point (OM_FAULT) that trips a comparison (exit 1; the results file,
+//            OM_CHECK_RESULTS, records its failing got and want at that site), and the tautology at that site
+//            (OM_EQ_MUT) that turns it into a pass (exit 0)
 //   OSD-IN   the osd scenario's inputs generated from check_osd (checks/lib/osdcalls.mjs): consecutive actions, every
 //            call one the replay has an adapter for, its keywords bound as the replay binds them.
 // Needs emu/golden.json. Writes under emu/out/test-checks/ and removes it.
@@ -42,6 +43,12 @@ function mutant(root, name, edits) {
     fs.writeFileSync(f, t.replace(oldText, newText));
   }
   return d;
+}
+// Did the results file (checks/lib/eq.mjs OM_CHECK_RESULTS) record a failing comparison, with its got and want, at site?
+function tripped(file, site) {
+  const r = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
+  const s = r?.format === 'om1-checkresults/1' ? r.sites[site] : null;
+  return !!(s?.fail && s.first.length && s.first.every((x) => Object.hasOwn(x, 'got') && Object.hasOwn(x, 'want')));
 }
 const runner = (d, ...a) => sh('node', [path.join(d, 'emu/bin/checks.mjs'), ...a], d);
 // bin/golden.mjs check of the sessions in copy d: null when it reports each of them DIFFERENT (exit 1), else what it did
@@ -137,16 +144,17 @@ export async function checksTests() {
     'const value = f ? Math.floor((a * (4096 - f) + ycComp(b, s + 1, comp) * f + 2047) / 4096) : a;']]);
   why = goldenCatches(d, ['run/display']);
   if (why) bad.push(`NC-IMG1: ${why}`);
-  // FAULT: one fault point per check, then the tautology mutant at the predicate it trips
+  // FAULT: one fault point per check, then the tautology mutant at the comparison it trips
   for (const [c, name, text] of [['check_display', 'display-stub-preset', 'check(cpu(lab, LOAD, 0x9A900474).d0 === 0x15);'],
     ['check_liveview', 'liveview-winreg', 'check(CD.cpu(lab, LOAD, 0x98100058).d0 === 0x17161514);'],
-    ['check_text', 'text-getstring', 'const bad = ids.filter((sid) => !pred(lab1.get_string(sid)[1] === tables.get(lang).text(sid)));']]) {
+    ['check_text', 'text-getstring', 'const bad = ids.filter((sid) => !eq(lab1.get_string(sid)[1], tables.get(lang).text(sid)));']]) {
     const src = path.join(J, `checks/${c}.mjs`), lines = fs.readFileSync(src, 'utf8').split('\n');
     const at = lines.findIndex((x) => x.includes(text));
-    if (at < 0 || lines.findIndex((x, i) => i > at && x.includes(text)) >= 0) { bad.push(`FAULT ${c}: the predicate text is not in ${src} once`); continue; }
+    if (at < 0 || lines.findIndex((x, i) => i > at && x.includes(text)) >= 0) { bad.push(`FAULT ${c}: the comparison text is not in ${src} once`); continue; }
     const run = (extra) => spawnSync('node', [src], { cwd: REPO, encoding: 'utf8', env: { ...process.env, OM_FAULT: name, ...extra }, maxBuffer: 1 << 28 });
-    const f = run({}), t = run({ OM_PRED_MUT: `${c}.mjs:${at + 1}` });
+    const res = path.join(root, `${c}-results.json`), f = run({ OM_CHECK_RESULTS: res }), t = run({ OM_EQ_MUT: `${c}.mjs:${at + 1}` });
     if (f.status !== 1) bad.push(`FAULT ${c} (${name}): exit ${f.status}, want 1 (the fault point trips nothing)`);
+    else if (!tripped(res, `${c}.mjs:${at + 1}`)) bad.push(`FAULT ${c} (${name}): ${res} records no failing got/want at ${c}.mjs:${at + 1}`);
     if (t.status !== 0) bad.push(`FAULT ${c} (${name}) with the tautology at ${c}.mjs:${at + 1}: exit ${t.status}, want 0\n${t.stdout.slice(-300)}${t.stderr.slice(-300)}`);
   }
   // ---- check_menu, check_nav ----
@@ -156,17 +164,18 @@ export async function checksTests() {
     const got = path.join(notesDir, `check_${c}_notes.txt`), want = path.join(J, `checks/fixtures/check_${c}_notes.txt`);
     if (r.status !== 0 || !fs.existsSync(got) || !fs.readFileSync(got).equals(fs.readFileSync(want))) bad.push(`NOTES check_${c}: exit ${r.status}, ${fs.existsSync(got) ? 'notes differ from' : 'no notes written for'} ${want}\n${r.stdout.slice(-300)}${r.stderr.slice(-300)}`);
   }
-  // FAULT (check_menu, check_nav, check_irq, check_osd): the fault point trips its predicate (exit 1), the tautology there passes (0)
-  for (const [c, name, text, args] of [['check_menu', 'menu-gui-state', 'if (!pred(r.state === MM.STATE_MENU)) p2.push(', ['--quick']],
-    ['check_nav', 'nav-scpu-command', "if (!pred(count(err, 'scpu UNKNOWN') === 7", ['--quick']],
+  // FAULT (check_menu, check_nav, check_irq, check_osd): the fault point trips its comparison (exit 1), the tautology there passes (0)
+  for (const [c, name, text, args] of [['check_menu', 'menu-gui-state', 'if (!eq(r.state, MM.STATE_MENU)) p2.push(', ['--quick']],
+    ['check_nav', 'nav-scpu-command', "if (!eq([count(err, 'scpu UNKNOWN'), ", ['--quick']],
     ['check_irq', 'ipi-80c-clear-all', "g.eq('+0x80c clears the written bits'", ['--only', 'I10']],
     ['check_osd', 'osd-debug-write', "check(deepEqual(lab.engine.errors().map((e) => e.name), ['DEBUG_CPU_WRITE'])", []]]) {
     const src = path.join(J, `checks/${c}.mjs`), lines = fs.readFileSync(src, 'utf8').split('\n');
     const at = lines.findIndex((x) => x.includes(text));
-    if (at < 0 || lines.findIndex((x, i) => i > at && x.includes(text)) >= 0) { bad.push(`FAULT ${c}: the predicate text is not in ${src} once`); continue; }
+    if (at < 0 || lines.findIndex((x, i) => i > at && x.includes(text)) >= 0) { bad.push(`FAULT ${c}: the comparison text is not in ${src} once`); continue; }
     const run = (extra) => spawnSync('node', [src, ...args], { cwd: REPO, encoding: 'utf8', env: { ...process.env, OM_FAULT: name, ...extra }, maxBuffer: 1 << 28 });
-    const f = run({}), t = run({ OM_PRED_MUT: `${c}.mjs:${at + 1}` });
+    const res = path.join(root, `${c}-results.json`), f = run({ OM_CHECK_RESULTS: res }), t = run({ OM_EQ_MUT: `${c}.mjs:${at + 1}` });
     if (f.status !== 1) bad.push(`FAULT ${c} (${name}): exit ${f.status}, want 1 (the fault point trips nothing)`);
+    else if (!tripped(res, `${c}.mjs:${at + 1}`)) bad.push(`FAULT ${c} (${name}): ${res} records no failing got/want at ${c}.mjs:${at + 1}`);
     if (t.status !== 0) bad.push(`FAULT ${c} (${name}) with the tautology at ${c}.mjs:${at + 1}: exit ${t.status}, want 0\n${t.stdout.slice(-300)}${t.stderr.slice(-300)}`);
   }
   // OSD-IN

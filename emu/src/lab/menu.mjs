@@ -513,7 +513,7 @@ export class MenuLab extends T.TextDisplayLab {
     // bare return, X); none where the build has no such task (the E118 family: E143's unplaced, no bare return started,
     // X)
     const started = this.lt.started.slice(1).map(K.disasm_of);
-    const bare = this.lt.started.slice(1).filter((e) => this.lt._bare_return(e)).map(K.disasm_of);
+    const bare = started.includes(EMPTY_TASK) ? [EMPTY_TASK] : this.lt.started.slice(1).filter((e) => this.lt._bare_return(e)).map(K.disasm_of);
     const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
     const sortNum = (xs) => [...xs].sort((a, b) => a - b);
     const own = started.filter((t) => wantStarted.includes(t)), more = started.filter((t) => !wantStarted.includes(t));

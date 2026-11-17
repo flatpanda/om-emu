@@ -282,7 +282,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   (`docs/hle-gaps.md` 4.8.12): the second is empty unless `OM_EMU_CARD2=FILE` (or `OM_EMU_CARD2_SIZE=GiB`) gives it a
   card of its own or the input `{"type": "card", "action": "insert", "slot": 2}` puts a blank one in; each slot's
   card-detect pin and card switch follow its card, the firmware mounts each card from its own port, and S2's picture
-  goes to the card the firmware's save settings name (the save slot; the double-slot save modes stop the session). The
+  goes to the card the firmware's save settings name (the save slot; in Dual Same both cards, through REC_FILE's own
+  double-slot record; Auto Switch moves the save slot off a full card; Dual Independent stops the session: 4.8.14). The
   card stays in the slot across a player's power cycles; `OM_EMU_CARD=FILE` keeps it between sessions (`host/card.mjs`),
   and the host puts files on that card and takes them off between sessions with `bin/card.mjs`, or before the first
   session's mount with `--card-put` (The card's files, below). `OM_EMU_CARD_SIZE=GiB` (the browser player's Card start

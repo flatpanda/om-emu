@@ -153,7 +153,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5; S-JPEGENC the run and Jpeg_Result on the three since 2026-11-11, 4.3.9); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129), since 2026-11-11 on E147, E148 and eight E144-family bodies (findings 149 to 152); two slots on E143 and E146, the second empty by default (2026-11-11, 4.8.12) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5; S-JPEGENC the run and Jpeg_Result on the three since 2026-11-11, 4.3.9); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129), since 2026-11-11 on E147, E148 and eight E144-family bodies (findings 149 to 152); two slots on E143 and E146, the second empty by default (2026-11-11, 4.8.12), Dual Same's record on both cards (2026-11-16, 4.8.14) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its view decoded on the model of the image library's pipeline block and JPEG codec, a pre-reduced one stood in (H-PLAYSTART, S-IMGPIPE, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11, 4.8.13); since 2026-11-11 Delete's eraseCurrent by the firmware's own attribute and object delete (H-OBJDEL, `docs/model-survey.md` findings 137 to 140) on the bodies of `emu/test/test_erase.mjs` ERASE_NATIVE | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
@@ -7877,7 +7877,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
     `0x5087ad37`), the play module, the movie module (1131).
   - The menu's names of the six values are not read. By the logic 0 records on the save slot, 1 switches cards
     (1134), 2 and 4 need both cards and 3 and 5 go on with one (I: Standard, Auto Switch, Dual Independent and Dual
-    Same in their two forms).
+    Same in their two forms). (Read 2026-11-16, 4.8.14, X: the menu's Save Settings titles them so, in that order.)
 - **The menu with one card (X).** OK on Card Formatting opens the card's Format Card / No screen at once; with two
   cards it opens "Select Card to Set Up" first (4.8.2). `test_storage.mjs`'s menu format takes the one-card path on
   E143 and E146 now.
@@ -7896,7 +7896,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
     (`0x50ab4f75`), at the start and after each change: (1, 0) with one card, where camapp 1 had (0, 0) before. A
     picture goes to the card the record controller's rule names: the slot 1130 for 1129 = 0 or 1, REC's `Media`;
     no picture where that slot has no mounted card; 1129 = 2..5 stop the session (the double-slot record is not
-    made). The settings are the store's as they stand: a test sets 1130 through the store's setter, not through
+    made; since 2026-11-16 Dual Same, 4 and 5, records on both cards, 4.8.14). The settings are the store's as they stand: a test sets 1130 through the store's setter, not through
     the menu, and whether the application lets the save slot stand at an empty slot is not read (?).
   - *S-MEDIA:* the second slot's switch as the first's where no manager runs; under camapp 3 the manager takes the
     second slot's change itself and S-MEDIA only reads the drive status back. The first slot under camapp 3 is as
@@ -7941,7 +7941,8 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   switch at the no-card level), 15261 is 1 where it was 0, the GUI reads 1129, 1130, 1404, 44 and 15209 more often
   and 15262 no longer, and the GUI's extra work moves its stand-in counts and heap (S-RPC request addresses by `0x50`).
   Re-recorded with that reason (evidence: firmware).
-- **Open.** The double-slot record (`rec_file_record_DoubleSlot`, 1129 = 2..5) and the auto switch; the movie slot
+- **Open.** The double-slot record (`rec_file_record_DoubleSlot`, 1129 = 2..5; Dual Same since 2026-11-16, 4.8.14)
+  and the auto switch; the movie slot
   1131 beyond the row; the playback slot (1404, `startSlotSwitch`); the manager's own requests in S-CARD's and
   S-MEDIA's place for the first slot (`0x31`, `0x35`); `0x72`; the write-protect pins; the expander's chip and
   UI_IN's group 1 producer; the removal of the save slot's card under camapp 3; E139, E134 and E125; the browser
@@ -8152,6 +8153,95 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   second request for a destination under 1/7 of the source; the index view, movies and the album manager; INFO's
   histogram (4.8.11; its bins counted since 4.2.7, from the fill while this view's pixels are S-PLAYDEC's); the other
   bodies.
+
+#### 4.8.14 The double-slot record modes (2026-11-16; D unless tagged, addresses E143's)
+
+With both cards in, S2 records on both in Dual Same through REC_FILE's own double-slot record on E143 and E146, and
+Auto Switch moves the save slot off a full first card; the save settings are set from the camera's own menu
+(`emu/src/lab/camapp.mjs` record_cards, `rec.mjs` record, `storage.mjs` rec_picture, `cardfs.mjs` fill). Dual
+Independent stops the session (below).
+
+- **The settings' names (X).** MENU, Card Slot Settings (the still one, the icon `@A030@`; the movie row is
+  `@A003@`), Save Settings opens a panel of six icons whose title the firmware draws as text (DrawText, the menu
+  walker's reads; the same on E146): Standard, Auto Switch, Dual Independent `@A032@`, Dual Independent `@A033@`,
+  Dual Same `@A032@`, Dual Same `@A033@` (the arrow down and up), with the texts "Records to assigned card only.",
+  "When designated card becomes full, switches to other card to continue shooting.", "Saves to both cards applying
+  their respective settings. If one card becomes full, the other cannot be saved to either." (down) / "Even if one
+  card becomes full, the other can still be saved to." (up), and for Dual Same "Saves to both cards applying same
+  [still quality] settings." with the same two endings. OK on a position sets 1129 to its index (X for 1, 4 and 5 in
+  the tests). This settles 4.8.12's I reading of the six values: 0 Standard, 1 Auto Switch, 2 / 3
+  Dual Independent down / up, 4 / 5 Dual Same down / up. The same submenu has Save Slot (1130) and `@A034@` Slot.
+- **The record controller with both cards (D, 4.8.12).** For 2 to 5 alike it names both cards (3) where its test
+  `0x50c73fd5` passes for both and neither media status has a bit of 0x12; else the one slot that passes; else none.
+  The test reads the slot's remaining count (`0x5041a28c` with the settings 855, 1320, 856, 1457, 477, 478, 484; not
+  read further). DevRec_Rec::recordMedia makes it Media 0, Media2 1, and REC_MAIN copies 1129 into
+  `RecordMediaMode` (+297; E146 and E147 +267, the packet dump's, fact `rec_file` packet.fields).
+- **REC_FILE's choice (D).** Its handler (`0x5053f354`) fills a list of the files per slot (`0x5053e165`) and takes
+  the double-slot record (`0x5053f8df`, then rec_file_record_DoubleSlot `0x5053f97d`) where `0x5053dcf8` answers:
+  `RecordDevice` bit 0, `RecordMediaMode` neither 0 nor 1, `Media2` not `0xffff`. The list: the type
+  (`0x5053e165`) by `ExifFileType` (+288) and `ExifFileTypeDoubleSlot` (+290), 0 JPEG, 2 RAW, 5 RAW + JPEG, pairs
+  (2, 2) .. (5, 5) to 0 .. 8 (and 9 .. 12 for the modes `0x5054bf6c` names); each type's 12 bytes at
+  `0x60358df8` are three {buffer, kind} pairs per slot (X: type 4, JPEG and JPEG, is `01 01 00 00 00 00` /
+  `04 01 00 00 00 00`: the first slot's JPEG from buffer 1, `BuffAddr1`, the second's from buffer 4,
+  `BuffAddrDoubleSlot` +168 / `BuffSizeDoubleSlot` +172; the buffers' readers `0x5053e584` and `0x5053e5b2`). Where
+  the second slot's buffer is 4 and `BuffAddrDoubleSlot` is 0, it takes the first slot's buffer and size
+  (`0x5053e40f..0x5053e421`): the same bytes on both cards. The double-slot record fills the file context of Media
+  and of the other drive (`0x62a8c4e4` / `0x62a8c540`, swapped where Media is 1: `0x5053fa3b..0x5053fa55`), then
+  per file both slots' steps (`0x5053fd77` twice; the DCF checkout per Media and Media2, `0x5053f918..0x5053f926`).
+- **REC_IMAGE's one image or two (D).** Who writes `BuffAddrDoubleSlot`: rec_jpeg_exec alone (`0x505499a7`), for a
+  packet whose `SlotNo` (+313) is 1 where `0x5053dd22` answers; else its image goes to `BuffAddr1`. `0x5053dd22`:
+  the double-slot test, `RecordMediaMode` 2 or 3 (Dual Independent), the shot record's second-slot image settings
+  (+38000, +38016, +38020) not those REC keeps for the first slot (`0xa33232a2`, `a4`, `a6`, which REC_IMAGE's task
+  copies from the record's +37998, +38014, +38018 at `0x5053ddfa`), and neither file RAW. TAKE's shot record fill
+  writes the second slot's for 2 and 3 only (`0x503bbb6f..0x503bbc23`: the setting 21169, which is 1129's data
+  object; then 20785 into +38000, 33121 and 33105 of it into +38016 and +38020, and +37898, the second slot's
+  ExifFileType, from 20785 and 20801); the first slot's come from REC_MAIN's request (`0x5053b832..0x5053b968`).
+  So Dual Same (4, 5) is one image recorded twice; Dual Independent with the two slots' settings alike is too, and
+  with them different REC_IMAGE makes a second image for the second slot (its path not read further).
+- **The lab's part.** S-CARD (record_cards): 1129 = 4 or 5 with both cards mounted gives Media 0, Media2 1 and
+  `RecordMediaMode` 1129 to S-RECREQ's packet (the rest as before, `BuffAddrDoubleSlot` 0 as REC_MAIN's clear leaves
+  it); REC_IMAGE, REC_FILE and the file system run natively, and the lab reads each drive's file from its context.
+  A mounted card is taken as passing the controller's test (I: a card that is not full). With one card mounted, 5
+  records on it alone (Media its slot, Media2 none, `RecordMediaMode` 5); 4 stops the session: the application's card
+  check (`0x5105c978`) answers an error for 2 and 4 where either slot has one, and what the release does then is not
+  read. 2 and 3 stop the session: whether REC_IMAGE makes one image or two follows TAKE's fill of the second slot's
+  settings, which S-EXIFPRM does not make, and REC_MAIN's of the first slot's, which does not run. With no card
+  mounted no picture is taken, as for 0 and 1.
+- **What it does (X).** E143 and E146, a firmware-formatted card in each slot, Dual Same by the menu: S2 gives
+  `C:\DCIM\100OMSYS\P1010003.JPG` and `D:\DCIM\100OMSYS\P1010003.JPG` with the cards holding one and two pictures:
+  one DCF number on both, the next after the larger (the file layer numbers across the two drives, 4.8.12), the
+  same bytes (62,857 in the exploration, read back by `refs/volume.mjs`), both DCF databases counting it in the same
+  session; on E143 rec_file_record_DoubleSlot runs once. The firmware logs the warnings a single-slot S2 does
+  (`0x39000903`, `0x0d090002`, `0x1e01500e`, `0x1e001001`, `0x1e01500d`; 4.8.10), none more. Dual Same up with the
+  second card out: the first card alone.
+- **Auto Switch (D, X).** The application's setRecordMedia (`0x5107dc70`, natively in the lab's sessions: X, three
+  calls over S1 and S2) calls validateAutoCardSwitch (`0x5107dcf5`) for 1129 = 1 with 1134 = 1; that moves the
+  save slot where the application's error factor of the save slot (`0x5105ccd5`: the word of the slot in
+  `0x603661a8`) is set and the other's is not: 1130 and 1132 to the other slot and 1134 to 0, the switch made once
+  (`0x5107dd31..0x5107dd4b`). For 3 and 5 it calls `0x5107dda7`, which moves the playback slot (1404) the same way,
+  and `0x5107dd71`, which calls `0x5105ad55` where either slot's factor is set (what that does, ?). A full card:
+  a 3 GiB card the firmware formats (FAT32, 98,048 clusters of 32 KiB, X), then one file over every free cluster
+  put by the host's writer (`cardfs.mjs` fill, its sectors not written; read back consistent by `refs/fat.mjs`).
+  X, E143, that card in slot 1 and a card in slot 2, Auto Switch by the menu: the factors are 4 and 0 before S2
+  (the application's own media check; I: from the card's free count), 1134 is 1 (the lab's store); at S2
+  validateAutoCardSwitch moves 1130 to 1 and 1134 to 0, S-CARD reads the save slot after it, and the picture is
+  `D:\DCIM\100OMSYS\P1010001.JPG` on the second card; the full card gets no sector written. E146 the same (the
+  test reads its factors and observes the switch on E143 alone).
+- **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots; E143 38 of 38, E146 32 of 32): the six names and the positions
+  1, 4 and 5 set by the menu, S2 on both cards twice (Dual Same down, then up; the same bytes, one DCF number, both
+  counts; the double-slot record observed on E143), up with the second card out on the first alone, down with one
+  card a stop, Dual Independent a stop; Auto Switch with the first card full, S2 on the second. `test_facts.mjs`
+  pins `RecordMediaMode` on E143, E146 and E147 (1592 of 1592).
+- **Other bodies with two slots.** E139 (E-M1 III), E134 (E-M1X) and E125 (E-M1 II): the card driver's detect table
+  has two drives (fact `card.detect` drives 2, 4.8.12); their REC is the family version (`recFileQueue`), whose
+  packet the lab writes without `RecordMediaMode`, and their slot-detect helper is not of E143's form, so one card
+  still answers every port there (open). Every other ported body's detect table has one drive (E147, E148, the E144
+  and E118 families; `src/fw/ports.mjs` FACTS).
+- **Open.** Dual Independent (the second slot's image settings in the shot record, REC_MAIN's first-slot copy, the
+  second image's path); a full card under Standard and the two Dual modes (`0x5105ad55`; the record controller's
+  choice of the one passing slot for the arrow up); the
+  controller's test `0x50c73fd5` and the application's card check in the lab's release (S-CARD takes a mounted card
+  as passing); RAW and RAW + JPEG on two cards (types 0 .. 8); the movie slot; E139, E134 and E125.
 
 ### 4.9 HDMI and DisplayPort
 

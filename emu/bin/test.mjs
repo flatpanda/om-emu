@@ -558,8 +558,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += nu.bad.length + ns.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the second card slot (test_storage.mjs --slot2: E143's and E146's two card slots, one card and two, the save slot,
-// the cards out and in, on E143 also under control camapp 3; docs/hle-gaps.md 4.8.12), each body in a process of
-// its own
+// the cards out and in, the save settings from the menu, Dual Same on both cards, Auto Switch off a full card, on
+// E143 also under control camapp 3; docs/hle-gaps.md 4.8.12, 4.8.14), each body in a process of its own
 {
   const { spawnSync } = await import('node:child_process');
   const runs = ['E143', 'E146'].map((m) => {

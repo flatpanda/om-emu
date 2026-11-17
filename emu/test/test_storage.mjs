@@ -1322,6 +1322,15 @@ const SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
 // the media status's bits (api_media 0x503f0bd7's, D): no card (the drive status 1), a card with no file system (X),
 // the card present, the DCF mount
 const MS_NO_CARD = 1, MS_UNFORMATTED = 4, MS_CARD = 0x80, MS_MOUNTED = 0x1000;
+// the still Card Slot Settings' Save Settings by the menu's English texts (the icon codes the firmware draws before
+// them, @A030@: the still's, X), and the panel's six settings as it titles them, by position (@A032@ the arrow down,
+// @A033@ up; X, E143 and E146): Standard, Auto Switch, Dual Independent and Dual Same, each one's position its value
+// of setting 1129 (X for 4 and 5 here; the rest D, docs/hle-gaps.md 4.8.12's reading of the record controller)
+const SAVE_GOALS = [{ row: ['@A030@Card Slot Settings'] }, { row: ['@A030@Save Settings'] }];
+// rec_file_record_DoubleSlot, validateAutoCardSwitch and the application's error factor of each slot (E143's, D:
+// docs/hle-gaps.md 4.8.10, 4.8.12 and 4.8.14), and the auto switch's own setting (1134: 1 in the lab's store, X)
+const DOUBLE_SLOT_E143 = 0x5053F97D, AUTO_SWITCH_E143 = 0x5107DCF5, SLOT_FACTOR_E143 = 0x603661A8, AUTO_ON = 1134;
+const SAVE_NAMES = ['Standard', 'Auto Switch', 'Dual Independent@A032@', 'Dual Independent@A033@', 'Dual Same@A032@', 'Dual Same@A033@'];
 export async function storageSlots() {
   const bad = [], notes = [];
   let checks = 0;
@@ -1333,7 +1342,8 @@ export async function storageSlots() {
   const { STORAGE: F, SECOND, DRIVE_NO_CARD } = await import('../src/lab/storage.mjs');
   if (!F?.slots) return { checks: 1, bad: [`${MODEL}: the lab does not model a second card slot (src/fw/models.mjs card_fs.second_slot)`], notes };
   const H = F.hls, FLAG = H.ctrl.flag[1], { mode: MODE, slot: SAVE } = F.slots.record, { SHOTS } = cardQueries(A);
-  const names = F.names, DIR = `DCIM/100${names.folder}`, file = (n) => `${DIR}/${names.file}${String(n).padStart(4, '0')}.${names.ext}`;
+  const { runtime } = await import('../src/lab/hle.mjs');
+  const names = F.names, names0 = names, DIR = `DCIM/100${names.folder}`, file = (n) => `${DIR}/${names.file}${String(n).padStart(4, '0')}.${names.ext}`;
   const hx = (v) => '0x' + (v >>> 0).toString(16), J = JSON.stringify;
   const holder = (card) => ({ open: () => card, save() {} });
   const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
@@ -1369,6 +1379,25 @@ export async function storageSlots() {
   const empty = (x, d) => x.det[d] !== 0 && x.drive[d] === DRIVE_NO_CARD && x.api[d] === MS_NO_CARD;
   const cardA = new SdCard(), cardB = new SdCard();
   let menu1 = null, menu2 = null;
+  // the still Save Settings panel (MENU, then the walker to Card Slot Settings and Save Settings; the panel opens with
+  // its cursor on the setting's value): its titles from the first position to the last where names is given (LEFT
+  // to the first, RIGHT on), then the position pos taken with OK, and MENU back to the shooting screen. Returns the
+  // title taken
+  const top = (s) => screenTexts(s.lab.draw_log, s.frame('boundary')).find((t) => t.box[1] === 0)?.text ?? null;
+  const choose = (s, pos, names = null) => {
+    press(s, 'menu');
+    new MenuWalk({ press: (k) => press(s, k), frame: () => s.frame('boundary'), draws: () => s.lab.draw_log }).to(SAVE_GOALS);
+    for (let i = s.lab.get(MODE); i > 0; i--) press(s, 'left');
+    if (names) {
+      names.push(top(s));
+      for (let i = 1; i < SAVE_NAMES.length; i++) { press(s, 'right'); names.push(top(s)); }
+      for (let i = SAVE_NAMES.length - 1; i > 0; i--) press(s, 'left');
+    }
+    for (let i = 0; i < pos; i++) press(s, 'right');
+    const title = top(s);
+    press(s, 'ok'); press(s, 'menu'); idle(s, 300);
+    return title;
+  };
   // the node host's second card (host/card.mjs secondCard): none without an option, a blank card of the size asked
   // for, a file's card, and the first slot's file refused
   {
@@ -1393,7 +1422,7 @@ export async function storageSlots() {
     try { s.storage.put_card(s.storage.card); } catch (e) { refused = e.message; }
     ok(/each slot takes a card of its own/.test(refused ?? ''), `the first slot's card is refused for the second slot: ${refused}`);
     menu1 = menu(s);
-    // the count and the record destination follow the save slot (the firmware's own query and S-CARD's save_slot)
+    // the count and the record destination follow the save slot (the firmware's own query and S-CARD's record_cards)
     const n0 = shots(s);
     s.set(SAVE, 1); idle(s, 300);
     const n1 = shots(s);
@@ -1405,11 +1434,11 @@ export async function storageSlots() {
     const f1 = has(cardA, 1);
     ok(s.storage.files.length === 1 && s.storage.files[0].path.startsWith(`${names.drive}:`) && f1 && f1.size === s.storage.files[0].size && s.camapp.card_images(0) === 1,
       `one card, the save slot back at slot 1: S2's file ${s.storage.files[0]?.path} on the card (${f1?.size} bytes, read independently), the firmware's image count ${s.camapp.card_images(0)}`);
-    // the double-slot record modes are refused
+    // Dual Independent is refused (the second slot's own image settings are TAKE's, which the lab does not fill)
     s.set(MODE, 2); idle(s, 300);
     let stop = null;
     try { shoot(s); } catch (e) { stop = e.message; }
-    ok(/double-slot record/.test(stop ?? ''), `the save mode (setting ${MODE}) 2: S2 stops the session, the double-slot record not made: ${(stop ?? 'no stop').slice(0, 160)}`);
+    ok(/Dual Independent/.test(stop ?? ''), `the save mode (setting ${MODE}) 2: S2 stops the session, Dual Independent not made: ${(stop ?? 'no stop').slice(0, 160)}`);
   } catch (e) { bad.push(`one card: ${e.message.slice(0, 500)}`); }
   try { pl?.close_session(); } catch { /* closed */ }
   for (const c of [cardA]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
@@ -1463,6 +1492,90 @@ export async function storageSlots() {
     try { pl.run_input({ type: 'card', action: 'insert', slot: 2 }); } catch (e) { twice = e.message; }
     ok(/in the slot already/.test(twice ?? ''), `a second insert into slot 2 is refused: ${twice}`);
   } catch (e) { bad.push(`two cards: ${e.message.slice(0, 500)}`); }
+  try { pl?.close_session(); } catch { /* closed */ }
+
+  // ---- the save settings from the camera's own menu (Card Slot Settings, Save Settings; docs/hle-gaps.md 4.8.14),
+  // both cards in (the first formatted by the firmware above, the second with its two pictures): the six settings'
+  // names as the panel titles them, each position the setting's value; Dual Same (the arrow down, then up) records S2's
+  // picture on both cards through REC_FILE's double-slot record, the same bytes under each card's own next DCF
+  // number; with the arrow up and the second card out, on the first card alone; with the arrow down (set through the
+  // store's setter) and one card, a stop (the second card is put back in its slot for the sessions after)
+  try {
+    for (const c of [cardA, cardB]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+    pl = player(cardB, cardA);
+    const s = pl.session, st = s.storage;
+    idle(s, 1500);
+    const names = [], t4 = choose(s, 4, names);
+    ok(J(names) === J(SAVE_NAMES) && t4 === SAVE_NAMES[4] && s.lab.get(MODE) === 4,
+      `Save Settings: the panel's six settings ${J(names)} (want ${J(SAVE_NAMES)}); the fifth (${t4}) taken with OK sets ${MODE} = ${s.lab.get(MODE)} (want 4)`);
+    const two = (mode, before) => {
+      const seen = [];
+      if (ON_LAB_MODEL) s.lab.observe(DOUBLE_SLOT_E143, () => seen.push(s.lab.lab_time()), 'obs-test-double');
+      shoot(s);
+      if (ON_LAB_MODEL) s.lab.hooks.delete(runtime(DOUBLE_SLOT_E143));
+      const [f0, f1] = st.files.slice(before);
+      const v0 = vol(cardB), v1 = vol(cardA), e0 = f0 && v0?.find(file(f0.number)), e1 = f1 && v1?.find(file(f1.number));
+      const d0 = e0 && v0.data(e0), d1 = e1 && v1.data(e1);
+      ok(st.files.length === before + 2 && f0.path.startsWith(`${names0.drive}:`) && f1.path.startsWith(`${String.fromCharCode(names0.drive.charCodeAt(0) + 1)}:`) && d0 && d1
+        && d0.length === f0.size && d0.length === d1.length && d0.every((b, i) => b === d1[i]) && (!ON_LAB_MODEL || seen.length === 1),
+        `Dual Same (${MODE} = ${mode}): S2's picture on both cards, ${f0?.path} and ${f1?.path}, ${d0?.length} and ${d1?.length} bytes read back independently, the same bytes${ON_LAB_MODEL ? `; REC_FILE's double-slot record ran ${seen.length} time(s)` : ''}`);
+      return [f0, f1];
+    };
+    const n0 = [s.camapp.card_images(0), s.camapp.card_images(1)];
+    const [a, b] = two(4, 0);
+    // (the file layer numbers across the two drives, docs/hle-gaps.md 4.8.12: one number, the next after the larger)
+    ok(a?.number === Math.max(...n0) + 1 && b?.number === a?.number && s.camapp.card_images(0) === n0[0] + 1 && s.camapp.card_images(1) === n0[1] + 1,
+      `Dual Same: one DCF number on both cards (${a?.number} and ${b?.number}, the cards holding ${n0[0]} and ${n0[1]} pictures), both cards' DCF databases count it: ${s.camapp.card_images(0)}, ${s.camapp.card_images(1)}`);
+    const t5 = choose(s, 5);
+    ok(t5 === SAVE_NAMES[5] && s.lab.get(MODE) === 5, `the sixth (${t5}) sets ${MODE} = ${s.lab.get(MODE)} (want 5)`);
+    two(5, 2);
+    // the arrow up with the second card out: the record controller names the first card alone (Media 0, Media2 none)
+    pl.run_input({ type: 'card', action: 'remove', slot: 2 });
+    idle(s, 1000);
+    const k1 = s.camapp.card_images(0);
+    shoot(s);
+    const f = st.files[4], e = f && vol(cardB)?.find(file(f.number));
+    ok(st.files.length === 5 && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
+      `Dual Same with the arrow up, the second card out: S2's picture ${f?.path} on the first card alone (${e?.size} bytes), its count ${s.camapp.card_images(0)}`);
+    s.set(MODE, 4); idle(s, 300);
+    let stop = null;
+    try { shoot(s); } catch (x) { stop = x.message; }
+    ok(s.lab.get(MODE) === 4 && /Dual Same with the arrow down/.test(stop ?? ''), `Dual Same with the arrow down and one card: S2 stops the session: ${(stop ?? 'no stop').slice(0, 160)}`);
+  } catch (e) { bad.push(`the save settings: ${e.message.slice(0, 500)}`); }
+  try { pl?.close_session(); } catch { /* closed */ }
+  cardA.insert();
+
+  // ---- Auto Switch (docs/hle-gaps.md 4.8.14), with the first card full: a 3 GiB card the firmware formats, then
+  // filled by the host's writer (src/lab/cardfs.mjs fill: one file over every free cluster, read back consistent),
+  // in slot 1, the second card in slot 2. The setting from the menu; the application's own error factor of slot 1 is
+  // set (E143), and at S2 its setRecordMedia moves the save slot (1130) to slot 2, where the picture goes, the full
+  // card untouched
+  try {
+    const cardF = new SdCard({ sectors: cardSectors(3) });
+    pl = player(cardF);
+    idle(pl.session, 1500);
+    pl.close_session();
+    for (const c of [cardF, cardB]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+    const { openCardFs, cardDevice } = await import('../src/lab/cardfs.mjs');
+    const filled = openCardFs(cardDevice(cardF)).fill('FILL.BIN'), v = vol(cardF), problems = v?.check?.() ?? null;
+    ok(v?.find('FILL.BIN')?.size === filled.size && v.freeClusters() === 0 && Array.isArray(problems) && problems.length === 0,
+      `a full card: ${filled.clusters} clusters of FILL.BIN (${filled.size} bytes), read back with ${v?.freeClusters()} free and consistent (${J(problems)})`);
+    pl = player(cardF, cardB);
+    const s = pl.session, st = s.storage, seen = [];
+    idle(s, 1500);
+    const title = choose(s, 1), before = s.lab.get(SAVE), armed = s.lab.get(AUTO_ON), factor = ON_LAB_MODEL ? [0, 1].map((i) => s.lab.sim.u32(SLOT_FACTOR_E143 + 4 * i) >>> 0) : null;
+    if (ON_LAB_MODEL) s.lab.observe(AUTO_SWITCH_E143, () => seen.push(s.lab.lab_time()), 'obs-test-auto');
+    const writes = cardF.writes, k2 = s.camapp.card_images(1);
+    shoot(s);
+    if (ON_LAB_MODEL) s.lab.hooks.delete(runtime(AUTO_SWITCH_E143));
+    const f = st.files[0], e = f && vol(cardB)?.find(file(f.number));
+    ok(title === SAVE_NAMES[1] && s.lab.get(MODE) === 1 && armed === 1 && before === 0 && (!ON_LAB_MODEL || (factor[0] !== 0 && factor[1] === 0)),
+      `Auto Switch from the menu (${title}): ${MODE} = ${s.lab.get(MODE)}, ${AUTO_ON} = ${armed}, the save slot at slot ${before + 1}${ON_LAB_MODEL ? `, the application's error factors of the slots ${J(factor)}` : ''}`);
+    // (the switch sets the save slot and 1132 to the other slot and 1134 to 0, 0x5107dd31..0x5107dd4b, D)
+    ok(s.lab.get(SAVE) === 1 && s.lab.get(AUTO_ON) === 0 && st.files.length === 1 && f.path.startsWith(`${String.fromCharCode(names.drive.charCodeAt(0) + 1)}:`) && e?.size === f.size && s.camapp.card_images(1) === k2 + 1
+      && cardF.writes === writes && !vol(cardF)?.find(file(1)) && (!ON_LAB_MODEL || seen.length > 0),
+      `Auto Switch, the first card full: the application moves the save slot to slot ${s.lab.get(SAVE) + 1} (${AUTO_ON} now ${s.lab.get(AUTO_ON)})${ON_LAB_MODEL ? ` (validateAutoCardSwitch ran ${seen.length} time(s))` : ''}, S2's picture ${f?.path} on the second card (${e?.size} bytes), the full card not written (${cardF.writes - writes} sectors)`);
+  } catch (e) { bad.push(`Auto Switch: ${e.message.slice(0, 500)}`); }
   try { pl?.close_session(); } catch { /* closed */ }
 
   // ---- a new blank card put into the empty second slot while the camera runs; the Player keeps it for its next

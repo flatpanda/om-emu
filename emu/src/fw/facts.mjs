@@ -479,6 +479,119 @@ export function stateTableBound(img, table) {
   return found.size ? [...found][0] : undefined;
 }
 
+// The menu's GUI state (fact 'gui_states.menu', src/lab/menu.mjs STATE_MENU): the state the firmware's own table names
+// SS_MENU/ID_ST_MENU, parent << 8 | child, among the table's first `parents` rows (stateTableBound; the rows as
+// src/lab/menu.mjs state_names reads them: u16 parent, its name, its children's table of {u16 child, name} rows ending
+// at 0xffff). E143's and E148's ListMenu `0x0b02`, E144's Menu_Viewer `0x1102` (X: the state each menu open reaches,
+// docs/model-survey.md findings 66 to 68 and 156). Returns undefined where no row holds the two names.
+export const MENU_STATE_NAMES = ['SS_MENU', 'ID_ST_MENU'];
+export function menuState(img, table, parents) {
+  const { base } = imageBase(img), at = (a) => (a >= base && a + 4 <= base + img.length ? a - base : null);
+  const cstr = (a) => { const o = at(a); if (o === null) return null; const e = img.indexOf(0, o); return e < 0 ? null : String.fromCharCode(...img.subarray(o, e)); };
+  const u16 = (o) => img[o] | img[o + 1] << 8;
+  const found = [];
+  for (let i = 0; i < parents; i++) {
+    const r = at(table + 12 * i);
+    if (r === null || cstr(u32(img, r + 4)) !== MENU_STATE_NAMES[0]) continue;
+    const sub = at(u32(img, r + 8));
+    for (let j = 0; sub !== null && u16(sub + 8 * j) !== 0xFFFF && j < 0x100; j++) {
+      if (cstr(u32(img, sub + 8 * j + 4)) === MENU_STATE_NAMES[1]) found.push((u16(r) << 8 | u16(sub + 8 * j)) >>> 0);
+    }
+  }
+  if (found.length > 1) throw new Error(`menuState: ${found.length} states named ${MENU_STATE_NAMES.join('/')} in the table at ${h8(table)}, want one`);
+  return found[0];
+}
+
+// The GUI's icon words (fact 'icons', src/lab/text.mjs check_init; through bin/port.mjs the places of E143's
+// ICON_TABLE_E143 and ICON_AUX_E143, how 'icon-store'): the GUI's icon load takes the icons record's address from the
+// resource API (`calls (a1)`, E143 0x51257d3b through vt+56; ICON_RETURN_E143 its return, one of src/lab/text.mjs
+// RES_GET_CALLERS) and stores two words of it. The rule walks from that call to `mov d0,a0`, then reads the next two
+// stores of a data register to an absolute word, each with what it holds: `mov (a0),Dn` (70+) word 0 of the record,
+// `mov (d8,a0),Dn` (f8 0n d8) its word at d8, or d0 itself, the record's address ('record'). Two forms (D): E143's,
+// E146's, E147's and E148's store word 0 and word 4 (E143 0x51257d46..53: `mov (a0),d0; mov d0,(0x62b3e364); mov
+// (4,a0),d0; mov d0,(0x60370af8)`; E148 0x50ef8e7e..88 the same to its own words); the other E144-family bodies' and
+// the E118 family's store the record's address and its word 16 (E144 0x50f1eb09..14: `mov d0,a0; mov
+// d0,(0x62319a80); mov (16,a0),d1; mov d1,(0x61e5bb80)`; E122 0x50cfbcf5..00 the same). The method is one (E148 and
+// the E144 and E118 families call vt+52, their API vtable lacking E143's slot 0, src/fw/overrides-E144.mjs). Returns
+// {table, table_at, aux, aux_at}, or undefined where the return does not follow `calls (a1)` or the walk meets another
+// instruction.
+export const ICON_RETURN_E143 = 0x51257D3D, ICON_TABLE_E143 = 0x62B3E364, ICON_AUX_E143 = 0x60370AF8;
+const ICON_SPAN = 0x20;
+export function iconStores(img, ret) {
+  const c = ret - 2 - 0x50000000;
+  if (img[c] !== 0xf0 || img[c + 1] !== 0xf1) return undefined;
+  let p = c + 2;
+  for (; p < c + ICON_SPAN && !(img[p] === 0xf1 && img[p + 1] === 0xe0); p += insnLength(img[p], img[p + 1]));
+  if (p >= c + ICON_SPAN) return undefined;
+  const regs = ['record', null, null, null], stores = [];
+  for (p += 2; p < c + ICON_SPAN && stores.length < 2;) {
+    if ((img[p] & 0xf3) === 0x70) { regs[img[p] >> 2 & 3] = 0; p += 1; continue; }
+    if (img[p] === 0xf8 && (img[p + 1] & 0xf3) === 0) { regs[img[p + 1] >> 2 & 3] = img[p + 2]; p += 3; continue; }
+    if (img[p] === 0xfc && (img[p + 1] & 0xf3) === 0x81 && regs[img[p + 1] >> 2 & 3] !== null) { stores.push([u32(img, p + 2), regs[img[p + 1] >> 2 & 3]]); p += 6; continue; }
+    return undefined;
+  }
+  if (stores.length !== 2) return undefined;
+  return { table: stores[0][0], table_at: stores[0][1], aux: stores[1][0], aux_at: stores[1][1] };
+}
+
+// The resource/settings API's object word (fact 'api_object', src/lab/text.mjs check_init; through bin/port.mjs the
+// place of E143's API_OBJECT_E143, how 'api-getter'): the icon load (iconStores) gets the API object from its getter
+// just before its method call, `call <getter>; mov (a0),a1` (E143 0x51257d2a: `call 0x50b4e3f0`), and the getter's
+// first instruction loads the object's word, `mov (abs32),a0` (fc a0; E143 0x50b4e3f0: 0x603613b0). The map placed
+// E143's word 8 bytes off on E144 (an override since, src/fw/overrides-E144.mjs) and on E148, E137 and the others
+// (X: the word held 0 after the GUI's creation; D: E148's getter 0x508cddb3 loads 0x61e44380, the port gave
+// 0x61e44378). Returns {getter, word}, or undefined where the form is not met within API_SPAN bytes before the call.
+export const API_OBJECT_E143 = 0x603613B0;
+const API_SPAN = 0x18;
+export function apiObject(img, ret) {
+  const c = ret - 2 - 0x50000000;
+  if (img[c] !== 0xf0 || img[c + 1] !== 0xf1) return undefined;
+  for (let p = c - 1; p >= c - API_SPAN; p--) {
+    const call = callAt(img, p);
+    if (!call || img[p + call.len] !== 0xf0 || img[p + call.len + 1] !== 0x04) continue;
+    const g = call.to;
+    if (img[g] !== 0xfc || img[g + 1] !== 0xa0) return undefined;
+    return { getter: 0x50000000 + g, word: u32(img, g + 2) };
+  }
+  return undefined;
+}
+
+// The GUI's device records (fact 'gui_devices', src/lab/text.mjs check_init; through bin/port.mjs the place of E143's
+// GUI_DEVICES_E143, how 'device-loop'): the GUI's set-up fills a callbacks struct on its stack, among them its text
+// callback (`mov <callback>,d0; mov d0,(slot,sp)`; E143 0x510bbc8a, the struct at sp + 44 of 76 bytes, its memset
+// `add 44,d3; mov d3,a0; clr d0; mov 76,d1` at 0x510bbc4c), then for each device clears its record and copies the
+// struct into it: `mov <devices>,a2` ... `mov <stride>,d1` (the record's memset) ... `mov <at>,a0; add a2,a0` (the
+// struct's place in the record) ... `cmp <count>,d2; blt` (E143 0x510bbcc7..0x510bbd1d: 0x62b3dc94, 168, 76, 3). The
+// rule reads them from the place of the text callback: E143's records of 168 bytes, the text callback at +108; E137's
+// of 164 with a struct of 72 bytes, E122's of 160 with a struct of 68 at sp + 40 (D: 0x50c730a6, 0x50baacfc), where
+// E143's stride left the check reading other words (X). Returns {devices, stride, count, callback_at}, or undefined
+// where the form is not met.
+export const GUI_DEVICES_E143 = 0x62B3DC94, GPI_TEXT_CALLBACK_E143 = 0x510BC7D8;
+const DEVICES_BACK = 0x80, DEVICES_SPAN = 0x100;
+export function guiDevices(img, cb) {
+  const { base } = imageBase(img), rt = (base + cb - 0x50000000) >>> 0, found = [];
+  for (const l of loadsOf(img, rt)) {
+    if (img[l + 1] !== 0xcc || img[l + 6] !== 0x42) continue;
+    const slot = img[l + 7];
+    let struct = null;
+    for (let p = l - 7; p >= l - DEVICES_BACK && struct === null; p--) {
+      if (bytesAt(img, p, [0x2b, null, 0xf1, 0xec, 0x00, 0x85, null])) struct = { sp: img[p + 1], size: img[p + 6] };
+    }
+    if (struct === null) continue;
+    let devices = null, stride = null, at = null, count = null;
+    for (let p = l + 8; p < l + DEVICES_SPAN && count === null; p += insnLength(img[p], img[p + 1])) {
+      if (devices === null && img[p] === 0xfc && img[p + 1] === 0xde) devices = u32(img, p + 2);
+      else if (devices !== null && stride === null && img[p] === 0x2d) stride = img[p + 1] | img[p + 2] << 8;
+      else if (stride !== null && at === null && img[p] === 0x90 && img[p + 2] === 0xf1 && img[p + 3] === 0x78) at = img[p + 1];
+      else if (at !== null && img[p] === 0xaa) count = img[p + 1];
+    }
+    if (count === null || slot < struct.sp || slot + 4 > struct.sp + struct.size) continue;
+    found.push({ devices, stride, count, callback_at: at + slot - struct.sp });
+  }
+  if (found.length > 1) throw new Error(`guiDevices: ${found.length} device loops after loads of the text callback ${h8(cb)}, want one`);
+  return found[0];
+}
+
 // Whether the SCPU keeps the camera's backup words and clock (fact 'scpu.backup'): the image holds the trace names of
 // those requests, "ScpuBkupW" (with "ScpuBkupR", "SctimeWrite"; E143's poster 0x5005cd17 sends them, D). E143, E146,
 // E147, E139 and E134 hold all three; E144 and the other 12 E144- and E118-family bodies none (X, a string count over
@@ -5850,7 +5963,14 @@ export function readPlacedFacts({ img, at }) {
   const stateRegs = stateLogFn !== null ? stateLog(img, stateLogFn) : undefined;
   if (stateRegs !== undefined) facts.state_log = { regs: stateRegs };
   const stateTable = at(STATE_TABLE_E143), parents = stateTable !== null ? stateTableBound(img, stateTable) : undefined;
-  if (parents !== undefined) facts.gui_states = { parents };
+  const menuSt = parents !== undefined ? menuState(img, stateTable, parents) : undefined;
+  if (parents !== undefined) facts.gui_states = { parents, ...(menuSt !== undefined && { menu: menuSt }) };
+  const iconRet = at(ICON_RETURN_E143), icons = iconRet !== null ? iconStores(img, iconRet) : undefined;
+  if (icons !== undefined) facts.icons = icons;
+  const api = iconRet !== null ? apiObject(img, iconRet) : undefined;
+  if (api !== undefined) facts.api_object = api;
+  const textCb = at(GPI_TEXT_CALLBACK_E143), devices = textCb !== null ? guiDevices(img, textCb) : undefined;
+  if (devices !== undefined) facts.gui_devices = devices;
   const loop = kcb !== null && qerd !== null ? displayLoop(img, kcb, qerd) : null;
   const dispq = { ...(qewr !== null && { sends: displaySends(img, qewr) }), ...(loop !== null && { loop, start: displayStart(img, loop, qerd) }),
     ...(loop !== null && qewr !== null && { replies: displayReplies(img, loop, qewr) }) };
@@ -6087,6 +6207,12 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.crt) out.set(K_CRT_134D_E143, { to: facts.crt.clock_read, how: 'call-target' });
   if (facts.frame_mode) out.set(FRAME_MODE_SET_E143, { to: facts.frame_mode.set, how: 'take-clamp' });
   if (facts.frame_plane) out.set(AF_UPLOAD_E143, { to: facts.frame_plane.uploads[2], how: 'plane-mode' });
+  if (facts.icons) {
+    out.set(ICON_TABLE_E143, { to: facts.icons.table, how: 'icon-store' });
+    out.set(ICON_AUX_E143, { to: facts.icons.aux, how: 'icon-store' });
+  }
+  if (facts.api_object) out.set(API_OBJECT_E143, { to: facts.api_object.word, how: 'api-getter' });
+  if (facts.gui_devices) out.set(GUI_DEVICES_E143, { to: facts.gui_devices.devices, how: 'device-loop' });
   if (facts.play) {
     const here = facts.play.wrappers, pairs = new Map();
     for (const w of componentWrappers(e143, COMPONENT_GETTER_E143)) {

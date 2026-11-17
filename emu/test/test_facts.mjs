@@ -29,7 +29,8 @@
 //               its caller word against CALLER_FOUND and A(), the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
-//               WRAPPERS_FOUND and A(), the GUI state table's bound against STATES_FOUND, the still information's
+//               WRAPPERS_FOUND and A(), the GUI state table's bound against STATES_FOUND, the menu's state, the icon words,
+//               the API object and the GUI's device records against NAV_FOUND and A(), the still information's
 //               layout against STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
 //               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
 //               SIO_FOUND, the GUI canvas, OSD banks
@@ -944,6 +945,19 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // table: E143's 12 (D: `cmp 12,d3; lcs` at 0x5124b478 in the name lookup that loads the table at 0x5124b467) and
 // E145's 18 (D: 0x50de87bf, after the load at 0x50de87ae)
 const STATES_FOUND = { E143: 12, E145: 18 };
+// The nav bring-up's facts (src/fw/facts.mjs menuState, iconStores, apiObject, guiDevices; docs/model-survey.md
+// finding 156): E143's (D: the state table's SS_MENU row 0x0b and its ID_ST_MENU child 2; the icon stores at
+// 0x51257d46..53; the API getter 0x50b4e3f0's `mov (0x603613b0),a0`; the device loop 0x510bbcc7..0x510bbd1d), E144's
+// (D: its 0x1102; the stores at 0x50f1eb09..14; its getter 0x508cdd5d, the hand override's word; the loop 0x50d30aa9),
+// E148's (D: the stores at 0x50ef8e7e..88, its getter 0x508cddb3) and E137's and E122's device loops (D: 0x50c730a6,
+// stride 164, the struct of 72 bytes; 0x50baad72, stride 160, the struct at sp + 40)
+const NAV_FOUND = {
+  E143: { menu: 0x0B02, icons: { table: 0x62B3E364, table_at: 0, aux: 0x60370AF8, aux_at: 4 }, api: { getter: 0x50B4E3F0, word: 0x603613B0 }, devices: { devices: 0x62B3DC94, stride: 168, count: 3, callback_at: 108 } },
+  E144: { menu: 0x1102, icons: { table: 0x62319A80, table_at: 'record', aux: 0x61E5BB80, aux_at: 16 }, api: { getter: 0x508CDD5D, word: 0x61E43B5C }, devices: { devices: 0x62319700, stride: 168, count: 3, callback_at: 108 } },
+  E148: { menu: 0x0B02, icons: { table: 0x62353EEC, table_at: 0, aux: 0x61E53FE8, aux_at: 4 }, api: { getter: 0x508CDDB3, word: 0x61E44380 } },
+  E137: { devices: { devices: 0x6230DB34, stride: 164, count: 3, callback_at: 104 } },
+  E122: { icons: { table: 0x61A8E328, table_at: 'record', aux: 0x61618A70, aux_at: 16 }, devices: { devices: 0x61A8DFE8, stride: 160, count: 3, callback_at: 104 } },
+};
 // The still information's layout (play.still; src/fw/facts.mjs stillFields) at the port's place of E143's converter
 // 0x50acc981: E143's (D: `mov (148,a3),d0` to the GUI's +56 at 0x50accaf3, `mov (100,a3),d0` to +88 at 0x50accaa4,
 // the u32 +100 S-PLAYCOMP's pattern found), E122's (D: 0x506a9e36 and 0x506a9deb, `movhu (90,a3),d0`), E144's at the
@@ -1425,6 +1439,15 @@ export function factsTests() {
     }
     // the GUI state table's bound, and the still information's layout at the port's place of E143's converter
     if (Object.hasOwn(STATES_FOUND, code) && (code === 'E143' || PORTS[code])) ok(placed?.gui_states?.parents === STATES_FOUND[code], `${code}: gui_states ${hx(placed?.gui_states ?? placed)}, found ${STATES_FOUND[code]}`);
+    const nf = NAV_FOUND[code];
+    if (nf && (code === 'E143' || PORTS[code])) {
+      if (nf.menu !== undefined) ok(placed?.gui_states?.menu === nf.menu, `${code}: gui_states.menu ${hx(placed?.gui_states ?? placed)}, found ${hx(nf.menu)}`);
+      for (const [k, f] of [['icons', 'icons'], ['api', 'api_object'], ['devices', 'gui_devices']]) if (nf[k]) ok(same(placed?.[f], nf[k]), `${code}: ${f} ${hx(placed?.[f] ?? placed)}, found ${hx(nf[k])}`);
+    }
+    // every body's port places E143's icon words, API object word and device records where the rules read them
+    if (PORTS[code] && placed?.icons) ok(PORTS[code][0x62B3E364] === placed.icons.table && PORTS[code][0x60370AF8] === placed.icons.aux, `${code}: A() of the icon words ${hx([PORTS[code][0x62B3E364], PORTS[code][0x60370AF8]])}, the rule's ${hx(placed.icons)}`);
+    if (PORTS[code] && placed?.api_object) ok(PORTS[code][0x603613B0] === placed.api_object.word, `${code}: A() of the API object word ${hx(PORTS[code][0x603613B0])}, the rule's ${hx(placed.api_object)}`);
+    if (PORTS[code] && placed?.gui_devices) ok(PORTS[code][0x62B3DC94] === placed.gui_devices.devices, `${code}: A() of the GUI's device records ${hx(PORTS[code][0x62B3DC94])}, the rule's ${hx(placed.gui_devices)}`);
     if (Object.hasOwn(STILL_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.play?.still, STILL_FOUND[code]), `${code}: play.still ${hx(placed?.play?.still ?? placed)}, found ${hx(STILL_FOUND[code])}`);
     if (Object.hasOwn(TAKE_FOUND, code)) ok(got.menu?.take === TAKE_FOUND[code], `${code}: menu.take ${hx(got.menu ?? got)}, found ${hx(TAKE_FOUND[code] ?? 'none')}`);
     if (Object.hasOwn(CALLER_FOUND, code)) ok(got.menu?.caller === CALLER_FOUND[code], `${code}: menu.caller ${hx(got.menu ?? got)}, found ${hx(CALLER_FOUND[code])}`);

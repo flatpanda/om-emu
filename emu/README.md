@@ -578,6 +578,13 @@ separated `mutant=N` (a negative control) and `oneInsn=0|1` (the one-instruction
 check_menu's and check_nav's `--jobs N` run the sessions in N `worker_threads`; `--mutants` runs the check as a node
 child under each mutant; check_menu's and check_nav's first check that a child spinning on `bra .` and killed on timeout
 leaves no child process and no temporary directory.
+Every pass/fail comparison of a check goes through `eq(got, want)` (`checks/lib/eq.mjs`, structural equality; a
+comparison with no natural pair of values is `eq(cond, true)`). With `OM_CHECK_RESULTS=FILE` a check writes, when it
+exits, each comparison site's passes and fails and its first failing `got` and `want`; `OM_RNG_TAPE=FILE` writes the
+draws of its seeded generators (`checks/lib/rngtape.mjs`). `bin/checks.mjs` sets both for every run, into the run's
+output directory (`check-results.json`, `rng-tape.json`, kept with a failing run's outputs), and a FAIL line names the
+failing sites; golden records neither file. `OM_EQ_MUT=check_x.mjs:LINE` makes the comparison at that line always hold
+(a tautology mutant), which the fault-point controls of `test/test_checks.mjs` use.
 
 ## The firmware map
 

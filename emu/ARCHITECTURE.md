@@ -158,7 +158,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F05 device configuration lives in debug-window bytes without write notification | open: rebase a running VSC channel when `LINE_NS` changes |
 | F06 the machine owns no simulated time; the lab clock moves only through VSC doorbells | open, phase 4 |
 | F07 the product runtime reproduces CPython, glibc and http.server behaviour | fixed: plain JS values throughout (`src/util/py*` is gone, `test/test_pure.mjs` keeps it so), plain JSON on the HTTP API and in the session logs, node's own errors and stacks |
-| F08 the checks report bare boolean predicates (`checks/lib/pred.mjs`) | open, phase 2: structured `eq(got, want)` results |
+| F08 the checks report bare boolean predicates (`checks/lib/pred.mjs`) | fixed: every comparison is `eq(got, want)` (`checks/lib/eq.mjs`); per site results with the first failing pairs, beside the RNG tape, in each run's output directory (`bin/checks.mjs`) |
 | F09 no firmware-free test tier | fixed: `bin/test-pure.mjs` |
 | F10 hosts classify errors as "lab error or crash" | fixed: the browser Worker fails the session on `Unported` / `HostStopped` and a restart recovers |
 | F11 firmware facts are literals spread across modules; node entry points did not validate the image | fixed: node loads refuse an image that is not the model's; facts are read by rules (`src/fw/facts.mjs`) |

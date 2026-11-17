@@ -637,7 +637,9 @@ green; a phase that changes behaviour on purpose records every changed baseline 
 - F02: a typed machine port replaces the gdbstub text in `Simulator`; Stats and the harness digest become optional
   observers.
 - F07 is done: plain JS values, plain JSON on the HTTP API and in the session logs, node's own errors.
-- F08: the checks' `pred()` seam becomes structured `eq(got, want)` results, with the RNG tape.
+- F08 is done (2026-11-16): the checks' `pred()` seam is `eq(got, want)` (`emu/checks/lib/eq.mjs`); each run of
+  `bin/checks.mjs` writes its per-site results (first failing `got` and `want`) and its RNG tape beside its outputs
+  (`emu/README.md` "Run", the checks).
 - F18: mutants move out of product code into test-only injection (or go with the checks that used them).
 - F13: one explicit options object per lab, which also finishes F19 (the machine options are already their own
   `env.machine`, `OM_MACHINE` parsed at first use, but still ride in the env bag).

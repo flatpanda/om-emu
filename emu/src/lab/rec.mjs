@@ -482,9 +482,11 @@ export class RecFile {
   // The picture's file from the lab's JPEG (a JFIF file, src/lab/jpeg.mjs): S-EXIFPRM, then S-RECREQ and REC_IMAGE
   // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. media: the packet's Media, the
   // drive REC_FILE records on (0, or 1 for the second slot's card: DevRec_Rec's apiRecInfo.slot[0], which REC_MAIN
-  // copies there, docs/hle-gaps.md 4.8.12; Media2 stays none: the double-slot record is not made here). Returns the
-  // file's record {path, size, folder, number, cluster, stamp, clock, header, date}
-  record(jpeg, media = 0) {
+  // copies there, docs/hle-gaps.md 4.8.12). media2 and mode: the packet's Media2 and RecordMediaMode (apiRecInfo's
+  // slot[1] and the save mode, setting 1129, which REC_MAIN copies there too): with both cards in a double-slot mode
+  // Media 0, Media2 1, and REC_FILE's double-slot record writes the file on both (docs/hle-gaps.md 4.8.14); else Media2
+  // none. Returns the files' records {path, size, folder, number, cluster, stamp, clock, header, date}, Media's first
+  record(jpeg, media = 0, media2 = NO_MEDIA, mode = 0) {
     const lab = this.lab, sim = lab.sim, R = this.R, P = R.packet.fields, who = this.image ? 'S-RECREQ' : 'S-RECIMAGE';
     if (!this.started) this.bring_up();
     if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its input`);
@@ -496,12 +498,16 @@ export class RecFile {
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', shot ? shot.id : SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
     if (this.image) put('Command', '<I', STILL_COMMAND);
+    // (RecordMediaMode: the fact's where the version's dump names it; a mode other than 0 on a version without it, or
+    // a second Media there, is refused)
+    if (P.RecordMediaMode !== undefined) put('RecordMediaMode', '<B', mode);
+    else if (mode !== 0 || media2 !== NO_MEDIA) throw new RecError(`${who}: RecordMediaMode ${mode}, Media2 ${media2}: this body's packet (fact rec_file) has no RecordMediaMode`);
     if (this.frame) {       // the E118 family's packet: FileType a halfword, no second slot; RecordDevice on E118 only
       put('FileType', '<H', JPEG);
       if (P.RecordDevice !== undefined) put('RecordDevice', '<H', CARD);
     } else {
       // (null: the version's record path reads no such field, src/fw/facts.mjs recFileInline)
-      if (P.Media2 !== null) put('Media2', '<H', NO_MEDIA);
+      if (P.Media2 !== null) put('Media2', '<H', media2);
       if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
       put('FileType', '<B', JPEG);
     }
@@ -513,18 +519,26 @@ export class RecFile {
     // registration (image_lab); on the E118 family from the registration's block as FILECLBK replied to it
     // (frame_watch). Those two forms record on the first slot alone in the lab
     if ((this.frame || R.contexts === null) && media !== 0) throw new RecError(`REC_FILE: Media ${media} on a body whose REC version the lab records on the first slot alone`);
-    const kept = !this.frame && R.contexts === null ? this.context : null, ctx = this.frame || kept ? null : R.contexts[media];
+    const kept = !this.frame && R.contexts === null ? this.context : null;
     if (!this.frame && R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
-    if (!this.frame && !kept && ctx === undefined) throw new RecError(`REC_FILE: no file context of Media ${media} is read on this body (fact rec_file contexts)`);
-    const file = {
-      ...(this.frame ? this.records.at(-1).file
-        : kept ? { ...this.dcf_file(kept.fnode, kept.dcf, 'its context at the registration'), stamp: kept.stamp }
-          : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`, media)),
-      clock, header, date,
-    };
-    if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size}, the packet's ${size}`);
+    // the double-slot record fills the context of each drive (rec_file_record_DoubleSlot 0x5053f97d: Media's context
+    // and the other, 0x5053fa3b..0x5053fa55, D) and records the same buffer on both where the second slot's own
+    // (BuffAddrDoubleSlot) is 0, as a single encode leaves it (0x5053e40f..0x5053e421, D)
+    const drives = media2 === NO_MEDIA ? [media] : [media, media2];
+    const files = drives.map((d) => {
+      const ctx = this.frame || kept ? null : R.contexts[d];
+      if (!this.frame && !kept && ctx === undefined) throw new RecError(`REC_FILE: no file context of Media ${d} is read on this body (fact rec_file contexts)`);
+      const file = {
+        ...(this.frame ? this.records.at(-1).file
+          : kept ? { ...this.dcf_file(kept.fnode, kept.dcf, 'its context at the registration'), stamp: kept.stamp }
+            : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`, d)),
+        clock, header, date,
+      };
+      if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size} on drive ${d}, the packet's ${size}`);
+      return file;
+    });
     this.pictures += 1;
-    return file;
+    return files;
   }
   // A recorded file by its fnode fn and its DCF block blk (storage.mjs REC's layouts) on the slot of Media media (the
   // file layer's letter 'C' + media): {path, size, folder, number, cluster, stamp}

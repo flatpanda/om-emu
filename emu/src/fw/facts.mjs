@@ -3473,7 +3473,9 @@ export function recorder(img) {
 //   REC_MAIN copies from the requester's message and dispatches on, the still's handler being Command 16's case (D on
 //   the three: its jump table's entry 16, for the request's Mode 4113, the handler that sets Mode 4097), and which
 //   rec_ImgPro_CreateParam's extension reads for the size of its first buffer (S-RECREQ gives it 16; this version's
-//   dump only: the other versions' rules do not read it)
+//   dump only: the other versions' rules do not read it); and RecordMediaMode (1 byte, +297; E146 and E147 +267), the
+//   save mode REC_MAIN copies from the request and REC_FILE's double-slot test reads (0x5053dcf8; S-RECREQ gives it
+//   the setting's value, docs/hle-gaps.md 4.8.14; this version's dump only too)
 // - jpeg: make_image (S-JPEGENC) by its trace; rec_jpeg_exec by its trace too, read as the form but not given since
 //   2026-11-11 (no stand-in reads it: REC_IMAGE's task runs it); header, the size rec_jpeg_exec clears before the
 //   encode, the
@@ -3518,7 +3520,7 @@ export const REC_FILE_E143 = {
   packet: {
     size: 316, post: 0x5053990F,
     fields: { pExifParam: 28, HandleTarget: 116, BuffAddr1: 144, BuffSize1: 148, HeaderSize: 184, Status: 208, Mode: 210,
-      Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314, Command: 52 },
+      Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314, Command: 52, RecordMediaMode: 297 },
   },
   jpeg: {
     make_image: 0x50549B42, header: 41984,
@@ -3649,7 +3651,7 @@ export function recFile(img, kcb) {
     else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
   }
   const fields = {};
-  for (const [name, width] of Object.entries({ ...REC_FIELDS, Command: 4 })) {
+  for (const [name, width] of Object.entries({ ...REC_FIELDS, Command: 4, RecordMediaMode: 1 })) {
     const f = named.get(name);
     if (f?.width !== width || f.ptr !== null) return undefined;
     fields[name] = f.at;

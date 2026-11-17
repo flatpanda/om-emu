@@ -504,19 +504,22 @@ export class Storage {
   }
   // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
   // cluster, the stamp and the clock record)
-  // drive: the slot's the firmware's save settings name (camapp.mjs save_slot); the second slot's only where REC_FILE
-  // records natively
-  write_picture(bytes, drive = DRIVE) {
-    if (drive !== DRIVE && !this.rec) throw new StorageError(`S-RECFILE: a picture for drive ${drive}: the lab records on the second slot only where REC_FILE runs natively (src/fw/models.mjs rec_native)`);
-    return this.rec ? this.rec_picture(bytes, drive) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes);
+  // drives: the slots the firmware's save settings name (camapp.mjs record_cards: one, or both for the double-slot
+  // record), mode the save mode (setting 1129) REC's packet carries; the second slot's only where REC_FILE records
+  // natively. Returns the first drive's file (each one's is in files)
+  write_picture(bytes, drives = [DRIVE], mode = 0) {
+    if (drives.some((d) => d !== DRIVE) && !this.rec) throw new StorageError(`S-RECFILE: a picture for drive ${drives.join(' and ')}: the lab records on the second slot only where REC_FILE runs natively (src/fw/models.mjs rec_native)`);
+    return this.rec ? this.rec_picture(bytes, drives, mode) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes);
   }
-  // REC_FILE natively (src/lab/rec.mjs): its file, with the header REC_IMAGE's header maker builds
-  rec_picture(bytes, drive = DRIVE) {
-    const file = this.rec.record(bytes, drive);
-    this._slot(drive).next_file = file.number + 1;
-    this.files.push(file);
-    this.log.push(['rec', `${file.path}: ${file.size} bytes (header ${file.header}) from cluster ${file.cluster}, dated '${file.date}'`]);
-    return file;
+  // REC_FILE natively (src/lab/rec.mjs): its file on each drive, with the header REC_IMAGE's header maker builds
+  rec_picture(bytes, [drive, drive2] = [DRIVE], mode = 0) {
+    const files = this.rec.record(bytes, drive, drive2, mode);
+    for (const [i, file] of files.entries()) {
+      this._slot(i ? drive2 : drive).next_file = file.number + 1;
+      this.files.push(file);
+      this.log.push(['rec', `${file.path}: ${file.size} bytes (header ${file.header}) from cluster ${file.cluster}, dated '${file.date}'`]);
+    }
+    return files[0];
   }
   rec_layout() { return REC; }       // the fnode's and the dnode's fields (src/lab/rec.mjs)
   // S-RECFILE where the rule reads the build's recorder: the file as REC_FILE's modules record one (the recorder

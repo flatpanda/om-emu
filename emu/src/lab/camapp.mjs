@@ -164,8 +164,7 @@ import { FACTS } from '../fw/ports.mjs';
 //              application's card check passes, errFactor 0, and the GUI's count check 0x511ffcc9 too); each picture
 //              taken (END_SHOOTING_PICTURE) is kept as the lab's record of its capture (images), and its file is
 //              written through the file module (S-RECFILE, storage.mjs) in place of REC_FILE, whose recording modules
-//              do not run (on E143, E146, E147, the E118 family and the E144 family but E145 and E132 REC_FILE's own
-//              task records it, rec.mjs).
+//              do not run (on every body since 2026-11-16 REC_FILE's own task records it, rec.mjs).
 //              Where REC's recorder or REC_FILE records it (storage.mjs record(), rec.mjs; dcf_db) the firmware's
 //              DCF database counts it at once, and the image count (IMAGE_COUNT) and playback's pictures are the
 //              database's; elsewhere S-CARD answers the count from its list and the database learns of the file at the

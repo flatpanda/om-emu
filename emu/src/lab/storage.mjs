@@ -51,8 +51,8 @@
 //               would start, sends its first request to the image engine (0x5048ee61 on E143, a kind 14 fill on the
 //               imgpro unit 0x9c600000, whose model S-IMGPRO the IRQ attach of camapp 3's H-IMGPROINIT serves only
 //               after the mount: docs/hle-gaps.md 4.3.1), and the movie module it asks does not run
-//   S-RECFILE   (not on E143, E146, E147, the E118 family and the E144 family but E145 and E132, where REC_FILE runs
-//               natively in its task from REC_IMAGE's packet, src/lab/rec.mjs) the picture's file at a release's
+//   S-RECFILE   (on no body since 2026-11-16: REC_FILE runs natively in its task from REC_IMAGE's packet on all 19,
+//               src/lab/rec.mjs) the picture's file at a release's
 //               END_SHOOTING_PICTURE
 //               (src/lab/camapp.mjs S-CARD),
 //               the JPEG the capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes

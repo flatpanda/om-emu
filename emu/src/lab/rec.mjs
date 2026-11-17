@@ -1,11 +1,12 @@
 // REC_FILE natively on E143, E146 and E147, on the E144 family's E144, E148, E139, E134, E137, E142, E140 and
-// E125, on E130, E133 and E129, whose REC is the version before the family's, and on the E118 family's E122, E118
-// and E120 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 131 to 136): S2's
-// picture
-// file recorded by REC_FILE's own task from the packet REC_IMAGE posts it, with the file's header made by REC_IMAGE's
-// own header maker. Addresses and offsets are E143's (D unless tagged); each body's are the ones the rule reads (fact
-// 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue, on E130, E133 and E129 recFileInline, on
-// the E118 family recFileFrame). The other bodies keep S-RECFILE (src/lab/storage.mjs).
+// E125 and on E145 (its loop inlining the start and the finish), on E130, E133, E129 and E132, whose REC is the
+// version before the family's (E132 recording through rec_file_destination_record), and on the E118 family's E122,
+// E118 and E120 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 131 to 136,
+// 156): S2's picture file recorded by REC_FILE's own task from the packet REC_IMAGE posts it, with the file's header
+// made by REC_IMAGE's own header maker. Addresses and offsets are E143's (D unless tagged); each body's are the ones
+// the rule reads (fact 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue, on E130, E133, E129
+// and E132 recFileInline, on the E118 family recFileFrame). A body without rec_native keeps S-RECFILE
+// (src/lab/storage.mjs); none of the 19 since 2026-11-16.
 //
 // REC's packet (316 bytes): its fields by the firmware's own names, from the packet dump 0x50541561 (D). REC_MAIN
 // builds it (0x50539e89..0x50539f0e clear it), REC_IMAGE posts it to REC_FILE's queue REC_EXEC_FILE 69 (0x6004324e)
@@ -27,14 +28,15 @@
 // rec_make_image_finish posts a still's packet to that queue (S-RECIMAGE's post is that route there); the EXIF init
 // flushes no cache and rec_jpeg_exec clears no header area through the image engine (no K-CFLUSH answer, no fill stood
 // in); the clock read is the rule's. No rule reads REC_IMAGE's task there (fact 'rec_image' is recFile's version's).
-// The REC version before the family's (E130, E133 and E129; D on E130, docs/model-survey.md findings 131 to 136, the
-// addresses at src/fw/facts.mjs recFileInline): the packet is 284 bytes with other offsets (REC_MAIN fills it from
-// the request it dumps field by field; the names here are E143's for the same uses, I); REC_FILE (task 30) waits on
-// its queue alone and inlines its start and finish; its record step is rec_make_file, which keeps its file context
-// (84 bytes) on its own stack and records through the whole-file recorder's builders, so the lab reads the file's
-// fnode and stamp at the registration's entry (fact rec_file.context, contexts null); it reads no Media2 and no
-// RecordDevice (null: not written); REC_IMAGE's task posts a still's packet to REC_FILE's queue (S-RECIMAGE's post
-// is the camera's route) with Free set from rec_bracket_update's result, 1 for the frame that ends a shot, and
+// The REC version before the family's (E130, E133, E129 and E132; D on E130, docs/model-survey.md findings 131 to
+// 136 and 156, the addresses at src/fw/facts.mjs recFileInline): the packet is 284 bytes with other offsets
+// (REC_MAIN fills it from the request it dumps field by field; the names here are E143's for the same uses, I);
+// REC_FILE (task 30) waits on its queue alone and inlines its start and finish; its record step is rec_make_file,
+// which keeps its file context (84 bytes) on its own stack and records through the whole-file recorder's builders, so
+// the lab reads the file's fnode and stamp at the registration's entry (fact rec_file.context, contexts null); it
+// reads no Media2 and no RecordDevice (null: not written; on E132, whose record step is rec_file_destination_record,
+// RecordDevice is read and written, bit 0 the card, as on the family); REC_IMAGE's task posts a still's packet to
+// REC_FILE's queue (S-RECIMAGE's post is the camera's route) with Free set from rec_bracket_update's result, 1 for the frame that ends a shot, and
 // REC_FILE then answers the requester's ObjResponse queue with the status (also where Dst is 0): S-RECIMAGE sets
 // Free and takes the reply (fact rec_file.reply), as S-RECREQ does on E143; the EXIF init flushes no cache,
 // rec_jpeg_exec clears no header area, and the header maker divides by no crop area (it makes the area from
@@ -246,9 +248,9 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // 2026-11-11). The bodies' differences (E146 and E147: the packet of 276 bytes with other offsets, the
 // image's address and size in REC_IMAGE's image record, another EXIF parameter block's size and offsets past its
 // tags; the E144 family, by recFileQueue: the packet of 300 bytes, REC_FILE's queue with no flag, no cache flush and
-// no fill (cflush and fill null), one file context or two, the clock read clock_read; E130, E133 and E129, by
-// recFileInline: the packet of 284 bytes, no Media2 or RecordDevice, the context on rec_make_file's stack, REC_FILE's
-// reply) are the rule's values; docs/hle-gaps.md 4.8.10
+// no fill (cflush and fill null), one file context or two, the clock read clock_read; E130, E133, E129 and E132, by
+// recFileInline: the packet of 284 bytes, no Media2 or RecordDevice (E132 RecordDevice), the context on
+// rec_make_file's stack, REC_FILE's reply) are the rule's values; docs/hle-gaps.md 4.8.10
 export const REC_NATIVE = MODEL_INFO.rec_native === true;
 // REC_IMAGE's task natively (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5), wherever
 // REC_FILE runs natively in recFile's REC version (E143, E146, E147; the E144 family's keeps S-RECIMAGE), at the
@@ -641,8 +643,8 @@ export class RecFile {
     }
     return { header: y.header, size: y.size };
   }
-  // The E144 family, and E130, E133 and E129 (no REC_IMAGE task natively): S-RECIMAGE (rec_jpeg_exec in the lab's call
-  // on the packet pk, S-JPEGENC's encode and the fill where the body has one), REC_IMAGE's post to REC_FILE's queue,
+  // The E144 family, and E130, E133, E129 and E132 (no REC_IMAGE task natively): S-RECIMAGE (rec_jpeg_exec in the
+  // lab's call on the packet pk, S-JPEGENC's encode and the fill where the body has one), REC_IMAGE's post to REC_FILE's queue,
   // then lab time until REC_FILE's handler returns. Returns {header, size} from the packet
   image_lab(pk, stream) {
     const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, I = J.image, P = R.packet.fields, who = 'S-RECIMAGE';

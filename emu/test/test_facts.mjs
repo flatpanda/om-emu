@@ -1030,8 +1030,9 @@ const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', '
 // The picture file API's object delete and attribute (erase; src/fw/facts.mjs pictureErase), as read (D: E144's code 33
 // at 0x502dfb7a and its fnode +89 read at 0x502dfe5a, E130's at 0x502d7564 and 0x502d7899, each after its API id's
 // load as E143's), and none on E118 and E120, which load neither id (X: a byte scan)
-const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3 },
-  E130: { object_delete: 0x502D7450, attribute: 0x502D7809 }, E118: null, E120: null };
+const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3, erase_all: 0x502DFC28 },
+  E130: { object_delete: 0x502D7450, attribute: 0x502D7809, erase_all: 0x502D762C }, E146: { object_delete: 0x503F9B1B, attribute: 0x503F9E58, erase_all: 0x503F9C9D },
+  E147: { object_delete: 0x50407991, attribute: 0x50407CCE, erase_all: 0x50407B13 }, E118: null, E120: null };
 // The SD card's HLS media status word (media_status; src/fw/facts.mjs mediaStatus), as read (D: the setter's medium 4
 // store, E144 0x5084940a, E137 0x507b72ef, E130 0x506ff7fd, E122 0x506a75e9; the map had E137's, E130's and E122's 8
 // bytes low, on the second slot's word)

@@ -3342,14 +3342,18 @@ export function dcfCounts(img) {
 //   the API's queue);
 // - attribute (id 0x70012, 0x503fdcb1: d0 drive, d1 the index) answers the fnode's byte +89 (`movbu (89,aN),dM`,
 //   0x503fdd28), whose bit 0 the DCF edit's lock sets and its unlock clears (0x50872e87, 0x50872ea8) and whose
-//   object delete erases nothing where it is set (0x508728bc).
+//   object delete erases nothing where it is set (0x508728bc);
+// - erase_all (id 0x70010, 0x503fdaf6: d0 the media; 2 or more returns 0) builds the DCF edit's ALL_DELETE request:
+//   +2 the media, +12 0, FILECLBK's code 37 (0x25: `mov 37,d0; mov d0,(40,sp)`, 0x503fdba2), and posts it through
+//   the API's sender with the API's reply queue (0x503fdbdc), returning the token (src/lab/media.mjs S-MDACTRL's
+//   erase all; docs/hle-gaps.md 4.8.14). An image without it gives erase_all null.
 // The entry of each is the greatest call target within API_ENTRY bytes before its id's load. One load of each id
 // in d0 on 17 images, none on E118 and E120 (X, a byte scan; E144's and E130's functions read as E143's, D: E144
-// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute}, or null where an id is not loaded; throws for
-// an id loaded twice, a load with no call target before it, or a function without its code or its read within
-// API_BODY bytes of whole instructions.
-export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1 };
-const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ENTRY = 0x20, API_BODY = 0x200, DCFED_OBJ_DEL = 0x21, FNODE_ATTR = 89;
+// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all}, or null where the first two ids are
+// not loaded; throws for an id loaded twice, a load with no call target before it, or a function without its code or
+// its read within API_BODY bytes of whole instructions.
+export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1, erase_all: 0x503FDAF6 };
+const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ERASE_ALL = 0x70010, API_ENTRY = 0x20, API_BODY = 0x200, DCFED_OBJ_DEL = 0x21, DCFED_ALL_DELETE = 0x25, FNODE_ATTR = 89;
 export function pictureErase(img) {
   const rule = 'pictureErase', D = (o) => h8(0x50000000 + o);
   const fn = (id, what, has) => {
@@ -3364,7 +3368,8 @@ export function pictureErase(img) {
   };
   const del = fn(API_OBJECT_DELETE, "`mov 33,d0` (the DCF edit's object delete)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_DEL);
   const attr = fn(API_ATTRIBUTE, "`movbu (89,aN),dM` (the fnode's attribute)", (q) => img[q] === 0xf8 && (img[q + 1] & 0xf0) === 0x40 && img[q + 2] === FNODE_ATTR);
-  return del === null || attr === null ? null : { object_delete: del, attribute: attr };
+  const all = fn(API_ERASE_ALL, "`mov 37,d0` (the DCF edit's ALL_DELETE)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_ALL_DELETE);
+  return del === null || attr === null ? null : { object_delete: del, attribute: attr, erase_all: all };
 }
 // The HLS media layer's status word of the SD card in the first slot (fact 'media_status', and through bin/port.mjs
 // the place of E143's MEDIA_STATUS_E143; src/lab/camapp.mjs S-CARD's CARD_STATUS; docs/model-survey.md finding 138).

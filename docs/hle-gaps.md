@@ -153,7 +153,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5; S-JPEGENC the run and Jpeg_Result on the three since 2026-11-11, 4.3.9); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129), since 2026-11-11 on E147, E148 and eight E144-family bodies (findings 149 to 152); two slots on E143 and E146, the second empty by default (2026-11-11, 4.8.12), Dual Same's record on both cards (2026-11-16, 4.8.14) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5; S-JPEGENC the run and Jpeg_Result on the three since 2026-11-11, 4.3.9); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; since 2026-11-16 the playback menu's Erase All on E143, E146, E147 and E148 (S-MDACTRL's erase all, 4.8.15); S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129), since 2026-11-11 on E147, E148 and eight E144-family bodies (findings 149 to 152); two slots on E143 and E146, the second empty by default (2026-11-11, 4.8.12), Dual Same's record on both cards (2026-11-16, 4.8.14) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its view decoded on the model of the image library's pipeline block and JPEG codec, a pre-reduced one stood in (H-PLAYSTART, S-IMGPIPE, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11, 4.8.13); since 2026-11-11 Delete's eraseCurrent by the firmware's own attribute and object delete (H-OBJDEL, `docs/model-survey.md` findings 137 to 140) on the bodies of `emu/test/test_erase.mjs` ERASE_NATIVE | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
@@ -6808,7 +6808,9 @@ on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/
   picture on the card the save settings name. The same round: the play module's view decoded on the pipeline block's
   model under camapp 3's play opt-in (4.8.13); the HLS side on E147, E148 and eight E144-family bodies, REC_FILE's
   task on E130, E133, E129 and the E118 family, and Delete's eraseCurrent natively (`docs/model-survey.md` findings
-  131 to 154).
+  131 to 154). Round 11 (2026-11-16, 4.8.14, 4.8.15): Dual Same and Auto Switch on E143 and E146 (4.8.14); the
+  playback menu's Erase All natively through the media control's command 3 and the DCF edit's ALL_DELETE, a locked
+  picture kept (S-MDACTRL's erase all), on E143, E146, E147 and E148 (4.8.15).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -7014,7 +7016,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   stays. (Round 8, 4.8.9: REC's steps read and sent by S-RECFILE, each run natively.)
 - **Open:** the second slot (S-CARD sets both slots' mount state to 8 at the start, so the format sets slot 2's flag
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
-  media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
+  media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...; read in
+  4.8.15: 2 the copy all, 3 the erase all, run since 2026-11-16, 5 the unlock all, 6 the rating-exclusive erase all); the SD
   host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card it formats and mounts,
   4.8.6). (What the camera draws without a card is no longer open: the firmware's own screen without a card, "No
   Card" with the card icon, is drawn in the lab since 2026-11-14, below.)
@@ -8242,6 +8245,78 @@ Independent stops the session (below).
   choice of the one passing slot for the arrow up); the
   controller's test `0x50c73fd5` and the application's card check in the lab's release (S-CARD takes a mounted card
   as passing); RAW and RAW + JPEG on two cards (types 0 .. 8); the movie slot; E139, E134 and E125.
+
+#### 4.8.15 The media control's other commands: Erase All (2026-11-16; D unless tagged, addresses E143's)
+
+- **Why.** 4.8.3 left the media control's commands but the format open (S-MDACTRL stopped the session at any other),
+  and `docs/model-survey.md` finding 142 the menu's All Erase. Delete's eraseCurrent runs natively since 2026-11-11
+  (H-OBJDEL, findings 137 to 142); this round runs the menu's erase of every picture the same way, from the camera's
+  own menu down through the media control and the file system.
+- **Which command is which.** The function component's start table `0x60364a44` (24 bytes a command, the command's
+  entry at `+24 * cmd`, mediaCtrlStartExecSelect `0x50ceb784`: `cmp 7`, `udfu01 24`, `add 0x60364a44`), read at run
+  time after the boot filled it (X), and the functions' trace names (D): command 1 executeMediaFormatStart
+  `0x50ceb9b0` / getMediaProgress `0x50ceb96c` / executeMediaFormatEnd `0x50ceba28`; 2 executeCopyAllStart
+  `0x50ceba68` / getCopyAllProgress `0x50cebaf6` / executeCopyAllEnd `0x50cebb61`; 3 executeEraseAllStart
+  `0x50cebba1` / getMediaProgress / executeEraseAllEnd `0x50cebc19`; 5 executeUnlockAllStart `0x50cebc59` /
+  getMediaProgress / executeUnlockAllEnd `0x50cebce9`; 6 executeRatingExclusiveEraseAllStart `0x50cebd29` /
+  getRatingExclusiveEraseAllProgress `0x50cebdbb` / executeRatingExclusiveEraseAllEnd `0x50cebe10`; 0 and 4 empty.
+  getMediaCtrlCBC `0x50cebeea` gives them the callback ids 16, 56, 54, 55 and 54. From the menu (X, E143): the
+  playback menu's File page (MENU, then the sub dial two tabs on from Card/Folder/File) holds Reset All Images, Copy
+  All and Erase All. Erase All asks "Do you really want to delete images with rating flags?" with Erase and Save;
+  Erase, then Yes, sends command 3 for media 0; Save, then Yes, sends command 6; Reset All Images' Reset Protect,
+  then Yes, sends command 5. (E143's Card Formatting offers Format Card alone, with pictures on the card too, X.)
+- **The erase all (D).** executeEraseAllStart registers for the file module's progress event `0x04020011` as the
+  format's start does and calls the picture file API's erase all `0x503fdaf6` (api_picfile.c, API `0x70010`) with the
+  media: for media 0 or 1 a 56-byte block (+2 the media, +12 0) posted by the API's sender (`0x503eb960`, target 17)
+  as {the API's reply queue, the token, code 37, the block}, the token returned (`0x503fdbdc`). FILECLBK's code `0x25`
+  is the DCF edit's ALL_DELETE (finding 137's table), whose op 7 (`0x50872836`) sends the notification
+  `0x5089c2d8(7, drive, 0)` and runs MULTI_DELETE's body `0x50873295`: the progress total (the count + 5,
+  `0x50890247`), the DCF process's command 3, a walk of the database's objects (`0x508733b7`, its callback
+  `0x50873412`) that passes over an object whose fnode byte +89 has bit 0, the DCF edit's lock (`0x50873471`, with a
+  notification), and erases each other object's files (their entries marked `0xe5`, `0x50873566`), then every folder
+  left empty (`0x508735c1`: dosfile's FILE_DELETE_DIR, a folder not empty passed over as in finding 137), the
+  database's re-read (`0x5087366a`), the DCF process's command 4, the print order where its flag is set, and the
+  delete mount (`0x50873626`, DCFNUM_DELMOUNT), one progress step after each. executeEraseAllEnd only drops the
+  progress registration. The component's end (rcvReqFncMediaCtrlStartComplete `0x50cec0ff`) is the format's for any
+  command up to the result: on status 0 the end check `0x50cec5d1` (an error `0xf0000024` only for command 2, the
+  copy, where its count equals the card's), the slots' flags, kind 72, 1513 {CBC, 3, 100, 0} and 697 {1, media}; the
+  remount request is started for command 1 alone (`0x50cec36e`: `cmp 1` on the command, then the result 0); every
+  other command takes `0x50cec458`, a request made with cbMediaCtrlResult's closure (`0x50ab7a34`; the word
+  `0x60d0c6e1` is its code; that the request calls it at once is I, as the format's), which runs the command's end function and sends 1514 {CBC, kind, 0, result} (`0x50ceb6c1`).
+- **S-MDACTRL's erase all** (`emu/src/lab/media.mjs`): at TRA 1511 with command 3 (`src/fw/models.mjs` E143
+  `card_fs.hls.ctrl.erase_all`) the stand-in calls the picture file API's erase all natively where the rule reads it
+  (`src/fw/facts.mjs` pictureErase, fact `erase.erase_all`: the one `mov 0x70010,d0` of the build, its function
+  holding `mov 37,d0`) and the DCF database holds the pictures (S-CARD's `dcf_db`, as H-OBJDEL needs); then the
+  progress and the end as the format's (getMediaProgress natively, the flags under the component's tests, 1513 at
+  100, 697) without the DCF numbering mount, and 1514 {54, 72, 0, 0}. S-CARD drops its records of the pictures the
+  database no longer lists (`card_erased`). Not run, as for the format: the component's state machine, its media
+  status test before the exec (cbMediaCtrlStart `0x50ceb49f`: bit 7 of api_media's status picks state 1 or 3) and
+  the request objects; the notifications go through the reception's synchronous slot (4.8.3, I).
+- **What it does (X, E143, `emu/test/test_eraseall.mjs`).** Three pictures, the first locked by the DCF edit's
+  OBJ_LOCK (the test's own action, as test_erase's): Erase All, Erase, Yes starts command 3 for media 0; the card
+  input is refused at OK's press; the file module replies 0 after 167 ms of lab time and six progress events (one
+  1513 at 75 %, then at 100), 697 and 1514 follow, and the application stays on the menu's File page. Read back by
+  the independent readers (`emu/refs/volume.mjs`, `emu/refs/fat.mjs`, as `bin/card.mjs ls` reads a card): the two
+  unlocked files' entries marked deleted (their other name bytes, first clusters and sizes kept), every cluster of
+  their chains free in the FAT, the free count and FSInfo's up by the chains; the locked P1010001 kept with its bytes,
+  first cluster and read-only bit, its folder kept; the firmware's count 1. Unlocked by OBJ_UNLOCK, a second Erase
+  All leaves no picture: `100OMSYS` removed from DCIM (its entry marked deleted), DCIM kept, the free count the
+  start's less DCIM's cluster (the start's card had no DCIM; the first picture made it). MENU closes the menu and S2
+  takes 100-0001, counted and on the card. Erase All's Save stops the session at S-MDACTRL naming command 6.
+- **E146, E147 and E148, by the rule (X).** pictureErase now reads the erase all's entry with the other two (the one
+  `mov 0x70010,d0`, its function holding `mov 37,d0`): on the 16 bodies with the object delete (`docs/model-survey.md`
+  finding 159), E146 `0x503f9c9d`, E147 `0x50407b13`, E148 `0x502e3760`, each the call its executeEraseAllStart
+  makes (D: E146 `0x50cfc463`, E147 `0x50d07a2c`, E148 `0x50a6c105`, each after the registration of `0x04020011`).
+  Their menus send command 3 for Erase All's Erase too (X), so `card_fs.hls.ctrl.erase_all` is 3 there, and
+  test_eraseall passes its 18 checks on each (the locked picture kept, the second erase, the next picture, Save's
+  command 6 refused). The other bodies run the media control in their application (S-MDAEND, which still stops at
+  any command but the format): there the test holds that no S-MDACTRL erase all is offered.
+- **Open.** The copy all (2: a second card; its end check), the unlock all (5: its start notifies the Wi-Fi remote
+  take component, CapWif_WifiRemoteTake's Wifi_Notify_Callback `0x50bd8f5e` with the event `0x041b0055`, before
+  the API `0x503ff28b(media, 0)`, API `0x70025`, which posts FILECLBK code 36, OBJ_UNLOCK, with the option
+  `0x40000`; that notification is not read further, so the command stays refused), the rating-exclusive erase all
+  (6), the component's error kinds; the single frame's erase all (play request 23, `PlaySingleFrame::eraseAll`),
+  still refused by S-PLAYSEQ: its sender is not found (finding 110), and the menu's Erase All does not use it (X).
 
 ### 4.9 HDMI and DisplayPort
 

@@ -3247,6 +3247,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    where it held 0. Open: the picture's Exif FocalLength on the three, which the EXIF set would store from the same G
    (the set does not run on them, finding 136); a zoom other than the wide end; the column's setting 17649 (the
    converter lens).
+159. **The picture file API's erase all, by the rule** (2026-11-16, `src/fw/facts.mjs` pictureErase, fact
+   `erase.erase_all`; `src/lab/media.mjs` S-MDACTRL's erase all; hle-gaps 4.8.15). Answers findings 129's, 142's and
+   154's "All Erase, not driven" for the bodies whose HLS function component runs the media control. E143's
+   api_picfile.c erase all (`0x503fdaf6`, API id `0x70010`, D) opens as its siblings of finding 140 do and posts
+   FILECLBK the DCF edit's ALL_DELETE (code 37, `0x25`). The rule finds the one load of the id on the 16 bodies whose
+   object delete it reads and holds the function to its `mov 37,d0` (X, `bin/port.mjs all`): E146 `0x503f9c9d`, E147
+   `0x50407b13`, E144 `0x502dfc28`, E130 `0x502d762c`, E148 `0x502e3760` among them (`test/test_facts.mjs`
+   ERASE_FOUND; D for E146's, E147's and E148's: their executeEraseAllStart calls it). The playback menu's Erase All,
+   Erase and Yes send the media control's command 3 on E143, E146, E147 and E148 (X), and the erase runs natively there
+   (`test/test_eraseall.mjs` ERASE_ALL, 18 checks each). On the E144 and E118 families the application runs the media
+   control itself (findings 124 to 129, 151): their erase all goes through S-MDAEND's path, which reads the start's
+   command and stops at any but the format; its process's erase-all side is not read (open), and so is where the E118
+   family's Card Setup All Erase starts (finding 129).
 
 
 

@@ -282,7 +282,7 @@ the survey table.
   TG-5s' date and time setting at the start, the TG-5s' canvas scaled to their wider TFT and their short menu tabs,
   which the walker now reads, and E133's format ending before the card input was tried). Left (findings 154 and
   157): the second slot (on E143 and E146 since 2026-11-11, hle-gaps.md 4.8.12), the media control's other
-  commands, and the HLS side with an SDXC card on these bodies; E133's, E129's and E132's cards are native since
+  commands (the playback menu's Erase All on E143, E146, E147 and E148 since 2026-11-16, hle-gaps.md 4.8.15), and the HLS side with an SDXC card on these bodies; E133's, E129's and E132's cards are native since
   their starts run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
@@ -320,7 +320,11 @@ the survey table.
   same bytes under one DCF number, read back on each), and Auto Switch with the first card full (the application
   moves the save slot, S2 on the second card); open: Dual Independent, which stops (the second slot's own image
   settings in TAKE's shot record), and E139, E134 and E125, the other two-slot bodies);
-  the media control's other commands (erase all, copy, unlock); an SDXC card (done
+  the media control's other commands (erase all, copy, unlock; the erase all done 2026-11-16, hle-gaps.md 4.8.15:
+  the playback menu's Erase All sends command 3, S-MDACTRL calls the picture file API's erase all natively and FILECLBK
+  runs the DCF edit's ALL_DELETE, a locked picture kept, the card read back, on E143, E146, E147 and E148; open: the copy all 2, the unlock all 5,
+  whose start notifies the Wi-Fi remote take component first, and the rating-exclusive erase all 6, each still
+  refused); an SDXC card (done
   2026-10-29, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an independent exFAT
   reader `refs/exfat.mjs`; the firmware formats a blank 64 or 128 GiB card exFAT in an MBR partition and mounts it,
   X; the tooling, the HLS side and the other bodies with it on 2026-10-29, 4.8.6 round 5: the Card panel and

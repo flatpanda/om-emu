@@ -3245,8 +3245,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    The lab moves no zoom (the zoom lever and ZOOM_MAIN are not run), so every picture is at the wide end. INFO's record
    then carries 45 (tenths of a mm) on the three, and `test/test_playinfo.mjs` holds 4.5 mm there (BUILTIN_FOCAL_MM)
    where it held 0. Open: the picture's Exif FocalLength on the three, which the EXIF set would store from the same G
-   (the set does not run on them, finding 136); a zoom other than the wide end; the column's setting 17649 (the
-   converter lens).
+   (the set does not run on them: with REC_FILE native, finding 156, E145's S2 file carries the template's 0/10, X,
+   exiftool `0.0 mm`); a zoom other than the wide end; the column's setting 17649 (the converter lens).
 159. **The picture file API's erase all, by the rule** (2026-11-16, `src/fw/facts.mjs` pictureErase, fact
    `erase.erase_all`; `src/lab/media.mjs` S-MDACTRL's erase all; hle-gaps 4.8.15). Answers findings 129's, 142's and
    154's "All Erase, not driven" for the bodies whose HLS function component runs the media control. E143's

@@ -538,7 +538,7 @@ export function iconStores(img, ret) {
 // place of E143's API_OBJECT_E143, how 'api-getter'): the icon load (iconStores) gets the API object from its getter
 // just before its method call, `call <getter>; mov (a0),a1` (E143 0x51257d2a: `call 0x50b4e3f0`), and the getter's
 // first instruction loads the object's word, `mov (abs32),a0` (fc a0; E143 0x50b4e3f0: 0x603613b0). The map placed
-// E143's word 8 bytes off on E144 (an override since, src/fw/overrides-E144.mjs) and on E148, E137 and the others
+// E143's word 8 bytes off on E144 (an override since, src/fw/overrides-E144.mjs) and 4 to 16 bytes off on 14 others
 // (X: the word held 0 after the GUI's creation; D: E148's getter 0x508cddb3 loads 0x61e44380, the port gave
 // 0x61e44378). Returns {getter, word}, or undefined where the form is not met within API_SPAN bytes before the call.
 export const API_OBJECT_E143 = 0x603613B0;

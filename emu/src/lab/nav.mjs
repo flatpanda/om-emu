@@ -25,10 +25,21 @@ export let WAIT_SLICE_MS = 10000;
 export function setNavPri(v) { NAV_PRI = v; }
 export function setWaitSliceMs(v) { WAIT_SLICE_MS = v; }
 export const SHOW_PANEL = A(0x5124F726), VAR_SET = A(0x51090EA1), VAR_MENU = 226, VAR_SIZE = 2428, MENU_PANEL = M.MENU_PANEL;
+// sendEvent's indices of the keys (on; on + 1 long; on + 2 off), INFO, the dials ([index, the S-DIAL counter slot]),
+// the menu's open and close: E143's (D: its event map EV_MAP). A session posts each at its build's index of E143's
+// message (MESSAGES; NavSession.index_of, the rule of S-TOUCHMAP, src/lab/play.mjs): the event maps of E137, E142,
+// E140, E125, E130, E133 and the E118 family lack E143's 107 and 108, so from there on each message sits two indices
+// lower (OPEN's 0x9624 at 0x85, E143's 0x87 being 0x9628 there; X, each image's map, docs/model-survey.md findings 75
+// and 156), while the keys', INFO's and the dials' indices are E143's on every body (X)
 export const KEYS = { UP: 8, DOWN: 11, LEFT: 14, RIGHT: 17, OK: 20, MENU: 23 };
 export const INFO = [37, 38];
 export const DIALS = { MAIN: [59, 2], SUB: [60, 3] };
 export const OPEN = 0x87, CLOSE = 0x88, NO_MESSAGE = 0x7FFF, STATE_CLOSED = 0x0104;
+// E143's message of each index above
+export const MESSAGES = new Map([[8, 0x9004], [9, 0x9036], [10, 0x9005], [11, 0x9006], [12, 0x9037], [13, 0x9007],
+  [14, 0x9008], [15, 0x9034], [16, 0x9009], [17, 0x900A], [18, 0x9035], [19, 0x900B], [20, 0x900C], [21, 0x903E],
+  [22, 0x900D], [23, 0x900E], [24, 0x9040], [25, 0x900F], [37, 0x9014], [38, 0x9015], [59, 0x9032], [60, 0x9031],
+  [OPEN, 0x9624], [CLOSE, 0x9625]]);
 export const REDISPLAY = A(0x510BD84B), HELP_FLAG = 2421;
 
 const h4 = (v) => '0x' + fx(v >>> 0, 4);
@@ -235,6 +246,19 @@ export class NavSession {
   }
   // ---- primitives
   message(index) { return this.lab.message_for(index); }
+  // The build's sendEvent index of E143's index e143 (KEYS, INFO, DIALS, OPEN, CLOSE): the first index whose message in
+  // the build's event map is E143's message of it (MESSAGES); refused where the map has none
+  index_of(e143) {
+    this._indices ??= new Map();
+    let i = this._indices.get(e143);
+    if (i !== undefined) return i;
+    const m = MESSAGES.get(e143);
+    if (m === undefined) throw new NavError(`sendEvent index ${e143}: not one of the session's events`);
+    for (i = 1; i <= 334 && this.message(i) !== m; i++);
+    if (i > 334) throw new NavError(`no sendEvent index for message 0x${fx(m, 4)} (E143's index ${e143}) in the build's event map`);
+    this._indices.set(e143, i);
+    return i;
+  }
   // POST_HOOKS as read at call time (PlaySession.set raises it for its call: _post_hooks).
   post_hooks() { return this._post_hooks ?? POST_HOOKS; }
   // sendEvent(index) from the lab task (priority 50): GESetEvent posts, the GUI must not run.
@@ -336,15 +360,17 @@ export class NavSession {
     const base = name.replace(/[+\-0-9@]+$/, '');
     if (Object.hasOwn(KEYS, name)) {
       const kind = arg || 'click', on = KEYS[name];
-      const seq = own({ click: [on, on + 2], on: [on], long: [on + 1], off: [on + 2] }, kind);
+      let seq = own({ click: [on, on + 2], on: [on], long: [on + 1], off: [on + 2] }, kind);
       if (seq === undefined) throw new ValueError(`${t}: kind ${show(kind)} (click, on, long, off)`);
+      seq = seq.map((i) => this.index_of(i));
       const hooks = seq.map((i) => this.event(i));
       return this.end(t, kind, seq, hooks);
     }
     if (name === 'INFO') {
       const kind = arg || 'click';
-      const seq = own({ click: [...INFO], on: [INFO[0]], off: [INFO[1]] }, kind);
+      let seq = own({ click: [...INFO], on: [INFO[0]], off: [INFO[1]] }, kind);
       if (seq === undefined) throw new ValueError(`${t}: kind ${show(kind)} (click, on, off)`);
+      seq = seq.map((i) => this.index_of(i));
       const hooks = seq.map((i) => this.event(i));
       return this.end(t, kind, seq, hooks);
     }
@@ -357,7 +383,7 @@ export class NavSession {
       return this.dial(base.toLowerCase(), sign === '+' ? nv : -nv, count, t);
     }
     if (name === 'OPEN' || name === 'CLOSE') {
-      const index = name === 'OPEN' ? OPEN : CLOSE;
+      const index = this.index_of(name === 'OPEN' ? OPEN : CLOSE);
       return this.end(t, 'event', [index], [this.event(index)]);
     }
     if (name === 'EV') {
@@ -439,7 +465,7 @@ export class NavSession {
   dial(which, n, count = 1, tag = null) {
     const sgn = (v) => (v >= 0 ? `+${v}` : `${v}`);
     if (tag === null) this.begin(`${String(this.steps.length).padStart(2, '0')}-${which.toUpperCase()}${sgn(n)}`);
-    const [index, slot] = lookup(DIALS, which.toUpperCase());
+    const [e143, slot] = lookup(DIALS, which.toUpperCase()), index = this.index_of(e143);
     const word = dial_counters(slot) + (n > 0 ? 8 : 10);
     const hooks = [];
     for (let i = 0; i < Math.abs(n); i++) {

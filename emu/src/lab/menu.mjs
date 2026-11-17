@@ -38,7 +38,9 @@ const stateParents = () => fact('gui_states.parents', STATE_PARENTS_E143);
 // arguments, a0 and a1 (D); a build whose log takes one argument fewer passes them in d1 and a0 (src/fw/facts.mjs
 // stateLog, fact 'state_log.regs')
 const stateLogRegs = () => fact('state_log.regs', ['a0', 'a1']);
-export const STATE_POWER_ON = 0x0102, STATE_MENU = 0x0B02;
+// STATE_MENU: the menu's GUI state, the one the firmware's state table names SS_MENU/ID_ST_MENU (src/fw/facts.mjs
+// menuState, fact 'gui_states.menu'): E143's and E148's ListMenu 0x0b02, the Menu_Viewer builds' 0x1102 (D)
+export const STATE_POWER_ON = 0x0102, STATE_MENU = fact('gui_states.menu', 0x0B02);
 export const MODULE_STATE_SET = A(0x50AB6299), MODULE_STATE_GET = A(0x50AB5780), TAKEOVER_MODULE = 9, TAKEOVER_STATE = 2;
 export const TAKEOVER_READERS = [A(0x50ABCFD7), A(0x50ABCFE2)];
 export const CONNECT_EVENT = 0x83, CONNECT_LOUTPUT = 7, LAYOUT_BYTE = A(0x60368BA4), CCOMMON = A(0x60368BAC);
@@ -501,10 +503,21 @@ export class MenuLab extends T.TextDisplayLab {
     const tasks = this.nk.tasks();
     const gui = [], timer = [];
     for (const [t, [e]] of tasks) { if (e === GUI_TASK) gui.push(t); if (e === GENIFA_TIMER_TASK) timer.push(t); }
+    // The tasks started: each of the lab's own once (wantStarted), and besides them only once each a task the lab task
+    // lets the kernel start without being the lab's (K.LabTask: the model's extra_tasks, src/fw/models.mjs, which the
+    // display task init starts on E146, E147 and the E118 family, E125's battery manager thread; HLS_EYEFI, whose
+    // singleton the E144 family's GUI creation reaches through API 0x10125, X on E144, docs/model-survey.md finding
+    // 156). E143 starts none of them (X), and the kernel refuses any other task (K.LabTask _task_start)
+    // The empty task is the display task init's task whose entry returns at once (E143's EMPTY_TASK, `retf [],0`, D):
+    // the one bare-return entry started, wherever it lies (E134's, where the port places E143's at another
+    // bare return, X); none where the build has no such task (the E118 family: E143's unplaced, no bare return started,
+    // X)
     const started = this.lt.started.slice(1).map(K.disasm_of);
-    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), EMPTY_TASK, GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
+    const bare = this.lt.started.slice(1).filter((e) => this.lt._bare_return(e)).map(K.disasm_of);
+    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
     const sortNum = (xs) => [...xs].sort((a, b) => a - b);
-    if (JSON.stringify(sortNum(started)) !== JSON.stringify(sortNum(wantStarted))) problems.push(`tasks started: ${show(started.map(hex))}`);
+    const own = started.filter((t) => wantStarted.includes(t)), more = started.filter((t) => !wantStarted.includes(t));
+    if (JSON.stringify(sortNum(own)) !== JSON.stringify(sortNum(wantStarted)) || new Set(more).size !== more.length) problems.push(`tasks started: ${show(started.map(hex))}${own.length < wantStarted.length ? `, not ${show(wantStarted.filter((t) => !own.includes(t)).map(hex))}` : ''}`);
     if (gui.length !== 1 || timer.length !== 1 || tasks.get(gui[0])[1] !== 'WAI' || tasks.get(timer[0])[1] !== 'WAI') {
       problems.push(`GUI/timer tasks: ${show(this.task_states())}`);
     }

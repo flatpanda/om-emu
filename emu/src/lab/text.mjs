@@ -23,7 +23,18 @@ export const GC_CREATE = A(0x510B998E), GC_SET_DEVICE = A(0x510BA02C), GC_SET_BA
 export const GET_STRING = A(0x510BB079), DRAW_TEXT_BY_ID = A(0x510AE820), DRAW_TEXT = A(0x510AB0F9), GPIFONT_LOG = A(0x5124B173);
 export const API_VTABLE = A(0x60E38124), CUR_FONT = A(0x62B3E36C), STRING_LIST = A(0x60370858), FONT_LIST = A(0x603708A4);
 export const ICON_TABLE = A(0x62B3E364), ICON_AUX = A(0x60370AF8), DEVICES = A(0x62B3DC94), GPI_TEXT_CALLBACK = A(0x510BC7D8);
+// GUI_BUFFER_TABLES: GUI layer L's table of its buffers' records, one word per record of kind (L + 1) % 3 in their order
+// (E143's two a kind, the E144 family's four where its banks hold four: src/lab/osd.mjs GUI.banks; X, the words after
+// the GUI's creation on every body, docs/model-survey.md finding 156)
 export const GUI_BUFFER_TABLES = [A(0x62B3DFDC), A(0x62B3DFE4), A(0x62B3DFEC)], OFFSCREEN_RECORD = A(0x62B3DFF4);
+// The icon words' contents (src/fw/facts.mjs iconStores, fact 'icons'): ICON_TABLE holds the icons record's word at
+// table_at, or the record's own address ('record'), ICON_AUX its word at aux_at. E143's word 0 and word 4 (the stores
+// after the resource get's return 0x51257d3d, D); the E144 and E118 families' the record and its word 16
+export const ICON_WORDS = fact('icons', { table: 0x62B3E364, table_at: 0, aux: 0x60370AF8, aux_at: 4 });
+// The GUI's device records at DEVICES (src/fw/facts.mjs guiDevices, fact 'gui_devices'): count records of stride bytes,
+// the GUI's text callback GPI_TEXT_CALLBACK at callback_at in each. E143's 3 of 168, +108 (D: the set-up's loop,
+// src/fw/facts.mjs); 164 and 160 on the bodies whose callbacks struct is shorter
+export const GUI_DEVICES = fact('gui_devices', { devices: 0x62B3DC94, stride: 168, count: 3, callback_at: 108 });
 export const FONT_ENABLE = A(0x603657C5), STRING_BANK = A(0x603671C4), FRONT_BACK = A(0x603672F0), DRAW_OFFSET = A(0x6036731C);
 // LANG_SETTING: the language's store id, the one the language loader LANG_LOADER reads (E143 3009, D; another model's
 // read from its loader, src/fw/facts.mjs langSetting: E147 renumbered it 3011)
@@ -176,18 +187,18 @@ export const GuiMixin = (Base) => class extends Base {
     const want = [...EXPECTED_RECORDS.map(([b]) => [b, STRIDE, HEIGHT]), [KIND3_AREA[0], STRIDE, KIND3_AREA[1]]];
     if (JSON.stringify(got) !== JSON.stringify(want)) out.push(`registry ${show(got)} != guarded ${show(want)}`);
     const recs = this.records;
-    const tables = GUI_BUFFER_TABLES.map((t) => unpack('<II', this.sim.read(t, 8)));
-    const wantT = [[recs[2], recs[3]], [recs[4], recs[5]], [recs[0], recs[1]]];
+    const wantT = GUI_BUFFER_TABLES.map((_, layer) => recs.filter((r, i) => i < EXPECTED_RECORDS.length && EXPECTED_RECORDS[i][1] === (layer + 1) % 3));
+    const tables = GUI_BUFFER_TABLES.map((t, layer) => unpack(`<${wantT[layer].length}I`, this.sim.read(t, 4 * wantT[layer].length)));
     if (JSON.stringify(tables) !== JSON.stringify(wantT)) out.push(`GUI buffer tables ${show(tables.map((t) => t.map((a) => '0x' + a.toString(16))))}`);
     if (this.sim.u32(OFFSCREEN_RECORD) !== KIND3_RECORD) out.push(`offscreen record ${h8(this.sim.u32(OFFSCREEN_RECORD))}`);
-    for (let n = 0; n < 3; n++) {
-      const dev = DEVICES + 168 * n;
-      if (this.sim.u32(dev + 108) !== runtime(GPI_TEXT_CALLBACK)) out.push(`device ${n} +108 = ${h8(this.sim.u32(dev + 108))}`);
+    for (let n = 0; n < GUI_DEVICES.count; n++) {
+      const dev = DEVICES + GUI_DEVICES.stride * n, cb = GUI_DEVICES.callback_at;
+      if (this.sim.u32(dev + cb) !== runtime(GPI_TEXT_CALLBACK)) out.push(`device ${n} +${cb} = ${h8(this.sim.u32(dev + cb))}`);
     }
     const sr = R.raw_record(this.langs.get(this.lang).strings_record, this.block);
     const s0 = u32(sr, 0), s1 = u32(sr, 4);
-    const blob0 = R.blobs(this.block)[0][1];
-    const icon0 = u32(blob0, 0), icon1 = u32(blob0, 4);
+    const [load0, blob0] = R.blobs(this.block)[0];
+    const icon0 = ICON_WORDS.table_at === 'record' ? load0 : u32(blob0, ICON_WORDS.table_at), icon1 = u32(blob0, ICON_WORDS.aux_at);
     for (const [name, address, value] of [['font', CUR_FONT, R.FONT_SLOT[0]], ['pStringsList', STRING_LIST, s0],
       ['pFontsList', FONT_LIST, s1], ['icon table', ICON_TABLE, icon0], ['icon word 1', ICON_AUX, icon1]]) {
       if (this.sim.u32(address) !== value) out.push(`${name} (${h8(address)}) = ${h8(this.sim.u32(address))}, expected ${h8(value)}`);
@@ -200,8 +211,9 @@ export const GuiMixin = (Base) => class extends Base {
     const entry = this.langs.get(this.lang);
     const wantLoaded = [[entry.font_record, 0], [entry.strings_record, 2], [R.layout(this.block).images[0], 1]];
     if (JSON.stringify(this.init_loaded) !== JSON.stringify(wantLoaded)) out.push(`resource calls ${show(this.init_loaded)}`);
+    // the API object's word: E143's place, read by a rule on the other bodies (src/fw/facts.mjs apiObject)
     if (this.sim.u32(A(0x603613B0)) === 0 || this.sim.u32(this.sim.u32(A(0x603613B0))) !== API_VTABLE) {
-      out.push('resource/settings API object (0x603613b0) has no vtable 0x60e38124');
+      out.push(`resource/settings API object (${h8(A(0x603613B0))}) has no vtable ${h8(API_VTABLE)}`);
     }
     const kinds = new Map();
     for (const e of this.init_log) kinds.set(e.command.name, (kinds.get(e.command.name) ?? 0) + 1);
@@ -233,7 +245,7 @@ export const GuiMixin = (Base) => class extends Base {
     if (!(this.call(GC_SET_DEVICE, { a0: gc, d0: layer, a1: 0 }).d0 & 0xFFFF)) throw new FirmwareError(`gc set device ${layer} returned 0`);
     this.call(GC_SET_BACKGROUND, { a0: gc, d0: 0xFFFFFFFF });
     this.call(GC_SET_FONT_BY_ID, { a0: gc, d0: font_id });
-    if (this.sim.u32(gc + 72) !== DEVICES + 168 * layer || !this.sim.u32(gc + 76)) {
+    if (this.sim.u32(gc + 72) !== DEVICES + GUI_DEVICES.stride * layer || !this.sim.u32(gc + 76)) {
       throw new FirmwareError(`gc ${h8(gc)}: device ${h8(this.sim.u32(gc + 72))}, font handle ${h8(this.sim.u32(gc + 76))}`);
     }
     this.gcs.push([gc, font_id]);
@@ -246,10 +258,11 @@ export const GuiMixin = (Base) => class extends Base {
     const address = this.call(GET_STRING, { d0: sid }).a0 >>> 0;
     return [address, this.read_utf16(address)];
   }
-  // The record the text callback draws into: *(0x62b3dfdc + 8 * layer + 4 * byte 0x603672f0).
+  // The record the text callback draws into: word (byte 0x603672f0) of layer's table (E143: *(0x62b3dfdc + 8 * layer +
+  // 4 * byte)).
   front_record(layer) {
     const index = this.sim.read(FRONT_BACK, 1)[0];
-    return this.sim.u32(GUI_BUFFER_TABLES[0] + 8 * layer + 4 * index);
+    return this.sim.u32(GUI_BUFFER_TABLES[layer] + 4 * index);
   }
   buffer_of(layer) {
     const i = this.records.indexOf(this.front_record(layer));

@@ -1093,7 +1093,9 @@ export const MODELS = {
     res_len: 13577184, res_sha256: '5404cb456e2f5cddb7fa1ace6fa3210b6b2ea3e55908d71c3140434880b7fd98',
     // TFT 1.04M dots; no EVF
     panels: { tft: [720, 480], evf: null },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 157)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, the E144 family's version with its loop inlining the start and the finish (src/fw/facts.mjs
     // recFileQueue; X: test_storage's session, 2026-11-16)
     rec_native: true,
@@ -1116,7 +1118,9 @@ export const MODELS = {
     res_len: 21456352, res_sha256: 'd777456e3c2e41db6a55458cb8ec37d1a6589391f8103b3ec38be7cae59aaa43',
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 156)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
     rec_native: true,
     board: { family: 'E144' },
@@ -1163,7 +1167,9 @@ export const MODELS = {
     res_len: 17276384, res_sha256: '110a674b5dfe8d127eb241b24c4cb60a5675ce14a1d435687a53eb36c6663f1b',
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 156)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
     rec_native: true,
     // the family's stub pages and the serial controllers' blocks of channels 9, 2 and 3, as E132's (its sessions write
@@ -1189,7 +1195,9 @@ export const MODELS = {
     res_len: 18550240, res_sha256: 'd0fa5807f2e4fbbf384b464082c35a9a59355c12fb73830987d15d08d4b162bc',
     // a TG-5 (the reply's model_name TG-5(KOUICHIRO)): its TFT of 460K dots, no geometry given; no EVF
     panels: { tft: null, evf: null },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls, docs/model-survey.md finding 157)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, as E130's but through rec_file_destination_record (src/fw/facts.mjs recFileInline; X:
     // test_storage's session, 2026-11-16)
     rec_native: true,

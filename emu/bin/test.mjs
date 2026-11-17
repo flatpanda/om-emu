@@ -508,9 +508,9 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // SDXC cards, whose findings print as notes), and E146, E147, E144, E142 and E134 (the OM-1 family, the E144 family,
 // the E142 lineage and the E-M1X, whose card needs UI_OUT) each in a process of its own (the model is fixed when the
 // lab is imported); each with the HLS media side where the body runs it (Card Formatting from the menu, the card out
-// and in: E146, E147 and E148 as E143; E144, E142, E134, E137 and E125 by the rule), and that side alone on E122,
-// E118 and E120 (the E118 family's, read by a rule), on E139 and E140 (the E144 family's bodies whose session is
-// not run here) and on E130; E148, E137 and E125 for the E144 family's REC_FILE
+// and in: E146, E147 and E148 as E143; E144, E142, E134, E137, E125, E133 and E129 by the rule), and that side alone
+// on E122, E118 and E120 (the E118 family's, read by a rule), on E139, E140, E145 and E132 (the E144 family's bodies
+// whose session is not run here) and on E130; E148, E137 and E125 for the E144 family's REC_FILE
 // natively in the forms the others do not take (Exif 0300, the E137 date set, two file contexts with Exif 0230;
 // src/fw/facts.mjs recFileQueue); E122, E118 and E120 also for their S2 files, which their own REC_FILE records
 // natively in the family's older REC version (src/fw/facts.mjs recFileFrame)

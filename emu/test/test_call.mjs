@@ -5,7 +5,8 @@
 //   callSession (E143 firmware, two headless Players): the settings getter 0x503c49ab natively (MODE_EXPOSE 24 is 3,
 //     P, at the start: test_camapp.mjs's dial check) by its notation and run-time address, memcpy answered by the lab's
 //     hook with scratch and a restored write, the budget ending a call (CallLimit) and the session's next call, the
-//     registers as before; refusals (a stopping watchpoint, a debug stop); then the same inputs on a session that made
+//     registers as before; refusals (a stopping watchpoint, also at its stop), a call at a watchpoint's stop once it is
+//     cleared (the registers as at the stop); then the same inputs on a session that made
 //     no call: the records, the frame and every dirty memory page equal (the negative control: a write left in place,
 //     restore false, is told apart), a fault (CallFault), the memcpy request with the lab's hook taken away (the
 //     control for 'hooks honoured'), and an input after them; on a third with --loaded on (S-STALERAM) a fn in a gap and
@@ -234,8 +235,8 @@ export async function callSession() {
       ok(r?.ok && r.end === 'stop' && r.stubs.length === 0, `a stop on the patched hook's pc: ${JSON.stringify(r).slice(0, 300)}`);
     } finally { lab0.patch = patch0; }
     ok(JSON.stringify(ask({ op: 'regs' }).regs) === JSON.stringify(regs0), 'the 16 registers as before the calls (insns among them)');
-    // refusals: a frame the image cannot give, a stopping watchpoint armed, a watchpoint's stop (a call runs at a
-    // breakpoint's stop since 2026-11-14: test_tools.mjs)
+    // refusals: a frame the image cannot give, a stopping watchpoint armed; then a call at a watchpoint's stop with
+    // the watchpoint cleared (since 2026-11-16; at a breakpoint's since 2026-11-14: test_tools.mjs)
     r = ask({ op: 'call', fn: '0x50000000' });
     ok(r && !r.ok && /call-site frames \[\]: give frame/.test(r.error.message), `no call site: ${JSON.stringify(r?.error)}`);
     const stime = A.session.lab.nk.kcb(36);
@@ -243,13 +244,15 @@ export async function callSession() {
     r = ask({ op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } });
     ok(r && !r.ok && /stopping watchpoint is armed/.test(r.error.message), `refused with a stopping watchpoint: ${JSON.stringify(r?.error)}`);
     const held = [];
-    const script = [{ op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } }, { op: 'detach' }];
+    const script = [{ op: 'regs' }, { op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } }, { op: 'watch', list: [] }, { op: 'call', fn: h8(GETTER), regs: { d0: MODE_EXPOSE } }, { op: 'regs' }, { op: 'state' }, { op: 'detach' }];
     A.q.feed = (q) => { const s = script.shift(); if (s) { const i = { seq: ++seq, t_wall: 0, type: 'debug', ...s }; held.push(i.seq); q.put(i); } };
     apply(A, { type: 'debug', op: 'cont' });
     apply(A, { type: 'token', token: 'WAIT:20' });
     A.q.feed = null;
-    r = results.get(held[0])?.debug;
-    ok(r && !r.ok && /not at a watch stop \(only at a breakpoint's\)/.test(r.error.message) && results.get(held[1])?.debug?.state === 'running', `refused at a watchpoint's stop: ${JSON.stringify(r?.error)}`);
+    const [r0, rw, , wr, r1, sw, dt] = held.map((x) => results.get(x)?.debug);
+    ok(rw && !rw.ok && /stopping watchpoint is armed/.test(rw.error.message) && wr?.ok && Number(wr.regs.d0) === P && wr.stubs.some(([n]) => n === 'prop_get') &&
+      sw?.state === 'stopped' && sw.stop?.stop === 'watch' && r0?.regs && JSON.stringify(r1?.regs) === JSON.stringify(r0.regs) && dt?.state === 'running',
+    `at a watchpoint's stop: refused while it is armed, answered once cleared, the registers as at the stop: ${JSON.stringify(rw?.error)} ${JSON.stringify(wr).slice(0, 300)} ${JSON.stringify(sw).slice(0, 200)}`);
     // the inputs the session without calls will make (its memory compared below), and the negative control's
     // memory: a write left in place (restore false)
     const ia = inputs(A), pa = pages(A);

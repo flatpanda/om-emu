@@ -28,9 +28,9 @@
 // Traces and stops: trace:PC[,PC...][:stack=N] and trace:mem:ADDR:LEN[:r|w|rw] record each hit in the later steps'
 // records, with N stack words per pc hit (trace:off disarms); break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] end the
 // step that meets one at the stop (at a hooked pc before the hook answers), where the next tokens (reads, dumps, writes,
-// a call at a breakpoint's stop, expects, the card, trace:, break:) run until resume (break:off disarms). A run whose
-// tokens end at a stop ends there, nothing run after it (the summary's ended_at_stop, the last line), exit 0 when
-// every step passed.
+// a call, after break:off at a watchpoint's stop, expects, the card, trace:, break:) run until resume (break:off
+// disarms). A run whose tokens end at a stop ends there, nothing run after it (the summary's ended_at_stop, the last
+// line), exit 0 when every step passed.
 // Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, a local file a step cannot write
 // or an --out it cannot make ('FILE: cannot write it (CODE)'), or a failed expect (the step named on stderr); 2 a usage
 // error.

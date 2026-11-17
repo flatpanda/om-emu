@@ -8,8 +8,9 @@
 //     detach, the input answered as without the debugger; a break at the same pc in the disassembly notation stops
 //     at its run-time address; a control letting a stop go; cont's maxMs; the refusals of a queue that does not block;
 //   liveHost (E143 firmware, bin/play.mjs over HTTP): /api/debug halt, reads, a stop, step, detach on a session pacing
-//     against the wall clock, and bin/debug.mjs --attach's JSON lines (the call op among them: refused at the stop,
-//     answered once the session runs; test_call.mjs has its own tests).
+//     against the wall clock, and bin/debug.mjs --attach's JSON lines (the call op among them: at the watch stop refused
+//     while the stopping watchpoint is armed and answered once it is cleared, answered once the session runs;
+//     test_call.mjs has its own tests).
 //   node emu/test/test_live.mjs [--units | --session | --host]
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -318,17 +319,19 @@ export async function liveHost() {
     const cli = spawn(process.execPath, [path.join(EMU, 'bin/debug.mjs'), '--attach', `${pl.base}/?t=${pl.token}`], { stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '';
     cli.stdout.on('data', (d) => { out += d; });
-    // the call op (src/debug/call.mjs): refused at the stop (a watchpoint's; only a breakpoint's takes one), answered
-    // once the session runs (the settings getter:
-    // MODE_EXPOSE 24 is 3, P, at the start, test_call.mjs)
+    // the call op (src/debug/call.mjs) at the stop (a watchpoint's): refused while the stopping watchpoint is armed,
+    // answered once it is cleared, and once the session runs (the settings getter: MODE_EXPOSE 24 is 3, P, at the
+    // start, test_call.mjs)
     const call = JSON.stringify({ op: 'call', fn: `0x${GETTER.toString(16)}`, regs: { d0: 24 } });
-    cli.stdin.end(`{"id": "a", "op": "state"}\nnot json\n{"id": "b", "op": "stack", "words": 2}\n${call.replace('{', '{"id": "d", ')}\n{"id": "c", "op": "detach"}\n${call.replace('{', '{"id": "e", ')}\n`);
+    cli.stdin.end(`{"id": "a", "op": "state"}\nnot json\n{"id": "b", "op": "stack", "words": 2}\n${call.replace('{', '{"id": "d", ')}\n{"id": "w", "op": "watch", "list": []}\n` +
+      `${call.replace('{', '{"id": "f", ')}\n{"id": "c", "op": "detach"}\n${call.replace('{', '{"id": "e", ')}\n`);
     const rc = await new Promise((res) => cli.on('exit', res));
     const lines = out.trim().split('\n').map((l) => JSON.parse(l));
-    ok(rc === 0 && lines.length === 6 && lines[0].id === 'a' && lines[0].state === 'stopped' && lines[1].error?.type === 'BadRequest' && lines[2].stack?.length === 2 && lines[4].state === 'running',
+    ok(rc === 0 && lines.length === 8 && lines[0].id === 'a' && lines[0].state === 'stopped' && lines[1].error?.type === 'BadRequest' && lines[2].stack?.length === 2 && lines[6].state === 'running',
       `--attach: rc ${rc}, ${out.slice(0, 400)}`);
-    ok(lines[3]?.id === 'd' && /not at a watch stop \(only at a breakpoint's\)/.test(lines[3].error?.message ?? '') && lines[5]?.id === 'e' && lines[5].ok && Number(lines[5].regs?.d0) === 3,
-      `--attach call: at the stop ${JSON.stringify(lines[3]?.error)}, running ${JSON.stringify(lines[5]).slice(0, 200)}`);
+    ok(lines[3]?.id === 'd' && /stopping watchpoint is armed/.test(lines[3].error?.message ?? '') && lines[4]?.ok && lines[5]?.id === 'f' && lines[5].ok && Number(lines[5].regs?.d0) === 3 &&
+      lines[7]?.id === 'e' && lines[7].ok && Number(lines[7].regs?.d0) === 3,
+      `--attach call: at the stop ${JSON.stringify(lines[3]?.error)} ${JSON.stringify(lines[5]).slice(0, 200)}, running ${JSON.stringify(lines[7]).slice(0, 200)}`);
     const after = await pl.waitPhase((s) => s.phase === 'running' && s.debug?.state === 'running', 30);
     ok(after.debug.stops >= 1 && after.debug.watchpoints === 0, `running on after detach: ${JSON.stringify(after.debug)}`);
     r = await pl.input({ type: 'token', token: 'GET:1881' });

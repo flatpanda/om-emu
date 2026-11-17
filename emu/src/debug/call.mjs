@@ -156,9 +156,9 @@ const le4 = (v) => Uint8Array.of(v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, 
 const toHex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 
 // Run spec (callSpec's) on the session's lab between ticks; dbg: the live route's attached Debugger. atStop: at a
-// debug breakpoint's stop inside a tick (live.mjs), where the lab is inside calls of its own: the CPU's whole context
-// (machine cpuContext) and the harness stack under SP_TOP, which holds the lab's own live frames there, are put back
-// too, and the call ends before any lab hook but the builtins memset and memcpy answers (CallHooked): a stand-in's
+// debug stop inside a tick (live.mjs: a breakpoint's or a watchpoint's), where the lab is inside calls of its own: the
+// CPU's whole context (machine cpuContext, a pending debug stop among it, off during the call) and the harness stack
+// under SP_TOP, which holds the lab's own live frames there, are put back too, and the call ends before any lab hook but the builtins memset and memcpy answers (CallHooked): a stand-in's
 // state is in the middle of the tick, so none may run.
 export function runCall(lab, dbg, spec, { atStop = false } = {}) {
   const sim = lab.sim, m = sim.m, { target, limit } = spec, fn = target.notation;
@@ -199,6 +199,9 @@ export function runCall(lab, dbg, spec, { atStop = false } = {}) {
   const guard = atStop ? new Set([...lab.hooks].filter(([pc, h]) => !BUILTIN_STUBS.includes(h[0]) && !AT_STOP_HOOKS.has(h[1]) && !ends?.has(pc) && !inHarness(pc)).map(([pc]) => pc)) : null;
   const callEnds = guard ? new Set([...(ends ?? []), ...guard]) : ends;
   sim.stats = null; sim.observer = null; lab.stubObserver = null; sim.debug = null;
+  // at a watchpoint's stop in a single step (the harness's 's', src/lab/sim.mjs) the step left a debug stop pending,
+  // which the call's first continue would take at once: off for the call, back with the context (setCpuContext)
+  if (ctx) m.dropPendingStop();
   let failure = null, result = null, thrown = null;
   try {
     if (spec.scratch) {                                // OsdLab.alloc's placement, its bytes kept first

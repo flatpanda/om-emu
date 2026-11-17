@@ -63,9 +63,9 @@
 //   call {fn, ...}          a firmware function run natively through the lab's harness, its hooks and stand-ins
 //                           answering, to its return or to a stop pc, from its entry or a pc inside it
 //                           (src/debug/call.mjs lists the fields, the convention and what is restored);
-//                           running, halted or at a breakpoint's stop (inside a tick: the CPU's whole context and the
-//                           harness stack put back too, and a lab hook other than memset's and memcpy's ends it as
-//                           CallHooked; refused at a watchpoint's stop), with no stopping watchpoint armed; an
+//                           running, halted or at a breakpoint's or a watchpoint's stop (inside a tick: the CPU's
+//                           whole context, a pending stop among it, and the harness stack put back too, and a lab hook
+//                           other than memset's and memcpy's ends it as CallHooked), with no stopping watchpoint armed; an
 //                           error's detail (pc, steps, stubs, reads) rides in error.detail
 // and the protocol's reads and the ops that change memory or registers (regs, reg, setReg, setRegs, read, write,
 // stack, stderr, stats, disasm, watchLog, trace, lab {time}); load, quit, reset, cpuStore, snapshot, restore, drop,
@@ -260,7 +260,6 @@ export class LiveDebug {
       case 'tasks': return this._tasks();
       case 'call': {
         const spec = callSpec(q);
-        if (this.at !== null && this.at.kind !== 'break') throw new BadRequest(`call: not at a ${this.at.kind} stop (only at a breakpoint's): cont, then call between ticks (running or halted)`);
         if (this.watches.some((w) => w.action === 'stop')) throw new BadRequest('call: a stopping watchpoint is armed (it would end the call inside the harness): give it action \'log\' or clear it');
         return runCall(this.lab, this.dbg, spec, { atStop: this.at !== null });
       }

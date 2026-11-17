@@ -15,7 +15,9 @@
 //                 step's lab time and frame, the harness stack at the stop and 64 MiB of DRAM at the end) is the run
 //                 without the call (controls, by hand: with the harness stack not put back the resumed step faults;
 //                 the CPU context's part is the unit's); a call at a stop that reaches another hook answers
-//                 CallHooked and the run ends there; a call at a watchpoint's stop is refused; --a15 off publishes
+//                 CallHooked and the run ends there; a call at a watchpoint's stop, in a continue and in the
+//                 harness's single step of a pass-through observer (a pending stop), answers as between ticks and the
+//                 run after it (every step, the harness stack and 64 MiB of DRAM) is the run without it; --a15 off publishes
 //                 no frame where on publishes one; --device evf and the eye sensor's switch: shot: takes the EVF's
 //                 frame; the lv and eye tokens switch the display (eye:down refused); --osd-errors: a step whose engine refused a picture fails by default and only reports
 //                 with report (the refusal counted through the module API; test_osdwrap.mjs makes real ones); on
@@ -198,9 +200,28 @@ async function e143({ ok }, { T, step }) {
     `E143 the run after a call at the stop is the run without it: ${JSON.stringify([step(ca, HS).sha256, step(cb, HS).sha256, step(ca, RAM).sha256, step(cb, RAM).sha256])}\n${JSON.stringify(shape(ca))}\n${JSON.stringify(shape(cb))}`);
   const ch = cli(['--model', 'E143', `break:${GET}`, 'wait:1500', `call:${MALLOC}:d0=16`, 'resume']);
   ok(ch.rc === 1 && /FAILED at step 3 \(call:0x50002fdc:d0=16\): call: CallHooked: .*reached the lab's hook S-HEAP malloc at 0x50002fdc.*; ended at the debug stop of step 2/.test(ch.last), `E143 a call at a stop that reaches another hook: rc ${ch.rc} ${ch.last}`);
+  // a call at a watchpoint's stop: in a continue (the stop after the accessing instruction) and in the harness's single
+  // step of a pass-through observer (obs-vt4, whose movm pushes: the step leaves a debug stop pending, which the call's
+  // own continue would take at once; control, by hand: without the drop the call ends at the trampoline, FirmwareError
+  // 'stopped at 0xa2100000'); each answers as between ticks and the run after it is the run without it
   const lw = cli(['--model', 'E143', 'trace:mem:0x62453800:64:w', 'wait:300']), first = step(lw, 'wait:300').hits?.find((x) => x.kind === 'mem');
-  const cw = first ? cli(['--model', 'E143', `break:mem:${first.addr}:${first.size}:w`, 'wait:300', 'break:off', `call:${GET}:d0=24`]) : null;
-  ok(cw?.rc === 1 && /call: BadRequest: call: not at a watch stop \(only at a breakpoint's\)/.test(cw.last), `E143 a call at a watchpoint's stop refused: ${cw?.last}`);
+  const CW = first ? [`break:mem:${first.addr}:${first.size}:w`, 'wait:300', 'break:off'] : [], CTAIL = ['resume', ...FLOW, RAM];
+  const cwa = cli(['--model', 'E143', '--out', T('cwa'), ...CW, ...CTAIL]), cwb = cli(['--model', 'E143', '--out', T('cwb'), ...CW, `call:${GET}:d0=24`, ...CTAIL]);
+  const cwc = step(cwb, `call:${GET}:d0=24`), cws = step(cwb, 'wait:300').stopped;
+  ok(first && cwa.rc === 0 && cwb.rc === 0 && cws?.kind === 'watch' && cws.watch?.addr === first.addr && cwc.ok && Number(cwc.d0) === 3 && JSON.stringify(cwc.stubs) === '[["prop_get",1]]' &&
+    same(cwa, cwb) && step(cwa, RAM).sha256 && step(cwa, RAM).sha256 === step(cwb, RAM).sha256,
+  `E143 a call at a continue's watch stop: rc ${cwa.rc} ${cwb.rc} ${JSON.stringify(cws)} ${JSON.stringify(cwc).slice(0, 300)} | ${cwb.last}\n${JSON.stringify(shape(cwa))}\n${JSON.stringify(shape(cwb))}`);
+  const VT4 = '0x50b4f28b', UPTO = FLOW.slice(0, 4);                       // obs-vt4: reached in the MENU press
+  const vt = cli(['--model', 'E143', `trace:${VT4}`, ...UPTO]), vh = step(vt, 'menu').hits?.[0];
+  const SW = vh ? [`break:${VT4}`, ...UPTO, 'break:off', `break:mem:${h8(Number(vh.regs.sp) - 4)}:4:w`, 'resume', 'break:off'] : [], STAIL = ['resume', ...FLOW.slice(4), RAM];
+  const swa = cli(['--model', 'E143', '--out', T('swa'), ...SW, HS, ...STAIL]), swb = cli(['--model', 'E143', '--out', T('swb'), ...SW, `call:${GET}:d0=24`, HS, ...STAIL]);
+  const swc = step(swb, `call:${GET}:d0=24`), sws = step(swb, 'resume').stopped, d1 = step(base, 'down');
+  ok(vh && swa.rc === 0 && swb.rc === 0 && step(swb, 'menu').stopped?.hook === 'obs-vt4' && sws?.kind === 'watch' && sws.watch?.pc === VT4 && sws.pc === h8(Number(VT4) + 2) &&
+    swc.ok && Number(swc.d0) === 3 && JSON.stringify(swc.stubs) === '[["prop_get",1]]',
+  `E143 a call at a single step's watch stop: rc ${swa.rc} ${swb.rc} ${JSON.stringify(sws)} ${JSON.stringify(swc).slice(0, 300)} | ${swb.last}`);
+  ok(same(swa, swb) && step(swa, HS).sha256 === step(swb, HS).sha256 && step(swa, RAM).sha256 && step(swa, RAM).sha256 === step(swb, RAM).sha256 &&
+    step(swb, 'down').lab_ns === d1.lab_ns && step(swb, 'down').frame === d1.frame,
+  `E143 the run after a call at a single step's watch stop is the run without it: ${JSON.stringify([step(swa, HS).sha256, step(swb, HS).sha256, step(swa, RAM).sha256, step(swb, RAM).sha256])}\n${JSON.stringify(shape(swa))}\n${JSON.stringify(shape(swb))}`);
 
   // --a15, --device and the eye sensor: shot: takes the shown device's frame
   const off = cli(['--model', 'E143', '--out', T('a'), '--a15', 'off', 'wait:1500', 'info', 'wait:300', 'shot:a.png']), on = cli(['--model', 'E143', '--out', T('a'), '--a15', 'on', 'wait:1500', 'info', 'wait:300', 'shot:a.png']);

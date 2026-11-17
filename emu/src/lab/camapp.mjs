@@ -205,6 +205,13 @@ import { FACTS } from '../fw/ports.mjs';
 //              lens table (0x506ea4f3). The driver's derived values then run natively (0x502a63c2 apertures,
 //              0x50129a3e / 0x50129980 / 0x501299a2 focal lengths). No focus confirmation is drawn after END_FOCUS.
 //              Set before CA_MAIN starts
+//   S-ZOOMNO   (E129 and E132, the TG-5: fact lens.focal's zoom, src/fw/facts.mjs builtinFocal, which names the
+//              addresses: they are the TG-5's own, not E143's for the port) the built-in lens's zoom number byte is 1,
+//              the wide end, as the lens module's variable init stores it first (the boot's lens init calls it, D);
+//              the init is not run: it goes on to divide by a rate the lab leaves 0 (X). The focal length getter the
+//              EXIF set calls then runs natively at a capture (S-CARD's lens_focal: 4.5 mm). E145's getter reads a
+//              position word its lens setup writes 0, which the lab leaves 0: no stand-in there
+//              (docs/model-survey.md finding 156). Set before CA_MAIN starts
 //   S-EXPOSE   the brightness the exposure plan follows: the AE result the writer 0x50596187 writes when EXP calls back
 //              (the data objects 0xc12a, 0xc0ba, 0xc0ca, one per metering mode, I; the plan reads the one its metering
 //              mode picks, 0x505613ea) is set through the property setter 0x5004188b to the scene's brightness, BV =
@@ -634,6 +641,10 @@ const CLOCK_READ = A(0x5005A59E), CLOCK_RECORD = 10, CLOCK_STATUS = 8;
 // S-LENS applies on a build with a lens mount, whose driver keeps the mounted lens's record (fact lens.mount,
 // src/fw/facts.mjs lensMount); a body with a built-in lens (E145, E129, E132) has no such record to mount one through
 export const LENS_MOUNT = fact('lens.mount', true);
+// a body with a built-in lens: the focal length getter its EXIF set stores FocalLength from, in hundredths of a mm,
+// and on the TG-5 the zoom number byte it reads with its variable init's first value (fact lens.focal,
+// src/fw/facts.mjs builtinFocal; S-ZOOMNO); null with a lens mount
+export const LENS_FOCAL = fact('lens.focal', null);
 const LENS_ATTACHED = A(0xA32D4B9A), LENS_VALID = A(0xA32D4B98), LENS_RECORD = A(0xA32CAA8C), LENS_READY = A(0xA32D4B94);
 // S-LENS: the driver's static record and its current copies (0x502ac60b), commits and derived values; a build whose
 // driver init points the record at a static buffer of its own has that buffer read (src/fw/facts.mjs lensStatic), the
@@ -781,6 +792,7 @@ export const CAMAPP_STAND_INS = {
   "S-EMS1": "the EMS1 engine of the camera front end (src/dev/ems1.mjs, board ems1): its registers as storage (the state, start, control and channel words, the common parameters, the five area channels' registers of the driver's table 0x602a3820, the power words, the clock tables, the four look-up tables, which read back what was written; any other address a bus error), the status write 1 to clear, a start (+0x008 with a channel's run bit 5k + 4, while the state word is 0) keeping the parameter image written since the last start (the debug API's ems1 op) and completing after 1 ms of lab time (A-EMS1-1) with each run channel's status bit and IRQ 276; the result RAMs read the lab's words (none) or 0; a nonzero block trigger is refused; nothing is written to memory: the engine's computation (its motion, statistics and correlation outputs by DMA) does not run. No camera flow the lab runs makes an EMS1 job: test_mdet.mjs runs the firmware's driver on it (docs/om1-subject-spec.md 2.4, 5.9)",
   "S-DML": "the DML engine (src/dev/dml.mjs, board dml): its registers as storage, the power words, a start (+0x010 = 1) that keeps the register image written since the last one (the debug API's dml op), zeroes the 9 classes of 32 records at (+0x1118) << 4, writes the records the lab gives (on E143 with S-TAKEMDET: S-SCENE's subjects of the offer's kind, each of them, placed in MDET's 640 x 480 frame through DISP_FRAME's own transform taken back, subject.mjs frames(), as body records of class 0 and the parts S-SCENE names at their own boxes in their class of the group, the racer's helmet in class 2 (part 2, I), all with score 0x0e00, mdet.mjs; MDET's own combination pairs each part with its body, docs/om1-subject-spec.md 5.6) and completes after 10 ms of lab time (A-DML-1) with status bit 14 (write 1 to clear) and IRQ 285; the network does not run",
   "S-LENS": "(unless the lens runs natively: the default on E143, E146 and E147, S-LENSMCU; OM_EMU_LENS=stand-in for S-LENS there) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
+  "S-ZOOMNO": "(E129 and E132, the TG-5) the built-in lens's zoom number byte (fact lens.focal's zoom.word) is 1, the wide end, as the lens module's variable init (zoom.init, which the boot's lens init calls, D) stores it first; the init itself is not run, as it goes on to divide by a rate the lab leaves 0 (X). The focal length getter the EXIF set calls then runs natively at a capture and the picture's record carries its 4.5 mm (docs/model-survey.md finding 156); the lab moves no zoom. Set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (the AE result writer 0x50596187 copies them from EXP's result record, in the callback TAKE_EXPOSE puts in its AE request to EXP; one per metering mode, I; read natively only by the plan and the application's get by index, docs/hle-gaps.md 4.2.2) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (EXP's AE requests, not run: the lab never reaches the through start's request, and posted by hand it stops before the callback, docs/hle-gaps.md 4.2.2)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I). Under control camapp 3 it answers 6 from the start of a SWITCH to the EVF (play.mjs native_switch), the input that with H-EYESTATE starts the firmware's own output change (docs/hle-gaps.md 4.3.10)",
   "S-OUTDEV": "(E143 with --hdmi on) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done. Not used under control camapp 3: there the component answers TRA 588 natively and the device opens through it (X)",
@@ -921,6 +933,7 @@ export class CamApp {
     // and the port places only some of them, X; whether and where it draws its AF frames is ?)
     if (DF_FUNCTIONS.every((a) => !isUnmapped(a))) this.dispframe_start();
     if (this.slens()) this.lens_mount();                                            // S-LENS
+    if (LENS_FOCAL?.zoom) lab.sim.write(LENS_FOCAL.zoom.word, Uint8Array.of(1));    // S-ZOOMNO
     // the event broker's init before the HighLevel steps, as the boot runs them: its wrapper is called from a start
     // task that runs before the one that creates and inits the HighLevel object (E143: USRSTART2, then USRSTART4 at
     // 0x501e9dbc / 0x501e9dd1, with all of USRSTART3 between; the 18 other bodies' images hold the three calls after
@@ -1002,10 +1015,13 @@ export class CamApp {
     for (const f of LENS_DERIVE) lab.call(f, null, null, null, 200000);
   }
   // S-CARD: the lens's focal length in mm now (a capture's): the native lens's zoom (lens.mjs), S-LENS's zoom step, or
-  // null with no lens on the mount (a body with a built-in lens, whose focal length the lab does not read)
+  // on a body with a built-in lens what the getter its EXIF set calls answers, run natively (LENS_FOCAL: hundredths of
+  // a mm; the wide end's 4.5 mm on the three, X, the lab moving no zoom); null where neither is (none of the 19)
   lens_focal() {
     if (this.s.lens) return this.s.lens.mcu.focal();
-    return this.slens() ? LENS_ZOOM[this.zoom] : null;
+    if (this.slens()) return LENS_ZOOM[this.zoom];
+    if (!LENS_FOCAL) return null;
+    return (this.s.lab.call(LENS_FOCAL.getter, null, null, null, 2000000).d0 >>> 0) / 100;
   }
   // S-CARD: the camera's clock now (a capture's) as its own read gives it (CLOCK_READ, run natively): {date: [year,
   // month, day, hour, minute, second], status}, or null on a build where the read is not placed
@@ -1774,15 +1790,16 @@ export class CamApp {
   // date the camera's clock gave (S-CARD's clock(): the firmware's own read, each build's default while the clock is
   // not set, X), the size of its file's JPEG (S-RECFILE's, the frame the lab encodes), its exposure time (S-SCENE's at
   // the capture; the release's, DEFAULT_SHUTTER_S, without it), with S-SCENE's capture its f-number, bias and ISO, and
-  // the lens's focal length at the capture in tenths of a mm (S-CARD's lens_focal: S-LENS's zoom step or the native
-  // lens's). A field the image does not have is 0: the date where the read is not placed, the size of a picture with
-  // no file (no file system), the focal length with no lens (a built-in lens's is not read), the f-number, bias and
-  // ISO without S-SCENE's capture; the focal length and ISO are left out where the rule reads no layout (fact
-  // play.still null, logged). Written alike in the component's struct (S-PLAYCOMP: E143's, E146's, E147's and the
-  // E144 family's PlyCom; before 2026-11-02 the size 5184 x 3888 and the exposure alone, no date or focal length, X)
-  // and in the play module's response block (S-PLAYSEQ: the E118 family's), which every synchronous answer shares
-  // (getNumber's +4..+11, canMoveCurrent's +8..+19): each field whole. kind: the log's key. (The ISO was E143's u32
-  // +100 on every body before 2026-10-31, a field the E144 family's converters read as another, X: finding 58.)
+  // the lens's focal length at the capture in tenths of a mm (S-CARD's lens_focal: S-LENS's zoom step, the native
+  // lens's or a built-in lens's getter's, since 2026-11-16; 0 before on E145, E129 and E132). A field the image does
+  // not have is 0: the date where the read is not placed, the size of a picture with no file (no file system), the
+  // focal length with no lens, the f-number, bias and ISO without S-SCENE's capture; the focal length and ISO are left
+  // out where the rule reads no layout (fact play.still null, logged). Written alike in the component's struct
+  // (S-PLAYCOMP: E143's, E146's, E147's and the E144 family's PlyCom; before 2026-11-02 the size 5184 x 3888 and the
+  // exposure alone, no date or focal length, X) and in the play module's response block (S-PLAYSEQ: the E118
+  // family's), which every synchronous answer shares (getNumber's +4..+11, canMoveCurrent's +8..+19): each field
+  // whole. kind: the log's key. (The ISO was E143's u32 +100 on every body before 2026-10-31, a field the E144
+  // family's converters read as another, X: finding 58.)
   still_record(info, img, kind) {
     const lab = this.s.lab, layout = fact('play.still', STILL_E143) ?? null;
     const put = (at, fmt, ...v) => lab.sim.write(at >>> 0, pack(fmt, ...v));

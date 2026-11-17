@@ -14,8 +14,8 @@
 //                    picture's own: the date the camera's clock gave at the capture (its read called again here,
 //                    camapp's clock(): the clock is not set in the lab, so each build's default), the size of its
 //                    file's JPEG (S-RECFILE, read back from the card by refs/volume.mjs and decoded by refs/jpeg.mjs),
-//                    the focal length of the lens at the capture (S-LENS's zoom step or the native lens's, in tenths of
-//                    a mm; 0 on a body with a built-in lens, whose focal length the lab does not read) and the
+//                    the focal length of the lens at the capture (S-LENS's zoom step, the native lens's, or on a body
+//                    with a built-in lens the getter its EXIF set calls, in tenths of a mm: 4.5 mm, finding 156) and the
 //                    release's exposure time (1/125 s without S-SCENE); and the histogram request answered empty.
 //                    Between LEFT and INFO, OK opens the playback wizard (SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY, its
 //                    screen drawn: the frame changes) where the body's OK opens one (not on OK_OPENS_NOTHING's),
@@ -41,6 +41,11 @@ import { ERASE_DIALOG, ERASE_NATIVE, ERASE_YES_UNTIMED } from './test_erase.mjs'
 // +2, date +3, hour +4, minute +5, pictureSize +8 / +10, expTime +40 / +44, focalLength +56; D, src/fw/facts.mjs
 // stillFields)
 const GUI = { year: 0, month: 2, day: 3, width: 8, height: 10, exp: 40, focal: 56 };
+// the built-in lens's focal length at a capture, the getter's answer / 100 (src/fw/facts.mjs builtinFocal; the zoom
+// number 1's row of its table, D: E145 0x601b278c, E129 0x6058365c, E132 0x605836bc, each 450; the TG-7 and TG-5
+// at their wide end, 4.5 mm; on E129 and E132 with S-ZOOMNO's zoom number, X: 0 without it reads a pointer's half,
+// 2203 and 2110): docs/model-survey.md finding 156
+const BUILTIN_FOCAL_MM = { E145: 4.5, E129: 4.5, E132: 4.5 };
 // a start that waits at a prompt S1 does not leave: the keys that answer it (bin/modelcheck.mjs START_PROMPT: E132's
 // date and time setting has no Cancel, UP and OK five times set the clock; E145's and E129's S1 leaves theirs)
 const START_KEYS = { E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'] };
@@ -120,9 +125,11 @@ export async function playInfoSession() {
   // the camera's clock now (it is not set in the lab: each build's default, which does not advance), as at the capture
   const clock = s.camapp.clock();
   ok(clock && got.date.join() === clock.date.slice(0, 3).join() && clock.date[0] > 0, `${MODEL}: the record's date ${got.date.join('-')}, the camera's clock ${clock?.date.join('-')} (status ${clock?.status})`);
-  // the lens at the capture: a mounted one's focal length (S-LENS or the native lens), none with a built-in lens
-  const lens = LENS_MOUNT || !!s.lens;
-  ok(got.focal === (img.focal_mm ?? 0) * 10 && (img.focal_mm > 0) === lens, `${MODEL}: the record's focal length ${got.focal / 10} mm, the lens's at the capture ${img.focal_mm} mm (${lens ? 'a mounted lens' : 'a built-in lens'})`);
+  // the lens at the capture: a mounted one's focal length (S-LENS or the native lens), or the built-in lens's as the
+  // getter its EXIF set calls answers it (fact lens.focal), the wide end's 4.5 mm on the three (BUILTIN_FOCAL_MM)
+  const lens = LENS_MOUNT || !!s.lens, builtin = BUILTIN_FOCAL_MM[MODEL];
+  ok(got.focal === Math.round((img.focal_mm ?? 0) * 10) && img.focal_mm > 0 && (builtin === undefined) === lens && (builtin === undefined || img.focal_mm === builtin),
+    `${MODEL}: the record's focal length ${got.focal / 10} mm, the lens's at the capture ${img.focal_mm} mm (${lens ? 'a mounted lens' : `a built-in lens, ${builtin} mm expected`})`);
   ok(got.exp.join('/') === '1/125', `${MODEL}: the record's exposure time ${got.exp.join('/')} s`);
   // the histogram request answered empty where the play module answers: no bars from another answer's bytes
   if (seq) {

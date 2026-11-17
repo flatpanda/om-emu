@@ -19,7 +19,8 @@
 //               sync against
 //               SYNC_FOUND, its module-9 readers against MODULE9_FOUND and E143's lab lists, its language setting
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
-//               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the lens driver against LENS_DRIVER_FOUND and
+//               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the built-in lens's focal length getter against
+//               BUILTIN_FOCAL_FOUND, the lens driver against LENS_DRIVER_FOUND and
 //               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the IIC driver's wait
 //               against IIC_FOUND, the
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
@@ -305,6 +306,15 @@ const NO_TOUCH_DRIVER = ['E145', 'E129', 'E132'];
 // E132 (TG-5), the built-in-lens bodies, whose application loads no API id 0x20041 (getLensConnection on E143, D:
 // 0x504106fc; X, a byte scan); the other 15 hold its one lens record test (X)
 const NO_LENS_MOUNT = ['E145', 'E129', 'E132'];
+// The built-in lens's focal length getter the EXIF set stores FocalLength from, and the TG-5's zoom number byte with
+// the variable init that stores 1 there first (lens.focal; src/fw/facts.mjs builtinFocal), as read in their code (D:
+// the stores E145 0x502edd6c, E129 0x502d9732, E132 0x502dba13; the getters' table reads E145 0x500f4943, E129
+// 0x500e477d, E132 0x500e4720; the inits' callers E129 0x500e4203, E132 0x500e41a6); null on the 16 with a mount (X)
+const BUILTIN_FOCAL_FOUND = {
+  E145: { getter: 0x500F4E9D },
+  E129: { getter: 0x500E476B, zoom: { word: 0x625AF788, init: 0x500E5A69 } },
+  E132: { getter: 0x500E470E, zoom: { word: 0x625AF788, init: 0x500E5A0C } },
+};
 // The lens driver's entry points, LENS_EXEC's queue, the lens-0 flags and the lens caches' NAND (lens_driver;
 // src/fw/facts.mjs lensDriver) at the port's places: E143's as src/fw/models.mjs gave them by hand before the rule
 // (lens_native, D), E146's and E147's as read in their code (D: the boot's starts of LENS_MAIN and LENS_ASKDATA at
@@ -1040,7 +1050,7 @@ const E143_FACTS = {
   display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
     sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] } },
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
-  touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
+  touch_panel: { driver: true }, lens: { mount: true, focal: null }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null, slots: SLOTS_FOUND.E143 },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
@@ -1341,6 +1351,7 @@ export function factsTests() {
     ok(got.board?.vsc?.levels === LEVELS_FOUND[code], `${code}: board.vsc ${hx(got.board?.vsc ?? got)}, found ${LEVELS_FOUND[code] === undefined ? 'none (not kind 3)' : `levels ${LEVELS_FOUND[code]}`}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);
     ok(got.lens?.mount === !NO_LENS_MOUNT.includes(code), `${code}: lens ${hx(got.lens ?? got)}, found ${NO_LENS_MOUNT.includes(code) ? 'no mount' : 'a mount'}`);
+    ok(same(got.lens?.focal, BUILTIN_FOCAL_FOUND[code] ?? null), `${code}: lens.focal ${hx(got.lens?.focal ?? got.lens)}, found ${hx(BUILTIN_FOCAL_FOUND[code] ?? null)}`);
     if (IIC_FOUND[code]) ok(same(got.iic?.waits, IIC_FOUND[code]), `${code}: iic ${hx(got.iic ?? got)}, found ${hx(IIC_FOUND[code])}`);
     const tp = got.touch && [got.touch.i2c_write, got.touch.i2c_read];
     ok(same(tp, TOUCH_FOUND[code]), `${code}: touch ${hx(tp ?? got)}, found ${hx(TOUCH_FOUND[code] ?? 'none')}`);

@@ -2020,6 +2020,45 @@ function lensRecordGetter(img) {
   return sites[0]?.getter;
 }
 
+// The built-in lens's focal length now, as a still's Exif takes it (fact 'lens.focal'; src/lab/camapp.mjs lens_focal,
+// S-ZOOMNO): {getter, zoom?: {word, init}}, null where the rule reads none (the 16 bodies with a lens mount, X). The
+// EXIF set stores FocalLength from one call, `call G,[],4; mov (8,sp),a0; add F,a0; mov d0,(a0); mov 100,d0; mov
+// d0,(4,a0)`, F the EXIF tag table's FocalLength (0x920a) offset in its parameter block: G answers the focal length in
+// hundredths of a mm (D: E145 G 0x500f4e9d at 0x502edd6c, F 4184; E129 0x500e476b at 0x502d9732 and E132 0x500e470e at
+// 0x502dba13, F 1880). E145's G (through 0x500f4943) looks up the zoom number of the position word 0x61c67b3e
+// (0x500f1bea: the count of the table 0x601b1f38's 21 positions 0, 3, 8 .. 100 at or below it, 1 at 0) in the table
+// 0x601b278c, 56 bytes a zoom number, its column by setting 17649 (0x500f4ba1: the converter lenses, I); the lens's setup
+// writes the word 0 (0x500e8bf8, 0x500e8d23), its zoom commands others (0x500e91dd, 0x500e92c2). The TG-5's G reads the
+// zoom number itself, a byte (`movbu (Z),d0` before its first return: E129 and E132 0x625af788) times 52 into the table
+// 0x6058365c (E132 0x605836bc), its column by setting 17649; zoom gives Z and the function that stores 1 there first,
+// `mov 1,d0; movbu d0,(Z)` at a call's target (E129 0x500e5a69, E132 0x500e5a0c, D: the lens module's variable init,
+// which the lens init calls, E129 0x500e41af and E132 0x500e4152, the boot's calls at 0x50022c6c and 0x50022d28 after
+// its trace "1_p"). E145's G loads no byte in that form (a one-call wrapper): no zoom. Throws where two stores of the
+// form are found, or two such inits.
+export function builtinFocal(img) {
+  const u16 = (o) => img[o] | img[o + 1] << 8, dtTag = [];
+  for (let o = img.indexOf(0x32); o >= 0; o = img.indexOf(0x32, o + 1)) if (bytesAt(img, o, [0x32, 0x01, 0x02, 0x00, 20, 0, 0, 0])) dtTag.push(o);
+  if (dtTag.length !== 1) return null;
+  let lo = dtTag[0], focal;
+  while (EXIF_TAG_TYPES.has(u16(lo - 10)) && dtTag[0] - lo < REC_TAG_SPAN * 12) lo -= 12;
+  for (let o = lo; EXIF_TAG_TYPES.has(u16(o + 2)) && o - lo < REC_TAG_SPAN * 12 && focal === undefined; o += 12) if (u16(o) === 0x920a) focal = u32(img, o + 8);
+  if (focal === undefined || focal > 0xffff) return null;
+  const store = [0x5c, 0x08, 0xfa, 0xd0, focal & 0xff, focal >> 8, 0x60, 0x80, 0x64, 0xf8, 0x10, 0x04], sites = [];
+  for (let o = img.indexOf(0xdd); o >= 0; o = img.indexOf(0xdd, o + 1)) {
+    if (img[o + 5] === 0x00 && img[o + 6] === 0x04 && bytesAt(img, o + 7, store)) sites.push({ at: o, to: callAt(img, o).to });
+  }
+  if (sites.length > 1) throw new Error(`builtinFocal: ${sites.length} FocalLength stores from a call (${sites.map((s) => h8(0x50000000 + s.at)).join(', ')}), want one`);
+  if (!sites.length) return null;
+  const g = sites[0].to;
+  let word;
+  for (let p = g; p < g + 0x100 && !isRet(img, p) && word === undefined; p += insnLength(img[p], img[p + 1])) if (img[p] === 0xfc && img[p + 1] === 0xa8) word = u32(img, p + 2);
+  if (word === undefined) return { getter: 0x50000000 + g };
+  const set = [0x80, 0x01, 0xfc, 0x82, ...le32(word)], inits = [];
+  for (let o = img.indexOf(0x80); o >= 0; o = img.indexOf(0x80, o + 1)) if (bytesAt(img, o, set) && callsTo(img, o).length) inits.push(o);
+  if (inits.length > 1) throw new Error(`builtinFocal: ${inits.length} called functions that open storing 1 at the zoom byte ${h8(word)}, want one`);
+  return { getter: 0x50000000 + g, ...(inits.length && { zoom: { word, init: 0x50000000 + inits[0] } }) };
+}
+
 // The lens driver's entry points and flags that the native lens runs (fact 'lens_driver', src/lab/lens.mjs; docs/
 // hle-gaps.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
 // (OLYQERD_E143) and LENS_COMMAND's queue-id word (LENS_COMMAND_QUEUE_E143 0x60043226, the module queue 0x31 of the
@@ -5882,7 +5921,7 @@ export function readPlacedFacts({ img, at }) {
 // routine (only vector_page and dram_size for reset_head null, the E143 family's; and vsc: {levels} on a kind-3 VSC's), {res: {font_limit, string_limit}},
 // {menu: {list_menu, tab_memory, page_memory, take, caller, task}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
-// {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
+// {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount, focal}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {touch_int: {wait, poll, word}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect, movie_rate}}, {boot: {key, stage}}, {sections: {loader, switch, table, copied, ends, head}} (null where its rule reads none), {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
@@ -5923,7 +5962,7 @@ export function readFacts({ img, family, resLoad }) {
   const dial = dialSelect(img);
   if (dial !== undefined) facts.dial = dial;
   facts.touch_panel = { driver: touchDriver(img) };
-  facts.lens = { mount: lensMount(img) };
+  facts.lens = { mount: lensMount(img), focal: builtinFocal(img) };
   facts.iic = { waits: iicWaits(img) };
   const touch = touchI2c(img);
   if (touch !== undefined) facts.touch = touch;

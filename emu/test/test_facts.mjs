@@ -46,7 +46,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileQueue, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
   TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
@@ -344,8 +344,8 @@ const LENS_DRIVER_FOUND = {
 // and setting +216 / +220 from the size +264, the header maker's store of 41984 at +256, 0x503df699; the EXIF init
 // 0x503035f9 and its copy 0x5030362b of 6580 words, the date set 0x50305c65 with the time at +22708; the clock
 // setting 0x500de2c8), E133's and E129's as the rule reads them (X: their sessions record S2's file natively with
-// them), none on E132 (its record step is rec_file_destination_record) and E145 (the E144 version's dump with an
-// inlined loop), X
+// them); E145 (the E144 version's dump with an inlined loop) and E132 (its record step rec_file_destination_record)
+// since 2026-11-16, below
 // the packet's fields (300 bytes; FileType at +298, on E134, E137 and E125 at +296), rec_jpeg_exec's parts and the
 // date set's offsets the eight share (D, the rule's reads)
 const QF = (FileType) => ({ pExifParam: 28, HandleTarget: 116, BuffAddr1: 136, BuffSize1: 140, HeaderSize: 176, Status: 192, Mode: 194,
@@ -460,6 +460,27 @@ const REC_FILE_FOUND = {
     packet: { size: 284, post: 0x503A4D04, fields: IF }, jpeg: IJ(0x503AF13D, 0x503AF25B),
     contexts: null, context: { at: 0x503AFCED, dcf: 8, fnode: 32 }, reply: { fn: 0x503A4C41, from: 0x503A9185 },
     clock_set: 0x500EA4BD, clock_read: 0x500EA4DD,
+  },
+  // E145, the family's version with its loop inlining the start and the finish (recFileQueue, 2026-11-16), and
+  // E132, E130's version recording through rec_file_destination_record (recFileInline, 2026-11-16), as the rules read
+  // them (X: their sessions record S2's file natively with them; D: E145's task 30 0x503cf34b with the packet at sp +
+  // 8, its record step's return 0x503cf432, its date set 0x502ed923; E132's record step 0x503acf1e calling
+  // rec_make_file 0x503acb85 for RecordDevice +82's bit 0 at 0x503ad021, its rec_jpeg_exec 0x503b3092 with the packet
+  // in a3)
+  E145: {
+    exif: { init: 0x502EADC2, cflush: null, template: 0x61CF6B34, copy: 0x502EADF4, size: 28120, time: 24844,
+      date: QD(0x500F791D, 0x50002EE6, 4089), tags: { make: 1480, model: 1504, zoom: 4224 }, crop: [] },
+    init: 0x503CA061, task: { id: 30, entry: 0x503CF34B, flag: null, queue: 0x60041682, handled: 0x503CF432 },
+    packet: { size: 300, post: 0x503CA306, fields: QF(296) }, jpeg: QJ(0x503D68F2, 0x503D6A78),
+    contexts: [0x61D31528], clock_set: 0x500F742C, clock_read: 0x500F744C,
+  },
+  E132: {
+    exif: { init: 0x502D8C69, cflush: null, template: 0x6263A2A0, copy: 0x502D8C9E, size: 34180, time: 30336,
+      date: QD(0x500EA951, 0x50002CA5, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [] },
+    init: 0x503A7A67, task: { id: 30, entry: 0x503ACA0E, flag: null, queue: 0x60421412, handled: 0x503ACACD },
+    packet: { size: 284, post: 0x503A7CF1, fields: { ...IF, RecordDevice: 82 } }, jpeg: IJ(0x503B3092, 0x503B3204),
+    contexts: null, context: { at: 0x503B3CD0, dcf: 8, fnode: 32 }, reply: { fn: 0x503A7C2E, from: 0x503ACB5E },
+    clock_set: 0x500EA460, clock_read: 0x500EA480,
   },
   // The E118 family's (src/fw/facts.mjs recFileFrame, 2026-11-11; the header maker's parts recHeader's, below): E122's
   // as read by hand (D: REC's receive 0x5050bbec with HandleTarget's read 0x5050bc20, REC_FILE task 33 at 0x5050ff06
@@ -1070,7 +1091,8 @@ export function factsTests() {
   // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143), and rec_native, given
   // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue, recFileInline: fact
   // rec_file) and its S2 was seen to record so: E142's REC_FILE runs natively by recFileQueue, E130's and E133's,
-  // which port through it, by recFileInline, E145's by neither (docs/model-survey.md findings 123, 131 to 136)
+  // which port through it, by recFileInline, E145's by recFileQueue's inlined form and E129's and E132's, which port
+  // through it, by recFileInline (docs/model-survey.md findings 123, 131 to 136, 156)
   const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',
     'panels', 'card_fs', 'board', 'port_via', 'overrides', 'carry', 'checked', 'return_stubs', 'call_skips',
     'vsync_alias_flags', 'ui_out', 'res_nand', 'rec_native', ...Object.keys(KNOBS)]);
@@ -1275,6 +1297,17 @@ export function factsTests() {
       };
       const end = refused(0x503d94ac, 0x3f, /0 ends of REC_FILE's loop/), step = refused(0x503d9429, 0x83, /has no record step/);
       ok(end === true && step === true, `recFileInline: the loop's other end and a status kept elsewhere refused: ${end}, ${step}`);
+    }
+    // recFileQueue's inlined loop and recFileInline's destination record refuse a form they do not know: E145's image
+    // with the record step's status kept in d3 (0x503cf432: mov d0,d2 -> mov d0,d3), E132's with the record step
+    // testing RecordDevice's bit 1 before its call of rec_make_file (0x503ad01d: cmp 1,d0 -> cmp 2,d0)
+    if ((code === 'E145' || code === 'E132') && placed?.rec_file) {
+      const [rule, addr, v, re] = code === 'E145' ? [recFileQueue, 0x503cf432, 0x83, /not its loop's opening/] : [recFileInline, 0x503ad01d, 0x02, /neither rec_make_file/];
+      const m = run.slice();
+      m[addr - 0x50000000] = v;
+      let got;
+      try { rule(m, at(KCB0_E143)); got = 'read'; } catch (e) { got = re.test(e.message) || e.message; }
+      ok(got === true, `${rule.name}: ${code}'s ${code === 'E145' ? 'record step\'s status kept elsewhere' : 'destination record\'s other bit'} refused: ${got}`);
     }
     // recFileFrame refuses a form it does not know rather than reading it: E122's image with REC_FILE's NoRecord test
     // made `cmp 2,d0` (0x5050ff2f: a0 01 -> a0 02: no task of REC's loop left), with the chain write's code 0x55

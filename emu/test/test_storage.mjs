@@ -26,9 +26,9 @@
 //                   on E143 'OM SYSTEM'), FSInfo's free count against the FAT's; the firmware's
 //                   remaining shots and movie time from the card (the queries S-CARD answered before), smaller on a 4 GiB
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
-//                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE; on
-//                   E143, E146, E147, the E118 family and the E144 family but E145 and E132 REC_FILE natively, the
-//                   clock set first): its directory entry, size and bytes
+//                   its card across a power cycle; S2 with the live view writes the picture's file (REC_FILE
+//                   natively on every body, the clock set first; S-RECFILE where a body has no rec_native): its
+//                   directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
@@ -107,13 +107,17 @@ const cardQueries = (A) => ({ SHOTS: A(0x50419164), MOVIE: A(0x5042DA58) });
 // header maker alone, 2026-11-11 with REC_FILE natively; refs/exif.mjs): the Make and Model the EXIF template's init
 // takes from the settings store (the Model strings are in each image, D: E122 'PEN-F' at 0x6009698c, E118 'E-M5MarkII'
 // at 0x600a8560, E120 'E-M10MarkII' at 0x600a5bec; E118's Make is not a string of its main block, X), the Exif version
-// '0230', the maker notes' 'OLYMPUS' and no XMP on all three
+// '0230', the maker notes' 'OLYMPUS' and no XMP on all three; E145's and E132's (X, 2026-11-16, refs/exif.mjs and
+// exiftool: recFileQueue's inlined loop and recFileInline's destination record; the Model strings in each image, D:
+// E145 'TG-7' at 0x5f420, E132 'TG-5K' at 0x5cda8), E145's as E144's (Make 'OM Digital Solutions', 'OM SYSTEM',
+// XMP), E132's as the six (its maker notes' CameraType2 'TG-5')
 const OM = { make: 'OM Digital Solutions', notes: 'OM SYSTEM', xmp: true }, OLY = { make: 'OLYMPUS CORPORATION', notes: 'OLYMPUS', xmp: false };
 const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { model: 'OM-1MarkII', version: '0231', ...OM }, E147: { model: 'OM-3', version: '0300', ...OM },
   E144: { model: 'OM-5', version: '0231', ...OM }, E148: { model: 'OM-5MarkII', version: '0300', ...OM }, E139: { model: 'E-M1MarkIII', version: '0231', ...OLY },
   E134: { model: 'E-M1X', version: '0231', ...OLY }, E137: { model: 'E-M5MarkIII', version: '0231', ...OLY }, E142: { model: 'E-P7', version: '0231', ...OLY },
   E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY },
   E130: { model: 'E-M10 Mark III', version: '0231', ...OLY }, E133: { model: 'E-PL9', version: '0231', ...OLY }, E129: { model: 'TG-5', version: '0231', ...OLY },
+  E145: { model: 'TG-7', version: '0231', ...OM }, E132: { model: 'TG-5K', version: '0231', ...OLY },
   E122: { model: 'PEN-F', version: '0230', ...OLY }, E118: { model: 'E-M5MarkII', version: '0230', ...OLY, make: 'OLYMPUS IMAGING CORP.' },
   E120: { model: 'E-M10MarkII', version: '0230', ...OLY } };
 // The still path below S2 where REC_IMAGE runs natively (docs/hle-gaps.md 4.3.12): what of it runs in one shot, per
@@ -796,7 +800,7 @@ export async function storageSession() {
           lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
           ok(withSet === '2025:03:04 05:06:08' && without === '', `a fresh block with the clock at 2025-03-04 05:06:08: the EXIF set's DateTimeOriginal '${withSet}', without it '${without}' (the template's)`);
         }
-        // the REC version before the family's (src/fw/facts.mjs recFileInline: E130, E133, E129): REC_FILE's reply to
+        // the REC version before the family's (src/fw/facts.mjs recFileInline: E130, E133, E129, E132): REC_FILE's reply to
         // the requester taken with status 0, and the file's context, on rec_make_file's stack, read at the
         // registration: its stamp the FAT stamp of the clock's date, as the directory entry's
         if (rec.R.reply && !rec.frame) {

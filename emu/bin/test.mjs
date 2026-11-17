@@ -28,8 +28,8 @@
 // port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
-// file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
+// file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129, E132, E145 and the E118
+// family (S2's file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
 // firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), a power-on with no card and the media status
 // around a removal on E143 and E147 (test_nocard.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
@@ -519,9 +519,10 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const { spawnSync } = await import('node:child_process');
   const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
   // E130, E133 and E129 for REC_FILE natively in the REC version before the E144 family's, each in a form the other
-  // two do not take (E133's rec_jpeg_exec, E129's date set; src/fw/facts.mjs recFileInline)
+  // two do not take (E133's rec_jpeg_exec, E129's date set; src/fw/facts.mjs recFileInline), E132 for its record step
+  // through rec_file_destination_record and E145 for the family's version with an inlined loop (recFileQueue)
   // the HLS media side alone (--hls: Format from Card Setup, the card out and in, a picture after each)
-  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E130', 'E133', 'E129', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120', 'E139', 'E140', 'E130'].map((m) => [m, '--hls'])].map(([m, arg]) => {
+  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E130', 'E133', 'E129', 'E132', 'E145', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120', 'E139', 'E140', 'E130'].map((m) => [m, '--hls'])].map(([m, arg]) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, arg], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [arg === '--session' ? m : `${m} ${arg}`, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });

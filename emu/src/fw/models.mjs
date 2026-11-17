@@ -130,9 +130,10 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // 'rec_image'; recImage throws where REC_IMAGE's forms differ, so a body with recFile's parts read has both); on the
 // E144 family's REC version (REC_FILE waiting on its queue alone, no header fill) at the addresses src/fw/facts.mjs
 // recFileQueue reads, with no 'rec_image': REC_IMAGE's part in the lab's call (H-EXIFINIT, H-RECINIT, H-RECFILE,
-// S-EXIFPRM, S-RECIMAGE, S-JPEGENC); on the REC version before the family's (E130, E133, E129: a 284-byte packet,
-// REC_FILE's loop inlining its start and finish, rec_make_file's file context on its stack) at the addresses
-// src/fw/facts.mjs recFileInline reads, with the same stand-ins; on the E118 family's older REC version (REC_FILE's
+// S-EXIFPRM, S-RECIMAGE, S-JPEGENC; E145's loop inlining its start and finish); on the REC version before the family's
+// (E130, E133, E129, E132: a 284-byte packet, REC_FILE's loop inlining its start and finish, rec_make_file's file
+// context on its stack, E132's reached through rec_file_destination_record) at the addresses src/fw/facts.mjs
+// recFileInline reads, with the same stand-ins; on the E118 family's older REC version (REC_FILE's
 // packet on its stack, the file context in rec_file_record's frame, the reservation its own call of the file system)
 // the same stand-ins at the addresses src/fw/facts.mjs recFileFrame reads (docs/model-survey.md findings 143 to 146);
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
@@ -1093,6 +1094,9 @@ export const MODELS = {
     // TFT 1.04M dots; no EVF
     panels: { tft: [720, 480], evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // REC_FILE natively, the E144 family's version with its loop inlining the start and the finish (src/fw/facts.mjs
+    // recFileQueue; X: test_storage's session, 2026-11-16)
+    rec_native: true,
     board: { family: 'E144' },
     // the map from E142 pairs 2.01M instructions with 121 conflicts, the one from E140 2.17M (116), from E144 1.83M
     // (117); through E142 120 of the overrides carry (60 nulls) and 14 fail, 77 lab addresses stay unplaced, through
@@ -1186,6 +1190,9 @@ export const MODELS = {
     // a TG-5 (the reply's model_name TG-5(KOUICHIRO)): its TFT of 460K dots, no geometry given; no EVF
     panels: { tft: null, evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // REC_FILE natively, as E130's but through rec_file_destination_record (src/fw/facts.mjs recFileInline; X:
+    // test_storage's session, 2026-11-16)
+    rec_native: true,
     // the family's stub pages (src/fw/board.mjs FAMILIES.E144) and the register blocks of the serial controllers its
     // channels use once PER_SIO's channel map is set (H-SIOMAP, src/lab/sio.mjs): channel map 0x604aa840 (core 0's,
     // the setter's table 0x604aa830 / 0x604aa86c), channel 9 -> index 7, 2 -> index 2 and 3 -> index 3, and the

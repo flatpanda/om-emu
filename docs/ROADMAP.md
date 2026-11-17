@@ -306,9 +306,10 @@ the survey table.
   and E120 at the addresses `src/fw/facts.mjs` recFileFrame reads (the packet on REC_FILE's stack, the file context
   in rec_file_record's frame, the reservation REC's own call of the file system, the chain write's reply from a queue
   FILECLBK answers), REC_IMAGE's part S-RECIMAGE's with rec_jpeg_exec native; S-RECFILE and S-RECHDR retired there.
-  Next: E132's and E145's REC_FILE (both record through rec_file_destination_record; E145's is the family's
-  version with an inlined loop, finding 136);
-  RAW and RAW + JPEG files; the HLS media manager itself (camapp 2 does
+  E145's and E132's since 2026-11-16 (`docs/model-survey.md` finding 156): E145's, the family's version with an
+  inlined loop, at the addresses recFileQueue reads, E132's, E130's version through rec_file_destination_record, at
+  recFileInline's; S-RECFILE is now in use on no body.
+  Next: RAW and RAW + JPEG files; the HLS media manager itself (camapp 2 does
   not create it) in place of S-CARD's and S-MEDIA's requests; the second slot (its switch `0x1518`, and S-CARD's start
   value of its mount state: done 2026-11-11 on E143 and E146, hle-gaps.md 4.8.12: two card slots, the second empty
   by default, each slot's card-detect pin a pin of the body IO expander, a second card mounted from its own port, S2
@@ -480,8 +481,8 @@ the survey table.
   a protected picture refused; findings 137 to 140), and is refused on the family and the other five, whose DCF
   database learns of the lab's pictures only at a mount (the rule reads no such calls in E118's and E120's either;
   since the merge, 2026-11-12, with REC_FILE native on E130, E133, E129 and the family, `test/test_erase.mjs`'s
-  ERASE_NATIVE holds E130, E133, E129 and E122 and the family's Delete opens the dialog, X; E145 and E132 stay
-  refused, E118 and E120 hold no erase fact); the
+  ERASE_NATIVE holds E130, E133, E129 and E122 and the family's Delete opens the dialog, X; E145 and E132 too
+  since 2026-11-16, finding 156; E118 and E120 hold no erase fact); the
   other erase requests (23, 301, 510, 395, 396, 497 and 265) are refused since finding 110, and the edits' saves,
   which S-PLAYSEQ finished with no file written, since finding 141. A second picture, RIGHT, LEFT and INFO's three
   views run

@@ -7453,7 +7453,7 @@ steps are now read and run, the lab handing over only what the capture pipeline 
 - **Open:** the recorder's own run in REC_FILE's task (the context the capture pipeline fills: on E143 since round 9,
   4.8.10); the older 13 bodies'
   recording modules (their builders of the same codes, not read; S-RECFILE writes through fileif there; read since:
-  `docs/model-survey.md` findings 118 to 123, 131 to 136 and 143 to 148, E132 and E145 left, finding 136); RAW and
+  `docs/model-survey.md` findings 118 to 123, 131 to 136, 143 to 148 and, for E132 and E145, 156); RAW and
   RAW + JPEG files (types 0 / 3 / 9, the fnode's second file at +60..+72); the second slot (on E143 and E146 since
   2026-11-11, 4.8.12).
 
@@ -7540,9 +7540,8 @@ there (it stays on the other bodies).
 - **Open:** the thumbnail and the shooting values in Exif (TAKE's record and the EXIF set, step 7); the media check-in
   (the HLS side); RAW and RAW + JPEG (`FileType` 0, `ExifFileType`, the type table `0x60358df8`); `Free` and its
   completion with a requester (api_rec); REC_MAIN's task and the image pipeline (REC_IMAGE's task runs natively on
-  E143 since 2026-11-10, 4.3.3, X); the E144
-  family's E145 and E132 (E130, E133 and E129 natively since 2026-11-11, `docs/model-survey.md` findings 131 to 136;
-  the eight others since 2026-11-10, below). E146
+  E143 since 2026-11-10, 4.3.3, X). The E144 family's eight since 2026-11-10 (below), E130, E133 and E129 since
+  2026-11-11 and E145 and E132 since 2026-11-16 (`docs/model-survey.md` findings 131 to 136 and 156). E146
   and E147 since the same day (below).
 - **The second slot (survey, D):** the packet carries it (`Media2`, `ExifFileTypeDoubleSlot`, `BuffAddrDoubleSlot`,
   `SlotNo`) and REC_FILE records both slots in `rec_file_record_DoubleSlot` (`0x5053f97d`, the second file context
@@ -7630,12 +7629,14 @@ there (it stays on the other bodies).
     (`OM SYSTEM`; `OLYMPUS` on the six), XMP on E144 and E148 only and IFD1's thumbnail of length 0; the firmware's
     image count 1 and its fnode 1 the file in the same session (S-CARD's count retired there), file 2 next at the
     next session's mount; E143's REC warnings around S2 (E144, E139). test_playinfo passes on the eight.
-  - *Open:* E145 and E132 (no rec_native: S-RECFILE through fileif; `docs/model-survey.md` finding 136). E130, E133
-    and E129, whose REC is the version before the family's (a 284-byte packet, REC_FILE's loop inlining its start
-    and finish, rec_make_file's context on its stack), run REC_FILE natively since 2026-11-11 by a rule of their own
-    (`src/fw/facts.mjs` recFileInline, findings 131 to 135), which also reads the 96-byte recorder's builders on
-    them (the rule `recorder` keeps the 100-byte form); REC_IMAGE's own task on the family; the thumbnail and
-    shooting values; RAW; the second slot.
+  - E130, E133 and E129, whose REC is the version before the family's (a 284-byte packet, REC_FILE's loop inlining
+    its start and finish, rec_make_file's context on its stack), run REC_FILE natively since 2026-11-11 by a rule of
+    their own (`src/fw/facts.mjs` recFileInline, findings 131 to 135), which also reads the 96-byte recorder's
+    builders on them (the rule `recorder` keeps the 100-byte form). E145 and E132 since 2026-11-16 (finding 156, X:
+    `test_storage --session` 32 and 33 checks): E145's REC is the family's with the loop inlined (recFileQueue reads
+    it), E132's is E130's with the record step rec_file_destination_record (recFileInline reads it); `TG-7` with the
+    family's OM SYSTEM Exif and XMP, `TG-5K` with OLYMPUS's. S-RECFILE is in use on no body since.
+  - *Open:* REC_IMAGE's own task on the family; the thumbnail and shooting values; RAW; the second slot.
 
 #### 4.8.11 The play module's load under camapp 3 (2026-11-10; D unless tagged, addresses E143's)
 

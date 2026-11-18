@@ -58,6 +58,8 @@ import { FAMILIES, UNKNOWN, mergeBoard, boardOf } from '../src/fw/board.mjs';
 import { MODELS, romPath, resPath } from '../src/fw/models.mjs';
 import { PORTS, FACTS } from '../src/fw/ports.mjs';
 import { KNOBS } from '../src/fw/knobs.mjs';
+import { nameTable, SettingNameError } from '../src/fw/setnames.mjs';
+import { block2 } from '../host/setnames.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const head = (file, n = 0x400) => {
@@ -1097,6 +1099,17 @@ const E143_FACTS = {
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
+// The setting-name table in block 2 (src/fw/setnames.mjs nameTable): {offset in the body, count of MODE_ names}, as a
+// scan of each body's block 2 found it without the rule (X, 2026-11-17: the offset of the record MODE_DRIVE, the records
+// counted up to MODE_LABEL_PLAT_END, the next one COUNT_STB_LIGHT on each); null where the rule refuses: no 52-byte
+// table (E118, E122, E125, E129, E132 and E137 hold MODE_DRIVE in 72-byte records; E120, E140, E142 and E145 none)
+const NAMES_FOUND = {
+  E147: { offset: 0x28803F0, count: 2343 }, E146: { offset: 0x28803F0, count: 2226 }, E143: { offset: 0x28C03F0, count: 2205 },
+  E148: { offset: 0x18403F0, count: 2352 }, E144: { offset: 0x1C403F0, count: 1966 }, E139: { offset: 0x20403F0, count: 1948 },
+  E134: { offset: 0x20403F0, count: 1912 }, E133: { offset: 0x1A003E0, count: 1676 }, E130: { offset: 0x1A003E0, count: 1676 },
+  E137: null, E125: null, E129: null, E132: null, E118: null, E122: null, E120: null, E140: null, E142: null, E145: null,
+};
+
 export function factsTests() {
   const bad = [];
   let checks = 0, models = 0;
@@ -1117,6 +1130,16 @@ export function factsTests() {
     let got;
     try { got = imageBase(head(file)).base; } catch (e) { got = e.message; }
     ok(got === m.image_base, `${code}: imageBase 0x${got.toString(16)}, MODELS image_base 0x${m.image_base.toString(16)}`);
+  }
+  // every model whose block 2 is here (unpacked and pinned, or in its .BIN): the name table's offset and count, or the
+  // rule's refusal (host/setnames.mjs block2; a body whose firmware is not here is skipped)
+  ok(Object.keys(NAMES_FOUND).length === Object.keys(MODELS).length && Object.keys(MODELS).every((c) => Object.hasOwn(NAMES_FOUND, c)), 'NAMES_FOUND names every MODELS body');
+  for (const code of Object.keys(MODELS)) {
+    let blk;
+    try { blk = block2(code).body; } catch (e) { if (e instanceof SettingNameError && / is here: /.test(e.message)) continue; throw e; }
+    let got;
+    try { got = nameTable(blk); } catch (e) { if (!(e instanceof SettingNameError)) throw e; got = null; }
+    ok(same(got, NAMES_FOUND[code]), `${code}: nameTable ${hx(got)}, found ${hx(NAMES_FOUND[code])}`);
   }
   // mergeBoard: one level deep, hand over family, a fact given both ways refused, UNKNOWN reads throw
   const fam = { a: 1, t: { x: 1, y: 2 }, u: UNKNOWN, v: { w: UNKNOWN, z: 3 } };

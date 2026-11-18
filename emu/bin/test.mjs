@@ -8,7 +8,8 @@
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
 // (test_debug.mjs) and its live route to a play session (test_live.mjs) with its call op (test_call.mjs: mid-function
-// calls with stop pcs too, and through bin/session.mjs on E143 and E147), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// calls with stop pcs too, and through bin/session.mjs on E143 and E147), the firmware's setting names and the setting
+// op and tokens on E143, E146 and E147 (test_setnames.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
@@ -778,6 +779,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`scripted session: units ${su.checks - su.bad.length}/${su.checks}; E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the firmware's setting names (test_setnames.mjs): the rule's units, then a session resolving names on E143 here and
+// on E146 and E147 in processes of their own (MODE_MOVIE is 44, 897's name the body's, an unknown name refused)
+{
+  const { setnamesUnits, setnamesSession } = await import('../test/test_setnames.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const nu = setnamesUnits(), ns = await setnamesSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_setnames.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`setting names: units ${nu.checks - nu.bad.length}/${nu.checks}; E143 ${ns.checks - ns.bad.length}/${ns.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...nu.bad, ...ns.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += nu.bad.length + ns.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the scripted session's traces, breakpoints and watchpoints (test_trace.mjs): its units, then whole runs through the
 // command line on E143 here and on E147 in a process of its own

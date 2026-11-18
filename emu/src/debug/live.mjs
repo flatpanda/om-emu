@@ -60,6 +60,11 @@
 //   ems1                    the EMS1 engine's model (src/dev/ems1.mjs, S-EMS1): {runs, busy, status, dropped, last: the
 //                           newest run {n, t_ns, start: the start word, channels: their mask, params: {offset:
 //                           value}} or null}, offsets and values in hex; refused on a board without the engine
+//   setting {setting, read?}  a setting by id or by the firmware's own name (src/fw/setnames.mjs; the names from the
+//                           host's settingNames(), the body's block 2): {setting: {id, name (null for an id past the
+//                           table), value, hex}, steps} with value the settings getter's answer (the lab's GETTER, run
+//                           as call runs it, so also at a debug stop); read false: the id and name only. A name the body does
+//                           not have, or any name on a host that offers no names (the browser's Worker), is refused
 //   call {fn, ...}          a firmware function run natively through the lab's harness, its hooks and stand-ins
 //                           answering, to its return or to a stop pc, from its entry or a pc inside it
 //                           (src/debug/call.mjs lists the fields, the convention and what is restored);
@@ -77,7 +82,8 @@
 // headless ArrayQueue) break, cont's stops and stopping watchpoints are refused, and halt, the reads, log
 // watchpoints and probes remain.
 // host: {openSink, disasm, resolvePath} as the protocol's (the node host: host/debughost.mjs); without them trace and
-// disasm are refused. holdStop(record) (the scripted session, host/session.mjs): a debug stop is held by calling it
+// disasm are refused. settingNames(): the run's body's setting names (src/fw/setnames.mjs SettingNames; the node hosts:
+// host/setnames.mjs), or throws why not; without it setting takes ids only. holdStop(record) (the scripted session, host/session.mjs): a debug stop is held by calling it
 // with the stop's record (as cont answers it) instead of waiting on the queue; it runs debug inputs through the
 // Player's debug_input meanwhile, and when it returns the stop is let go as by resume (unless it was let go already).
 // Worker-safe.
@@ -88,8 +94,10 @@ import { TCB_SP } from '../lab/kernel.mjs';
 import { callSpec, runCall } from './call.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
 import { BASE, runtime, disasm } from '../lab/hle.mjs';
+import { GETTER } from '../lab/menu.mjs';
+import { SettingNameError } from '../fw/setnames.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call', 'probe', 'hits']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call', 'setting', 'probe', 'hits']);
 export const HITS_MAX = 10000;           // the probes' log: the first this many hits since the last take, the rest counted
 export const STACK_WORDS_MAX = 256;      // a probed pc's stack capture: at most this many words per hit
 const KIND_NAMES = { r: 'r', w: 'w', rw: 'rw' };
@@ -263,6 +271,7 @@ export class LiveDebug {
         if (this.watches.some((w) => w.action === 'stop')) throw new BadRequest('call: a stopping watchpoint is armed (it would end the call inside the harness): give it action \'log\' or clear it');
         return runCall(this.lab, this.dbg, spec, { atStop: this.at !== null });
       }
+      case 'setting': return this._setting(q);
       case 'standins': {
         const n = absent(q.limit) ? 100 : count(q.limit, 'limit'), cut = (v) => (n ? v.slice(-n) : []);
         const camapp = this.player.session?.camapp ?? null;
@@ -420,6 +429,30 @@ export class LiveDebug {
     const o = outcome(this.dbg._outcome(k0));
     if (m.lastStop().kind === 'watch') m.dropPendingStop();     // reported here: the next step or cont runs
     return harness ? { ...o, harness: true } : o;
+  }
+  // setting {setting, read?}: the id and the firmware's name of a setting given by either, and its value by the getter
+  _setting(q) {
+    const v = q.setting;
+    if (!(typeof v === 'string' && v) && !(Number.isInteger(v) && v >= 0)) throw new BadRequest('setting: "setting" is an id (0..65535) or a name (MODE_MOVIE)');
+    if (!absent(q.read) && typeof q.read !== 'boolean') throw new BadRequest('setting: "read" is true or false');
+    const byId = typeof v === 'number' || /^(?:\d+|0x[0-9a-fA-F]+)$/.test(v);
+    let names = null;
+    try { names = typeof this.host.settingNames === 'function' ? this.host.settingNames() : null; } catch (e) {
+      if (!(e instanceof SettingNameError)) throw e;
+      if (!byId) throw new BadRequest(`setting ${v}: ${e.message}`);
+    }
+    if (!byId && names === null) throw new BadRequest(`setting ${v}: this host offers no setting names (the firmware's block 2 is read by the node hosts, host/setnames.mjs); give the id`);
+    let s;
+    try { s = names ? names.resolve(String(v)) : { id: Number(v), name: null }; } catch (e) {
+      if (e instanceof SettingNameError) throw new BadRequest(`setting ${v}: ${e.message}`);
+      throw e;
+    }
+    if (!(s.id >= 0 && s.id <= 0xffff)) throw new BadRequest(`setting ${v}: an id is 0..65535`);
+    if (q.read === false) return { setting: { id: s.id, name: s.name } };
+    if (this.watches.some((w) => w.action === 'stop')) throw new BadRequest('setting: a stopping watchpoint is armed (the getter runs as call runs it): give it action \'log\' or clear it');
+    const r = runCall(this.lab, this.dbg, callSpec({ fn: GETTER, regs: { d0: s.id }, limit: 100000 }), { atStop: this.at !== null });
+    const d0 = Number(r.regs.d0) >>> 0;
+    return { setting: { id: s.id, name: s.name, value: d0 | 0, hex: hex8(d0) }, steps: r.steps };
   }
   _tasks() {
     const nk = this.lab.nk, sim = this.sim, running = sim.u32(nk.kcb(96)), out = [];

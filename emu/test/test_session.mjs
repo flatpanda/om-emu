@@ -2,7 +2,8 @@
 //   sessionUnits    (firmware-free) the script splitter (quotes, comments), every token form and its refusals, each
 //                   step's Player inputs (a press: down, 150 ms, up, the settle; each wait the session's, sent in
 //                   WAIT_SLICE_MS slices toward its end; a play WAIT token as written), every expect on fakes with its
-//                   negative control (gui = and ~, mem = and !=, card, standin, exif = and ~), the Exif fields by
+//                   negative control (gui = and ~, mem = and !=, setting = and !=, card, standin, exif = and ~), a
+//                   setting:ID|NAME's input (the setting op), the Exif fields by
 //                   name (UserComment after its character code), the parser's rest positional, and bin/session.mjs's
 //                   usage errors (exit 2 before any lab: an unknown option or token, a bad --loaded, --settle -1, a
 //                   malformed --card-put, --main with --patch, a missing --script), and its usage header against
@@ -78,6 +79,9 @@ export function sessionUnits() {
     ['write:0x10=00ff', '{"kind":"write","addr":16,"hex":"00ff"}'],
     ['call:0x603f0111:d0=901,a0=0x10,limit=5000', `{"kind":"call","fn":${0x603f0111},"regs":{"d0":901,"a0":16},"limit":5000,"space":null}`],
     ['call:0x10:space=notation', '{"kind":"call","fn":16,"regs":{},"limit":null,"space":"notation"}'],
+    ['setting:MODE_MOVIE', '{"kind":"setting","setting":"MODE_MOVIE"}'], ['setting:44', '{"kind":"setting","setting":44}'], ['setting:0x2c', '{"kind":"setting","setting":44}'],
+    ['expect:setting:MODE_MOVIE=1', '{"kind":"expect","expect":{"what":"setting","setting":"MODE_MOVIE","op":"=","value":1}}'],
+    ['expect:setting:2!=-256', '{"kind":"expect","expect":{"what":"setting","setting":2,"op":"!=","value":-256}}'],
     ['card-ls', '{"kind":"card-ls"}'], ['card-get:\\DCIM\\X.JPG=x.jpg', '{"kind":"card-get","path":"DCIM/X.JPG","local":"x.jpg"}'], ['exif:DCIM/100OMSYS/*.JPG', '{"kind":"exif","path":"DCIM/100OMSYS/*.JPG"}'],
     ['expect:gui=SS_MENU/ID_ST_MENU', '{"kind":"expect","expect":{"what":"gui","op":"=","text":"SS_MENU/ID_ST_MENU"}}'],
     ['expect:gui~PICTUREMODE', '{"kind":"expect","expect":{"what":"gui","op":"~","text":"PICTUREMODE"}}'],
@@ -90,7 +94,7 @@ export function sessionUnits() {
   for (const [x, want] of forms) { const got = thrown(() => p(x)) ?? p(x); ok(got === want, `${x}: ${got}`); }
   const refusals = ['', 'OK', 'ok:sideways', 'main_dial:+9', 'main_dial:+0', 'wait:-1', 'wait:1.5', 'read:0x10:0', 'read:0x10:70000', 'read:zz:4', 'write:0x10=abc',
     'write:0x1ffffffff=00', 'call:0x10:sp=1', 'call:0x10:d0', 'call:0x10:d0=0x100000000', 'call:0x10:space=flash', 'shot:a.jpg', 'card-get:A.JPG', 'exif:DCIM/*/A.JPG',
-    'expect:gui', 'expect:mem:0x10=a', 'expect:exif:A.JPG:Nope=1', 'expect:standin:lower', 'expect:nothing', 'switch:creative_dial', 'hold:ok:x', 'restart:x', 'a-b'];
+    'expect:gui', 'expect:mem:0x10=a', 'setting', 'setting:', 'setting:mode_movie', 'setting:-1', 'setting:MODE MOVIE', 'expect:setting:MODE_MOVIE', 'expect:setting:MODE_MOVIE=x', 'expect:exif:A.JPG:Nope=1', 'expect:standin:lower', 'expect:nothing', 'switch:creative_dial', 'hold:ok:x', 'restart:x', 'a-b'];
   for (const x of refusals) ok(thrown(() => parseToken(x)) instanceof TokenError, `refused: ${JSON.stringify(x)} -> ${thrown(() => parseToken(x))?.message ?? 'taken'}`);
   // the Player inputs
   const inp = (x, settle) => JSON.stringify(stepInputs(parseToken(x), settle));
@@ -109,17 +113,23 @@ export function sessionUnits() {
   ok(inp('read:16:4') === '[{"type":"debug","op":"read","addr":16,"size":4}]' && inp('write:16=ab') === '[{"type":"debug","op":"write","addr":16,"hex":"ab"}]', 'read and write');
   ok(inp('call:0x50000010:d1=2,limit=9') === '[{"type":"debug","op":"call","fn":1342177296,"regs":{"d1":2},"limit":9}]', `a call: ${inp('call:0x50000010:d1=2,limit=9')}`);
   ok(['restart', 'shot:a.png', 'card-ls', 'exif:A.JPG', 'expect:gui=X'].every((x) => inp(x) === '[]'), 'the session\'s own steps are not inputs');
+  // a setting by id or by name: the live route's setting op (openSession resolves a name to its id first)
+  ok(inp('setting:44') === '[{"type":"debug","op":"setting","setting":44}]' && JSON.stringify(stepInputs({ ...parseToken('setting:MODE_MOVIE'), id: 44 })) === '[{"type":"debug","op":"setting","setting":44}]',
+    `a setting: ${inp('setting:44')}`);
   // the expects on fakes: each passes on its match and fails (with what it found) on a mismatch
   const card = new Set(['OM3MOD/LOOKS.BIN']);
   const got = { gui: 'SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART', mem: (a, n) => (a === 0x20 ? 'ff030000' : '00'.repeat(n)).slice(0, 2 * n), card: (x) => (card.has(x) ? {} : null),
-    exif: (x) => (x === 'A.JPG' ? { Model: 'OM-3            ', UserComment: 'Caduceus FILM 5' } : null), standins: ['S-SECLOADED'] };
+    exif: (x) => (x === 'A.JPG' ? { Model: 'OM-3            ', UserComment: 'Caduceus FILM 5' } : null), standins: ['S-SECLOADED'],
+    setting: (v) => ({ id: v === 'MODE_MOVIE' ? 44 : v, name: v === 'MODE_MOVIE' || v === 44 ? 'MODE_MOVIE' : null, value: v === 'MODE_MOVIE' || v === 44 ? 1 : -256 }) };
   const ex = (x) => expectFails(parseToken(x).expect, got);
   const pass = ['expect:gui=SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART', 'expect:gui~PICTUREMODE', 'expect:mem:0x20=ff030000', 'expect:mem:0x20!=00000000', 'expect:mem:0x30=0000',
-    'expect:card:OM3MOD/LOOKS.BIN', 'expect:standin:S-SECLOADED', 'expect:exif:A.JPG:Model~OM-3', 'expect:exif:A.JPG:UserComment=Caduceus FILM 5'];
+    'expect:card:OM3MOD/LOOKS.BIN', 'expect:standin:S-SECLOADED', 'expect:exif:A.JPG:Model~OM-3', 'expect:exif:A.JPG:UserComment=Caduceus FILM 5',
+    'expect:setting:MODE_MOVIE=1', 'expect:setting:44!=0', 'expect:setting:2=-256'];
   const fail = [['expect:gui=SS_MENU_LV', /GUI "SS_MENU_LV\/ID_ST_DIRECT_PICTUREMODE_ART", want "SS_MENU_LV"/], ['expect:gui~SHOOTING', /want one containing "SHOOTING"/],
     ['expect:mem:0x20=ff030001', /0x00000020 holds ff030000, want ff030001/], ['expect:mem:0x30!=0000', /holds 0000, want anything but 0000/],
     ['expect:card:OM3MOD/OTHER.BIN', /no OM3MOD\/OTHER.BIN on the card/], ['expect:standin:S-STALERAM', /S-STALERAM is not among/],
-    ['expect:exif:A.JPG:Model=OM-3', /Model "OM-3            ", want "OM-3"/], ['expect:exif:A.JPG:ImageDescription~FILM', /ImageDescription absent/], ['expect:exif:B.JPG:Model~OM', /no B.JPG on the card/]];
+    ['expect:exif:A.JPG:Model=OM-3', /Model "OM-3            ", want "OM-3"/], ['expect:exif:A.JPG:ImageDescription~FILM', /ImageDescription absent/], ['expect:exif:B.JPG:Model~OM', /no B.JPG on the card/],
+    ['expect:setting:MODE_MOVIE=0', /setting 44 \(MODE_MOVIE\) reads 1, want 0/], ['expect:setting:2!=-256', /setting 2 reads -256, want anything but -256/]];
   for (const x of pass) ok(ex(x) === null, `${x} holds: ${ex(x)}`);
   for (const [x, re] of fail) ok(re.test(ex(x) ?? ''), `control ${x}: ${ex(x) ?? 'held'}`);
   // the Exif fields
@@ -145,12 +155,14 @@ export function sessionUnits() {
   const FORMS = [
     ['KEY (a press', 'ok', 'press'], ['KEY:down', 's2:down', 'edge'], ['KEY:up', 's2:up', 'edge'], ['hold:KEY[:MS]', 'hold:menu', 'hold'], ['hold:KEY[:MS]', 'hold:ok:500', 'hold'],
     ['main_dial:+N', 'main_dial:+3', 'dial'], ['sub_dial:-N', 'sub_dial:-2', 'dial'], ['wait:MS', 'wait:1500', 'wait'],
-    ['WAIT:MS', 'WAIT:20', 'token'], ['EV:...', 'EV:1', 'token'], ['SET:id=v', 'SET:24=3', 'token'], ['GET:id', 'GET:24', 'token'],
+    ['WAIT:MS', 'WAIT:20', 'token'], ['EV:...', 'EV:1', 'token'], ['SET:id=v', 'SET:24=3', 'token'], ['GET:id', 'GET:24', 'token'], ['SET:MODE_SLEEP=60', 'SET:MODE_SLEEP=60', 'token'],
     ['switch:ID=V', 'switch:creative_dial=3', 'switch'], ['switch:ID+N', 'switch:mode_dial+1', 'switch'], ['switch:ID-N', 'switch:mode_dial-1', 'switch'],
     ['power:off', 'power:off', 'power'], ['restart[:card=FILE]', 'restart', 'restart'], ['restart[:card=FILE]', 'restart:card=b.omsd', 'restart'],
     ['shot:FILE.png', 'shot:a.png', 'shot'], ['read:ADDR:LEN', 'read:0x10:4', 'read'], ['dump:ADDR:LEN:FILE', 'dump:0x10:4:d.bin', 'dump'], ['write:ADDR=HEX', 'write:0x10=00ff', 'write'],
     ['call:FN[:d0=..,a0=..,limit=N]', 'call:0x10:d0=1,a0=2,limit=5', 'call'], ['entry=PC', 'call:0x10:entry=0x12', 'call'], ['stop=PC...', 'call:0x10:stop=0x12,stop=0x14', 'call'],
     ['frame=MASK/SIZE', 'call:0x10:frame=0xf0/20', 'call'], ['space=notation|runtime', 'call:0x10:space=runtime', 'call'], ['call:@FILE', 'call:@q.json', 'call'],
+    ['setting:ID or setting:NAME', 'setting:44', 'setting'], ['setting:ID or setting:NAME', 'setting:MODE_MOVIE', 'setting'], ['setting:44, setting:MODE_MOVIE', 'setting:MODE_MOVIE', 'setting'],
+    ['expect:setting:ID=V (or NAME, or !=V)', 'expect:setting:44=1', 'expect'], ['expect:setting:ID=V (or NAME, or !=V)', 'expect:setting:MODE_MOVIE!=1', 'expect'],
     ['card-ls', 'card-ls', 'card-ls'], ['card-get:DOS/PATH=LOCAL', 'card-get:DCIM/X.JPG=x.jpg', 'card-get'], ['exif:DOS/PATH', 'exif:DCIM/X.JPG', 'exif'],
     ['expect:gui=NAME (or ~TEXT)', 'expect:gui=SS_MENU/ID_ST_MENU', 'expect'], ['expect:gui=NAME (or ~TEXT)', 'expect:gui~MENU', 'expect'],
     ['expect:mem:ADDR=HEX (or', 'expect:mem:0x20=ff03', 'expect'], ['!=HEX)', 'expect:mem:0x20!=ff03', 'expect'], ['expect:card:DOS/PATH', 'expect:card:DCIM/X.JPG', 'expect'],

@@ -53,7 +53,7 @@
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
 // area's builder, S-RESNAND's layer), S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits), and
 // the scripted session's token grammar, its Player inputs, the expects on fakes and bin/session.mjs's usage errors
-// (test_session.mjs sessionUnits), its traces and stops: the tokens, the machine's exec probes on a blank image,
+// (test_session.mjs sessionUnits), the firmware's setting names' rule and lookups (test_setnames.mjs setnamesUnits), its traces and stops: the tokens, the machine's exec probes on a blank image,
 // the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits), its stack captures,
 // dumps, the machine's CPU context and its new options (test_tools.mjs toolsUnits), the LOOKS.BIN reader with a film's
 // values (test_looks.mjs looksUnits), the look hooks' expectations from their source's tables (test_lookhooks.mjs
@@ -120,6 +120,7 @@ import { resnandUnits } from '../test/test_resnand.mjs';
 import { nvramUnits } from '../test/test_nvram.mjs';
 import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
 import { sessionUnits } from '../test/test_session.mjs';
+import { setnamesUnits } from '../test/test_setnames.mjs';
 import { traceUnits } from '../test/test_trace.mjs';
 import { toolsUnits } from '../test/test_tools.mjs';
 import { looksUnits } from '../test/test_looks.mjs';
@@ -168,6 +169,7 @@ report('the Stand-ins tab: a row for every label a session can report in use (sr
 report('what a picture is, said at the picture: the frame\'s and a taken picture\'s sentences, the pages\' copies (src/lab/sources.mjs)', await sourcesUnits());
 report('the lab\'s call on a synthetic block: derived frames, arguments, nested calls, the saved registers, typed faults (src/lab/hle.mjs HLE.call)', await sliceUnits());
 report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
+report('the firmware\'s setting names: the block-2 table found by its form, its refusals, the lookups by id and name (src/fw/setnames.mjs)', setnamesUnits());
 report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('the scripted session\'s tools: stack captures, dumps, the machine\'s CPU context, the new options (test_tools.mjs)', await toolsUnits());
 report('a Caduceus film below the pixels: the LOOKS.BIN reader and its refusals, a film\'s settings and hooked reads (test_looks.mjs)', looksUnits());

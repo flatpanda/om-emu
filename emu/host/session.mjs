@@ -71,7 +71,7 @@ export class TokenError extends UsageError {}
 export class SessionRefused extends Error {}
 class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
 // the steps that run at a debug stop (the firmware held inside a tick): reads, pokes, checks, the card, arming, resume
-const AT_STOP = new Set(['read', 'dump', 'write', 'call', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
+const AT_STOP = new Set(['read', 'dump', 'write', 'call', 'setting', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
 
 // ---- the token grammar (firmware-free) --------------------------------------------------------------------------
 // A script's text as tokens: '#' at a token's start comments out the rest of its line; tokens are separated by white
@@ -102,7 +102,11 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // play's tokens that are harness inputs, not the camera's (the summary lists them): a GUI event posted, a setting
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
-const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'exif', 'expect', 'trace', 'break', 'resume'];
+const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'setting', 'exif', 'expect', 'trace', 'break', 'resume'];
+// a setting as a token gives it: an id (decimal or 0x) or a name of the firmware's own (MODE_MOVIE), resolved per body
+// by openSession (src/fw/setnames.mjs; the names read from the user's firmware, host/setnames.mjs)
+const SETTING = '(?:\\d+|0x[0-9a-fA-F]+|[A-Z][A-Z0-9_]*)';
+const settingOf = (s) => (/^[A-Z]/.test(s) ? s : Number(s));
 const CALL_KEYS =['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'limit', 'space', 'entry', 'stop', 'frame'];
 // the fields of a call:@FILE request (src/debug/call.mjs callSpec's)
 export const CALL_FILE_KEYS = ['fn', 'space', 'entry', 'stops', 'regs', 'stack', 'frame', 'mem', 'read', 'restore', 'limit', 'scratch'];
@@ -144,6 +148,8 @@ export function parseToken(t) {
     return step('read', { addr: addrOf(t, m[1], 'the address'), len });
   }
   if ((m = /^write:([^=]+)=(.*)$/.exec(t))) return step('write', { addr: addrOf(t, m[1], 'the address'), hex: hexOf(t, m[2]) });
+  if ((m = new RegExp(`^setting:(${SETTING})$`).exec(t))) return step('setting', { setting: settingOf(m[1]) });
+  if (/^setting(?::|$)/.test(t)) throw new TokenError(`${t}: setting:ID or setting:NAME (setting:44, setting:MODE_MOVIE)`);
   if ((m = /^call:@(.+)$/.exec(t))) return step('call', { file: m[1] });      // the request's JSON (read once the lab is in)
   if ((m = /^call:([^:]+)(?::(.*))?$/.exec(t))) {
     const regs = {}, stops = [];
@@ -202,7 +208,7 @@ export function parseToken(t) {
     return step('dial', { id: m[1], detents: n });
   }
   if (new RegExp(`^${ID}$`).test(t)) return step('press', { id: t });
-  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N|-N, power:off, restart[:card=FILE], card:out|in[:2], shot:FILE.png, read:ADDR:LEN, dump:ADDR:LEN:FILE, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..][:stack=N]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
+  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N|-N, power:off, restart[:card=FILE], card:out|in[:2], shot:FILE.png, read:ADDR:LEN, dump:ADDR:LEN:FILE, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, setting:ID|NAME, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..][:stack=N]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
 }
 // A call:@FILE token's request: the file's text (name: the file, for the refusals) as a JSON object of the call op's
 // fields (CALL_FILE_KEYS; src/debug/call.mjs checks their values), else TokenError
@@ -218,13 +224,14 @@ function parseExpect(t) {
   let m;
   if ((m = /^expect:gui([=~])(.+)$/.exec(t))) return { what: 'gui', op: m[1], text: m[2] };
   if ((m = /^expect:mem:([^=!]+)(!?=)(.*)$/.exec(t))) return { what: 'mem', addr: addrOf(t, m[1], 'the address'), op: m[2], hex: hexOf(t, m[3]) };
+  if ((m = new RegExp(`^expect:setting:(${SETTING})(!?=)(-?(?:\\d+|0x[0-9a-fA-F]+))$`).exec(t))) return { what: 'setting', setting: settingOf(m[1]), op: m[2], value: m[3].startsWith('-') ? -Number(m[3].slice(1)) : Number(m[3]) };
   if ((m = /^expect:card:(.+)$/.exec(t))) return { what: 'card', path: dosPath(t, m[1]) };
   if ((m = /^expect:standin:([A-Z0-9][A-Z0-9-]*)$/.exec(t))) return { what: 'standin', name: m[1] };
   if ((m = /^expect:exif:([^:]+):([A-Za-z0-9]+)([=~])(.*)$/.exec(t))) {
     if (!FIELD_NAMES.has(m[2])) throw new TokenError(`${t}: field ${m[2]} is not one of ${[...FIELD_NAMES].join(', ')}`);
     return { what: 'exif', path: dosPath(t, m[1]), field: m[2], op: m[3], text: m[4] };
   }
-  throw new TokenError(`${t}: expect:gui=NAME|~TEXT, expect:mem:ADDR=HEX|!=HEX, expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT|~TEXT`);
+  throw new TokenError(`${t}: expect:gui=NAME|~TEXT, expect:mem:ADDR=HEX|!=HEX, expect:setting:ID|NAME=V|!=V, expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT|~TEXT`);
 }
 
 // A step's Player inputs (play's POST /api/input documents) for the kinds that are inputs; settle: the lab time after a
@@ -255,6 +262,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
     case 'card': return [{ type: 'card', action: st.action, ...(st.slot !== 1 ? { slot: st.slot } : {}) }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
+    case 'setting': return [{ type: 'debug', op: 'setting', setting: st.id ?? st.setting }];
     case 'write': return [{ type: 'debug', op: 'write', addr: st.addr, hex: st.hex }];
     case 'call':
       if (st.file !== undefined && !st.request) throw new TokenError(`${st.text}: the request is read from the file by openSession (callFile)`);
@@ -272,6 +280,10 @@ export function expectFails(e, got) {
   if (e.what === 'mem') {
     const h = got.mem(e.addr, e.hex.length / 2);
     return (h === e.hex) === (e.op === '=') ? null : `0x${e.addr.toString(16).padStart(8, '0')} holds ${h}, want ${e.op === '=' ? '' : 'anything but '}${e.hex}`;
+  }
+  if (e.what === 'setting') {
+    const r = got.setting(e.id ?? e.setting);
+    return (r.value === e.value) === (e.op === '=') ? null : `setting ${r.id}${r.name ? ` (${r.name})` : ''} reads ${r.value}, want ${e.op === '=' ? '' : 'anything but '}${e.value}`;
   }
   if (e.what === 'card') return got.card(e.path) ? null : `no ${e.path} on the card`;
   if (e.what === 'standin') return got.standins.includes(e.name) ? null : `${e.name} is not among the stand-ins in use`;
@@ -336,6 +348,8 @@ export async function openSession(o = {}) {
   const { pngRaw } = await import('./server.mjs');
   const { callSpec } = await import('../src/debug/call.mjs');
   const { frameSource } = await import('../src/lab/sources.mjs');
+  const { settingNames } = await import('./setnames.mjs');
+  const { SettingNameError } = await import('../src/fw/setnames.mjs');
   const say = o.say ?? (() => {});
   const settle = o.settle ?? SETTLE_MS;
   const out = o.out ? path.resolve(o.out) : null;
@@ -356,6 +370,22 @@ export async function openSession(o = {}) {
       if (!STORAGE) throw new TokenError(`${st.text}: ${MODEL} has no card with a file system in the lab (S-CARD)`);
     }
     if (st.kind === 'card' && !STORAGE?.hls) throw new TokenError(`${st.text}: ${MODEL} has no card with its HLS media side in the lab (src/fw/models.mjs card_fs.hls)`);
+    // a setting by name (setting:, expect:setting:, play's GET: and SET:): resolved in this body's table now, an unknown
+    // name refused before the boot; the step carries the id and the name
+    const named = (text, v) => {
+      if (typeof v === 'number') { const n = namesOr(); return { id: v, name: n ? n.name(v) : null }; }
+      try { return settingNames(MODEL).resolve(v); } catch (e) {
+        if (e instanceof SettingNameError) throw new TokenError(`${text}: ${e.message}`);
+        throw e;
+      }
+    };
+    if (st.kind === 'setting') return { ...st, ...named(st.text, st.setting) };
+    if (st.expect?.what === 'setting') return { ...st, expect: { ...st.expect, ...named(st.text, st.expect.setting) } };
+    const gs = st.kind === 'token' ? /^(GET|SET):([^=]+)(=.*)?$/.exec(st.token) : null;
+    if (gs) {
+      const s = named(st.text, /^[A-Z]/.test(gs[2]) ? gs[2] : intValue(gs[2]) ?? gs[2]);
+      return { ...st, token: `${gs[1]}:${s.id ?? gs[2]}${gs[3] ?? ''}`, setting: s };
+    }
     if (st.kind === 'call' && st.file !== undefined) {           // call:@FILE: the request read and checked now
       const file = local(st.file);
       let text;
@@ -366,6 +396,8 @@ export async function openSession(o = {}) {
     }
     return st;
   };
+  // the names where an id is printed (null where the body's firmware offers none: an id needs no name)
+  const namesOr = () => { try { return settingNames(MODEL); } catch (e) { if (e instanceof SettingNameError) return null; throw e; } };
   const parse = (t) => checkStep(parseToken(t));
   const planned = (o.tokens ?? []).map(parse);
   const pairs = (list, what) => (list ?? []).map((item) => {
@@ -438,7 +470,7 @@ export async function openSession(o = {}) {
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
-    wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r) },
+    wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r), settingNames: () => settingNames(MODEL) },
     onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16, device: meta.device }; }, onAudio: () => {} };
   const envFor = (k) => ({ ...baseEnv, card, ...(nv.file ? { nvram: fileNvram(nv.file) } : {}),
     ...(out ? { logSink: (name, text) => { const f = path.join(out, `session-${k}${name.slice('session'.length)}`); if (name.endsWith('.jsonl')) fs.appendFileSync(f, text); else fs.writeFileSync(f, text); } } : {}) });
@@ -634,12 +666,16 @@ export async function openSession(o = {}) {
       } else if (st.kind === 'expect') {
         const e = st.expect;
         const why = expectFails(e, { gui: pl?.session ? (pl.publish_status(), pl.status_doc.gui_name ?? null) : null, mem: memHex,
-          card: (p) => find(p), exif: (p) => exifOf(p)?.fields ?? null, standins: pl ? pl.stand_ins_in_use() : [] });
+          card: (p) => find(p), exif: (p) => exifOf(p)?.fields ?? null, standins: pl ? pl.stand_ins_in_use() : [],
+          setting: (v) => debugOp('setting', { setting: v }).setting });
+        if (e.what === 'setting') rec.setting = { id: e.id, name: e.name };
         rec.expect = e.what;
         if (why !== null) fail(rec, `expect failed: ${why}`);
       } else {
+        let last = null;
         for (const inp of playerInputs(stepInputs(st, settle))) {
           const before = pl.dropped.toObject(), res = apply(inp);
+          last = res;
           const r = running;                       // after a debug stop and resume, resume's record carries the rest
           if (pl.phase === 'error') { fail(r, labMessage()); if (pl.error?.stderr_tail) r.stderr_tail = pl.error.stderr_tail; break; }
           if (res.error) { fail(r, res.error); break; }
@@ -650,6 +686,7 @@ export async function openSession(o = {}) {
             if (st.kind === 'call' && st.request?.mem?.length) pokes.push({ step: rec.step, token: st.text, mem: st.request.mem });
             if (!res.debug.ok) { fail(rec, `${inp.op}: ${res.debug.error?.type ?? 'error'}: ${res.debug.error?.message ?? JSON.stringify(res.debug.error)}`); break; }
             if (st.kind === 'read') rec.hex = res.debug.hex;
+            if (st.kind === 'setting') rec.setting = res.debug.setting;
             if (st.kind === 'call') {
               const d = res.debug;
               Object.assign(rec, { fn: d.fn.notation, d0: d.regs.d0, steps: d.steps, stubs: d.stubs, regs: d.regs });
@@ -662,6 +699,11 @@ export async function openSession(o = {}) {
           }
         }
         if (st.kind === 'token' && HARNESS_TOKEN.test(st.token)) harness.push({ step: rec.step, token: st.token });
+        // play's GET: and SET: (by id or by name): the setting with its name, and what the Player's record read
+        if (st.kind === 'token' && st.setting && rec.ok) {
+          const got = last?.record?.get ?? last?.record?.set ?? null;
+          rec.setting = { id: st.setting.id, name: st.setting.name, ...(got ? { value: got.read_back ?? got.value } : {}) };
+        }
       }
     } catch (e) {
       if (e instanceof StopEnd) {                // the script ended at a debug stop, or a step there failed: nothing ran after it

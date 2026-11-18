@@ -1,10 +1,13 @@
-// The debug API's node callbacks: the trace files (openSink) and the disassembler (disasm), for bin/debug.mjs and the
-// live route of a play session (src/debug/live.mjs, through the lab worker's env.debugHost). Node-only (host/).
+// The debug API's node callbacks: the trace files (openSink), the disassembler (disasm) and the run's body's setting
+// names (settingNames, host/setnames.mjs: read from the user's own firmware when first asked for), for bin/debug.mjs
+// and the live route of a play session (src/debug/live.mjs, through the lab worker's env.debugHost). Node-only (host/).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { REPO } from '../checks/lib/env.mjs';
+import { MODEL } from '../src/fw/model.mjs';
+import { settingNames } from './setnames.mjs';
 
 // A buffered line writer (the trace files). prepare (the protocol's trace op): the file is opened (created if missing)
 // but not truncated until commit(); discard() closes it and removes it when this open created it.
@@ -32,5 +35,6 @@ export function disasm(addr, bytes) {
     return out.split('\n').filter((l) => /^\s*[0-9a-f]+:\t/.test(l)).map((l) => l.trimEnd());
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
-// The live route's host: trace paths are the play server's working directory's (path.resolve).
-export const debugHost = { openSink, disasm, resolvePath: (p) => path.resolve(p) };
+// The live route's host: trace paths are the play server's working directory's (path.resolve); the setting names the
+// run's model's (MODEL, fixed at the lab's first import)
+export const debugHost = { openSink, disasm, resolvePath: (p) => path.resolve(p), settingNames: () => settingNames(MODEL) };

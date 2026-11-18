@@ -16,14 +16,17 @@
 // a restart keeps the slot as the last session left it.
 // Each argument and each --script line is split into tokens at white space ("..." keeps spaces; # starts a comment).
 // The tokens: KEY (a press: down, 150 ms, up, then --settle of lab time), KEY:down, KEY:up, hold:KEY[:MS],
-// main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...), switch:ID=V,
+// main_dial:+N / sub_dial:-N, wait:MS, play's own tokens (WAIT:MS, EV:..., SET:id=v, GET:id, ...; a SET or GET
+// setting may be named, SET:MODE_SLEEP=60), switch:ID=V,
 // switch:ID+N or switch:ID-N (creative_dial, mode_dial, still_movie, lever, ...), power:off, restart[:card=FILE] (a new session in this process
 // on the same nvram file and card, or the card FILE), shot:FILE.png (the last published frame, /api/frame's pixels),
 // read:ADDR:LEN, dump:ADDR:LEN:FILE (up to 64 MiB into FILE), write:ADDR=HEX (a poke: flagged in the summary and the last line), call:FN[:d0=..,a0=..,limit=N]
 // (and entry=PC, stop=PC..., frame=MASK/SIZE: a mid-function call; space=notation|runtime for an address outside the
 // image's two ranges), call:@FILE (the call op's whole request as JSON;
-// one with mem is a poke), card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
-// !=HEX), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
+// one with mem is a poke), setting:ID or setting:NAME (a setting's value by the getter, with its id and the firmware's
+// own name for it: setting:44, setting:MODE_MOVIE; a name is this body's, read from its .BIN, and one it lacks is a
+// usage error), card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT),
+// expect:mem:ADDR=HEX (or !=HEX), expect:setting:ID=V (or NAME, or !=V), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
 // pattern with * and ? (the last match by name). Relative LOCAL and FILE paths of the tokens resolve against --out.
 // Traces and stops: trace:PC[,PC...][:stack=N] and trace:mem:ADDR:LEN[:r|w|rw] record each hit in the later steps'
 // records, with N stack words per pc hit (trace:off disarms); break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] end the

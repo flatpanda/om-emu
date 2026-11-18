@@ -4378,7 +4378,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 | StlRdy1's exposure record and its fill | native fill on a record of the lab's (2026-11-14); since 2026-11-16 on a slot of TAKE's ring, freed after the shot; its request to the strobe sequence not run (1c) | H-TAKEFILLS | `src/lab/rec.mjs` take_fills() |
 | the shot-record fill | natively since 2026-11-16 (before: the template's copy, its six fields REC_IMAGE reads, 4.3.5, and the shutter range by S-EXIFPRM) | H-TAKEFILLS | same |
 | StlTake's capture fill, the key, the frame count, the fill after the key | natively since 2026-11-16 (before: S-EXIFPRM's clock read alone) | H-TAKEFILLS | same |
-| takepic, the lens fill, TAKE's third fill | takepic's copy of the exposure record and the EXIF set the third fill calls (4.3.11), and the crop areas; the rest not run: natively takepic stops in its AF maker-note fill (below) | S-EXIFPRM | `src/lab/rec.mjs` exif_param() |
+| takepic, the lens fill, TAKE's third fill | natively since 2026-11-17, takepic's AF maker-note fill stood in (below; before: S-EXIFPRM's copy of the exposure record, crop areas and EXIF set, natively takepic stopping in that fill) | H-TAKEFILLS, S-AFMKNT | `src/lab/rec.mjs` take_fills() |
 | the shot's id and buffers (TAKE's shot table) | allocated and freed through api_rec natively, as the application's CapBuf_TakeBuff does (since 2026-11-14, below; before: none, HandleTarget 1 and ImageParam's sources logging `0x25000402`, 4.3.4) | H-SHOTALLOC | `src/lab/rec.mjs` shot_alloc() |
 | the sensor's readout into the Bayer buffer | none (S-SCENE draws a view frame) | S-SCENE, S-JPEGENC | `src/lab/play.mjs`, `src/lab/rec.mjs` |
 | REC_PREPRO's white-balance gains | not run (0) | S-RECREQ | `src/lab/rec.mjs` |
@@ -4406,7 +4406,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     In storageSession's shot, taken straight after the start, the fill read 0 and ExposureTime stayed 1 s until the
     start reached the shooting screen (4.4.4); since then it is 1/200 s there too (X, `emu/test/test_storage.mjs`).
   - Not filled: Sv +38174 (TAKE's context), so ISO stays 25 (REC_IMAGE's); FNumber stays 0/10 (the lens step and
-    the lens flag are takepic's); the other takepic fields above. The files' size and picture are unchanged; only
+    the lens flag are takepic's; filled since 2026-11-17, below); the other takepic fields above. The files' size and picture are unchanged; only
     the Exif exposure fields move.
 - **Not landed, with the evidence for the next step.**
   - *The shot's buffers.* Landed 2026-11-14 as H-SHOTALLOC (below). The first pass had run TAKE's allocation
@@ -4568,7 +4568,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   (4) or +3122 at 4 (2), else 0: the mode bytes above, 0 in the default session (X). In an E143 probe the lens step
   with kind 0, run natively before the EXIF set, logs nothing, sets the lens flag's bit 12, the focal length 12/1,
   the maximum aperture 761/256 and the lens name of S-LENSMCU's lens, and the EXIF set then gives FNumber 56/10, the
-  plan's Av (X). Not landed this round: the fill reads the three bytes in TAKE's context, where Standby's entry
+  plan's Av (X). Landed 2026-11-17 with takepic (below). Not landed this round: the fill reads the three bytes in TAKE's context, where Standby's entry
   puts them and the lab runs neither Standby nor the Rdy states' builder; landing it takes a rule for the builder,
   its two copies and the lens fill on the three bodies, the lens step run on E146 and E147 (X on E143 alone), and
   the pins of the files' lens fields.
@@ -4635,6 +4635,73 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   the third fill `0x503bd1fa` come after takepic in the states' order: run past it in a probe they return without
   a log, but REC_IMAGE then divides by the zero crop areas (`0x50542a62`, fault 6), so they are not landed apart from
   takepic. E146 and E147 call the same AF fill from takepic (`0x509c965d`, `0x509ce3c7` by the port; not run there).
+- **(1d) What TAKE_FOCUS's release-take start needs (2026-11-17; D unless tagged, E143's addresses; X E143 probes).**
+  - The request. RdyFcsTake's entry (`0x503c381d..0x503c389a`) takes a 56-byte record (`0x50002fdc(56)`), puts the
+    callback `0x503c38a5` at its +24 (run-time `0x603e48c5`: a post of TAKE_MAIN's mailbox token 5, the token on which
+    RdyFcsTake asks TAKE_EXPOSE `0x600`, 4.1.8) and two mode bytes at +46 and +47, and posts {RELEASE_TAKE_START
+    `0x500`, token 8, the record} to TAKE_FOCUS's queue (`0x6004327e`) with TAKE_POST's reply queue (`0x6004328a`).
+    TAKE_FOCUS's case `0x509a1115` calls `0x509a842f(context 0xa33d9564, record)`, which keeps the callback at the
+    context's +120 and the +47 byte at +245, calls `0x508ca329`, and then by the context's fields (+5 the focus field,
+    +7, +12, +45 RELEASE_READY_START's copy of its record's +37, +264, +283; 4.1.8) the AF library's start paths
+    (`0x508c86ae`, `0x508c8786`, `0x508c8554`, `0x508c23be` and others).
+  - The word. `0x508ca329` is `mov 0x608eba51,(0xa33b262c); retf`: the run-time address of the AF library's
+    `0x508caa31`, a constant. That callback (the record in a0) writes +18492 (36472, `0x509376ae`) and +18496 (1) and
+    copies 36472 bytes of the AF library's debug record into +41052 (`0x5048ee39`) from the buffer the table
+    `0xa33ba98c` holds at the index `0xa33ba99b`; with no buffer (or a size over 51200) it logs `0x0f807001`. The
+    table's three buffers are taken from FCS's memory (`0x50937666`: `0x50953bf0(i)`, on the base `(0xa33cfaa0)` that
+    `0x509538d8` sets) in an init of the AF library's (`0x5090c606`). So the word is the AF library's own, and what
+    the call through it needs is the AF library's state, not TAKE_FOCUS's.
+  - The rest of the AF maker-note fill `0x508c9bfe` reads the same module: the AF point through `0x509b01ec`
+    (TAKE_FOCUS's context by the pointer `0xa33d9560`: its +47, +54, +60, object 3 of `0x509b1bc5`, setting 34994;
+    a 640 x 480 grid) into the crop areas +40858 and +40866, the AF library's state `0xa33b25c8..0xa33b262a` into
+    +4962.., +40876.., +40916.., +14642, +14658, +14840 and +14666, then `0x508ca5a0` or `0x508ca54f` by
+    `(0xa33b2628)`, `0x508c23f9` into +38512 and +38514, `0x508cac42`, `0x508cad3f` and two calls by the word
+    `0xa33d9528`.
+  - In the lab. The default session runs neither TAKE_FOCUS's inits (the pointer `0xa33d9560` and the ready byte
+    `0xa33d955c` read 0 at S2, X) nor its task, nor TAKE_MAIN's still states, nor the AF library's init (`0x508bede6`,
+    which logs `0x1c005002` in the lab, 4.1.8; H-FCSAF runs three of its steps for MDET). Run as a function at S2 on
+    the shot, the case logs `0x0f8030d2` (TAKE_FOCUS's log through `0x506ea712`; I: the path for a context +45 neither
+    1 nor 4, `0x509a9a06`) and sets the word; takepic then runs to its end, its callback logging `0x0f807001` (X), and
+    its crop areas come out {160, 120, 320, 240} twice, read through the null context pointer (X; not the camera's).
+    Under `--take probe` TAKE_FOCUS runs, but S2 does not reach RdyFcsTake (S1's take-ready waits for EXP_MOVIE, 4.1.8
+    and 4.2.5; past an invented answer TAKE_EXPOSE's `0x600` crashed, 4.1.8). So (A), the release-take start natively,
+    needs TAKE_MAIN's S2 through RdyFcsTake on the probe's path, TAKE_FOCUS's S1 state behind it, and the AF library's
+    init with FCS's memory (CPU 1's FCS for its result): out of this item's reach. (B) below stands in the one call
+    that needs them, the AF maker-note fill, so (A) replaces it by dropping the stand-in.
+- **Landed: takepic, the lens fill and the third fill natively, S-AFMKNT for the AF maker-note fill (2026-11-17;
+  `src/lab/rec.mjs` take_fills(); fact `take_fills`, `src/fw/facts.mjs` takeFills; E143, E146, E147; D unless
+  tagged).** After StlTake's fills H-TAKEFILLS runs, in the states' order: takepic `0x503bcd51(d0 0, context, the
+  packet word's packet)` as StlTake's registered function `0x503b2e5d` calls it (its call of `0x50597c6d` after
+  takepic, into TAKE_EXPOSE, is not run; I: not a fill of the record); the lens fill `0x503bd137` as StlTake's reply
+  37 calls it; and the third fill `0x503bd1fa(context, packet)`, which ends in the EXIF set (`0x503bd48e`). The calls'
+  d0 is read only where the context's mode byte (+3122; E146 and E147 +3324, read at takepic's entry) is 4, another
+  mode's shot; the lab refuses that byte (0 in the default session, X). S-AFMKNT answers takepic's one call of the AF
+  maker-note fill (`0x509b08f0`; one caller, takepic's `0x503bceee`; E146 `0x509c965d`, E147 `0x509ce3c7`) with the
+  two crop areas the full frame {0, 0, 1, 1} (I, S-EXIFPRM's value before; checked to be the rule's crop areas) and
+  the AF fields left as the template's. S-EXIFPRM writes nothing of the record on the three: it checks the
+  shot-record fill's settings fields and takepic's copy against the exposure record (X: equal). The rule reads
+  takepic and the lens fill as the only two calls `mov CTX,a0; mov (P),a1; clr d0; call` (takepic the one holding
+  takeExposure's copy, with the AF fill's call; the lens fill reading settings 22257, 22289, 22305), the third fill
+  by its function object's call form, checked to call recFile's EXIF set, and the AF fill's two areas from its first
+  call (E146 `0x503bd6ab`, `0x503bda91`, `0x503bdb54`, areas +40312 and +40320; E147 `0x503c793b`, `0x503c7d21`,
+  `0x503c7de4`, +40576 and +40584; `emu/test/test_facts.mjs` against these, three altered forms refused).
+  - Each call logs nothing and the session's error log is the commit before's (X on the three). The record against
+    S-EXIFPRM's copies: 110 halfwords differ on each body (40 before; `emu/test/test_takefills.mjs`, 13 of 13 on E143,
+    7 of 7 on E146 and E147): on E143 the lens flag +37982 gains bit 12 and +38792 is 120 (the lens step on S-LENSMCU's
+    lens at 12 mm), +37992 and +37988 are settings 33057 and 33073 (the frame count is 1: takepic's single-still
+    branch), with takepic's other fields and the third fill's.
+  - The file (X, exiftool, the default session's first picture against the commit before's): FNumber 5.6 on E143 (the
+    plan's Av 1276), 6.3 on E146 and E147 (Av 1404, by their set's conversion); FocalLength 12.0 mm; LensInfo
+    12-40mm f/2.8, LensModel and the maker notes' LensType `12-40mm F2.8 PRO`, the maker notes' minimum and maximum
+    focal length 12 and 40 and maximum aperture 2.8; MeteringMode Multi-segment (ESP; Unknown before); on E143 also
+    AutoFocus On, RollAngle and PitchAngle 0, four ImageProcessing and three FocusInfo tags; ExposureTime, ISO 25,
+    WhiteBalance Auto and the image unchanged. `emu/test/test_storage.mjs` storageSession pins FNumber on the three.
+    REC_IMAGE takes the stand-in's crop areas as before; with zero areas it divides by them at `0x50542a62` (X, a
+    control).
+  - Golden (X, 2026-11-17): the full check reported the same 23 sessions as H-TAKEFILLS' move, on their output layer
+    (keys also on devices, stops and harness: its shot runs the three fills); no screen moved. With the name S-AFMKNT
+    left out of the Player's list, tokens, playback, the three power sessions and scp-edge were identical and keys
+    alone differed, so the 22 move by the list's name. Re-recorded with evidence 'firmware'.
 - **Golden for H-TAKEFILLS (X, 2026-11-16).** The full check reported the same 23 sessions as H-SHOTALLOC's move,
   on their output layer alone (keys also on its stops and harness); no screen and no devices layer moved. With the
   name H-TAKEFILLS left out of the Player's list of stand-ins (the fills still run), tokens, keys, playback and the
@@ -4649,18 +4716,22 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   above: the mode bytes, the ring slot, the shot-record fill, StlTake's fills and the key; the six settings inputs
   and the key); takepic stops at TAKE_FOCUS's callback, so FNumber, the lens fields and the white-balance mode wait
   for (1d) TAKE_FOCUS's release-take start natively, or a declared stand-in of its AF result, before takepic, the
-  lens fill and the third fill (the AF data path, 4.4: weeks if FCS runs; a stand-in of `0xa33b262c`'s callback and
-  the AF module's state is the shorter road, its values a named assumption). (1c) the strobe sequence's init, so that
+  lens fill and the third fill. (1d) done 2026-11-17 by the stand-in (S-AFMKNT, above): the word's callback and the
+  rest of the AF maker-note fill are the AF library's, so the stand-in answers the whole fill; FNumber, the lens
+  fields and the white-balance mode are TAKE's own code's on the three. Natively (A) waits for S2's TAKE_MAIN states
+  on the probe's path, TAKE_FOCUS's release-take start there and the AF library's init (the AF data path, 4.4:
+  weeks if FCS runs). (1c) the strobe sequence's init, so that
   StlRdy1's request is answered without a log: it gives Sv (ISO), +6720 and +38160; its mode word's writer first.
   (2) to (5) as above; the white-balance step (4) also needs the thumbnail's content, so a declared S-RAWFRAME
   comes before it, and the eight inputs no fill of TAKE's writes need their writers read.
 - **Open.** Where CapBuf_TakeBuff allocates and frees in the release sequence; the strobe sequence's mode word
   `0x62a34c2c` and its init; who writes the white-balance step's +10542, +10546, +10548, +10552, +38210, +41001,
   +7626 and +6140; which operand the auto white balance's multiply refuses; the buffers' geometry (MM's kinds); the
-  readout's event and unit; TAKE_EXPOSE's `0x600`; E146's and E147's exposure request and lens fill (read on E143
-  alone; their Rdy builder, copy, Standby and StlTake fills are the rule's since 2026-11-16); TAKE_FOCUS's
-  release-take start and the AF module's state takepic reads (`0xa33b262c`, `0xa33b25c8..`); what the fill after the
-  key (`0x503bc4fe`) writes, field by field.
+  readout's event and unit; TAKE_EXPOSE's `0x600`; E146's and E147's exposure request (read on E143 alone; their Rdy
+  builder, copy, Standby and StlTake fills are the rule's since 2026-11-16, takepic, the lens fill and the third
+  fill since 2026-11-17); the AF maker-note fill natively (S-AFMKNT: TAKE_FOCUS's release-take start on its task,
+  the AF library's init and FCS's buffers) and what the crop areas and the AF fields hold on the camera; what the
+  fill after the key (`0x503bc4fe`), takepic and the third fill write, field by field.
 
 ### 4.4 AF, lens and body IS
 

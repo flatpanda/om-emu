@@ -1414,6 +1414,8 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   decoded position (byte `0xa32d9d0d`; board 0's table `0x60240b40`: 3, 2, 1), and the mode reader gives the shooting
   mode 10 for the levels 2 and 3 (`cmp 2` / `cmp 3` at `0x5042f63d`, D). Setting 44 reads 1 at positions 0 and 1 and 0
   at 2 after a move (X); setting 2188 is written 2 at 0, 1 at 1 (X); what distinguishes 0 and 1 is not read (?). The
+  firmware's setting names (container block 2, `analysis/caduceus-om3/README.md` 8.3, X) call 44 `MODE_MOVIE` and 2188
+  `MODE_ACTION_DIAL`; Caduceus for OM-3's notes take position 0 as S&Q and 1 as movie (theirs). The
   firmware names the code's event EV_CHANGE_ACTION_DIAL (its tables, X). The application sets 44 when the switch
   moves, not at the start (X: a start on a blank store reads 0 at position 1; a power-on on the kept state reads the 44
   the off saved, also after a restart that put the switch back at 2). The Fn lever `0x1223` (EV_CHANGE_LEVER_SW) is
@@ -4041,7 +4043,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `analysis/caduceus-om3/README.md` 4.6 has each hook's parameter and what runs.
 - **E147's stage list and its job (D, 2026-11-14; X where tagged).** The stage list `0x504f8694` (`ret
   [d2,d3,a2,a3],48`) takes the job context C in a0: C+4 is the request R, C+12 the output O, C+48 the RGB gamma
-  stage's key, C+60 flags (4.8.13 has the whole record). Its second call is the RGB gamma stage `0x504f5ab9` (at
+  stage's key, C+60 flags (4.8.13 has the whole record). Its first call (at `0x504f86d6`, frame 84) is the colour-matrix
+  function `0x504f3782`, which another caller reaches at `0x504f96db` and whose row scaling is its call of `0x504f34cf`
+  at `0x504f383a` (D, 2026-11-17; what its branches pick is Caduceus for OM-3's reading,
+  `analysis/caduceus-om3/README.md` 8.3). Its second call is the RGB gamma stage `0x504f5ab9` (at
   `0x504f86dd`, frame 16), which copies one picture-mode curve to O+1252, O+1892 and O+2532 (256 u16 of 12 bits and 64
   fine entries each) and points O+3172..O+3180 at them (X: a COLOR request gives three equal tables). On the still
   path it then calls the COLOR stage `0x504f7553` (frame 28), the luminance-LUT builder `0x504f7d92` at `0x504f87b0`

@@ -21,7 +21,9 @@ round's base. Where this round's modules changed what the lab shows, the text ma
 base `ae63e25`, took up section 7's follow-ups against the checkout at `0b1d5cb`, which adds v0.29.1; its modules are
 listed in 4.1, and where it changed a result the text says so. A third round on 2026-11-14, on base `a68dca3` and the
 same checkout, took up the second round's follow-ups in the same way, and a fourth later that day, on base `b36e3e5`,
-took up the third's. No excerpt of Caduceus' code, no byte of its patch and no picture it draws is committed.
+took up the third's. A fifth on 2026-11-17, on base `19befb74`, read upstream's eight releases since (v0.29.2 to
+v0.30.3, checkout `78a809e`), pinned them and judged what in them is useful here (section 8). No excerpt of
+Caduceus' code, no byte of its patch and no picture it draws is committed.
 
 **Licence.** The repository is Apache-2.0 (`LICENSE`) with a `NOTICE` that says the release patch files hold only the
 bytes the project writes, that its tour screenshots were drawn by om-emu running its firmware, and that its developer
@@ -81,6 +83,12 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
    cache flush answered, the OM-3's display switch, the picture's shot in TAKE's own table, the stock stage builders
    pinned on a job the test writes, and their Grain route and halation pass checked by calls (4.1, 4.6).
    **Corrections to om-emu's docs:** four (section 5), all made.
+7. **Since (2026-11-17, section 8).** Eight more releases, v0.29.2 to v0.30.3 (custom modes, Delete remap, per-mode
+   settings, Color Mix and RGB curves, films at switch-on), run in the lab as published and pinned with no poke; their
+   films load before any half press from v0.30 on and their `CURVES.BIN` is kept in store M (X). Of use here: the
+   firmware's own setting names in container block 2 (X on E143, E146 and E147), the mode codes and the still / movie
+   switch's byte (X), the stage list's colour-matrix call and a shot's job types (D), and three camera-vs-lab
+   differences around the mode change, unexplained. One correction (2.7's family 898).
 
 ## 1. What it is, and how it is built and delivered
 
@@ -248,7 +256,10 @@ and v0.29 (X, second round). Of the exposure fields beside them, ExposureTime is
 - **Creative Dial (D, `0x501f58a5`, theirs `0x602168c5`).** The power-on routine reads UI code `0x1906` through
   `0x501570c5` and, for values 1, 2, 3, 4, 5, prints a `picd_00n!` string and sets setting 897 (the Picture Mode
   family) to 900, 899, 898, 901, 988 through `0x503cf304` (theirs `0x603f0324`; E143's `0x503c4b2f`, port pair X). That
-  the four physical positions are CRT = 900, ART = 899, COLOR = 901 and MONO = 988 (898 none) is their report. At
+  the four physical positions are CRT = 900, ART = 899, COLOR = 901 and MONO = 988 is their report. 898 is not "none",
+  as this note said until 2026-11-17: the firmware names it `MODE_COLORTONE_DIAL_NEUTRAL`, the standard picture modes'
+  family, and their #65 notes log it at the dial's standard position (X for the name, their report for the position;
+  8.3). At
   `f2b326b` the lab fixed the dial at one idle position and did not reach this routine once a session was open (X).
   The dial is now a play control on E147 (`creative_dial`, `--creative-dial K`): a turn and the start position set
   setting 897 natively to the families above, and a power cycle keeps the position (X, `emu/test/test_cdial.mjs`).
@@ -1010,9 +1021,9 @@ front dial (section 3's table).
 - Why the camera sends their custom Picture Mode row's OK as another event than the lab's (their test 12), and the
   ISO and other Fn-type keys, which are not wired on E147 in the lab. Their test 12 and 13 builds are not in
   `releases/`, so neither was re-run as built.
-- What tells the still / movie switch's positions 0 and 1 apart (setting 2188 is written 2 at 0 and 1 at 1, X; its
-  reader is not read), and whether the camera's start sets setting 44 from the switch, which the lab's does not
-  (`docs/hle-gaps.md` 4.1.13).
+- What tells the still / movie switch's positions 0 and 1 apart (setting 2188, `MODE_ACTION_DIAL`, is written 2 at 0
+  and 1 at 1, X; its reader is not read; their notes call 0 S&Q, 8.3), and whether the camera's start sets setting 44
+  from the switch, which the lab's does not (`docs/hle-gaps.md` 4.1.13).
 - Whether the camera, too, brings a film picked without a later half press back as `Color Profile k` after a power
   cycle (4.2; the lab's order, I for the camera).
 - Which bits of the stage list's flags (the job's +60) the camera sets on a still, and what its request holds where
@@ -1077,3 +1088,150 @@ and 6 (halation by a call, on a buffer in main DRAM) in the fourth (4.1, 4.6). W
 Leads for upstream, not sent (nothing has been posted to them): two places of their `research/NOTES.md`
 differ from their source and from the stock code (the ft1 paragraph and the 7-byte block, 4.6), and `hl_run`'s header
 comment says two allocations where the code makes three.
+
+## 8. Upstream since `0b1d5cb`: v0.29.2 to v0.30.3 (2026-11-17)
+
+How it was read: the read-only clone was fast-forwarded to `78a809e` (main, 2026-11-17), 204 commits after `0b1d5cb`,
+with eight new release folders (v0.29.2 to v0.30.3; the tag `v0.30.4-alpha` has none). Read as data: the release
+folders and their `NOTES.md`, `docs/DEVELOPER_NOTES.md`, `docs/FORMATS.md`, `research/NOTES.md` (2,026 lines added),
+the new `research/TESTING.md`, `research/BUTTONS.md`, `firmware/build.py` and their new test suite (`tools/test/`).
+Their firmware facts were checked on our pinned E147 block with `tools/mn10300dis.sh` and small read-only scripts, and
+in lab sessions on base `19befb74` (stock, and their releases' `patch.json`, through `bin/session.mjs`). Their
+addresses are given in E147 notation (theirs - `0x10021020`, "Addresses" above). Nothing of theirs is committed: the
+pins are digests and observations, and the scripts that read their `build.py` and our container stayed outside the
+tree.
+
+### 8.1 What changed upstream
+
+| Release | What (their notes) | Runs / bytes changed | New hook sites (E147) |
+|---|---|---|---|
+| v0.29.2 | custom modes C1..C5 keep their own films (#41): a record `OM3C` at store M + `0x3B000`; the switch runs at the settings manager's write of setting 1440; Assign and Recall through the settings facade's entries 18 and 20 | 159 / 324,781 | none (two facade words) |
+| v0.29.3 | the Delete button takes any Fn function (#37): copies of the key table and the full-button list one entry longer | 175 / 327,667 | `0x51098ff5` (their `0x610ba015`), the state block walk's end |
+| v0.29.4 | Picture Mode stars and a save on leaving it (#45, #46), a film's Custom WB Kelvin written to setting 1632 too (#48) | 175 / 327,352 | none |
+| v0.29.5 | per-mode settings: record `OM3S` at M + `0x3D000`; Assign > Reset through the facade's entry 19 | 175 / 342,144 | none (one facade word) |
+| v0.30 | Color Mix (a 3 x 3 matrix per film at the camera's colour-matrix call) and RGB curves (record `OM3R` at M + `0x3B100`, the engine in their tone hook), both photos only; `CURVES.BIN` kept at M + `0x3BE20`; the films loaded from M at the GUI's first state change, before any half press (their PR #56); the live mode-dial turn fix (#54); a new Picture Mode row order; a code tail `.ext13` at `0x60fac000..0x60fbc000` and section 6's end word raised to `0x60fb5000` (v0.29's `0x60fa3000`) | 189 / 391,637 | `0x504f383a` (`0x6051485a`, the matrix's row scaling), `0x511a19a2` and `0x511a194f` (`0x611c29c2`, `0x611c296f`: INFO and the held-OK reset in Picture Mode) |
+| v0.30.1 | the bottom bar's one-frame flash on leaving a grid row (#66) | 190 / 391,675 | `0x511af57c` (`0x611d059c`), the Picture Mode update's end |
+| v0.30.2 | no Glow / Halation on a shot's small extra developments, such as the review picture (#65) | 190 / 391,738 | none |
+| v0.30.3 | a faster halation pass with a longer fade; the debug log written at releases only | 190 / 394,968 | none |
+
+So v0.30.3 has 44 hook sites (v0.29.1: 39). The stock bytes at all 44, and the `0xff` of all 13 code tails including
+`.ext13`, match our block (X, read from their `build.py` as text, as 2.8 did), and the five facade words these
+releases add to their re-pointed words (entries 18, 19 and 20 and two of the RGB page's) hold the stock targets they
+assert (X). Their test suite now drives the public om-emu at a pinned commit
+(`tools/emulator/om-emu.pin`: `0819080`, 2026-11-14, with a weekly check that reruns the suite at the pin and at
+upstream's newest): `bin/card.mjs` for its cards, `bin/session.mjs --main ... --loaded auto` for the patch audit, and
+their own driver `session_ed1.mjs` for the other tests, which pokes memory where the lab cannot reach a camera state
+and says so per test (`research/TESTING.md`). Their notebook's camera results are their report; its emulator results
+came from om-emu at `0819080` or from their driver.
+
+### 8.2 The new releases in the lab (X)
+
+Each release was pinned with `--pin` and the v0.29.1 flow (films, the second session on a blank card, the no-card
+part), plus two observations added to the flow for these releases: `early`, their state word `0x62b4dd16` 1.5 s after
+the restart, before any half press; and `curves`, the 8 bytes at M + `0x3BE20` (`0x6295c520`; M's RAM image
+`0x62920700`, 2.5) after the first S1. All eight open under the loaded-ranges mode with v0.29.1's audit (`hooks` none,
+`ported` GET_STRING and the end word `sections.ends[5]`, `unloaded` 0, `tasks` none), read the copied mask `0x3ff`,
+load the films at the first half press, name FILM 1, 2 and 20 `Portra 400`, `Portra 160` and `Natura 1600`, write
+`FILM 2 Portra 160` and the photo code prefix `Caduceus FILM 2 Portra 160 om3.1.` into the S2 picture, keep the film
+over a power cycle on a blank card and load it with no card, with no poke. v0.29.2 to v0.29.5 read 0 at `early` and
+zeros at `curves`. v0.30 to v0.30.3 read their state word set at `early` (the films loaded from M before any half
+press, and no task started: their load runs in the GUI task) and `4f4d334b 0100 b001` at `curves` (`OM3K`, version 1,
+length 432: the card's `CURVES.BIN` kept in M, as their `docs/FORMATS.md` says). The card keeps only the files put on
+it. 52 to 59 s each, three at once.
+
+What the flow cannot show for these releases: the custom-mode, Delete, Color Mix and RGB-curve features (no flow turns
+the mode dial, presses Delete or sets a mix or a curve, and a mix or a curve changes only the development the lab
+stands in for, 4.4), the #65 fix (the lab makes one development a shot), and the faster halation (`hl_run` is checked
+by calls on v0.29 and v0.29.1, 4.6; v0.30.3's output differs from theirs before on purpose, their h8).
+
+Three of their statements about om-emu were re-checked here (stock E147 or v0.30.3, `bin/session.mjs`, X):
+
+- "The emulator's stand-in card truncates a file the camera's `fopen` with `w` does not" (`research/TESTING.md`): not
+  so here. With a 20,000-byte `OM3MOD/CADLOG.TXT` and `DEBUG.TXT` on the card, three half presses on v0.30.3 leave
+  the file at 20,000 bytes, its first 9,216 bytes their report and the rest the old bytes, as on their camera. The lab
+  runs the firmware's own file system on the card (S-SDCARD).
+- "The debugger's getter call times out for 134 ids (111, 901, 1578 among them)": not reproduced.
+  `call:0x503cf0f1:d0=ID` returns at once for 111, 901, 1578, 6, 1632, 1699 and 4000 (`0x36`, `0x36`, 0, 0, 5400,
+  `0x800`, `0x800` on a blank camera).
+- "300 quick presses of right in the film list kill the node process at about 1.4 GB": not with `bin/session.mjs`.
+  300 `right` tokens in v0.30.3's Picture Mode list run in 185 s with a peak of 1.1 GB and exit 0, the page still
+  open. Their run used their own driver; their camera's reboot on that scroll (#72) is not reproduced in either.
+
+Their notebook's "om-emu takes no photo (`s2` and `hold:s2` change nothing)" does not hold for `bin/session.mjs`:
+every pin above takes the S2 picture off the card with their photo code in it.
+
+### 8.3 What in their recent work is useful to om-emu
+
+"Theirs" marks a fact read from their notes and not checked here.
+
+| Item | Their source | Our doc | Tag here |
+|---|---|---|---|
+| **The firmware's setting names.** Container block 2 (the large-data block, load `0x458c0000`, which the lab does not load) holds 52-byte names at body offset `0x28803f0` whose index is the setting id: 2,343 `MODE_*` names on E147 (ids 0 to 2342, `MODE_DRIVE` to `MODE_LABEL_PLAT_END`), then other name groups whose ids are not checked. E146's block 2 has the table at the same offset (2,226 names), E143's at `0x28c03f0` (2,205), with other ids (E143's 897 is `MODE_COLORTONE_DIAL_NEUTRAL`), so a name is per body. Names that settle or check our docs: 9 `MODE_WB`, 24 `MODE_EXPOSE`, 44 `MODE_MOVIE` (the application's movie mode, `docs/hle-gaps.md` 4.1.13, I until now), 50..53 `MODE_CUSTOM_SW_7..10` (the arrows, section 3), 111 `MODE_COLORTONE`, 534 `MODE_LEVER_SWITCH_TYPE`, 1578 `MODE_WB_STILL`, 1632 `MODE_CUSTOM_WB_KELVIN_1_STILL`, 2188 `MODE_ACTION_DIAL` | NOTES "Film WB: Custom WB Kelvin lost" ("decoded block 02, 52-byte names from 0x28803f0") | `docs/om1-settings-spec.md` and `docs/hle-gaps.md` name settings by number and role only | X (read from our `.BIN` files: E143, E146, E147) |
+| **The Creative Dial's families by name** (2.7): 897 `MODE_COLORTONE_DIAL`, 898 `..._NEUTRAL`, 899 `..._ART`, 900 `..._COLOR_CREATOR`, 901 `..._COLOR_CREATOR_2`, 902 `..._NON`, 988 `..._MONOCHROME_CREATOR`. So 898, which the power-on routine sets for dial value 3, is the standard picture modes' family, not "none" (their #65 notes log 898 at "the standard position (Vivid)", their report). COLOR's 18 film settings are `MODE_COLOR_CREATOR_2_*` (908 `..._CONTRAST_SET1`, 976..978 `..._TONE_CONTROL_HIGH / MIDDLE / LOW_SET1`, 928 `..._VIVID_SET1_1`) | NOTES "Issue #65"; the table above | 2.7 (corrected there) | X (names); their report (positions) |
+| **The mode dial and the shooting-mode code.** E147's positions in the lab are 0 S, 1 A, 2 P, 3..7 C5..C1, 8 B, 9 M. The settings object every manager call passes (a0; its byte +24 at `0x6242c3e8` in the lab, the address their notes give) holds the code of the firmware's mode-dial table: S 3, A 2, P 1, C5 `0x3f`, C4 `0x38`, C3 `0x37`, C2 `0x36`, C1 `0x35`, B `0x3e`, M 4, and 10 at the still / movie switch's positions 0 and 1. Setting 24 reads S 5, A 4, P 3, M 6, B 6 and 3 at each custom position of a blank camera; the dial's position index is the byte `0xa32d9d0c`. Their "C1..C5 = 53..57" holds for C1 to C4; C5 is `0x3f`, which the firmware's table names `MY_MODE5` (`src/fw/ports.mjs` E147 `mode_dial`, D): a lead for their mode grouping | NOTES "Custom modes and films", k2..k5, "Debug log dl8" | `src/fw/ports.mjs` mode dial names; `docs/hle-gaps.md` 4.1.13 | X (lab, stock E147) |
+| **The still / movie switch's positions.** The byte `0xa32d9d0d` is the position (0, 1, 2), 0 and 1 both give mode code 10, and setting 2188, `MODE_ACTION_DIAL`, is written 2 at 0 and 1 at 1. Their notes take 0 as S&Q and 1 as movie, which answers section 6's question by name; what the firmware does differently at 0 is still not read | NOTES "Custom modes ... k2", "Per-mode settings p1" | `docs/hle-gaps.md` 4.1.13; section 6 | X (byte, code, 2188); theirs (S&Q) |
+| **Setting ids by role** (their debug log dl9, found by walking the Super Control Panel, whose cursor setting 261 `MODE_SUPER_CONTROL_PANEL_CURSOR` takes the item's id): 24 mode, 1699 shutter and 1697 aperture as set (APEX x 256), 6 ISO (0 Auto, else Sv x 256), 2 exposure compensation, 85 AF target, 289 AF mode, 1712 subject detection, 16 / 17 flash and its compensation, 1 metering, 269 aspect, 157 stabiliser, 861 still quality, 2236 movie quality, 3265 drive; 1880..1884 Save Settings of C1..C5 (`MODE_AUTO_SET_MYSET1` ...); 570 and 1276 Button Function settings of a button the OM-3 lacks (`MODE_CUSTOM_SW_5`, `MODE_MOVIE_CUSTOM_SW_5`); 4000 / 4001 the exposure the AE worked out (their reading; past the table's `MODE_*` range, and 4000 reads `0x800` as 1699 does on a blank lab camera) | NOTES "Debug log dl9"; `research/BUTTONS.md` | `docs/om1-settings-spec.md` | X (the names given); theirs (the roles) |
+| **The GUI state word** `0x62ce5864` (u16, child << 8 \| parent; parents 1 COMMON, 2 REC, 3 / 11 menus, 4 MENU_LV with child 0x18 Picture Mode, 5..7 playback, 12 edit), whose address the firmware loads at `0x510dbf61` (`0x610fcf81`) and keeps in `0x603713a4`, our `menu.caller` fact | NOTES "Debug log dl9" | `src/fw/ports.mjs` E147 `menu` | X (the load is the block's only reference to the word, a scan); theirs (the codes) |
+| **The key path for a key with no record** (Delete, keycode 14, `API_DEL_KEY`, events `0x01000026..29`): the event-to-keycode table `0x512d20e0`; the 28-record key table `0x512d0ec8`, whose only references are the imm32 at `0x510620b4`, `0x5106212f` and `0x510621a6`; the dispatcher `0x51062002` (E143's `0x5104bc84`, already ported); the state machine's walk `0x51098fbb` and lookup `0x5109dcc0` (the current state's block, its parent's, then the global block `0x51318060`); the states 0x5100 stills live view, 0x5300 movie live view, 0x57xx playback, 0x5900..0x593e bracketing, 0x5a02 AF-ON held | NOTES "Delete button remap (#37)", steps 1 to 3 | section 7's follow-up 3 (E147's ISO and Fn-type keys) | X (the three references, a scan); theirs (the rest) |
+| **The colour-matrix stage.** The stage list `0x504f8694` calls `0x504f3782` (frame 84) at `0x504f86d6`, before its call of the RGB gamma stage at `0x504f86dd`; a second caller is at `0x504f96db`, and the function's row scaling is its call of `0x504f34cf` at `0x504f383a` (their Color Mix hook). Theirs: `0x504f3270` multiplies two 3 x 3 matrices (A x B, A acting after B); a COLOR request takes the default branch with R+1587 and R+1923 zero; R+1587 1 or 2 multiplies the table at run-time `0x606ad348`; the camera's live view and movie jobs go through the same caller (their camera result) | NOTES "Colour mix per film: engine and probe m1", "Colour mix: the Mix row" | `docs/hle-gaps.md` 4.3.12 "E147's stage list and its job", which names the second call and not the first | D (the calls); theirs (the matrices) |
+| **A shot's developments by job type.** `0x50534b38` (`0x60555b58`) maps the request's capture kind (u16 at +186): `0x2001` and `0x2006` give type `0x110` or `0x120` unless `0x50538ca2` answers 1 (then `0x1000`), `0x1008` and `0x1006` give 0, any other kind `0x1000`, the saved photo (D). Whether `0x10` or `0x20` comes from the request's u16 at +198 (2 gives `0x20`), not from the kind as their note has it (D). Theirs, through Caduceus for the E-P7: the camera clears an Art Filter job's multi-pass flags `0x40` and `0x80` for types `0x1xx` and `0x4x`, the shot's small extra developments (the review picture and the embedded preview among them), and their #65 freeze came from those developments carrying the Soft Focus flag. The lab makes one development a shot (S-JPEGENC) | NOTES "Reboot when resetting many films ...", DEVELOPER_NOTES "v0.30.2 release" | `docs/hle-gaps.md` 4.3.12, 4.3.13; 4.6 here | D (the mapper); theirs (which development each type is) |
+| **The settings manager's path** (theirs): the manager `0x50b9426f` (`0x60bb528f`), its writer tail `0x50ac91be`, the change notifier `0x500424f9`, which only a real change reaches, and the picture-mode message `0x503f9ff9` with 111, sent for ids 111, 897..901 and 988 whatever the value. The facade's vtable entries 18, 19 and 20 are a custom mode's Assign, Reset and Recall (their trace): the words at `0x50e3649c`, `0x50e364a0` and `0x50e364a4` hold `0x50b6662c`, `0x50b65a8f` and `0x50b661d3` | NOTES "RGB curves: live view refresh", "Custom modes ... k2", "k6", "Per-mode settings p1" | `docs/om1-settings-spec.md` | X (the words); theirs (the roles) |
+| **Interrupts masked, counted.** The firmware's lock `0x50054f53` with d0 = 0 sets the PSW's interrupt mask to 0 (4.6). Counting the instructions run between lock and unlock found a save running 212,851 instructions masked, their likeliest cause of one camera freeze; packing before the lock cut it to 10,062, and the camera test then passed | NOTES "Per-film R / G / B tone curves", tests 3 and 2b | 4.4 here ("Timing, the watchdog and the cache") | theirs (I for the cause) |
+| **Pictures where the OSD engine reads them** (their report): a picture descriptor of theirs pointing into a code tail (`0x60f9....`, cached) blanked the rest of the camera's menu, while every picture the camera has shown points into the heap (`0xa2......`); the lab drew both | NOTES "Issue #64 ... Pictures live in the heap" | 4.4 here ("Timing, the watchdog and the cache") | theirs; I (a cache or bus path the lab does not model) |
+
+Where the lab and the camera differ by their camera logs (their report; the lab side X where tagged), none of which
+this round explains:
+
+- **A live mode-dial turn** closes twice on the camera, setting 1440 written each time: first with the mode code 0
+  (their log shows `0xC0` plus the raw dial position) and only then with the mode's code. The lab writes the final
+  code at once. **At the first GUI look after a power-on** the camera's code reads 0, the lab's the mode's (P 1).
+  **At B** the camera reads 0 (their logs, a power-on in B among them), the lab `0x3e` (X), the firmware's own
+  table's code for B. Who writes the settings object's +24, and when, is not read here (?). Their #54 fix and its
+  test poke the camera's in-between state into the lab (`research/emulator/issue54_sim.py`, `research/TESTING.md`).
+- **The GUI's idle events**: their k3 log has the camera's GUI task get no event after a power-on until a key, where
+  the lab's gets one about every 200 ms (their reading, I).
+- **A frame between a hook and the update's publish** (#66): the camera showed one frame with the old row's bar; the
+  lab composes the screen after the update returns, so it never shows it (their MMIO trace; I for the camera).
+- **The camera's start writes** (their bp1 probe on the camera): task 167 writes 15258, 15319 twice, 15313, 897 and
+  2188 before the GUI's first state change, and 897 twice more before any key. Their notes give other task ids for
+  the same roles in the lab (165, 168); not compared here (?).
+- **Setting 1440, `MODE_PLAY_MEDIA_SLOT_TRANSITION`**, is what their custom-mode switch takes as the end of every
+  mode-dial change (written then and not at a half press, their lab trace). Its name says something else; what it
+  means is not read (?).
+
+Contradictions with om-emu's docs: one. Section 2.7 called the Creative Dial family 898 "none"; the firmware names it
+`MODE_COLORTONE_DIAL_NEUTRAL`, the standard picture modes (corrected there). Nothing else read contradicts this note,
+`docs/hle-gaps.md` or the FIDELITY notes; three of their statements about the lab do not hold today (8.2).
+
+### 8.4 What om-emu should adopt or verify, ranked
+
+1. **The setting names** (8.3's first row): read container block 2's table on E143, E146 and E147 (the offset found
+   by its first names, never assumed from a length) and give a name beside each id in the debug API, in `call:`
+   results on the settings getter and in the docs. Size: a day (I). Payoff: every settings-level finding in
+   `docs/hle-gaps.md` and `docs/om1-settings-spec.md` checkable by name; 44's role is settled by it already.
+2. **The mode change's order** (8.3, the first difference): read the writer of the settings object's mode byte and the
+   writes around setting 1440 on E147, to say whether the camera's code 0 at a live turn, at the first look and at B
+   is a step the lab skips (a lab defect) or a state the lab cannot reach without an input it lacks. Size: days (I).
+   Payoff: their #54 class of bug shown by the lab, and their test's poke dropped.
+3. **A count of instructions run with interrupts masked**, per step in the session record (the lock's PSW write to
+   the unlock), with the longest window named. Size: a day (I). Payoff: their test-3 freeze class flagged before the
+   camera; a stock baseline first, since the lab cannot say how long is too long.
+4. **The shot's extra developments** (job types `0x110` / `0x120`) in `docs/hle-gaps.md` 4.3.12's map of the still
+   path: where E147 requests them and which is the review picture and which the embedded preview (D). Size: days (I).
+   Payoff: their #65 class (an effect reaching the small developments) visible once the image library runs (4.6,
+   list 3).
+5. **The key path for a key with no record** (8.3) feeds section 7's follow-up 3: the same walk decides E147's ISO and
+   Fn-type keys in the lab. No work beyond that follow-up.
+
+Not taken: their RGB-curve, Color Mix and halation models (their code against their model, as 4.6 already does for
+three hooks), their spektrafilm analysis (nothing of it reaches the camera), LookLab, and their camera-only results as
+evidence beyond saying they exist.
+
+### 8.5 The regression run on this round
+
+`OM_CADUCEUS=$C OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs` on `78a809e`, three at once (X, 2026-11-17): the
+pin units 7 of 7, the releases 60 of 60, all 27 folders from v0.16 to v0.30.3 as pinned, 35 to 39 s each to v0.28
+and 52 to 54 s each from v0.29-beta on (the no-card part), the section-6 control and the bent-pin control as before.
+The flow's two new observations (`early`, `curves`) are taken only where a pin's flow asks for them, so the 19 older
+pins stand as they were. To pin the next release: `--pin vX --flow` with v0.30.3's flow (its row in
+`emu/test/fixtures/caduceus-releases.json`).

@@ -19,11 +19,13 @@
 //                   absent or failing its pins) says so in a note.
 // The flow (flowRun): a card bin/card.mjs made, with the pinned card files put; the session under the loaded-ranges
 // mode (the patch audit pinned); 4.5 s of lab time, the copied mask and their state word (0 before the half press);
-// S1 (the state word set: their card load ran); OK OK to the Picture Mode page; with films: the string getter's names
+// S1 (the state word set: their card load ran; with flow.curves, v0.30 on, the head of the copy of CURVES.BIN they
+// keep in store M); OK OK to the Picture Mode page; with films: the string getter's names
 // of FILM 1, 2 and 20 (the ids their title and list ask for), right x5 to FILM 2, OK; S2 and the picture's Exif (their
 // photo code where the release writes one); the page again and its title through the string getter (the selected
 // film's name); the card's OM3MOD listing; power:off, restart (on a blank card where the films live in the camera),
-// S1, S2's Exif and the title again (the selection kept); for the no-card fix (v0.29.1; v0.29 and v0.29-beta as its
+// (with flow.early, v0.29.2 on: their state word 1.5 s after the restart, before any half press) S1,
+// S2's Exif and the title again (the selection kept); for the no-card fix (v0.29.1; v0.29 and v0.29-beta as its
 // contrast) power:off, restart, the card taken out (card:out), the SD medium word (S-MEDIA's NOT_PRESENT), S1 and the
 // title; then power:off and restart with the slot still empty (a power-on without a card), the word, S1 and the
 // title. No poke. No frame hash is pinned.
@@ -176,6 +178,9 @@ async function flowRun(dir, version, flow, tmp) {
     const before = hex('read:0x62b4dd16:2');
     run('s1', 'wait:1200');
     o.state = { before_s1: before, after_s1: set(hex('read:0x62b4dd16:2')) };
+    // v0.30 on: the card's CURVES.BIN kept in settings store M at +0x3BE20 (their docs/FORMATS.md; M's RAM image
+    // 0x62920700, section 2.5 of the study): its magic, version and length after the first S1
+    if (flow.curves) o.curves = hex('read:0x6295c520:8');
     run('ok', 'ok');
     o.picture_mode = s.records.at(-1).gui;
     if (flow.films) {
@@ -188,8 +193,12 @@ async function flowRun(dir, version, flow, tmp) {
     o.title = string(TITLE);
     run('ok');
     o.card = step('card-ls').card.filter((x) => /^OM3MOD\//.test(x.path)).map((x) => x.path.slice('OM3MOD/'.length)).sort();
-    run('power:off', flow.restart_card === 'blank' ? 'restart:card=blank.omsd' : 'restart', 'wait:1500', 's1', 'wait:1200');
-    o.restart = { card: flow.restart_card, state_after_s1: set(hex('read:0x62b4dd16:2')) };
+    run('power:off', flow.restart_card === 'blank' ? 'restart:card=blank.omsd' : 'restart', 'wait:1500');
+    // the films from the camera's memory before any half press (v0.30's load at the GUI's first state change, their
+    // PR #56): their state word at 1.5 s, before S1
+    const early = flow.early ? { state_before_s1: set(hex('read:0x62b4dd16:2')) } : {};
+    run('s1', 'wait:1200');
+    o.restart = { card: flow.restart_card, ...early, state_after_s1: set(hex('read:0x62b4dd16:2')) };
     shoot();
     o.restart.exif = exif();
     run('ok', 'ok');

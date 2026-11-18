@@ -100,14 +100,30 @@
 //               (0x62a4a350) set to the packet, as Standby's tail keeps it; StlRdy2's shot-record fill (0x503bba51:
 //               the template's copy, the settings fields, the shutter range); StlTake's capture fill (0x503bcaa2: the
 //               camera's clock read into +37800 among its fields), the key (0x503baa2d), the frame count's step
-//               (0x503b23e3) and the fill after the key (0x503bc4fe). Each must log no error. takepic is not run: it
-//               stops in its AF maker-note fill (0x509b08f0 -> 0x508c9bfe), whose `calls (a1)` goes through a word
-//               (0xa33b262c) that TAKE_FOCUS's release-take start sets (0x509a847a) and the default session leaves 0
-//               (X); so S-EXIFPRM keeps takepic's copy of the exposure record, the crop areas and the EXIF set. The
+//               (0x503b23e3) and the fill after the key (0x503bc4fe); since 2026-11-17 then takepic (0x503bcd51, as
+//               StlTake's registered function 0x503b2e5d calls it: d0 0, the context, the packet word's packet), with
+//               S-AFMKNT in place of its AF maker-note fill; StlTake's reply 37's lens fill (0x503bd137: the lens
+//               step 0x5011fcf4 on S-LENSMCU's lens, the focal length +38792); and the third fill (0x503bd1fa, from a
+//               function object of TAKE's, 0x503b7e2c), which ends in the EXIF set (0x5042992d at 0x503bd48e). The
+//               calls' d0, another mode's shot id, is read only where the context's mode byte (+3122; E146 and E147
+//               +3324) is 4, which a single still's mode bytes do not give (refused). Each must log no error. The
 //               ring slot is freed after the EXIF set (0x503baf23, StlEnd's)
-//   S-EXIFPRM   (with H-TAKEFILLS: the crop areas, takepic's copy of the exposure record H-TAKEFILLS' ring slot holds,
-//               and the EXIF set alone; the template's copy, the clock read, the settings fields below and the
-//               shutter range are TAKE's own fills' there, whose fields exif_param checks against the settings)
+//   S-AFMKNT    (with H-TAKEFILLS) takepic's AF maker-note fill (0x509b08f0, one caller: takepic's 0x503bceee), the AF
+//               module's: its first call (0x508c9bfe) writes the record's crop areas +40858 and +40866 from the AF
+//               point (0x509b01ec, which reads TAKE_FOCUS's context, the pointer 0xa33d9560 that TAKE_FOCUS's
+//               interface init sets), the AF result's fields (+4962.., +40876.., +40916.., +14642.., +38512.. from the
+//               AF library's state 0xa33b25c8..0xa33b262a) and calls, through the word 0xa33b262c that TAKE_FOCUS's
+//               release-take start sets (0x509a847a -> 0x508ca329: the AF library's 0x508caa31), the copy of the AF
+//               library's debug record (36472 bytes from a buffer of its table 0xa33ba98c into +41052). None of that
+//               state exists in the lab: TAKE_FOCUS's inits and the AF library's init (0x508bede6, which logs
+//               0x1c005002 in the lab) do not run in the default session, FCS on CPU 1 not at all; run natively it
+//               reads TAKE_FOCUS's context through a null pointer and its callback faults or, with the word set,
+//               logs 0x0f807001 for the missing buffer (X, E143 probes). The stand-in answers the call: the two crop
+//               areas the full frame {0, 0, 1, 1} (I, S-EXIFPRM's before it; the areas are checked against the
+//               rule's rec_file crop), the AF fields left as the template's. docs/hle-gaps.md 4.3.13
+//   S-EXIFPRM   (with H-TAKEFILLS: nothing of the shot's record since 2026-11-17: takepic's copy, the EXIF set and,
+//               through S-AFMKNT, the crop areas are TAKE's own fills'; exif_param checks the settings fields and
+//               takepic's copy against the exposure record)
 //   S-EXIFPRM   the shot's EXIF parameter block (pExifParam, the packet's +28; on the camera TAKE's per-shot record,
 //               0x503afc3e(HandleTarget), 92252 bytes; with H-SHOTALLOC that record, else a block of the lab's), as
 //               TAKE's takepic hands it to REC, whose shooting values
@@ -333,6 +349,9 @@ const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
 // the take-picture request's packet as H-TAKEFILLS hands it TAKE's fills: the bytes TAKE_MAIN keeps of it (its +0..+63;
 // I: the fills read +0, +8 and +60, D) and the exposure record's word, which StlRdy1's entry keeps at +60 (0x503b12e0)
 const TAKE_PACKET = 64, TAKE_PACKET_RECORD = 60;
+// the crop areas' {x, y, xden, yden} as the full frame (I, by REC's arithmetic (x + 1) * width / xden - 1): S-EXIFPRM's,
+// and S-AFMKNT's in the AF maker-note fill's place, which writes them on the camera (docs/hle-gaps.md 4.3.13)
+const AF_AREA = [0, 0, 1, 1];
 // HeaderSize: rec_jpeg_make_header's (0x5054a5b9), and the header area rec_jpeg_exec reserves before the encode: its
 // buffer's size estimate adds it (0x5054a7b3) and its clear covers it (0x5054986f); the encoder's stream follows it
 // (I). E143's here; each body's is the rule's (jpeg.header: 41984 on E146 and E147 too)
@@ -470,9 +489,9 @@ export class RecFile {
   // (its request to the strobe sequence not run, docs/hle-gaps.md 4.3.13 item 1c), the packet word set to the packet
   // (Standby's tail's keep); StlRdy2's shot-record fill (the template's copy, the settings fields, the shutter range);
   // StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
-  // frame count and its fill after the key. takepic is not run: it stops in its AF maker-note fill, whose callback
-  // TAKE_FOCUS's release-take start sets (docs/hle-gaps.md 4.3.13). Each call must log nothing. Returns {record}, the
-  // exposure record (freed into the ring by exif_param at its end, as StlEnd frees it)
+  // frame count and its fill after the key; takepic with S-AFMKNT for its AF maker-note fill, the lens fill and the
+  // third fill with the EXIF set (docs/hle-gaps.md 4.3.13). Each call must log nothing. Returns {record}, the exposure
+  // record (freed into the ring by exif_param at its end, as StlEnd frees it)
   take_fills(shot) {
     const lab = this.lab, sim = lab.sim, F = this.fills, T = this.exposure, e0 = lab.kernel.errors.length;
     const run = (what, fn, regs, calls = false) => {
@@ -500,6 +519,24 @@ export class RecFile {
     const c = sim.read(F.take.count, 2);
     sim.write(F.take.count, pack('<H', ((c[0] | c[1] << 8) + 1) & 0xFFFF));
     run("StlTake's fill after the key", F.take.after, { d0: shot.id, a0: F.context });
+    // StlTake's registered function's takepic (d0 0, as it calls it), with S-AFMKNT in place of its AF maker-note
+    // fill; StlTake's reply 37's lens fill; the function object's third fill, which ends in the EXIF set. A mode byte 4
+    // (another mode's shot, whose id the calls' d0 would hold) is not read
+    const P = F.pic, X = this.R.exif;
+    if (u8(F.context + P.mode) === 4) throw new RecError(`H-TAKEFILLS: TAKE's context's mode byte +${P.mode} is 4, a mode whose shot the fills take from d0 (not read)`);
+    if (P.crop.join() !== X.crop.join()) throw new RecError(`S-AFMKNT: the AF maker-note fill's areas +${P.crop.join(', +')} are not the EXIF block's crop areas +${X.crop.join(', +')} (fact rec_file)`);
+    let afs = 0;
+    lab.hook(P.af, (h, r) => {
+      if ((r.a0 >>> 0) !== shot.record) throw new RecError(`S-AFMKNT: the AF maker-note fill ${h8(P.af)} called on ${h8(r.a0)}, not the shot's record ${h8(shot.record)}`);
+      for (const at of P.crop) sim.write(shot.record + at, pack('<HHHH', ...AF_AREA));
+      afs += 1;
+      h.finish(r);
+    }, 'S-AFMKNT');
+    try { run('takepic', P.fn, { d0: 0, a0: F.context, a1: pk }); } finally { lab.hooks.delete(runtime(P.af)); }
+    if (afs !== 1) throw new RecError(`S-AFMKNT: takepic ${h8(P.fn)} called the AF maker-note fill ${afs} times, want once`);
+    run("StlTake's lens fill", P.lens, { d0: 0, a0: F.context, a1: pk });
+    run("TAKE's third fill and its EXIF set", P.third, { d0: 0, a0: F.context, a1: pk });
+    this.exif_sets += 1;
     this.take_fill_runs += 1;
     return { record };
   }
@@ -512,7 +549,7 @@ export class RecFile {
       lab.call(X.copy, { a0: x }, null, null, 2000000);
       lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
     }
-    for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
+    if (!fills) for (const at of X.crop) sim.write(x + at, pack('<HHHH', ...AF_AREA));
     // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
     // runs natively); the EXIF set reads the aspect too (0x5042c356)
     // (an entry [id, at, n, when, other]: other's value instead where id gives when, the picture mode's fill)
@@ -542,11 +579,15 @@ export class RecFile {
       }
       for (const [from, to] of T.copy) {
         const v = sim.read(r + from, 2);
-        sim.write(x + to, v);
+        // (with H-TAKEFILLS takepic made the copy: the block must hold the record's field)
+        if (!fills) sim.write(x + to, v);
+        else if (sim.read(x + to, 2).some((b, k) => b !== v[k])) throw new RecError(`H-TAKEFILLS: takepic ${h8(this.fills.pic.fn)} left the block's +${to} ${h8(sim.read(x + to, 2)[0] | sim.read(x + to, 2)[1] << 8)}, the exposure record's +${from} holds ${h8(v[0] | v[1] << 8)}`);
         exposure[from] = ((v[0] | v[1] << 8) << 16) >> 16;
       }
     }
-    if (this.exif_set()) {
+    if (fills) {
+      // the EXIF set ran in TAKE's third fill (take_fills)
+    } else if (this.exif_set()) {
       // the EXIF set natively, as takepic calls it once its fill is made: the dates, the zoom ratio, the gains
       lab.call(X.set, { a0: x }, null, null, 2000000);
       this.exif_sets += 1;
@@ -821,7 +862,7 @@ export class RecFile {
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
 // H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

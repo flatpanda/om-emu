@@ -11,10 +11,15 @@
 //                     now) and the EXIF set's dates are the camera's; the shot-record fill's fields REC_IMAGE reads
 //                     equal the settings (exif_param's own check); and on E143 the key +38532 is the shot counter,
 //                     setting 25380, under TAKE's context +3128, +38190 setting 41082, and the frame count +3088
-//                     stepped to 1 from Standby's 0. Last (E143), the
-//                     stop: takepic run natively on the third picture's shot reaches its AF maker-note fill's `calls
-//                     (a1)` (0x508c9cdd) with a1 0, the word 0xa33b262c TAKE_FOCUS's release-take start sets
-//                     (0x509a847a -> 0x508ca329), which the default session does not run.
+//                     stepped to 1 from Standby's 0. Since 2026-11-17 takepic, the lens fill and the third fill run
+//                     too (each once, the third fill's EXIF set the picture's one), takepic's AF maker-note fill
+//                     answered by S-AFMKNT once with the crop areas the full frame; on E143 the lens fill sets the
+//                     lens flag's bit 12 (+37982) and the focal length +38792 (120: 12 mm, S-LENSMCU's lens at its
+//                     wide end), and takepic the white-balance mode +37992 and +37988 from settings 33057 and 33073
+//                     (the frame count 1). Last (E143), the control for S-AFMKNT: takepic run natively without it on
+//                     the third picture's shot reaches its AF maker-note fill's `calls (a1)` (0x508c9cdd) with a1 0,
+//                     the word 0xa33b262c TAKE_FOCUS's release-take start sets (0x509a847a -> 0x508ca329), which the
+//                     default session does not run.
 //   node emu/test/test_takefills.mjs [--session]     (OM_EMU_MODEL=E143 | E146 | E147)
 // Negative controls (X, 2026-11-16, E143): with the frame count's step taken out of take_fills the record is the
 // same but the count stays 0 (the count check fails); with the shot-record fill's call taken out exif_param's check
@@ -26,8 +31,10 @@ const tester = () => {
 };
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
 // the halfwords of the record the fills change against S-EXIFPRM's copies (X); E143's fields (D, docs/hle-gaps.md 4.3.13)
-const DIFFS = 40, KEY = 38532, AE_SETTING = 41082, AE_AT = 38190, COUNTER = 25380, CTX_TIMER = 3128, COUNT = 3088;
+// (40 on each before takepic, the lens fill and the third fill ran, 2026-11-16)
+const DIFFS = { E143: 110, E146: 110, E147: 110 }, KEY = 38532, AE_SETTING = 41082, AE_AT = 38190, COUNTER = 25380, CTX_TIMER = 3128, COUNT = 3088;
 const AF_CALLS = 0x508C9CDD, AF_WORD = 0xA33B262C, TAKEPIC = 0x503BCD51;
+const LENS_FLAG = 37982, LENS_BIT = 0x1000, FOCAL = 38792, FOCAL_12MM = 120, WB = [[37992, 33057], [37988, 33073]];
 
 export async function takeFillsSession() {
   const t = tester(), { ok } = t;
@@ -55,11 +62,17 @@ export async function takeFillsSession() {
     run({ type: 'token', token: 'WAIT:300' });
     const size = rec.R.exif.size, snaps = [], orig = rec.exif_param.bind(rec);
     rec.exif_param = (shot) => { const out = orig(shot); snaps.push({ rec: sim.read(shot.record, size), count: u16(F.take.count), ctx: sim.u32(F.context + CTX_TIMER) >>> 0, counter: setting(COUNTER) }); return out; };
+    // the runs of takepic, the lens fill, the third fill and the AF maker-note fill's stand-in, in the second picture
+    const P = F.pic, runs = { pic: 0, lens: 0, third: 0, af: 0 }, call0 = lab.call.bind(lab);
+    lab.call = (fn, ...a) => { for (const k of ['fn', 'lens', 'third']) if (fn === P[k]) runs[k === 'fn' ? 'pic' : k] += 1; return call0(fn, ...a); };
+    const hook0 = lab.hook.bind(lab);
+    lab.hook = (at, stub, name, ...a) => hook0(at, name === 'S-AFMKNT' ? (h, r) => { runs.af += 1; return stub(h, r); } : stub, name, ...a);
     rec.fills = null;
     shoot();
     rec.fills = F;
     shoot();
     rec.exif_param = orig;
+    lab.call = call0; lab.hook = hook0;
     ok(rec.take_fill_runs === 1 && s.camapp.images.length === 2 && s.camapp.images.every((im) => im.file?.size > 0),
       `two pictures recorded, H-TAKEFILLS run for the second alone (${rec.take_fill_runs} runs; files ${JSON.stringify(s.camapp.images.map((im) => im.file?.path))})`);
     const [a, b] = snaps, diffs = [];
@@ -67,7 +80,12 @@ export async function takeFillsSession() {
     const X = rec.R.exif, clock = (r) => Array.from(r.slice(X.time, X.time + 10)).join(','), date = (r) => String.fromCharCode(...r.slice(X.date.original, X.date.original + 19));
     t.note = `${diffs.length} halfwords of the record differ: ${diffs.map((o) => `+${o}`).join(' ')}`;
     ok(diffs.length > 0 && diffs.every((o) => o < X.time || o >= X.time + 10), `the fills change the record beyond the clock (${t.note})`);
-    ok(diffs.length === DIFFS, `${DIFFS} halfwords differ (X, 2026-11-16, on E143, E146 and E147; E146's and E147's TAKE fields 348 bytes lower): ${diffs.length}`);
+    ok(diffs.length === DIFFS[MODEL], `${DIFFS[MODEL]} halfwords differ (X, 2026-11-17, on E143, E146 and E147; E146's and E147's TAKE fields 348 bytes lower): ${diffs.length}`);
+    const area = (at) => Array.from({ length: 4 }, (_, k) => b.rec[at + 2 * k] | b.rec[at + 2 * k + 1] << 8).join(',');
+    ok(runs.pic === 1 && runs.lens === 1 && runs.third === 1 && runs.af === 1 && rec.exif_sets === 2 && pl.stand_ins_in_use().includes('S-AFMKNT'),
+      `takepic, the lens fill and the third fill natively once each with S-AFMKNT once (${JSON.stringify(runs)}), the EXIF set once per picture (${rec.exif_sets})`);
+    ok(P.crop.every((at) => area(at) === '0,0,1,1') && P.crop.every((at) => area(at) === Array.from({ length: 4 }, (_, k) => a.rec[at + 2 * k] | a.rec[at + 2 * k + 1] << 8).join(',')),
+      `S-AFMKNT's crop areas +${P.crop.join(', +')} the full frame, as S-EXIFPRM's: ${P.crop.map(area).join(' / ')}`);
     ok(clock(a.rec) === clock(b.rec) && /^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d$/.test(date(b.rec)) && date(a.rec) === date(b.rec),
       `the capture fill's clock read and the EXIF set's date are S-EXIFPRM's: ${clock(b.rec)} / ${clock(a.rec)}, '${date(b.rec)}' / '${date(a.rec)}'`);
     if (MODEL === 'E143') {
@@ -76,7 +94,12 @@ export async function takeFillsSession() {
         `the key +${KEY} ${h8(key)} is TAKE's context +${CTX_TIMER} ${h8(b.ctx)} over the shot counter ${COUNTER} ${b.counter} (S-EXIFPRM's: ${a.rec[KEY]})`);
       ok((b.rec[AE_AT] | b.rec[AE_AT + 1] << 8) === setting(AE_SETTING), `+${AE_AT} is setting ${AE_SETTING} (${setting(AE_SETTING)}): ${b.rec[AE_AT] | b.rec[AE_AT + 1] << 8}`);
       ok(a.count === 0 && b.count === 1, `the frame count +${COUNT}: ${a.count} without the fills, ${b.count} with them (Standby's clear, StlTake's step)`);
-      // the stop: takepic natively on a third shot, to its AF maker-note fill's call through the word TAKE_FOCUS sets
+      const h16 = (r, at) => r[at] | r[at + 1] << 8;
+      ok((h16(b.rec, LENS_FLAG) & LENS_BIT) && !(h16(a.rec, LENS_FLAG) & LENS_BIT) && h16(b.rec, FOCAL) === FOCAL_12MM,
+        `the lens fill's lens step: the lens flag +${LENS_FLAG} 0x${h16(b.rec, LENS_FLAG).toString(16)} (0x${h16(a.rec, LENS_FLAG).toString(16)} without it), the focal length +${FOCAL} ${h16(b.rec, FOCAL)}`);
+      ok(WB.every(([at, id]) => h16(b.rec, at) === setting(id)), `takepic's white-balance mode: ${WB.map(([at, id]) => `+${at} ${h16(b.rec, at)} (setting ${id} ${setting(id)})`).join(', ')}`);
+      // the control for S-AFMKNT: takepic natively without it on a third shot, to its AF maker-note fill's call through
+      // the word TAKE_FOCUS sets
       const shot = rec.shot_alloc(), pk = lab.alloc(new Uint8Array(64), 4);
       sim.write(pk, Uint8Array.of(shot.id, 0, 0, 0));
       let at = null;

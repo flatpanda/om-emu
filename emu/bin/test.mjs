@@ -863,7 +863,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   }
 }
 // H-TAKEFILLS (test_takefills.mjs): TAKE's own fills of the shot natively against S-EXIFPRM's copies, the record
-// compared byte for byte, on E143, E146 and E147, each in a process of its own; on E143 also takepic's stop
+// compared byte for byte, on E143, E146 and E147, each in a process of its own (takepic, the lens fill and the third
+// fill with S-AFMKNT among them); on E143 also S-AFMKNT's control, takepic's stop without it
 {
   const { spawnSync } = await import('node:child_process');
   for (const m of ['E143', 'E146', 'E147']) {

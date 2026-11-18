@@ -1401,33 +1401,39 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   - CA_MAIN calls ctrlRelease (returns `0x5105834b`, E147 `0x5106f0e7`) with key_1st 2 and key_2nd 3 on E143 and 0 and 0
     on E147. Its caller (`0x5105816b`, E147 `0x5106ef22`) clears both while `0x5105bdac` (E147 `0x510732f3`) answers 1,
     which is the application's setting 44 read as 1 (D). key_1st then stays 2 only where setting 49 is 1 (E147
-    `0x51082794`: 0). key_2nd is also 0 where setting 821 reads 0 (`0x51069ae4`: 1 on E147).
+    `0x51082794`: 0). key_2nd is also 0 where setting 821 reads 0 (`0x51069ae4`: 1 on E147). The firmware's names for
+    E147's 49 and 821 are `MODE_CUSTOM_SW_3` and `MODE_HDMI_INFO` (`docs/om1-settings-spec.md` section 10), neither a
+    release key's role: whether `0x51082715` and `0x51064d9b`, which the two sites call with them, read the store by id
+    is not read (?).
   - Setting 44 is 0 at E143's P and 1 at its mode dial's MOVIE (X). The button-function lookup `0x5104be42` takes its
-    row's +12 column while it is 1 (D). So 44 is the application's movie mode (I: its name is not read).
+    row's +12 column while it is 1 (D). So 44 is the application's movie mode; the firmware names it `MODE_MOVIE` on
+    every body that has the name table (X, `docs/om1-settings-spec.md` section 10).
   - E147's mode reader reads UI_IN's level of `0x02021909` right after the mode dial's `0x02021901`
     (`0x5042f4e4..0x5042f536`, D). The lab's idle image started every position switch at its second position
     (`emu/src/lab/play.mjs` SWITCH_IDLE_POSITION). With E147's `0x1909` at its positions 0 and 1 setting 44 reads 1, at
     2 it reads 0 and S1 takes the sequence to READY (X).
 - **The lab's part.** MODELS switch_idle names a body's own idle position of a position switch. E147's `0x1909`, its
-  still / movie switch, starts at 2 (`emu/src/fw/models.mjs`). Since 2026-11-14 it is an input of the players
-  (control `still_movie`, `emu/test/test_smswitch.mjs`). UI_IN answers its level from the board's value table at the
-  decoded position (byte `0xa32d9d0d`; board 0's table `0x60240b40`: 3, 2, 1), and the mode reader gives the shooting
-  mode 10 for the levels 2 and 3 (`cmp 2` / `cmp 3` at `0x5042f63d`, D). Setting 44 reads 1 at positions 0 and 1 and 0
-  at 2 after a move (X); setting 2188 is written 2 at 0, 1 at 1 (X); what distinguishes 0 and 1 is not read (?). The
+  still / movie switch, starts at 2 (`emu/src/fw/models.mjs`). Since 2026-11-14 it is an input of the players (control
+  `still_movie`, `emu/test/test_smswitch.mjs`). UI_IN answers its level from the board's value table at the decoded
+  position (byte `0xa32d9d0d`; board 0's table `0x60240b40`: 3, 2, 1), and the mode reader gives the shooting mode 10
+  for the levels 2 and 3 (`cmp 2` / `cmp 3` at `0x5042f63d`, D). Setting 44 reads 1 at positions 0 and 1 and 0 at 2
+  after a move (X); setting 2188 is written 2 at 0, 1 at 1 (X); what distinguishes 0 and 1 is not read (?). The
   firmware's setting names (container block 2, `analysis/caduceus-om3/README.md` 8.3, X) call 44 `MODE_MOVIE` and 2188
-  `MODE_ACTION_DIAL`; Caduceus for OM-3's notes take position 0 as S&Q and 1 as movie (theirs). The
-  firmware names the code's event EV_CHANGE_ACTION_DIAL (its tables, X). The application sets 44 when the switch
-  moves, not at the start (X: a start on a blank store reads 0 at position 1; a power-on on the kept state reads the 44
-  the off saved, also after a restart that put the switch back at 2). The Fn lever `0x1223` (EV_CHANGE_LEVER_SW) is
-  another control: toggled at position 2 it leaves 44 at 0 and 534 at 4 (X). The siblings: position
-  switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not read. E147's
-  other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections, link,
-  patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
+  `MODE_ACTION_DIAL`, which the tools now read by name (`setting:MODE_MOVIE`; `emu/test/test_setnames.mjs` reads both at
+  the switch's positions 0 and 2, `docs/om1-settings-spec.md` section 10); Caduceus for OM-3's notes take position 0 as
+  S&Q and 1 as movie (theirs). The firmware names the code's event EV_CHANGE_ACTION_DIAL (its tables, X). The
+  application sets 44 when the switch moves, not at the start (X: a start on a blank store reads 0 at position 1; a
+  power-on on the kept state reads the 44 the off saved, also after a restart that put the switch back at 2). The Fn
+  lever `0x1223` (EV_CHANGE_LEVER_SW) is another control: toggled at position 2 it leaves 44 at 0 and 534 at 4 (X). The
+  siblings: position switches exist on E122 and E147 only (X: every ported body's UI_IN tables). E122's other one is not
+  read. E147's other sessions run in stills mode now. Their tests (storage, creative dial, scripted session, sections,
+  link, patch, HDMI, card writer, INFO, erase, S-NVRAM, lens) and modelcheck pass unchanged (X). Caduceus for OM-3's
   stills-mode key results in the lab (their `research/BUTTONS.md`) came from om-emu versions that started the switch at
-  this movie position. Re-run at the stills position (2026-11-14, X) the arrow keys read setting ids 50..53 and the
-  dials work, where at the movie position the arrows read 1280..1283 and the front dial left exposure compensation
-  alone, so those results were the movie position's; OK on their custom Picture Mode row still differs from their
-  camera report (`analysis/caduceus-om3/README.md` section 6).
+  this movie position. Re-run at the stills position (2026-11-14, X) the arrow keys read setting ids 50..53
+  (`MODE_CUSTOM_SW_7..10`, the stills Button Function settings) and the dials work, where at the movie position the
+  arrows read 1280..1283 (`MODE_MOVIE_CUSTOM_SW_7..10`, the movie mode's own: the names settle it) and the front dial
+  left exposure compensation alone, so those results were the movie position's; OK on their custom Picture Mode row
+  still differs from their camera report (`analysis/caduceus-om3/README.md` section 6).
 - **TAKE's protocol on E146 and E147: the rule takeRequests (`emu/src/fw/facts.mjs`).** It reads, where recFile reads
   REC_FILE, the sites S-MODPOST and S-TAKERDY rest on. It starts at the E143 functions' places and takes each site in
   E143's bytes, with addresses and the values read left open (X: E146 and E147 hold every form):
@@ -1460,7 +1466,7 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   and P; at the old position that cell is empty; the other cells are the same); the `call` step's result is the same,
   its a1 at return (a heap address) not. Their hook sites hit as before in one S1 and S2 under camapp 1 and camapp 3
   (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the others 0).
-- **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; setting 44's name; what tells the
+- **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; what tells the
   switch's positions 0 and 1 apart; whether the camera's start sets 44 from the switch, which the lab's does not.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
@@ -3215,14 +3221,15 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   SW_2 OFF, at 2 the reverse (`0x50b79539..0x50b79561`), and the lever read then answers the position the camera is on
   in, 0 at 1 and 1 at 2 (`0x50abdd5c..0x50abdd73`, while module 9's state is 2). The menu lists 15260's values as Fn,
   ON/OFF and OFF/ON and shows the factory 0 as Fn (X); that ON/OFF is 1, and that SW_1 is the body's position 1, is I.
-- **The lever's function.** Setting 534 is MODE_LEVER_SWITCH_TYPE (the names are the 52-byte records of the resource
-  block `blk05a00000`), its descriptor list 0, 8, 4, 7 and its factory default 4. The menu (the Operations tab's first
-  page, Fn Lever Settings; X, `bin/nav.mjs --start 6,1,1`) shows "Fn Lever Function mode2" for stills and for movies
-  (1290, MODE_MOVIE_LEVER_SWITCH_TYPE, 4 too) and lists Off, mode1, mode2, mode3. The help of mode2 reads "Switches AF
-  mode/AF target mode/AF target point according to Fn lever position. Target can be selected.", Off's "Disables Fn
-  lever function." So 4, the factory value, is the menu's mode2, not mode1 (X), which answers 4.3.7's "the menu's names
-  of these values are not read"; that 0, 8 and 7 are Off, mode1 and mode3 is I (the two lists' order). In the lever
-  function table (`0x512ac924`, 4.3.7) 4 is the one case that calls setFocusModeChange with the lever read.
+- **The lever's function.** Setting 534 is MODE_LEVER_SWITCH_TYPE (the firmware's own name, from container block 2's
+  52-byte records, `docs/om1-settings-spec.md` section 10), its descriptor list 0, 8, 4, 7 and its factory default 4.
+  The menu (the Operations tab's first page, Fn Lever Settings; X, `bin/nav.mjs --start 6,1,1`) shows "Fn Lever Function
+  mode2" for stills and for movies (1290, MODE_MOVIE_LEVER_SWITCH_TYPE, 4 too) and lists Off, mode1, mode2, mode3. The
+  help of mode2 reads "Switches AF mode/AF target mode/AF target point according to Fn lever position. Target can be
+  selected.", Off's "Disables Fn lever function." So 4, the factory value, is the menu's mode2, not mode1 (X), which
+  answers 4.3.7's "the menu's names of these values are not read"; that 0, 8 and 7 are Off, mode1 and mode3 is I (the
+  two lists' order). In the lever function table (`0x512ac924`, 4.3.7) 4 is the one case that calls setFocusModeChange
+  with the lever read.
 - **The two banks.** MODE_AF_CHANGE (535; 0 or 1, default 0) selects the bank. The still focus mode is MODE_FOCUS_STILL
   (289, factory 0) in bank 0 and MODE_FOCUS_AF_CHANGE_STILL (536, factory 2) in bank 1; MODE_FOCUS (25) reads 0 with
   535 at 0 and 2 with it at 1, the property getter `0x503ee3bf` reads those as 0 and 1, and the shooting screen shows
@@ -5178,11 +5185,11 @@ tool (`bin/session.mjs`) and fixed on 2026-11-14.
   1. *The request.* The GUI's SubAppMDLFocus::changedFocus `0x5105260c` (dispatched on CBS_END_FOCUS's GUI event
      `0x03000030`: the GUI's event rows {event, 1, 1, handler} at `0x512c955c` and on) plays through playAfSound
      `0x51052444` when getCondition (OlyHfwOpeShoot `0x50ad8b37`) answers isFocus 1, indicator 1 and no rec view
-     (`0x5105268b..0x51052707`). playAfSound plays while the GUI's afSound flag `0x62b2e0c4` is 0 and settings id 18 is
-     not (`0x5104e12d(18)`; the Setup item "8", menu mode 1037, writes 18 with its own value through the settings DB's
-     write, X by the menu and by SET:1037), calls the sound singleton's play (`0x50b56569` -> object `0x62afee0c`,
-     vtable `0x60e3881c`, slot 0 `0x50b569a4`, call entry `0x50b569a9`: d0 the sound id, d1 the volume, 0 plays nothing,
-     a1, two stack words) with sound 0 and the setting's 60, and sets afSound. The facade calls
+     (`0x5105268b..0x51052707`). playAfSound plays while the GUI's afSound flag `0x62b2e0c4` is 0 and settings id 18
+     (MODE_BEEP) is not (`0x5104e12d(18)`; the Setup item "8", menu mode 1037, writes 18 with its own value through the
+     settings DB's write, X by the menu and by SET:1037), calls the sound singleton's play (`0x50b56569` -> object
+     `0x62afee0c`, vtable `0x60e3881c`, slot 0 `0x50b569a4`, call entry `0x50b569a9`: d0 the sound id, d1 the volume, 0
+     plays nothing, a1, two stack words) with sound 0 and the setting's 60, and sets afSound. The facade calls
      OlyHfwOpeSndCtl::playTarget `0x50b758b4`, which refuses sound 0 ("NOT READY", `0x50b75962`) unless the shared take
      status's word 0 has one of the bits 2, 4, 8 or `0x1000000` (and word 1 has neither bit 0x4 nor bit `0x10000000`,
      `0x50b75939..48`), then api_sound.c `0x5041ee45`, which sends a 44-byte message of kind 2 to UI_OUT's queue `0x70`
@@ -7270,7 +7277,8 @@ The orange `0:00:00` on E144, E139, E137 and E125 is the firmware's own answer f
 holds, not a missing model: their default movie mode is UHD 4K at 60p, and their codec rate tables have no rate for 4K
 at 60p or 50p. Nothing in the lab changes; the addresses are E144's.
 
-- **The movie mode:** the movie settings are data objects indexed by a mode: settings id 696 is object `0xf021` element
+- **The movie mode:** the movie settings are data objects indexed by a mode: settings id 696 (E144's
+  `MODE_IMAGE_QUALITY_MOVIE`, which agrees) is object `0xf021` element
   0, the mode (the id table `0x60514fec`); ids 697..704 and 848 are `0xf031[0..8]`, the resolution code; 705..712 and
   849 `0xf041`; 721..728 and 851 `0xf061`, the frame rate (the descriptors from `0x6050de50` allow 24, 25, 30, 50 and 60
   for 721, 722, 723 and 728, the ones read); 729..736 and 852 `0xf072`. The getters `0x5032a00d` (the mode),
@@ -7993,9 +8001,11 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   returns 1, the manager is not called, 15262 stays 1 and an insertion is not mounted. The round's slot2 test made
   the change after S2, which the lab then left in phase 102 (no 794); after take-111's merge the sequence was in 106
   and two checks failed. The test now makes the change before S2, in phase 101.
-- **The save settings.** 1129 (data object `0x52b1`, the shell's `MODE_PICTURE_RECORD_MEDIA`; six values 0..5), 1130
-  (the still save slot, 0 or 1), 1131 (the movie slot, 0 or 1; also the id of the menu row 4.3.7 followed), 1132 (0
-  or 1), 1134 and 1404; in the lab's blank store all are 0 but 1134, which is 1 (X). Who reads them:
+- **The save settings.** 1129 (data object `0x52b1`, the shell's and the name table's `MODE_PICTURE_RECORD_MEDIA`; six
+  values 0..5), 1130 (the still save slot, 0 or 1; `MODE_PICTURE_RECORD_MEDIA_SLOT`), 1131 (the movie slot, 0 or 1,
+  `MODE_MOVIE_RECORD_MEDIA_SLOT`; also the id of the menu row 4.3.7 followed), 1132 (0 or 1, `MODE_PLAY_MEDIA_SLOT`),
+  1134 (`MODE_PICTURE_RECORD_MEDIA_AUTO_ONOFF`) and 1404 (`MODE_PLAY_MEDIA_SLOT_TRANSITION`); in the lab's blank store
+  all are 0 but 1134, which is 1 (X). Who reads them:
   - *The record controller's card choice* (CmpSts_RecordController `0x50c73f16`): for 1129 = 0 or 1 the card of
     1130 (1 + its value), whatever is in the slot; for 2 to 5 both cards (3) where its own test `0x50c73fd5`
     passes for both slots (not read) and neither media status has a bit of the mask 0x12, else the one slot that
@@ -8317,7 +8327,10 @@ Independent stops the session (below).
 - **The record controller with both cards (D, 4.8.12).** For 2 to 5 alike it names both cards (3) where its test
   `0x50c73fd5` passes for both and neither media status has a bit of 0x12; else the one slot that passes; else none.
   The test reads the slot's remaining count (`0x5041a28c` with the settings 855, 1320, 856, 1457, 477, 478, 484; not
-  read further). DevRec_Rec::recordMedia makes it Media 0, Media2 1, and REC_MAIN copies 1129 into
+  read further; by name the focus bracketing's and focus stacking's on / off and shot counts, `MODE_BRACKET_MF_ONOFF`,
+  `MODE_FOCUS_STACKING_ONOFF`, `MODE_BRACKET_MF_LIMIT_NUMBER`, `MODE_FOCUS_STACKING_NUMBER`, and the interval
+  shooting's, `MODE_INTERVAL_SHOOTING_ONOFF`, `_NUMBER`, `_TAKE_NUMBER`; that the test counts the shots a sequence
+  will take is I). DevRec_Rec::recordMedia makes it Media 0, Media2 1, and REC_MAIN copies 1129 into
   `RecordMediaMode` (+297; E146 and E147 +267, the packet dump's, fact `rec_file` packet.fields).
 - **REC_FILE's choice (D).** Its handler (`0x5053f354`) fills a list of the files per slot (`0x5053e165`) and takes
   the double-slot record (`0x5053f8df`, then rec_file_record_DoubleSlot `0x5053f97d`) where `0x5053dcf8` answers:
@@ -8545,24 +8558,24 @@ body is named.
   the date prompt for the shooting screen. The same frame and cmd 18 follow H-G4SET's toggle of `0x0501` in a session
   without the port, so the driver's EDID state does not change what the application shows here.
 - **Why no OPEN followed (D, X, 2026-11-08):** doHdmiConnectChange `0x510c4672` asks the camera API (`0x50afccd5`) its
-  vt+56 (`0x50afcf14`, query 65803, `0x50abdbb5`: 1 while UI_IN's `0x0501` reads 1), which answers 0 once the report
-  set it to 0 (X), reads settings 288 and 304, and calls vt+20 (`0x50afcd3a`, query 65797) with device 8:
-  OlyHfwOpeCamCom's change of output device `0x50abcf49` builds TRA 588 (`0x50abf14d`: +32 the device, +36 the second,
-  +40 0) and executes it at `0x50abd146`; S-TRAACK answers the exec 0 (X: the camapp log's "tra 588 from
-  0x50abd14d"), so nothing opens. Then setOutputType `0x510c4946(1)` asks vt+28 (`0x50afce9d` -> `0x50abd8aa`, query
-  65798), which maps the current device (`0x50ab651a`, the output-device property 4513 read at S-PROP's site
-  `0x503eff61`) to type 1 and prints "not connected to HDMI" (X). The application waits for no setting, GUI state,
-  second event or CPU 1 / A53 answer: the open is the transaction's (D below), and the lab answered it. In the camera
-  the active state's component takes 588: CmpCst_Function (`0x50ce992d..0x50ce9a3f`) and CmpSqp_SequencePartsBase
-  (`0x50c8fd69`, in nine vtables) each build the IO-device capability's event 224 (`0x50bf2f4e`: +28, +32, +36 the
-  request's three words) and send it to CapIod_IODevice (their +636 / +696), beside steps of their own (the through
-  image's bank `0x50bd5ff2(512, device == 8)`, their reply). CapIod (the singleton `0x50be92ca`; X: constructed, in its
-  state 6, in both camapp modes) takes 224 in state 6 (`0x50bea64b` -> `0x50beace2` -> `0x50beab11` -> its change of
-  device `0x50be9c6c` -> `0x50be9855` for 8), writes property 4513 = 16 (`0x50bea474`, X) and calls DevDpc's openDevice
-  (vtable slot 31, `0x50d83338`, at `0x50be9c42`), which sends DISPLAY cmd 45 (`0x503e6aca`) with the code
-  `0x0d000004`. Neither component runs it in the lab: S-TRAACK answers every transaction at the exec, with the
-  components too, and in camapp 1 HIGHLEVEL_MAIN (task 57), whose OXF loop dispatches the reactives' events, does not
-  run (X: 224 sent natively through `0x50d7f925` was queued and CapIod stayed in state 6).
+  vt+56 (`0x50afcf14`, query 65803, `0x50abdbb5`: 1 while UI_IN's `0x0501` reads 1), which answers 0 once the report set
+  it to 0 (X), reads settings 288 and 304 (`MODE_HDMI_TYPE`, `MODE_HDMI_CEC` on E143, E146 and E147), and calls vt+20
+  (`0x50afcd3a`, query 65797) with device 8: OlyHfwOpeCamCom's change of output device `0x50abcf49` builds TRA 588
+  (`0x50abf14d`: +32 the device, +36 the second, +40 0) and executes it at `0x50abd146`; S-TRAACK answers the exec 0 (X:
+  the camapp log's "tra 588 from 0x50abd14d"), so nothing opens. Then setOutputType `0x510c4946(1)` asks vt+28
+  (`0x50afce9d` -> `0x50abd8aa`, query 65798), which maps the current device (`0x50ab651a`, the output-device property
+  4513 read at S-PROP's site `0x503eff61`) to type 1 and prints "not connected to HDMI" (X). The application waits for
+  no setting, GUI state, second event or CPU 1 / A53 answer: the open is the transaction's (D below), and the lab
+  answered it. In the camera the active state's component takes 588: CmpCst_Function (`0x50ce992d..0x50ce9a3f`) and
+  CmpSqp_SequencePartsBase (`0x50c8fd69`, in nine vtables) each build the IO-device capability's event 224
+  (`0x50bf2f4e`: +28, +32, +36 the request's three words) and send it to CapIod_IODevice (their +636 / +696), beside
+  steps of their own (the through image's bank `0x50bd5ff2(512, device == 8)`, their reply). CapIod (the singleton
+  `0x50be92ca`; X: constructed, in its state 6, in both camapp modes) takes 224 in state 6 (`0x50bea64b` -> `0x50beace2`
+  -> `0x50beab11` -> its change of device `0x50be9c6c` -> `0x50be9855` for 8), writes property 4513 = 16 (`0x50bea474`,
+  X) and calls DevDpc's openDevice (vtable slot 31, `0x50d83338`, at `0x50be9c42`), which sends DISPLAY cmd 45
+  (`0x503e6aca`) with the code `0x0d000004`. Neither component runs it in the lab: S-TRAACK answers every transaction at
+  the exec, with the components too, and in camapp 1 HIGHLEVEL_MAIN (task 57), whose OXF loop dispatches the reactives'
+  events, does not run (X: 224 sent natively through `0x50d7f925` was queued and CapIod stayed in state 6).
 - **S-OUTDEV (E143, `--hdmi on`; `src/lab/camapp.mjs`):** at TRA 588 the lab does the part both components share,
   after the step: event 224 built by its own constructor and made CapIod's current event, then CapIod's dispatchEvent
   natively (S-BOOTDONE's way); S-PROP's property 4513 then follows the value CapIod wrote (16). Only the HDMI output (8)
@@ -8739,14 +8752,15 @@ body is named.
   face engines `0x99600000` / `0x99a00000` exist on E143 only. TAKE drives MDET through `0x5080a5e2..0x5080ab02`;
   results go to FCS's AF points and to DISP_FRAME (UP_FACE). The seams and a plan (a display-level S-SUBJECT first)
   are in that spec's sections 4.4 and 5.
-- **Subject frames on the display (2026-10-27, spec 5.1; S-SUBJECT, `emu/src/lab/subject.mjs`).** MDET's frame table
-  is read (D): main and part records (filled only in MDET's state `0xa337f082 = 1`, ?), a count and up to eight list
+- **Subject frames on the display (2026-10-27, spec 5.1; S-SUBJECT, `emu/src/lab/subject.mjs`).** MDET's frame table is
+  read (D): main and part records (filled only in MDET's state `0xa337f082 = 1`, ?), a count and up to eight list
   records at `0xa337efa1..`, each four corners; DISP_FRAME's draw_face takes them through FACE's `0x5052202c` and MDET's
   getter `0x5083a299` when the getter's aspect code matches its own and the frame mode has bit 1, and maps them through
-  a per-output, per-aspect transform (`0x60365754`). The setting is settings id 1682 (object `0x1e71`, MDET's kind,
-  D). S-SUBJECT writes S-SCENE's subjects of the setting's kind as list records and posts UP_FACE; DISP_FRAME draws
-  them natively on the TFT and the EVF, following the scene's rider (X). UP_LOCKON (tracking) is the AF module's
-  request (D) and stays with step B; nothing is retired. Open: U9, U10 of the spec.
+  a per-output, per-aspect transform (`0x60365754`). The setting is settings id 1682 (`MODE_SUBJECT_DETECT` on E143;
+  E147's is 1712; object `0x1e71`, MDET's kind, D). S-SUBJECT writes S-SCENE's subjects of the setting's kind as list
+  records and posts UP_FACE; DISP_FRAME draws them natively on the TFT and the EVF, following the scene's rider (X).
+  UP_LOCKON (tracking) is the AF module's request (D) and stays with step B; nothing is retired. Open: U9, U10 of the
+  spec.
 - **MDET_DL natively with S-DML (2026-11-07, spec 5.3; `emu/src/lab/mdet.mjs`, `emu/src/dev/dml.mjs`).** With the
   setting at a kind, S-TAKEMDET makes TAKE's start, change of kind and end and take_mov's per-frame offer natively;
   S-CPU3 serves MDET's post to CPU 3 at once and S-MDETDL runs MDET_DL_REQ's and MDET_DL_LDL's turns on the lab CPU,
@@ -9011,14 +9025,14 @@ mechanical limit is I, from the match with P on all 13 bodies.
 
 E143's clamp function `0x505826fb..0x505827b5` (one caller, `0x50582815`) computes `base + d3 - d1 - (0x62abc568)` and
 clamps it to [`0x100`, `0x0d00`], clamps a second value the same way, and logs errlog `0x0e000015` (D). Which exposure
-path it serves and why the base differs per body is ?. Not tier-separating (D): the GUI strings ("1/8000" ..
-"1/64000" on every body); setting 1669's allowed lists (E143 `0x606169d8` ends at `0x0f00` = 1/32000, the 1/4000
-bodies carry the same, E130 and E133 have extra lists ending at `0x0e00`); cam_expcal's Tv table (lookup `0x5016eaf2`,
-table `0x6023d424`) ends at `0x0e00` on the OM-1 line and `0x0c00` on every other body, 1/8000 bodies included (meaning
-?); E143 `0x5057d260` sets Tv 15 or 12 from a mode word (E143 and E146 only, meaning ?). No electronic-limit constant
-per model was found (P only). No run-time unit identification was found (no ID read, no unit-type branch): the limit
-is compiled per firmware (I). The units differ physically (P); in the firmware only by the Tv limit and possibly the
-adjustment data (layout ?).
+path it serves and why the base differs per body is ?. Not tier-separating (D): the GUI strings ("1/8000" .. "1/64000"
+on every body); setting 1669's (`MODE_SHUTTER_STILL`) allowed lists (E143 `0x606169d8` ends at `0x0f00` = 1/32000, the
+1/4000 bodies carry the same, E130 and E133 have extra lists ending at `0x0e00`); cam_expcal's Tv table (lookup
+`0x5016eaf2`, table `0x6023d424`) ends at `0x0e00` on the OM-1 line and `0x0c00` on every other body, 1/8000 bodies
+included (meaning ?); E143 `0x5057d260` sets Tv 15 or 12 from a mode word (E143 and E146 only, meaning ?). No
+electronic-limit constant per model was found (P only). No run-time unit identification was found (no ID read, no
+unit-type branch): the limit is compiled per firmware (I). The units differ physically (P); in the firmware only by the
+Tv limit and possibly the adjustment data (layout ?).
 
 ### 7.2 E143's mechanism block at `0x9b900000`
 

@@ -3,7 +3,8 @@
 > `emu/src/lab/scpulink.mjs` (S-SCPUDEV, the sub-CPU at the far end of PER_SCPU's link, since 2026-10-23); checked by `emu/checks/check_nav.mjs`
 > (groups 0-2b, 4) and `emu/checks/check_menu.mjs`. Consolidated from three analysis reports
 > that are not part of this repository (settings store, event path, page 6 / EVF layout) and what the M6
-> implementation read or executed (marked "M6"). Corrections to those reports are listed in section 9.
+> implementation read or executed (marked "M6"). Corrections to those reports are listed in section 9; the
+> firmware's own names of the setting ids, and how the tools read them, in section 10.
 
 # OM-1 settings store and the SCPU interface
 
@@ -149,7 +150,7 @@ behave. Since 2026-10-30 the lab runs it natively between the registry bootstrap
 which finds it on all 18 unpacked bodies). The chain's other sixteen inits still do not run.
 
 **A change, measured (X; `emu/test/test_camapp.mjs` modeDialSession).** On the blank store each position's change sets
-its mode: MODE_EXPOSE (setting 24; the names are the 52-byte records of the resource block `blk05a00000`) 3 at P, 4 at
+its mode: MODE_EXPOSE (setting 24; the names are the firmware's, section 10) 3 at P, 4 at
 A, 5 at S, 6 at M and 76 at Movie, with MODE_CAMERA (26) alike; B sets MODE_DIAL_B_ONOFF (1444) to 1; C1..C4 recall the
 custom banks, which hold P with MODE_RAW (22) 1. A change touches 0 to 14 settings, and MODE_HQ_Q (12) and
 MODE_HDMI_INFO (820) keep their values; the shooting screen shows the mode (P, A, S, M, B, P with C1..C4 and LF+RAW, the
@@ -247,29 +248,31 @@ Lab cost (X, PERF): most of the lab's guest instructions run in one loop of the 
 ## 5. Writes
 
 - Harness (the nav token `SET:id=v`): the manager's raw path `0x50ac4afe(id, v)` (section 2), scalar ids without a key
-  selector and listed values only (X: 32 = 180 reads back 180, page 5 then paints "3min").
+  selector and listed values only (X: 32 = 180 reads back 180, page 5 then paints "3min"; 32 is MODE_SLEEP).
 - Menu: API vt+4 `0x50b4f28b` writes through the manager's value path, not the raw path SET uses (D): its default
   dispatch `0x50b4f3f4` calls `0x50b7be74`, which reads the current value (`0x503c4ba8`), computes the value to write
   with `0x50ab68e9` (`0x50b7bed0`), writes it with `0x50ab51a1(id, v, 1)` (`0x50b7bf0d`) and then calls `0x50b7d3c6`,
-  `0x50b693b0` and `0x50b698ad`. What `0x50ab68e9` and those calls do is ?. For the ids SET accepts (no value table,
-  no key selector) the value-to-raw step of `0x503c5ca7` returns the value unchanged; SET still skips `0x50ab68e9`,
+  `0x50b693b0` and `0x50b698ad`. What `0x50ab68e9` and those calls do is ?. For the ids SET accepts (no value table, no
+  key selector) the value-to-raw step of `0x503c5ca7` returns the value unchanged; SET still skips `0x50ab68e9`,
   `0x50b7dfd3` and the calls after the write. X: every vt+4 write of a blank `RIGHT MENU OPEN` run logs `0x50b7be74`,
-  `0x50ab68e9`, `0x50ab51a1`, `0x503c49b4`; `SET:32=180` logs `0x50ab51d5`, `0x503c49f7`. `0x50ab95a4` only writes a trace record (a slot
-  from `0x50ab9884`, tag | 0xe2000000, four u16 arguments, a timer read `0x50002bf2`, `get_tid`); `0x50ab4bf2` is a
-  general "may this setting change now" check: it compares the id with 15258, 284, 42, 29, 15273, 4, 1445
-  (`0x50ab4bf6..0x50ab4c27`, setting 1444 at `0x50ab4c3b`) and 892, 894, 266, 15267 (`0x50ab4c7d..b2`,
-  `0x50ab4cd9..0x50ab4d07`). Id 15258 is refused with reason 6 when `0x50ab3e20()` != 0 (`0x50ab4bfc..0c`); ids 4
-  and 1445 with reason 6 when setting 1444 == 1 and `0x50ab3e20()` == 1 (`0x50ab4c3b..59`). Ids 284, 42, 29 and 15273
-  branch to `0x50ab4c2f`, which clears the caller's (a0) = (40,sp) (vt+4 then skips `0x50ab42cb(1)`,
-  `0x50b4f39a..a2`) and jumps to the id-32 test `0x50ab4d41`, so none of the following tests run for them. Every other
-  id (15258, 4 and 1445 when not refused) tests bits of setting 477 through `0x50ab5716` (reasons 1, 2), calls
-  `0x50ab4d66` and `0x50ab4daf` (reason 3) and `0x50ab5780(5)` (reason 4). For id 32 (Sleep) it calls
-  `0x50ab5092(32, 2, 3200, 0)` and refuses with reason 7 when that returns nonzero (`0x50ab4d41..5d`). The reason goes
-  to (a3) = (44,sp) and on to `0x50ab2572` (`0x50b4f30f..11`); a refusal makes vt+4 return 0xf0000058
-  (`0x50b4f30b..38`). What each test means is ?; every observed write passed it (X). The write `0x50b4f3b3..0x50b4f3f4` dispatches on the caller's d1: 1/2/3 -> manager
-  methods `0x50b7c012`/`0x50b7bfc2`/`0x50b7bf72`, any other -> `0x50b7be74(id, a1, kind)` (D). Every menu write seen
-  has d1 = 0 and returns 0 (X): the memories on MENU (1881, 1882, the page's cursor memory), 1446..1449 = 3200 on
-  each OPEN, and the value popups (32, 21, 115 with their list values). a1 is a value for all of them.
+  `0x50ab68e9`, `0x50ab51a1`, `0x503c49b4`; `SET:32=180` logs `0x50ab51d5`, `0x503c49f7`. `0x50ab95a4` only writes a
+  trace record (a slot from `0x50ab9884`, tag | 0xe2000000, four u16 arguments, a timer read `0x50002bf2`, `get_tid`);
+  `0x50ab4bf2` is a general "may this setting change now" check: it compares the id with 15258, 284, 42, 29, 15273, 4,
+  1445 (`0x50ab4bf6..0x50ab4c27`, setting 1444 MODE_DIAL_B_ONOFF at `0x50ab4c3b`) and 892, 894, 266, 15267
+  (`0x50ab4c7d..b2`, `0x50ab4cd9..0x50ab4d07`). Id 15258 is refused with reason 6 when `0x50ab3e20()` != 0
+  (`0x50ab4bfc..0c`); ids 4 and 1445 with reason 6 when setting 1444 == 1 and `0x50ab3e20()` == 1 (`0x50ab4c3b..59`).
+  Ids 284, 42, 29 and 15273 branch to `0x50ab4c2f`, which clears the caller's (a0) = (40,sp) (vt+4 then skips
+  `0x50ab42cb(1)`, `0x50b4f39a..a2`) and jumps to the id-32 test `0x50ab4d41`, so none of the following tests run for
+  them. Every other id (15258, 4 and 1445 when not refused) tests bits of setting 477 (MODE_INTERVAL_SHOOTING_ONOFF)
+  through `0x50ab5716` (reasons 1, 2), calls `0x50ab4d66` and `0x50ab4daf` (reason 3) and `0x50ab5780(5)` (reason 4).
+  For id 32 (Sleep) it calls `0x50ab5092(32, 2, 3200, 0)` and refuses with reason 7 when that returns nonzero
+  (`0x50ab4d41..5d`). The reason goes to (a3) = (44,sp) and on to `0x50ab2572` (`0x50b4f30f..11`); a refusal makes vt+4
+  return 0xf0000058 (`0x50b4f30b..38`). What each test means is ?; every observed write passed it (X). The write
+  `0x50b4f3b3..0x50b4f3f4` dispatches on the caller's d1: 1/2/3 -> manager methods
+  `0x50b7c012`/`0x50b7bfc2`/`0x50b7bf72`, any other -> `0x50b7be74(id, a1, kind)` (D). Every menu write seen has d1 = 0
+  and returns 0 (X): the memories on MENU (1881, 1882, the page's cursor memory: MODE_RECENTLY_OPEN_TAB_MENU and
+  MODE_RECENTLY_OPEN_PAGE), 1446..1449 = 3200 on each OPEN (MODE_CUSTOM_SW_ASSIGN_MYSET1..4), and the value popups (32,
+  21, 115 with their list values: MODE_SLEEP, MODE_FILE, MODE_DEEP_POWER_OFF). a1 is a value for all of them.
 - After a value-popup OK the GUI starts Genifa timer 522 (`0x5124f980(522, 100)`, e.g. `0x51162e33`) and sets its awaited event `(0x603710f8)` = 0x9ac6 EVT_10MS_WIZARD_MENU (`0x5115c64e`); until that event arrives GuiCallerImp re-posts every other event (`0x5115c4fd..0x5115c5f6`). The Genifa timer task `0x510c1d01` waits in OSAL `0x50b81c5c(-1)`; 1500 K-TICK ticks did not wake it (X), so its time source is not the kernel tick (blocker B7). The value is in the store (getter reads it back). With lab time (M9, `emu/bin/nav.mjs --time`) the 2 ms software tick drives the Genifa timers and the event arrives: the popup closes with the written value shown (menu spec 13.7, check_nav N3T).
 
 ## 6. Defaults (`emu/refs/settings.mjs`)
@@ -326,3 +329,65 @@ the clock cell; the counter ticks on from the epoch, and N4's page is drawn befo
 | C10 | K-CFLUSH 4 + 1 calls (design) | 4, all from `0x5004086a` (X) |
 | C11 | INFO has no effect in the menu (EVENTS) | with the native store INFO shows the row's help (variable 226 +2421 = 1) |
 | C12 | the "File Name" write passes a pointer (EVENTS s5) | natively OK opens a value popup and the popup's OK writes 21 = 1 ("Auto"), a value; why the EVENTS run (empty store, S-STORE/S-WRITE) saw a greyed row and a pointer is not established; its MENU loop has the B7 deferral's shape |
+
+## 10. The firmware's setting names (X unless tagged; 2026-11-17)
+
+The firmware names every setting id 0.. of the store (section 2's ids 0..2128 and on) in a table the lab does not load:
+container block 2, the OE block with flags `0x0106` (the large-data block; load `0x458c0000` on E143, E146 and E147),
+holds 52-byte records, each a name NUL-padded, whose index is the id, `MODE_DRIVE` (0) to `MODE_LABEL_PLAT_END`; other
+name groups follow (`COUNT_STB_LIGHT`, `DAMAGE_INFO`, ...), whose ids are not read. Caduceus for OM-3 found it on E147
+(`analysis/caduceus-om3/README.md` 8.3); this section is the lab's reading of it.
+
+**Where, by rule.** `emu/src/fw/setnames.mjs` nameTable finds it by its form, never by an offset: the one place in
+the block where a record `MODE_DRIVE` is followed by records starting `MODE_`, the run ending at the first record that
+is not one, its last `MODE_LABEL_PLAT_END`; no such run, two of them or a run ending elsewhere is refused. On the 19
+MODELS bodies (pinned in `emu/test/test_facts.mjs` NAMES_FOUND):
+
+| Body | Offset in block 2 | Names (ids 0..n-1) |
+|---|---|---|
+| E148 | `0x18403f0` | 2,352 |
+| E147 | `0x28803f0` | 2,343 |
+| E146 | `0x28803f0` | 2,226 |
+| E143 | `0x28c03f0` | 2,205 |
+| E144 | `0x1c403f0` | 1,966 |
+| E139 | `0x20403f0` | 1,948 |
+| E134 | `0x20403f0` | 1,912 |
+| E130, E133 | `0x1a003e0` | 1,676 |
+| E118, E122, E125, E129, E132, E137 | refused: `MODE_DRIVE` and its siblings stand in 72-byte records with words after the name (E137's at `0x1ec0404`), another form, not read | |
+| E120, E140, E142, E145 | refused: no `MODE_DRIVE` record in block 2 | |
+
+Only E143's and E146's block 2 are unpacked (`unpacked/`, pinned in `BLOBS.sha256`); the others are read from the
+body's `.BIN` (`fw/`, `fw/old/`).
+
+**The ids are per body.** E143's 897 is `MODE_COLORTONE_DIAL_NEUTRAL`, E147's `MODE_COLORTONE_DIAL`; E143's 1682 is
+`MODE_SUBJECT_DETECT`, E147's 1712; E143's 1669 is `MODE_SHUTTER_STILL`, E147's 1699. Ids 0..251 name the same
+setting on all nine bodies (24 `MODE_EXPOSE`, 44 `MODE_MOVIE`, 111 `MODE_COLORTONE`); from 252 the tables part (E133's
+and E130's 252 is `MODE_RECINFO_PATTERN_10`, the others' `MODE_PLAYINFO_PATTERN_01`), and E143 and E147 agree on 696
+of E143's 2,205 ids, so a name is only ever resolved in the body's own table. A name longer than 51 characters is cut
+to 51 in its record: six ids of each table read `MODE_CURSOR_SELECT_CONTROLES_COLOR_CREATOR_2_VIVID_` (E143's 1084 and
+1089..1093, E147's 1120 and 1125..1129), which the tools refuse by name and print for each id.
+
+**That the index is the id.** X: a session reads through the settings getter, by name, the setting the role says
+(`emu/test/test_setnames.mjs` on E143, E146 and E147): `MODE_MOVIE` (44) is 0 at P; on E147 the still / movie switch
+at its position 0 sets `MODE_MOVIE` 1 and `MODE_ACTION_DIAL` (2188) 2, and at 2 `MODE_MOVIE` back to 0
+(`docs/hle-gaps.md` 4.1.13); `MODE_EXPOSE` (24) is 3 at P (section 2.2); `SET:MODE_SLEEP=60` reads back 60 at 32. D:
+the menu memories `emu/src/fw/facts.mjs` menuMemory reads from the code by rule are each body's
+`MODE_RECENTLY_OPEN_TAB_MENU` and `MODE_RECENTLY_OPEN_PAGE` (E143 and E146 1881 and 1882, E147 and E148 1909 and
+1910). The ids the docs cite with a role now carry the name where it settles or checks the role; what the names
+contradict is under Contradictions below.
+
+**The tools.** Nothing of the table is in the repository: the names are firmware bytes, read from the user's own
+firmware at run time and held in memory for the process (`emu/host/setnames.mjs`: block 2 from `unpacked/` where it is
+there and pinned, else from the `.BIN` through the container reader, its checksum checked and the same `.BIN`'s main
+code block checked against the body's MODELS digest). The debug API's `setting` op (`emu/README.md` "The debug API")
+answers a setting by id or name with its name and its value by the getter; the scripted session takes `setting:ID`,
+`setting:NAME`, `expect:setting:NAME=V` and play's `GET:NAME` and `SET:NAME=V`, and prints the name next to the id in
+its records (`emu/README.md` "Scripted sessions"). A name the body lacks is refused (a usage error before the boot in a
+script); an id past the table answers with no name. The browser player reads no block 2 and offers no names.
+
+**Contradictions.** Caduceus for OM-3's "1880..1884 Save Settings of C1..C5 (`MODE_AUTO_SET_MYSET1` ...)" holds for
+1880..1883 (`MODE_AUTO_SET_MYSET1..4`) on E147; 1884 is `MODE_LOCK_SHOULDER_BUTTON`, and C5's is 2176,
+`MODE_AUTO_SET_MYSET5` (the movie mode's five 2177..2181). On E147 the reads `docs/hle-gaps.md` 4.1.13 takes as
+settings 49 and 821 (key_1st, key_2nd) name `MODE_CUSTOM_SW_3` and `MODE_HDMI_INFO` if they are the store's ids;
+neither fits a release key's role, and whether `0x51082715` and `0x51064d9b` read the store by id is not read (?).
+

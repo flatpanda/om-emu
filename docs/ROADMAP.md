@@ -344,17 +344,17 @@ the survey table.
   (2026-10-31, model-survey findings 59, 60).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
   (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X:
-  frames); E144, E139, E137 and E125 show an orange `0:00:00` beside the card's count because the blank store's
-  movie mode (settings id 696 = 1: UHD 4K at 60p) is one their codec rate tables have no rate for, so the bitrate
-  check fails (`0x3a040001`, `0x39000105`) and the count is 0; with a mode the table has, the same native path draws
-  the card's time (E144: `0:36:59` in FHD, X). Open there: whether a body leaves the factory in that mode. Before: E142, E140 and E130, and since survey finding 18 E144
-  and E125 (the others not looked at), showed an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the
-  card's time since its file system runs natively (frames, X). E143's
-  movie item asks getMovieCountdownTime, whose time-left wrapper reaches S-CARD's movie query (`0x503f3dd3`); E142's
-  getMovieTimeInMedia runs in its sessions (E142 `0x5076da59`, X); its time comes from the movie time in media (E142
-  `0x502ae8f3`, the place of E143's `0x503f1bcd`, module `0x5000e`), which asks the DCF remain movie time (`0x505fd798`)
-  and returns 0 (X): S-CARD's card has no file system. Answering it is the seam; its unit is not read (forcing 3600
-  shows `0:00:06` on E142's TFT, X).
+  frames); E144, E139, E137 and E125 show an orange `0:00:00` beside the card's count because the blank store's movie
+  mode (settings id 696, E144's `MODE_IMAGE_QUALITY_MOVIE`, = 1: UHD 4K at 60p) is one their codec rate tables have no
+  rate for, so the bitrate check fails (`0x3a040001`, `0x39000105`) and the count is 0; with a mode the table has, the
+  same native path draws the card's time (E144: `0:36:59` in FHD, X). Open there: whether a body leaves the factory in
+  that mode. Before: E142, E140 and E130, and since survey finding 18 E144 and E125 (the others not looked at), showed
+  an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the card's time since its file system runs natively
+  (frames, X). E143's movie item asks getMovieCountdownTime, whose time-left wrapper reaches S-CARD's movie query
+  (`0x503f3dd3`); E142's getMovieTimeInMedia runs in its sessions (E142 `0x5076da59`, X); its time comes from the movie
+  time in media (E142 `0x502ae8f3`, the place of E143's `0x503f1bcd`, module `0x5000e`), which asks the DCF remain movie
+  time (`0x505fd798`) and returns 0 (X): S-CARD's card has no file system. Answering it is the seam; its unit is not
+  read (forcing 3600 shows `0:00:06` on E142's TFT, X).
 - **The GUI state table's length:** done (2026-11-02, survey finding 82): the lab names as many parents as each build's
   name lookup searches (rule stateTableBound, fact `gui_states.parents`): 12 on E143, E146, E147 and E148, 18 on the
   other 15, whose SS_MENU (`0x11`) and five more parents printed unnamed before.
@@ -645,6 +645,15 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    judge. Seen on this machine under heavy load (load average 45 to 74 on 16 cores, from other jobs): some
    `bin/session.mjs` children of `test_tools` and `test_trace` went idle until their spawn timeouts, and the same
    commands passed alone (X, 5 of 5); the cause is not known (?).
+10. **Setting names:** done (2026-11-17, `emu/README.md` "The debug API", "Scripted sessions";
+   `docs/om1-settings-spec.md` section 10). The firmware's own names of the setting ids, the 52-byte records of
+   container block 2, are read from the user's firmware at run time by rule (`src/fw/setnames.mjs` finds the table by
+   its form; on nine of the 19 bodies, the other ten refused, `test/test_facts.mjs` NAMES_FOUND) and never committed.
+   The live route's `setting` op answers a setting by id or name with its value by the getter; the scripted session
+   takes `setting:ID|NAME`, `expect:setting:...` and names in `GET:` and `SET:`, prints the name beside the id and
+   refuses a name the body lacks (`test/test_setnames.mjs` on E143, E146 and E147). Left: the browser player reads no
+   block 2, so its debug route takes ids only and the page shows no names; the 72-byte name records of E118, E122,
+   E125, E129, E132 and E137 are not read.
 
 ## Emulator architecture
 
@@ -796,9 +805,9 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   test over every body's table.
 - The display-switch trigger chain from the eye sensor / EVFSW to the sender `0x5105053c`, the eye driver's path to the
   setter `0x50050efd` and its publish gate `(0xa31f1d26)` = 119 (H-EYESTATE stands in).
-- The Super Control Panel's Live Control, live-guide and ART / SCN variants (settings 109 and 44 have no descriptor
-  list), each cell's value -> image / string mapping, the group descriptors (type 6) the settings reference does not
-  decode.
+- The Super Control Panel's Live Control, live-guide and ART / SCN variants (settings 109 and 44,
+  `MODE_SCENE_NAVIGATION` and `MODE_MOVIE`, have no descriptor list), each cell's value -> image / string mapping, the
+  group descriptors (type 6) the settings reference does not decode.
 - CPU 2: S-CPU2 serves the one allow-listed post (AUD_LEVEL_MONITOR's level data read 0); its swap path `0x50aaad0e` is
   refused. The GUI's histogram send to OSD_DRAW_CPU2 (queue `0x2013`) at idle, S1 and S2 is not refused: S-MODACK's
   blanket rule answers it E_OK (shutter spec item 42; with `--cpu2 native` under `control camapp 3` OSD_DRAW_CPU2
@@ -878,9 +887,9 @@ follow-ups):
 - Stage bits 7 to 9 need CPU 1 to run section 8's constructors (hle-gaps.md 4.6.4), so a patch task that waits for
   them never runs; S-STAGE9 and S-SECLOADED set bits 8 and 9 ahead of the camera's order.
 - E147's still / movie switch: what tells its two movie positions apart, and whether the camera's start sets setting 44
-  from it (hle-gaps.md 4.1.13). E146's and E147's live display switch passes since 2026-11-14 (H-CHAINREST, hle-gaps.md
-  4.4.4); the rest's end condition is the lab's (FIDELITY 1.6), other steps there still end inside a 1 ms sleep, and
-  `chain_sleeps` is set by hand for the two bodies, the others not surveyed.
+  (`MODE_MOVIE`) from it (hle-gaps.md 4.1.13). E146's and E147's live display switch passes since 2026-11-14
+  (H-CHAINREST, hle-gaps.md 4.4.4); the rest's end condition is the lab's (FIDELITY 1.6), other steps there still end
+  inside a 1 ms sleep, and `chain_sleeps` is set by hand for the two bodies, the others not surveyed.
 - `bin/nav.mjs` on the other bodies (Next stops above, model-survey finding 160): no frame on the seven bodies whose
   GUI waits for the application's display sync, OPEN without effect on E118 and E120, the bring-up on E145, E129 and
   E132 (GUI state 0, why not read), nav's menu fields (E143's viewer record only); E146's and E147's menu open needs
@@ -949,7 +958,7 @@ the register builders decoded and the engine's numerics, which cannot be checked
 
 | Step | Content | Size (I) |
 |---|---|---|
-| A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE posted, when the subject-detection setting (settings id 1682) names a kind. Done 2026-10-27 (spec 5.1: U1 and U2 read, the frames drawn natively; UP_LOCKON is the AF module's request, so it moves to B) | about 1 week |
+| A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE posted, when the subject-detection setting (settings id 1682, `MODE_SUBJECT_DETECT` on E143) names a kind. Done 2026-10-27 (spec 5.1: U1 and U2 read, the frames drawn natively; UP_LOCKON is the AF module's request, so it moves to B) | about 1 week |
 | B | S-SUBJECT at MDET's results to the AF module, which then asks for the tracking frame (UP_LOCKON) itself | 2-3 weeks after native FCS |
 | C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes. Part 1 done 2026-11-07 (spec 5.3): MDET_DL runs natively on the lab CPU at single call sites from TAKE's calls (S-TAKEMDET) through dml_start, IRQ 285 and dml_start_callback to MDET's subject records and LAF (S-MDETDL; the learning data's copy stubbed, S-LEARNDATA), S-DML a register file whose output is empty. Part 2 done the same day (spec 5.4): S-DML writes S-SCENE's subjects as the engine's records, MDET's stabilisation reports them from the seventh run and LAF fills the frame table's inputs natively. Part 3 done the same day (spec 5.5): DISP_FRAME draws MDET's own frame table (LAF's aspect pair from the offer, MDET's UP_FACE), S-SUBJECT writes nothing on E143 and the frame mode's subject bit is S-TAKEFRAME's. Several subjects and parts the same day (spec 5.6): S-SCENE's race preset (two motorcycles, each with its helmet), S-DML writes every body and part, MDET's own combination pairs each helmet with its body and DISP_FRAME draws a frame per body; the main and part records (U9) need LAF's frame trace and the AF library, located but not run. 2026-11-08 (spec 5.7): the status callback's trap fixed (TAKE's callback registered, S-TAKEMDET), LAF's AF area from the camera's AF target (H-FCSAF), a subject under it LAF's candidate natively, MDET_CALC_MAIN_CPU3 and MDET_E_SEND_CPU3 native on the firmware's posts; the end frame needs LAF's chase cycle on PDT / TRC. Later that day (spec 5.8): the chase cycle read (one request per live-view frame from take_mov after its EMS1 run, TRC's colour tracking the cycle's one engine), S-PDT a register model of the PDT / TRC unit, the boot chain's MDET / PDT / TRC init steps native (H-MDETINIT), LAF's start running PDT's and TRC's tasks natively and opening both drivers; the cycle is not reached: LAF's parameters and the chase requests come from TAKE_MOV's EMS1 state. Later still (spec 5.9): U11 read (take_mov's LAF mode bits are TAKE's tracking sources: the AF library's tracking, FACE's and LAF's own tracking status, handed over at TAKE's live-view start and after TAKE's message 81); served in a test, that message starts LAF's PDT / TRC side through TAKE_MOV's start and ends it natively (one level of nested CPU 3 turns for LAF's end); EMS1 at 0x9bd80000, the front end's five-area motion and statistics engine, decoded, its driver running on a register model (S-EMS1); the cycle stops at TAKE_MOV's frame events, which the image pipeline's live-view sequencer delivers (U12) | 4-6 weeks after HLE step 4's CPU 3 for the rest |
 | D | a reproduced DML network | months; bit-exactness ? |

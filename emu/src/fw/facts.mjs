@@ -4297,14 +4297,29 @@ export function takeShot(img) {
 //   order its capture fill (0x503b22dc: 0x503bcaa2, the clock read into the record's +37800 among them), the shot's
 //   key (0x503b23dc: 0x503baa2d) and its fill after the key (0x503b240b: 0x503bc4fe); after the key's call, `movhu
 //   (C),d1; inc d1; movhu d1,(C)` steps the frame count C (0x503b23e3: 0x62a4af68, the context's +3088)
+// - pic {fn, mode, af, crop, lens, third}: takepic and the lens fill, the two functions called `mov CTX,a0; mov (P),a1;
+//   clr d0; call F` (StlTake's registered function 0x503b2e60 and its reply 37's 0x503b6be2, the only two): takepic
+//   (0x503bcd51) the one whose code holds takeExposure's copy (placed, TAKE_COPY_E143) within TAKE_COPY_SPAN of its
+//   entry, opening `mov d0,(4,sp); mov a0,(12,sp); movbu (MODE,a0),d0` (MODE the context's mode byte +3122, Standby's
+//   copy of the mode record's +13; E146 and E147 +3324, X), with the one call of the AF maker-note fill (AF, placed,
+//   AF_MKNT_E143: 0x509b08f0 from 0x503bceee) within TAKE_PIC_SPAN; AF opens `mov a0,a3; call F2` and F2's first two
+//   `mov N,a0; add a2,a0` are the record's crop areas (crop: +40858, +40866; E146 +40312, +40320, E147 +40576,
+//   +40584); the lens fill (0x503bd137) the other, reading settings 22257, 22289 and 22305 (`mov ID,d0`, imm16) in
+//   that order within TAKE_LENS_SPAN; and TAKE's third fill (third, 0x503bd1fa), the one call of a function object's
+//   `mov (4,a3),a2; mov (a2),d0; mov (8,a2),d1; mov d0,a0; mov (4,a2),a1; mov d1,d0; call T` (0x503b7e32), which
+//   calls the EXIF set (exif.set, recFile's) once within TAKE_PIC_SPAN (0x503bd48e)
 // Throws where a form is missing or found twice
 export const TAKE_FILLS_E143 = { context: 0x62A4A358, packet: 0x62A4A350,
   mode: { build: 0x503C28C7, bytes: 0x62A4CE68, copy: 0x503C4509, record: 0x62A4CE80, standby: 0x503B09DD },
   ring: { get: 0x503BAEB6, free: 0x503BAF23 }, record: { fn: 0x503BBA51, modes: [0x62A4B190, 0x62A4B1BC] },
-  take: { capture: 0x503BCAA2, key: 0x503BAA2D, count: 0x62A4AF68, after: 0x503BC4FE } };
-const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20;
+  take: { capture: 0x503BCAA2, key: 0x503BAA2D, count: 0x62A4AF68, after: 0x503BC4FE },
+  pic: { fn: 0x503BCD51, mode: 3122, af: 0x509B08F0, crop: [40858, 40866], lens: 0x503BD137, third: 0x503BD1FA } };
+export const AF_MKNT_E143 = 0x509B08F0;
+const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20, TAKE_PIC_SPAN = 0x400, TAKE_LENS_SPAN = 0x60;
+const TAKE_THIRD_CALL = [0xf8, 0x2b, 0x04, 0x72, 0xf8, 0x06, 0x08, 0xf1, 0xe0, 0xf8, 0x26, 0x04, 0x84];
+const TAKE_LENS_IDS = [22257, 22289, 22305];
 const STANDBY_FORM = [0xcf, 0xa0, 0xf8, 0xfe, 0xfc, 0xf1, 0xe5, 0xf0, 0x09, 0xf8, 0x25, 0x04];
-export function takeFills(img, at) {
+export function takeFills(img, at, exif) {
   const rule = 'takeFills', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
   const main = at(TAKE_MAIN_E143);
   if (main === null) throw new Error(`${rule}: TAKE_MAIN's loop (E143 ${h8(TAKE_MAIN_E143)}) is not placed`);
@@ -4354,12 +4369,35 @@ export function takeFills(img, at) {
   const idx = u32(img, get + 2);
   const fr = oneAt(img, [0x00, 0xf8, 0x50, 0x5c, 0xf8, 0x40, 0x5d, 0xfc, 0x82, ...le32(idx), 0xde, 0x00, 0x00], rule, 'frees of the ring\'s slots');
   if (fr === null) throw new Error(`${rule}: no free of the ring's slots by its index ${h8(idx)}`);
+  // takepic, the lens fill and the third fill
+  const place = (e143, what) => { const p = at(e143); if (p === null) throw new Error(`${rule}: ${what} (E143 ${h8(e143)}) is not placed`); return p - 0x50000000; };
+  const callsTo = (from, to, target) => { const out = []; for (let o = from; o < to; o++) if ((img[o] === 0xdd || img[o] === 0xcd) && callAt(img, o).to === target) out.push(o); return out; };
+  const pics = all([0xfc, 0xdc, ...le32(context), 0xfc, 0xa1, ...le32(packet), 0x00], 0, img.length).filter((o) => img[o + 13] === 0xdd || img[o + 13] === 0xcd);
+  if (pics.length !== 2) throw new Error(`${rule}: ${pics.length} calls with TAKE's context and the packet word's packet (${pics.map(D).join(', ')}), want 2`);
+  const copyAt = place(TAKE_COPY_E143, 'takepic\'s copy'), afAt = place(AF_MKNT_E143, 'the AF maker-note fill');
+  const holds = (t) => copyAt - t >= 0 && copyAt - t < TAKE_COPY_SPAN, fns = pics.map((o) => callAt(img, o + 13).to);
+  const pic = fns.find(holds), lens = fns.find((t) => !holds(t));
+  if (pic === undefined || lens === undefined) throw new Error(`${rule}: ${fns.filter(holds).length} of ${fns.map(D).join(' and ')} hold takepic's copy ${D(copyAt)}, want one`);
+  if (!bytesAt(img, pic, [0x42, 0x04, 0x43, 0x0c, 0xfa, 0x40, null, null])) throw new Error(`${rule}: takepic ${D(pic)} does not open with its mode byte's read`);
+  const mode = img[pic + 6] | img[pic + 7] << 8;
+  if (callsTo(pic, pic + TAKE_PIC_SPAN, afAt).length !== 1) throw new Error(`${rule}: takepic ${D(pic)} does not call the AF maker-note fill ${D(afAt)} once`);
+  const af2 = img[afAt] === 0x93 ? callAt(img, afAt + 1) : null;
+  if (af2 === null) throw new Error(`${rule}: the AF maker-note fill ${D(afAt)} does not open with \`mov a0,a3; call\``);
+  const crop = all([0x24, null, null, 0xf1, 0x78], af2.to, af2.to + TAKE_LENS_SPAN * 2).slice(0, 2).map((o) => img[o + 1] | img[o + 2] << 8);
+  if (crop.length !== 2) throw new Error(`${rule}: the AF maker-note fill's first call ${D(af2.to)} stores no two areas`);
+  const ids = []; for (let o = lens; o < lens + TAKE_LENS_SPAN; o++) if (img[o] === 0x2c) ids.push(img[o + 1] | img[o + 2] << 8);
+  if (ids.filter((v) => TAKE_LENS_IDS.includes(v)).join() !== TAKE_LENS_IDS.join()) throw new Error(`${rule}: the lens fill ${D(lens)} does not read the settings ${TAKE_LENS_IDS.join(', ')} in order`);
+  const thirds = all(TAKE_THIRD_CALL, 0, img.length).filter((o) => img[o + TAKE_THIRD_CALL.length] === 0xdd || img[o + TAKE_THIRD_CALL.length] === 0xcd);
+  if (thirds.length !== 1) throw new Error(`${rule}: ${thirds.length} function-object calls of TAKE's third fill, want 1`);
+  const third = callAt(img, thirds[0] + TAKE_THIRD_CALL.length).to;
+  if (exif?.set === undefined || callsTo(third, third + TAKE_PIC_SPAN, exif.set - 0x50000000).length !== 1) throw new Error(`${rule}: TAKE's third fill ${D(third)} does not call the EXIF set ${exif?.set === undefined ? '(not read)' : h8(exif.set)} once`);
   return {
     context, packet,
     mode: { build: 0x50000000 + callAt(img, bd[0] + 7).to, bytes, copy: 0x50000000 + cp, record: u32(img, cp + 8), standby: 0x50000000 + sb },
     ring: { get: 0x50000000 + get, free: 0x50000000 + fr },
     record: { fn: 0x50000000 + callAt(img, rf + 21).to, modes: [u32(img, rf + 8), u32(img, rf + 17)] },
     take: { capture: 0x50000000 + capture, key: 0x50000000 + key, count: u32(img, cnt + 2), after: 0x50000000 + after },
+    pic: { fn: 0x50000000 + pic, mode, af: 0x50000000 + afAt, crop, lens: 0x50000000 + lens, third: 0x50000000 + third },
   };
 }
 
@@ -6125,7 +6163,7 @@ export function readPlacedFacts({ img, at }) {
   // TAKE's shot for a still as H-SHOTALLOC allocates it, on the same bodies
   if (recF !== undefined) facts.take_shot = takeShot(img);
   // TAKE's own fills of a still's shot as H-TAKEFILLS runs them, on the same bodies
-  if (recF !== undefined) facts.take_fills = takeFills(img, at);
+  if (recF !== undefined) facts.take_fills = takeFills(img, at, recF.exif);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

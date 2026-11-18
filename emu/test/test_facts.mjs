@@ -613,15 +613,22 @@ const TAKE_SHOT_FOUND = {
 // step at E146 0x503b2958 / E147 0x503bcbbd; StlRdy2's shot-record fill call E146 0x503b1a15 / E147 0x503bbc97;
 // RdyStart's builder call E146 0x503c2fce / E147 0x503ccee1; the mode bytes' copy, called from RdyFcsTake at E146
 // 0x503c41d6 / E147 0x503ce0e9, 26 bytes on where E143's is 24; Standby's entry with E143's prologue and its store
-// of P at E146 0x503b0f33 / E147 0x503bb19e; the ring's free right after its getter, by the getter's index word)
+// of P at E146 0x503b0f33 / E147 0x503bb19e; the ring's free right after its getter, by the getter's index word;
+// 2026-11-17: takepic E146 0x503bd6ab / E147 0x503c793b, from E146 0x503b33ee / E147 0x503bd653, reading its mode
+// byte at the context's +3324 and calling the AF maker-note fill E146 0x509c965d from 0x503bd848 / E147 0x509ce3c7
+// from 0x503c7ad8, whose first call E146 0x508e26c6 / E147 0x508e6d7c stores the areas at +40312 and +40320 /
+// +40576 and +40584; the lens fill E146 0x503bda91 / E147 0x503c7d21, from E146 0x503b72c5 / E147 0x503c1555; the
+// third fill E146 0x503bdb54 / E147 0x503c7de4, from the function object's call E146 0x503b8532 / E147 0x503c27c2)
 const TAKE_FILLS_FOUND = {
   E143: TAKE_FILLS_E143,
   E146: { context: 0x62A77988, packet: 0x62A77980, mode: { build: 0x503C30D7, bytes: 0x62A7B964, copy: 0x503C4CDB, record: 0x62A7B97E, standby: 0x503B0E14 },
     ring: { get: 0x503BB6F1, free: 0x503BB75E }, record: { fn: 0x503BC37E, modes: [0x62A78840, 0x62A78894] },
-    take: { capture: 0x503BD3D7, key: 0x503BB24E, count: 0x62A78664, after: 0x503BCE2B } },
+    take: { capture: 0x503BD3D7, key: 0x503BB24E, count: 0x62A78664, after: 0x503BCE2B },
+    pic: { fn: 0x503BD6AB, mode: 3324, af: 0x509C965D, crop: [40312, 40320], lens: 0x503BDA91, third: 0x503BDB54 } },
   E147: { context: 0x62A73DB0, packet: 0x62A73DA8, mode: { build: 0x503CCFEA, bytes: 0x62A76870, copy: 0x503CEBEE, record: 0x62A7688A, standby: 0x503BB07F },
     ring: { get: 0x503C597F, free: 0x503C59EC }, record: { fn: 0x503C660C, modes: [0x62A74C68, 0x62A74CBC] },
-    take: { capture: 0x503C7667, key: 0x503C54DC, count: 0x62A74A8C, after: 0x503C70BB } },
+    take: { capture: 0x503C7667, key: 0x503C54DC, count: 0x62A74A8C, after: 0x503C70BB },
+    pic: { fn: 0x503C793B, mode: 3324, af: 0x509CE3C7, crop: [40576, 40584], lens: 0x503C7D21, third: 0x503C7DE4 } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1340,12 +1347,19 @@ export function factsTests() {
       const refused = (o, v, re) => {
         const m = run.slice();
         m[o - 0x50000000] = v;
-        try { takeFills(m, at); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+        try { takeFills(m, at, placed.rec_file.exif); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
       };
       const count = refused(0x503b23e9, 0x40, /no step of the frame count after the key's call/);
       const standby = refused(0x503b09e3, 0xe4, /Standby's entry 0x503b09dd does not take \{packet, record\} by d1/);
       const free = refused(0x503baf2c, 0x51, /no free of the ring's slots/);
       ok(count === true && standby === true && free === true, `takeFills: the frame count not stepped, Standby's block by another register and the ring's free on another index refused: ${count}, ${standby}, ${free}`);
+      // takepic's AF maker-note fill called elsewhere (0x503bceee: its call's low byte 0x02 -> 0x03), the lens fill
+      // reading another setting first (0x503bd155: 22257 -> 22256) and the third fill calling past the EXIF set
+      // (0x503bd48f: 0x9f -> 0xa0)
+      const af = refused(0x503bceef, 0x03, /does not call the AF maker-note fill 0x509b08f0 once/);
+      const lens = refused(0x503bd155, 0xf0, /does not read the settings 22257, 22289, 22305 in order/);
+      const third = refused(0x503bd48f, 0xa0, /does not call the EXIF set 0x5042992d once/);
+      ok(af === true && lens === true && third === true, `takeFills: takepic not calling the AF fill, the lens fill on another setting and the third fill past the EXIF set refused: ${af}, ${lens}, ${third}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

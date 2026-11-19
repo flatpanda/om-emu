@@ -61,18 +61,19 @@ unit's page) are called standalone on stock PEN-F, OM-1 and OM-3 firmware and pi
 to that job, not a camera's. Caduceus' Grain route is checked by calls down to the texture's gain and its halation pass
 on frames the test draws (`emu/test/test_lookcode.mjs`); a Caduceus film with Grain does not finish S2 in the lab.
 
-Other bodies, through ports (as of 2026-11-02):
+Other bodies, through ports (as of 2026-11-19; `emu/bin/modelcheck.mjs` passes on all 18):
 
 | Body | Code | Status |
 |---|---|---|
-| OM-1 Mark II, OM-3, OM-5 II, OM-5, E-M1 III, E-M1X, E-M5 III, E-M10 IV, E-M1 II, E-M10 III | E146, E147, E148, E144, E139, E134, E137, E140, E125, E130 | start, S1, S2, playback on the TFT and the EVF (`emu/bin/modelcheck.mjs` passes, the screen's remaining-shots count included; E148's card runs natively too, 2026-11-01) |
-| E-P7, E-PL9, TG-7, TG-5 | E142, E133, E145, E129, E132 | start, S1, S2, playback on the TFT, which is their only panel (`emu/bin/modelcheck.mjs` passes) |
-| PEN-F | E122 | start, S1, S2, playback on the TFT and the built-in EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 1470 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count follows the card's query on screen once INFO redraws it, as the application asks for the count only when the shooting screen is redrawn (2026-10-31); the shooting screen comes back after S2's rec view and playback runs on the EVF too (2026-11-02) |
-| E-M5 II, E-M10 II | E118, E120 | start, S1, S2, playback on the TFT and the EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 2116 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count follows the card's query on screen once INFO redraws it, as on the PEN-F (2026-10-31); the shooting screen comes back after S2's rec view and playback runs on the EVF too (2026-11-02) |
-| 14 older bodies (E-PL5, E-M1, E-M10, TG-4, E-PL8 and others) | E100-E126 | surveyed, not tried |
+| OM-1 Mark II, OM-3 | E146, E147 | start, S1, S2, playback and the menu on the TFT; start, S1 and S2 on the EVF, whose playback and menu set a plane level (PLANC `0xb2`) the display model does not draw yet; the touch panel and the switch between the TFT and the EVF as on the OM-1 |
+| OM-5 II, OM-5, E-M1 III, E-M1X, E-M5 III, E-M10 IV, E-M1 II, E-M10 III | E148, E144, E139, E134, E137, E140, E125, E130 | start, S1, S2, playback and the menu on the TFT and the EVF |
+| E-P7, E-PL9, TG-7, TG-5, TG-5 industrial | E142, E133, E145, E129, E132 | start, S1, S2, playback and the menu on the TFT, their only panel (the TG-7 and the TG-5s past the date and time setting they open on an unset clock) |
+| PEN-F, E-M5 II, E-M10 II | E122, E118, E120 | start, S1, S2, playback and the menu on the TFT and the EVF, the frames in the GUI's own palette, touch native; the remaining-shots count follows the card once INFO redraws the shooting screen, as the application asks for it only then |
+| 14 older bodies (E-PL5, E-M1, E-M10, TG-4, E-PL8 and others) | E100, E101, E106-E113, E115, E117, E121, E126 | surveyed, not tried |
 
-On every ported body MENU opens the camera's own menu in the player, and its pages navigate (2026-11-02,
-`emu/bin/modelcheck.mjs` checks it on each).
+On all 18 the card's file system runs natively: the firmware formats and mounts the card, counts the remaining shots
+from it, and its own REC_FILE task writes S2's picture to it (2026-11-16 on the last of them). Card Setup's Format and taking the card out and putting it back run the firmware's own media control
+too. Scripted menu sessions (`emu/bin/nav.mjs`) run on 13 of them (2026-11-16).
 
 [docs/model-survey.md](docs/model-survey.md) has the evidence per body; [docs/ROADMAP.md](docs/ROADMAP.md) has the
 plan.

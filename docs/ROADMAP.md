@@ -185,7 +185,7 @@ How a port works: `bin/port.mjs` translates every E143 address the lab names thr
 image and writes both into `src/fw/ports.mjs`; hand overrides in `src/fw/models.mjs` and `src/fw/overrides-E144.mjs`
 carry their evidence. A body with `port_via` is ported a second time from a reference body through a leg map, which
 carries the reference's overrides (`carryOverrides`) and fills what the direct map leaves unplaced (`fillUnplaced`). A
-rule's answer wins over a carried one. `node emu/bin/port.mjs all` refreshes all 17 ported bodies in about a minute
+rule's answer wins over a carried one. `node emu/bin/port.mjs all` refreshes all 18 ported bodies in about a minute
 with every map from the cache; the direct map's cache key holds the lab's 8-digit hex literals in their order of first
 occurrence, so a change to `src/lab` that reorders them rebuilds every map.
 

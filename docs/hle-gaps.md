@@ -5823,7 +5823,7 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
   | 5_5 | starts PLAY_MAIN, PLAY_LOAD, PLAY_IMAGE, PLAY_SOUND, PLAY_DECODE, PLAY_LOADDRAW | H-PLAYSTART (the opt-in of 4.8.11) |
   | 5_6..5_8 | `0x51031b76`; starts EFFECT_EXE; `0x51030b0d`; starts EFFECT; `0x51017051`; starts IMG_PRECON | none |
   | 5_9 | starts OSD_DRAW_CPU2; `0x5100d04a`; starts DISP_FRAME (CPU 3) | H-CPU2TASKS; S-DISPFRAME |
-  | 5_a..5_r | 45 more starts with their inits: TPC, BAS, C3D, MVR_ENC, MOVP, MOVE, the AV middleware (`0x50527bcf`), SAICAS, DPS, PTP, PC, FIRMUP, ADJ, the WIFI tasks | none |
+  | 5_a..5_r | 45 more starts with their inits: TPC, BAS, C3D, MVR_ENC, MOVP, MOVE, the AV middleware (`0x50527bcf`), SAICAS, DPS, PTP, PC, FIRMUP, ADJ, the WIFI tasks; between 5_a and 5_b MENU's state to the camera state kind `0x2751` (4.6.5) | H-STARTKEY for the MENU state step; the starts none |
 
 - **Where the lab's order differs (D for the camera's, X for the lab's).** The lab's bring-up is not the chain run in
   order: each step was placed where a session first needed it.
@@ -6008,6 +6008,39 @@ on all three bodies by `emu/test/test_bootstage.mjs` (X: the same sequence of co
   for (4.6.3). So code in section 9 or 10 is not in RAM before CPU 0 has run section 7's constructors, nor section 10's
   before CPU 1 has run section 8's; the lab holds every section from its start (S-SECLOADED's mask included, whose bit
   9 the camera sets only after stage 8).
+
+#### 4.6.5 USTART5's MENU state and the hidden menu (2026-11-19; D unless tagged, addresses E143's)
+
+The OM-1's service screens (the model's name, then PAGE 1 and PAGE 2 with the counters; on the web the recipe is: hold
+MENU while turning the camera on, release it, MENU, Setup's Monitor Adjust, OK, INFO, OK, then UP, DOWN, LEFT, RIGHT,
+S2, UP for PAGE 1 and RIGHT for PAGE 2) are the GUI state SS_MENU_MAIN/ID_ST_HIDE_MODE (`0x0304`).
+- **The gate.** Monitor Adjust's key handler `0x5123c198` takes OK (GUI message `0x900c`) at `0x5123c1ed`: the camera
+  state object's method +12 with 4 (`0x50b00096` -> `0x50b7a915` case 4) is 1 when property 4519 reads 0; then it
+  hands its owner 10, 34 and the GUI moves to `0x0304` (X: with 4519 at 0 OK on the colour page reaches `0x0304`,
+  with 1 it goes back to the menu). The first check of the same handler, method +132 of the object `0x50afccd5`, is
+  the display sync flag (`getDispSync`), not the gate.
+- **Who writes 4519.** USTART5 (`0x501e9e94`), between its marks `5_a` and `5_b`: `mov 0x89,d0; call 0x5014c015`
+  (UI_IN's key state of MENU, `0x0089`), then `0x5004188b(0x2751, 0, state)`, the camera state kind `0x2751` that the
+  store's id 4519 maps to (`0x501ea096..0x501ea0a9`). `0x5014c015(0x89)` answers 1 with MENU up and 0 with it down
+  (X). No setter call writes 4519 in a lab start (X: an observer on `0x503ee40d` over a session); the kind keeps its
+  first value, 1. USTART5's `5_a..5_r` row (4.6.3) did not run in the lab, so the hold never reached the property.
+- **In the lab (H-STARTKEY).** The step runs natively after S-CAMAPP's start, as USTART5 runs after CA_MAIN's: the
+  two calls at the addresses the site's own instructions give (src/lab/play.mjs startKeySite: the bytes checked on
+  each body, the step skipped where they differ), the kind read back through `0x500417da`. `--held KEY` (play,
+  session) holds a key in UI_IN's images from before UI_IN's start and releases it once the start is done; with
+  `--held menu` the web's recipe reaches `0x0304`, PAGE 1 and PAGE 2 with no poke (X: frames: "OM SYSTEM", "OM-1",
+  "00 00 00 00"; PAGE 1's B, U, C, A, L, F, M rows and "H : Ver .C19"; PAGE 2's MS, S, C, U, V, B, L at 000000).
+  Without a hold the step writes the 1 the kind already held, so golden's sessions moved only by the step's three
+  calls: three more stops each, the harness digest and the stand-in list; no screen or device layer.
+- **PAGE 2's numbers.** API `0x40406` (`0x50afff43` -> `0x50b7a766`) answers index 0..6 from `0x503ef1b8`, which
+  reads the camera state kinds `0x8344` (index 0), `0x8354` (1), `0x38b4` (3) and `0x3874` (6), leaves 2 and 4 at 0,
+  and index 5 is property 4514; the GUI asks 0, 1, 2, 3, 4, 6, 5 (X: a trace of the API entry `0x50abc82f` at RIGHT).
+  That index 0 is the MS row and 1 the S row is I (the web: MS the mechanical shutter's count, S the flash's).
+  Kind `0x8344` is kept by the shutter mechanism's driver (gap@`0x50108fe0`, section 7.2): its init `0x5010efc6`
+  reads it into `0x6296597c`, and `0x5010f8fe` adds 1 and writes it back. That driver does not run in the lab, so
+  a lab shot does not count (X: three S2 shots, MS 000000) and every counter shows the blank store's 0. Open: the
+  counters' persistence (where the camera keeps the kinds across power cycles), and the MS count with the mechanism
+  driver (section 7).
 
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 

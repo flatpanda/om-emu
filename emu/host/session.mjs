@@ -18,7 +18,8 @@
 //   until a card:in token; a restart keeps the slot as the last session left it, card:out included, and restart:card=
 //   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
-//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
+//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, held [KEY...] (keys held down at power-on, released once
+//   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
 //   and --device), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
 //   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
@@ -465,7 +466,7 @@ export async function openSession(o = {}) {
 
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: 'off',
-    take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, a15: a15Arg, device: deviceArg };
+    take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',

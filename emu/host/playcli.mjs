@@ -55,6 +55,7 @@ export const ACTIONS = [
   { opt: '--take', type: 'str', choices: ['stand-in', 'probe'], default: 'stand-in' },
   { opt: '--cpu2', type: 'str', choices: ['stand-in', 'native'], default: 'stand-in' },
   { opt: '--creative-dial', type: 'int', default: null, metavar: 'K' },
+  { opt: '--held', type: 'str', repeat: true, metavar: 'KEY' },
   { opt: '--no-bgdraw', type: 'flag', default: false },
   { opt: '--compose', type: 'str', choices: ['boundary', 'next'], default: 'boundary' },
   { opt: '--port', type: 'int', default: 0 },

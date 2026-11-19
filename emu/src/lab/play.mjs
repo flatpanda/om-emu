@@ -435,6 +435,21 @@ export function mode_image(k) {
   MODE_DIAL.positions.forEach(([b, bit, pol], i) => set_bit(img, b, bit, i === k ? pol : 1 - pol));
   return img;
 }
+// H-STARTKEY's site in USTART5 (E143 0x501ea096): `mov code,d0` (2c lo hi), the call of UI_IN's key state read
+// (dd rel32 ...), `extbu d0` (14), `mov d0,a1` (f1 e1), `mov 0,a0` (90 00), `clr d1` (04), `mov kind,d0` (2c lo hi),
+// the call of the camera state write (dd rel32 ...): {code, key_state, kind, write, read}, or {why} where the port
+// does not place the site or its bytes differ. read is the camera state read 0x500417da(kind, index)
+export const START_KEY_SITE = A(0x501EA096), STATE_READ = A(0x500417DA);
+export function startKeySite(v) {
+  if (isUnmapped(START_KEY_SITE)) return { why: 'the port does not place USTART5\'s MENU state step (E143 0x501ea096)' };
+  if (isUnmapped(STATE_READ)) return { why: 'the port does not place the camera state read (E143 0x500417da)' };
+  const at = runtime(START_KEY_SITE), b = (k) => v.u8(at + k);
+  const want = [[0, 0x2c], [3, 0xdd], [10, 0x14], [11, 0xf1], [12, 0xe1], [13, 0x90], [14, 0x00], [15, 0x04], [16, 0x2c], [19, 0xdd]];
+  const bad = want.find(([k, x]) => b(k) !== x);
+  if (bad) return { why: `USTART5's MENU state step at ${h8(START_KEY_SITE)}: byte +${bad[0]} is 0x${b(bad[0]).toString(16)}, not 0x${bad[1].toString(16)}` };
+  const target = (k) => (START_KEY_SITE + k + (v.u32(at + k + 1) | 0)) >>> 0;
+  return { code: v.u16(at + 1), key_state: target(3), kind: v.u16(at + 17), write: target(19), read: STATE_READ };
+}
 // S-KEYBITS idle image.
 export function idle_images() {
   const imgs = GROUP_BYTES.map((n) => new Uint8Array(n));
@@ -1075,6 +1090,16 @@ export class PlaySession extends N.NavSession {
     apply_uiin_layout(env.rom);                    // the model's key matrix (E143: checked against CONTROLS)
     this.images = idle_images();
     if (take === 'probe') set_lever(this.images, LEVER_PROBE_STATE);   // (E143 only, checked above)
+    // keys held down at power-on (opts.held: control ids of kind 'key'), in the images before UI_IN starts, released
+    // once the start is done (start_keys_release): the user's hold through the power-on, as MENU for the hidden menu
+    this.held = [...new Set(opts.held ?? [])];
+    for (const id of this.held) {
+      const c = BY_ID.get(id);
+      if (c === undefined || c.kind !== 'key') throw new ValueError(`--held ${show(id)}: a key (${CONTROLS.filter((k) => k.kind === 'key' && k.status !== 'not-wired').map((k) => k.id).join(', ')})`);
+      if (c.status === 'not-wired') throw new ValueError(`--held ${id}: ${c.name} is not wired (${c.reason})`);
+      const [g, b, bit, , , pol] = c.uiin;
+      set_bit(this.images[g], b, bit, pol);
+    }
     // the creative dial at the session's start: the idle image's position (SWITCH_IDLE_POSITION), or opts.creative_dial
     const cd = BY_ID.get('creative_dial');
     this.cdial_index = cd.positions ? SWITCH_IDLE_POSITION : null;
@@ -1093,7 +1118,7 @@ export class PlaySession extends N.NavSession {
     this.audio_hw = null;          // the audio hardware (audiohw.mjs), from the bring-up on with --audio auto or on
     this.sound_area = null;        // the sound area S-RESNAND serves: 'host' (env.soundArea), S-SOUNDRES's or null (erased)
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
-    this.pressed = new Set();
+    this.pressed = new Set(this.held);              // opts.held: down from the start
     this.shutter_held = new Set();
     this.mode_index = mode_start();
     // a power-on after the power lever's off (src/lab/player.mjs power): the physical controls where the closing
@@ -1313,7 +1338,26 @@ export class PlaySession extends N.NavSession {
     const chain = this.chain_rest('S-CAMAPP start');   // H-CHAINREST: the start's sleeps
     if (chain.slices) this.camapp.expose();            // S-EXPOSE: the plan on the screen the start reached
     this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status(), ...(chain.slices ? { chain_rest: chain } : {}) });
+    this.start_key_bring_up();
+    for (const id of this.held) this.key(id, 'up');    // released once the start is done (opts.held)
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
+  }
+  // H-STARTKEY: USTART5's step between its marks 5_a and 5_b (E143 0x501ea096..0x501ea0a9, docs/hle-gaps.md), which
+  // the lab's start does not run (the 5_a..5_r row of USTART5's table), natively after S-CAMAPP's start as USTART5
+  // runs after CA_MAIN's: UI_IN's state of MENU (its key state read 0x5014c015(0x0089): 1 released, 0 held, X) written
+  // to the camera state kind 0x2751 index 0 (the write 0x5004188b), the store's property 4519, which Monitor Adjust's
+  // OK reads: 0 takes the GUI to SS_MENU_MAIN/ID_ST_HIDE_MODE (0x5123c1ed..0x5123c21a). The site is read by its
+  // instructions on each body (startKeySite); a body where they are not found does not run the step
+  start_key_bring_up() {
+    const site = startKeySite(this.tables.v);
+    this.start_key = site.why ? { skipped: site.why } : null;
+    if (site.why) return;
+    const lab = this.lab;
+    const state = lab.call(site.key_state, { d0: site.code }, null, null, 20000).d0 & 0xFF;
+    lab.call(site.write, { d0: site.kind, d1: 0, a0: 0, a1: state }, null, null, 200000);
+    const back = lab.call(site.read, { d0: site.kind, d1: 0 }, null, null, 200000).d0;
+    if (back !== state) throw new PlayError(`H-STARTKEY: camera state 0x${site.kind.toString(16)} reads ${back} after its write of ${state}`);
+    this.start_key = { code: site.code, kind: site.kind, state };
   }
   // H-DPCINIT: the deferred calls' init (fact 'dpc.init', src/fw/facts.mjs deferredCalls), which the boot head runs
   // before the kernel and the lab does not, natively at the bring-up on a board with the deferred-call triggers

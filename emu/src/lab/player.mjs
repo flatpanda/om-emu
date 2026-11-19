@@ -413,6 +413,7 @@ export class Player {
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
+      ...((a.held ?? []).length ? { held: a.held } : {}),   // keys held down at power-on (play.mjs PlaySession: opts.held)
       ...(this.off_positions !== null ? { carried: this.off_positions } : {}),   // a power-on after the lever's off (power)
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
       ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}) };
@@ -522,6 +523,7 @@ export class Player {
     if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
+    if (this.session?.start_key?.state !== undefined) used.push('H-STARTKEY');              // USTART5's MENU state step (play.mjs)
     if (this.session?.camapp?.erased) used.push('H-OBJDEL');                                 // a picture erased in playback (camapp.mjs)
     if (this.session?.camapp?.aflock_fed) used.push('S-AFLOCK');                             // an AF lock fed (E143)
     if (this.session?.camapp?.standby_answers) used.push('S-SEQSTANDBY');                    // the standby gate answered (E143)

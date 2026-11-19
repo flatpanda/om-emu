@@ -114,8 +114,10 @@ const REDRAW_MAX = 8, PROBE_REDRAW = { E118: 'info', E120: 'info', E122: 'info' 
 // the bodies whose EVF runs the whole path, playback included. The E118 family's kind-3 compositor draws the EVF's
 // playback (the plane's level 0xb2 drawn as full, docs/om1-vsc-spec.md section 12; X: PLAY, INFO and PLAY on the
 // three); E120's and E122's ran into their display task's 40 ms poll until the VSC raised its line compare
-// (docs/model-survey.md finding 70)
-const EVF_PLAY = new Set(['E118', 'E120', 'E122']);
+// (docs/model-survey.md finding 70). The E144 family's EVF (E148, E144, E139, E134, E137, E140, E125, E130) runs it
+// too (X, 2026-11-19: PLAY, INFO and PLAY on each, their composites clean). E146 and E147 are not in it: their EVF
+// playback writes PLANC 0xb2, which the VSC model does not draw (PLANC_UNOBSERVED, as their EVF menu, MENU_EVF_XFAIL)
+const EVF_PLAY = new Set(['E118', 'E120', 'E122', 'E148', 'E144', 'E139', 'E134', 'E137', 'E140', 'E125', 'E130']);
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
@@ -270,8 +272,8 @@ for (const m of models) {
     const p = spawnSync(process.execPath, ['--max-old-space-size=10240', path.join(REPO, 'emu/bin/port.mjs'), m], { encoding: 'utf8' });
     if (p.status !== 0) { console.log(`${m}: port failed: ${p.stderr.slice(-400)}`); bad++; continue; }
   }
-  // the EVF runs the path up to S2, but on EVF_PLAY's bodies: playback on the EVF navigates, but its composite uses a
-  // PLANC (0xb2) and the highlight block the VSC model has not observed (open, on E143 too)
+  // the EVF runs the path up to S2, but on EVF_PLAY's bodies: elsewhere playback on the EVF navigates, but its
+  // composite uses a PLANC (0xb2) and the highlight block the VSC model has not observed (open, on E143, E146, E147)
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
   const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
   const full = [PATH[0], ...answer, ...PATH.slice(1)];

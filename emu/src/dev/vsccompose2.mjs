@@ -14,6 +14,15 @@
 //                  EVF's (X: E144, E139, E137, E125) are 0x11, 0x9fc, 0, 0x9fc, 0, 0 for a 640 x 480 canvas on a
 //                  1024 x 768 area: 0x9fc is E143's OSD step form 4 ceil((src - 1) 1024 / dst) for 640 -> 1024 and
 //                  for 480 -> 768 (docs/om1-vsc-spec.md section 3)
+//   IMG plane p    (kind 2; p 0 IMG1 .. 2 IMG3; X: the writes of E137's Color Creator screen, whose colour wheel its
+//                  vector GPU draws into IMG2) address DMA9 + p, stride DMA15 + p in 64-byte units (0x10: 1024-byte
+//                  rows), area AREA1 + 3p in the video area's three-word form (0x1ce0100, 0x780078, 0x100: 256 x 256 at
+//                  (432, 112) of the TFT's 720 x 480), control IMGCTL + p (+0x194): format (x >> 20) & 0xf, bit 12
+//                  per-pixel alpha, the low 9 bits the level (0x301100; IMG1's 0x100 is format 0, YC). Format 3 is a
+//                  32-bit word a pixel: byte 0 alpha (0 transparent .. 255 opaque, not premultiplied: colour stays
+//                  above alpha where alpha is low, X in the camera's buffer), bytes 1..3 B, G, R; drawn through the
+//                  firmware's integer BT.601 and blended over what is below. Format 0 (live view) and a scaled plane
+//                  are refused (FMT_UNMODELLED, RSZ_UNMODELLED; I for the split of the control word)
 //   palette q      128 words at +0x800 + 0x800 q, the second bank +0x200 when bit 4 of OSD14 / OSD16 / OSD18 is set
 //                  (the writer 0x50023685 fills the other bank, the commit 0x50187eda flips the bit, D); a word is
 //                  tra << 24 | Cr << 16 | Cb << 8 | Y with tra 0..31 as on E143 (X)
@@ -73,8 +82,9 @@ import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vsc.mjs';
 import { blendLut, osdCol } from './vsccompose.mjs';
 
-const R = { DMA7: 0x030, DMA12: 0x044, DMA18: 0x05C, AREA10: 0x0C8, AREA22: 0x0F8, AREA23: 0x0FC, AREA24: 0x100,
-  BG1: 0x190, OSD1: 0x1A4, OSD7: 0x2E0, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
+const R = { DMA7: 0x030, DMA9: 0x038, DMA12: 0x044, DMA15: 0x050, DMA18: 0x05C, AREA1: 0x0A4, AREA10: 0x0C8,
+  AREA22: 0x0F8, AREA23: 0x0FC, AREA24: 0x100,
+  BG1: 0x190, IMGCTL: 0x194, OSD1: 0x1A4, OSD7: 0x2E0, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
 const HDR = { CHANNEL: 0, WIDTH: 1, HEIGHT: 2, FRAME: 3, ERRORS: 4, PAL_UNWRITTEN: 5, SKIPPED: 6, DRAWN: 7, OX: 8, OY: 9,
   MIX_FLAGS: 10, T_LO: 11, T_HI: 12, STATUS: 13, ASSUMED: 14, VIEW: 15 };
 const PLANES = 6, P_OSD1 = 3;
@@ -103,6 +113,8 @@ const K = KINDS[BOARD.vsc.kind] ?? null;
 // kind 3: whether the build sets the level words (a build that names none draws its planes at the full level)
 const LEVELS = BOARD.vsc.kind !== 3 || BOARD.vsc.levels;
 const FULL_LEVEL = 0x100;
+// whether the IMG planes are drawn (kind 2 only: kind 3's IMG registers are not read)
+const IMG_KIND2 = BOARD.vsc.kind === 2;
 
 export function compose2(v, c) {
   const ch = v.ch[c], m = ch.m, mf = v.mFlags(c), t = v.clock.t, out = v.out;
@@ -143,9 +155,54 @@ export function compose2(v, c) {
     hdr[HDR.WIDTH] = vw; hdr[HDR.HEIGHT] = vh; hdr[HDR.OX] = ox; hdr[HDR.OY] = oy;
     out.fill(bg, 0, vw * vh);
     const L = blendLut();
+    // kind 2's IMG plane p in format 3 at 1:1 (the head's 'IMG plane p'); a code other than 0 skips the plane
+    const drawImg2 = (p, info) => {
+      let base, ld, w1, w2, w3, ctl, rsz;
+      const a1 = R.AREA1 + 12 * p, ctlOff = R.IMGCTL + 4 * p;
+      if ((base = need(R.DMA9 + 4 * p)) === null || (ld = need(R.DMA15 + 4 * p)) === null || (w1 = need(a1)) === null ||
+          (w2 = need(a1 + 4)) === null || (w3 = need(a1 + 8)) === null || (ctl = need(ctlOff)) === null) return E.UNWRITTEN;
+      rsz = mw(R.RSZ[p]) ? m[R.RSZ[p] / 4] : 0;
+      const fmt = (ctl >>> 20) & 0xF;
+      if (fmt !== 3) { cerror(E.FMT_UNMODELLED, ctlOff, ctl, p, 0, 0); return E.FMT_UNMODELLED; }
+      if (rsz) { cerror(E.RSZ_UNMODELLED, R.RSZ[p], rsz, p, 0, 0); return E.RSZ_UNMODELLED; }
+      if (!(ctl & 0x1FF)) { v.noteRecord(NOTE.PLANC_ZERO, c, ctlOff, p); return 0x101; }
+      const xs = w1 >>> 16, ys = w2 >>> 16, pw = w1 & 0xFFFF, ph = w3 & 0xFFFF, stride = ld * 64;
+      if (xs < ox || ys < oy || !pw || !ph || xs - ox + pw > vw || ys - oy + ph > vh || (w2 & 0xFFFF) !== ys) {
+        cerror(E.WINDOW, a1, w1, w2, w3, 0); return E.WINDOW;
+      }
+      if (!stride || stride < 4 * pw || !v.bus.span(base, (ph - 1) * stride + 4 * pw)) {
+        cerror(E.DMA_RANGE, R.DMA9 + 4 * p, base, stride, p, 0); return E.DMA_RANGE;
+      }
+      const x0 = xs - ox, y0 = ys - oy, perPixel = (ctl & 0x1000) !== 0;
+      v.dset(info, 0x100);
+      [x0, y0, pw, ph, base, stride, 0].forEach((x, i) => v.dset(info + 4 + 4 * i, x));
+      const row = new Uint8Array(4 * pw);
+      for (let j = 0; j < ph; j++) {
+        v.bus.read((base + j * stride) >>> 0, row, 0, 4 * pw);
+        const d0 = (y0 + j) * vw + x0;
+        for (let i = 0; i < pw; i++) {
+          const a = perPixel ? row[4 * i] : 255;
+          if (!a) continue;
+          const b = row[4 * i + 1], g = row[4 * i + 2], r = row[4 * i + 3];
+          const y = ((19595 * r + 38470 * g + 7471 * b) >> 16) & 0xFF;
+          const cb = (((-11056 * r - 21712 * g + (b << 15)) >> 16) + 128) & 0xFF;
+          const cr = ((((r << 15) - 27440 * g - 5328 * b) >> 16) + 128) & 0xFF;
+          const dst = out[d0 + i];
+          if (a === 255) { out[d0 + i] = cr << 16 | cb << 8 | y; continue; }
+          const k = 255 - a, mixc = (s, d) => ((s * a + d * k + 127) / 255) | 0;
+          out[d0 + i] = mixc(cr, dst >>> 16 & 0xFF) << 16 | mixc(cb, dst >>> 8 & 0xFF) << 8 | mixc(y, dst & 0xFF);
+        }
+      }
+      return 0;
+    };
     for (let n = 0; n < PLANES; n++) {
       const p = order[n], info = D.PLANE + 32 * p;
       if (!(dmaen & (0x20 >>> p)) || !(view & (1 << p))) continue;
+      if (p < P_OSD1 && IMG_KIND2) {                                    // kind 2's IMG planes (drawImg2)
+        const code = drawImg2(p, info);
+        if (code) { v.dset(info, code); hdr[HDR.SKIPPED] |= 1 << p; } else hdr[HDR.DRAWN] |= 1 << p;
+        continue;
+      }
       if (p < P_OSD1) { cerror(E.FMT_UNMODELLED, 0, p, 0, 0, 0); v.dset(info, E.FMT_UNMODELLED); hdr[HDR.SKIPPED] |= 1 << p; continue; }
       const q = p - P_OSD1, P = K.palette(q);
       let base, ld, w1, w2, w3, planc, rsz, sel = 0;

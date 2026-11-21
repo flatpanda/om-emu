@@ -552,6 +552,10 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   BG1 (`0x50307b41`); DMA7's enable bits and DMA12..DMA14 from the commit `0x50309dc5`; the strides DMA18..DMA20 = 14
   (896-byte canvas rows, `0x503098c2`); the plane areas AREA10 / 13 / 16; the OSD scaler words (`0x50308314`
   horizontal bit 0 and +4, `0x50308389` vertical bit 4 and +12, `4 ceil((src - 1) 1024 / dst)`), four per plane.
+- **IMG planes (kind 2, 2026-11-21):** drawn in format 3 (32-bit, byte 0 alpha then B, G, R) at 1:1, as E137's
+  Color Creator screen shows its GPU-drawn colour wheel in IMG2 (X); the registers are in the head of
+  `emu/src/dev/vsccompose2.mjs`. Format 0 (live view) and scaled planes stay refused; kind 3's IMG registers are not
+  read.
 - **Palettes:** three groups by the palette id of the writer `0x50307aea`: id 0, 128 words at `+0x800` / `+0xa00`
   (the writer fills `+0x800` while bit 4 of `0x1b8` is set and `+0xa00` while it is clear, `btst 16` at `0x50307af4`,
   a mask; the commit flips the bit after an upload, `0x50309f14..0x50309f24`); id 1, 32 words at `+0x680`; id 2, 32

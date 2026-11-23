@@ -86,7 +86,16 @@
 //               no sensor image: nothing in the lab writes the Bayer, thumbnail or other buffers, so a reader of
 //               their pixels gets what MM's memory holds (the lab's DRAM, zero unless something else wrote there).
 //               TAKE's lock of the entry for the take (its +26, TAKE_MAIN's on taking the request) is not set: TAKE_MAIN
-//               does not run
+//               does not run. Since 2026-11-22 the Bayer buffer can hold S-RAWFRAME's pattern (below)
+//   S-RAWFRAME  (with H-SHOTALLOC's shot, where the body's bytes are E143's form: E143; src/lab/rawframe.mjs;
+//               docs/hle-gaps.md 4.3.14) the shot's Bayer buffer, which the sensor's DRAM capture fills on the
+//               camera, filled with a lab pattern right after the allocation: its handle by TAKE's Bayer lookup and
+//               its address by MM's, natively as rec_ImgProCtrl_Src_Bayer asks them, its geometry the one that
+//               reader gives a normal still (12 bits, stride 5360, 5208 x 3912) and the frame's 31,452,480 bytes
+//               inside MM's block of the handle (A-RAWFRAME-1: the packing). No other buffer of the shot is written.
+//               In use only where that block is memory of the lab's: E143's MM bank 0 starts at 0xb8000000, where the
+//               lab's 384 MiB of DRAM end, so by default S-RAWFRAME is not in use (rec.raw_skip says why; X: it runs
+//               with 512 MiB)
 //   H-TAKEFILLS (where the rule reads them, fact 'take_fills', src/fw/facts.mjs takeFills: E143, E146, E147, with
 //               H-SHOTALLOC's shot; docs/hle-gaps.md 4.3.13) TAKE's own fills of the shot natively, before the rest of
 //               S-EXIFPRM, in the still states' order on TAKE's context (0x62a4a358) and a take-picture packet of the
@@ -281,6 +290,7 @@ import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
 import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143 } from '../fw/facts.mjs';
+import { geometry as rawGeometry, rawFrame } from './rawframe.mjs';
 
 export class RecError extends FirmwareError {}
 
@@ -406,7 +416,8 @@ export class RecFile {
     // TAKE's own fills of the shot (H-TAKEFILLS, where the exposure and the shot are read: fact 'take_fills',
     // src/fw/facts.mjs takeFills)
     this.fills = this.exposure && this.shot ? fact('take_fills', TAKE_FILLS_E143) : null;
-    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot}
+    this.raw = undefined;          // S-RAWFRAME's geometry with H-SHOTALLOC's shot (raw_geometry(): read at first use)
+    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot, raw: S-RAWFRAME's fill}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
     // rule's record steps; recFileInline's version has no file context either, but its registration's, context)
@@ -486,6 +497,16 @@ export class RecFile {
     if (!record || lab.kernel.errors.length !== e0) throw new RecError(`H-SHOTALLOC: TAKE's lookup ${h8(T.record.fn)} gives the shot ${id} the record ${h8(record)} (error logs: ${logs()})`);
     const entry = sim.read(T.record.table + T.record.entry * id, T.record.entry);
     return { id, record, flags: entry[0] | entry[1] << 8, entry };
+  }
+  // S-RAWFRAME (src/lab/rawframe.mjs): the Bayer buffer's geometry by the firmware's own reader where H-SHOTALLOC
+  // allocates the shot and the body's bytes are E143's form, else null (raw_skip the reason)
+  raw_geometry() {
+    if (this.raw === undefined) {
+      const G = this.shot ? rawGeometry(this.lab.sim) : { skip: 'no shot of TAKE\'s (H-SHOTALLOC not in use)' };
+      this.raw = G.skip ? null : G; this.raw_skip = G.skip ?? null;
+      if (G.again) { this.raw = undefined; return null; }     // (before MM's init: asked again later)
+    }
+    return this.raw;
   }
   // H-SHOTALLOC's end: the application's free of the shot (api_rec's free natively), after which TAKE's entry is free
   shot_free(shot) {
@@ -640,6 +661,8 @@ export class RecFile {
     if (this.image && !this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
     const stream = encoderStream(jpeg);
     const shot = this.shot_alloc();
+    // S-RAWFRAME: the shot's Bayer buffer filled with the lab's pattern, before S-EXIFPRM and REC_PREPRO's place
+    const raw = shot && this.raw_geometry() ? rawFrame(lab, shot, this.raw) : null;
     const { x, clock, date, take, exposure } = this.exif_param(shot);
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
@@ -659,6 +682,7 @@ export class RecFile {
       put('FileType', '<B', JPEG);
     }
     const { header, size } = this.image ? this.image_native(pk, stream, take, exposure, shot) : this.image_lab(pk, stream);
+    if (raw) this.images[this.images.length - 1].raw = raw;
     if (shot) this.shot_free(shot);
     // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
     // for 1: 0x5053ff29..0x5053ff37, D; its fnode and DCF block, storage.mjs REC's layouts); where rec_make_file keeps
@@ -885,9 +909,10 @@ export class RecFile {
 }
 // The stand-ins a RecFile uses (src/lab/player.mjs's list): with REC_IMAGE natively (H-RECIMGPRO where the
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
-// H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
+// H-EXPINIT did not run IMG_PRECON's init; S-RAWFRAME and A-RAWFRAME-1 with H-SHOTALLOC where its geometry and MM's
+// block are found), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'H-STBPROP', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.shot && rec.raw_geometry() ? ['S-RAWFRAME', 'A-RAWFRAME-1'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'H-STBPROP', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

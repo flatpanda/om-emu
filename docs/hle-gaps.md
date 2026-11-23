@@ -4781,7 +4781,64 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   builder, copy, Standby and StlTake fills are the rule's since 2026-11-16, takepic, the lens fill and the third
   fill since 2026-11-17); the AF maker-note fill natively (S-AFMKNT: TAKE_FOCUS's release-take start on its task,
   the AF library's init and FCS's buffers) and what the crop areas and the AF fields hold on the camera; what the
-  fill after the key (`0x503bc4fe`), takepic and the third fill write, field by field.
+  fill after the key (`0x503bc4fe`), takepic and the third fill write, field by field. (2026-11-22: the Bayer
+  buffer's geometry and S-RAWFRAME in 4.3.14.)
+
+#### 4.3.14 The shot's RAW frame: S-RAWFRAME and the DRAM it needs (E143; 2026-11-22; D unless tagged, E143's addresses)
+
+- **Why.** 4.3.13 left the RAW frame open: once the Bayer buffer is TAKE's (H-SHOTALLOC), a declared stand-in could
+  fill it, but its geometry was not read. This round reads it from the buffer's own reader and MM, lands the fill
+  (S-RAWFRAME) and finds the stop that keeps it off by default: MM's Bayer block lies past the lab's DRAM.
+- **Which buffer is the Bayer (D).** rec_ImgProCtrl_Src_Bayer (`0x50549017`) asks TAKE's Bayer lookup
+  (`0x503af9de`, at `0x5054904d`): an id 1..115 whose entry has the flag 1 gives the entry's halfword +2 (`movhu
+  (2,a0),d0`, `0x503afa22`); MM's handle-to-address (`0x50534dd1`, at `0x50549055`) gives the source's address, the
+  record's +0. TAKE's allocation stores the Bayer handle there (flag 1, 4.3.13). With the lab's settings the shot's
+  kind is 3, and its Bayer, its flag-8 pair and nothing else are MM kind 0 (handles 1, 2, 3, X).
+- **MM's block (D, X).** MM takes a kind's bank from its high byte (`asr 8`, `0x50534a49`; the handle's too,
+  `0x50534dd7`) and the bank's pool from its table `0x606dc498` (8 bytes a bank, the pool at +4; `asl 3,d0; add
+  0x606dc498,d0; mov d0,a2; inc4 a2; mov (a2),d0`, `0x50534a90`). The address comes from the pool's method at its
+  vtable's +8 (`0x50534e72`), for bank 0's class `0x505379bc`: the handle's low byte n (1..192), the address (12,pool)
+  x (n - 1) + (8,pool) while n is at most the halfword (306,pool), else in a second region at (308,pool)
+  (`0x505379da..0x50537a08`). So (12,pool) is the block size. X (E143, at a shot): bank 0's pool `0xa31f4e9c`, base
+  `0xb8000000`, block `0x1ffec00` (33,549,312 bytes), 33 blocks in the first region, the second at `0x08000000`;
+  handles 1, 2, 3 at `0xb8000000`, `0xb9ffec00`, `0xbbffd800`. The thumbnail (handle `0x101`) is bank 1's
+  `0xb53cdf80` (`0x11c00` bytes a block), the record (`0x1501`) bank 21's `0xb5a8ac00`.
+- **The geometry (D).** Src_Bayer's normal-still branch (`0x505492e6..0x50549317`; taken where the record's +38764
+  is not 19, Mode not 8193 or 8198, `0x5054bfb3` not 2, 3 or 5 and the +7626 / Mode 4102 case not met) writes the
+  source: +8 the format of 12 bits (`mov 12,d0; call 0x50547b9a`: 1031), +10 5360, +12 5208, +14 3912, +16 5184,
+  +18 3888 and +24 / +26 the context's +6600 + 2592 and +6604 + 1944. The other branches give 1920 / 1736 x 1304
+  (Mode 8193 / 8198), 8240 / 8172 x 6132 and 10480 / 10384 x 7792 (the high-resolution modes) and 16080 / 5208 x 1304
+  (Mode 4102 with +7626). I: +10 is the stride in pixels (wider than the frame in every branch); the frame packed at
+  12 bits a pixel takes 8040 bytes a row, 31,452,480 bytes, inside MM's block, where 16 bits a pixel (41,940,480
+  bytes) would not fit. X (with the DRAM below): in each picture Src_Bayer's source, observed at its return, holds
+  `0xb8000000`, 1031, 5360, 5208 x 3912 and 5184 x 3888.
+- **Landed: S-RAWFRAME, A-RAWFRAME-1 (`emu/src/lab/rawframe.mjs`; `src/lab/rec.mjs` record()).** At S2's picture,
+  right after H-SHOTALLOC and before S-EXIFPRM (so before REC_PREPRO's place), the lab asks TAKE's Bayer lookup and
+  MM's address natively, checks the handle's pool is bank 0's class and the address its block n, and writes a lab
+  pattern over the frame (R a ramp along x, B a ramp along y, both greens 2048; RGGB, two pixels little-endian in
+  three bytes, the 152 pixels past the frame 0: A-RAWFRAME-1). Each site is taken through A() and its bytes checked;
+  a body whose bytes differ keeps the buffer unwritten with the reason (`rec.raw_skip`). Nothing reads the pixels yet
+  (S-JPEGENC skips the parameter set and the run), so the file does not change; the harness digest sees the write.
+- **The stop: the lab's DRAM (X).** The lab maps 384 MiB of DRAM (`src/fw/board.mjs` dram_size: `0x60000000` and
+  `0xa0000000` + 384 MiB), taken as ending where the GUI's first OSD bank ends, `0xb8000000` (`src/fw/facts.mjs`
+  dramSize, I). MM's bank 0 starts there, so the Bayer block is no memory of the lab's: a read of `0xb9dfed40` is
+  refused (`GDB m...: E14`), and the debug write skips it without a word. MM's banks reach much further: of its 119
+  banks, pools lie at `0xb8000000` (banks 0, 4, 6, 8, 39, 64, 79, 94, 115), up to `0xff0d9c00` (bank 113), and in a
+  region at `0x08000000..0x6944c000` and beyond (banks 36, 91, 95..106; bank 0's second region), so the camera's DRAM
+  is larger than the lab's and dramSize's inference does not hold for E143. So S-RAWFRAME is not in use by default:
+  its geometry check finds MM's Bayer block outside the lab's DRAM and gives that reason. With the DRAM at 512 MiB
+  (`0xa0000000..0xc0000000`; a probe and `emu/test/test_shotalloc.mjs --dram 512`, which sets the board's size before
+  the session) the fill runs: 29 of 29 over three pictures (the block, Src_Bayer's source, the pattern byte for byte
+  after the first and the last picture, the 4096 bytes past the frame and the next block's first 4096 untouched),
+  the files recorded and decoded as before.
+- **E146 and E147.** Src_Bayer writes the same values into a source record 8 bytes longer, the address a doubleword
+  (E146 `0x5052704d`: stride at +18, frame at +20 / +22, developed at +24 / +26; it calls rec_misc_select_bayer
+  for the address), so the branch's bytes differ and S-RAWFRAME is not in use there (X: E146's shot, 10 of 10). A
+  rule reading both forms comes with the DRAM.
+- **Next.** The DRAM's size from MM's banks (or the memory controller) instead of the GUI bank, at least
+  `0xa0000000..0xbdffc400` for bank 0's three first blocks on E143, which moves the board fact for every body
+  (`bin/port.mjs`); then S-RAWFRAME is on by default and, for the white-balance step (4.3.13 item 6), the thumbnail
+  (bank 1, inside the lab's DRAM) is the next buffer to fill.
 
 ### 4.4 AF, lens and body IS
 

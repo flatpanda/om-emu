@@ -887,6 +887,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
     if (r.status !== 0) { lines.filter((l) => l.startsWith('   ') || !/^H-SHOTALLOC over/.test(l)).forEach((l) => console.log('  ', `${m}: ${l.trim()}`)); bad += 1; }
   }
 }
+// S-RAWFRAME's fill (test_shotalloc.mjs --dram 512): on E143 MM's Bayer block lies past the lab's 384 MiB of DRAM, so
+// the fill runs only with 512; three pictures, each checked against rec_ImgProCtrl_Src_Bayer's source and MM's block
+{
+  const { spawnSync } = await import('node:child_process');
+  const r = spawnSync(process.execPath, [new URL('../test/test_shotalloc.mjs', import.meta.url).pathname, '--session', '--dram', '512', '--shots', '3'], { env: { ...process.env, OM_EMU_MODEL: 'E143' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n');
+  console.log(lines.find((l) => /^H-SHOTALLOC over/.test(l)) ?? 'H-SHOTALLOC over 3 pictures (E143, 512 MiB): FAILED');
+  if (r.status !== 0) { lines.filter((l) => l.startsWith('   ')).forEach((l) => console.log('  ', `E143 512 MiB: ${l.trim()}`)); bad += 1; }
+}
 // H-TAKEFILLS (test_takefills.mjs): TAKE's own fills of the shot natively against S-EXIFPRM's copies, the record
 // compared byte for byte, on E143, E146 and E147, each in a process of its own (takepic, the lens fill and the third
 // fill with S-AFMKNT among them, and StlRdy1's strobe request after H-STBPROP, Sv filled); on E143 also S-AFMKNT's

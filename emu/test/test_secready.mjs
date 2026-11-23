@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine } from '../src/lab/secready.mjs';
+import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const tester = () => {
@@ -93,8 +93,8 @@ export function secreadyUnits() {
   const ind = run([HOOK, [0x1c0, [0xfc, 0xdc, ...le32(BASE + 0x820), 0xf0, 0xf0]]]);
   ok(ind.ungated.length === 1 && ind.ungated[0].kind === 'icall' && ind.ungated[0].to === 9, `mov imm32,a0; calls (a0) into section 9: ${show(ind)}`);
   ok(sectionOf(LAYOUT, 0xa0000150) === 2 && sectionOf(LAYOUT, BASE + 0x1000) === null, 'sectionOf: either DRAM view, outside null');
-  ok(/^sec-ready: 1 ungated branch\(es\) of patched code into a later section \(of 1 crossing\(s\), 0 gated\): 0x600001c0 call -> 0x60000620 \(section 2 -> 7\)$/.test(secReadyLine({ static: plain, runs: null })),
-    `secReadyLine: ${secReadyLine({ static: plain, runs: null })}`);
+  ok(/^sec-ready: 1 ungated branch\(es\) of patched code into a later section \(of 1 crossing\(s\), 0 gated\): 0x600001c0 call -> 0x60000620 \(section 2 -> 7\)$/.test(secReadyLine(secReadyReport(plain, null))),
+    `secReadyLine: ${secReadyLine(secReadyReport(plain, null))}`);
   // the run-time watch on a made-up memory: the changed bytes at 0x700 (section 8)
   const mem = { [STAGE]: 0x7f, [COPIED]: 0x3ff };
   const read32 = (a) => new Uint8Array(le32(mem[a] ?? 0));
@@ -112,7 +112,11 @@ export function secreadyUnits() {
   const w2 = new SecReadyAudit(LAYOUT, [[0x700, 6]], { read: read32 });
   w2.guard(BASE + 0x700, 2);
   ok(w2.findings.length === 0, `control: bit 7 set, nothing recorded: ${show(w2.findings)}`);
-  ok(secReadyLine({ static: plain, runs: f }).includes('; patched code ran in 2 section(s) and phase(s) whose stage bit was clear: 0x60000700 (section 8, 2 instruction(s) in 1 piece(s), word 0x0000007f, caller'), `secReadyLine with runs: ${secReadyLine({ static: plain, runs: f })}`);
+  const rp = secReadyReport(plain, f);
+  ok(rp.watched && rp.static.crossings === 1 && rp.findings.map((x) => `${x.class} ${x.site}`).join() === `ungated-branch ${h8(BASE + 0x1c0)},unready-run ${h8(BASE + 0x700)},unready-run ${h8(BASE + 0x703)}` &&
+    rp.findings[0].addr === h8(BASE + 0x620) && rp.findings[0].branch === 'call' && rp.findings[1].phase === 'before-bootstage' && rp.findings[1].section === 8 && !secReadyReport(null, null).watched,
+  `secReadyReport: one findings list by class, site and address: ${show(rp)}`);
+  ok(secReadyLine(secReadyReport(plain, f)).includes('; patched code ran in 2 section(s) and phase(s) whose stage bit was clear: 0x60000700 (section 8, 2 instruction(s) in 1 piece(s), word 0x0000007f, caller'), `secReadyLine with runs: ${secReadyLine(secReadyReport(plain, f))}`);
   return { checks: T.checks, bad };
 }
 
@@ -202,9 +206,10 @@ export async function secreadyCli() {
     ok(none.status === 1 && /--sec-ready: no patch overlay/.test(none.stderr), `--sec-ready without an overlay: rc ${none.status} ${none.stderr.slice(-200)}`);
     const r = runNav(['--patch', file, '--sec-ready'], path.join(dir, 'on'));
     const doc = JSON.parse(fs.readFileSync(path.join(dir, 'on', 'session.json'), 'utf8'));
-    const st = doc.patch_audit?.sec_ready?.static;
+    const sr = doc.patch_audit?.sec_ready, fd = sr?.findings ?? [];
     ok(r.status === 0 && r.stdout.includes(`patch audit: sec-ready: 1 ungated branch(es) of patched code into a later section (of 1 crossing(s), 0 gated): ${h8(base + at)} call -> ${h8(base + to)} (section 2 -> 6)`) &&
-      /\nsec-ready: 1 ungated branch/.test(r.stdout) && st?.ungated?.length === 1 && Array.isArray(doc.patch_audit.sec_ready.runs),
+      /\nsec-ready: 1 ungated branch/.test(r.stdout) && sr?.static?.crossings === 1 && sr.watched === true &&
+      fd.filter((x) => x.class === 'ungated-branch').length === 1 && fd[0].site === h8(base + at) && fd[0].addr === h8(base + to) && fd.every((x) => x.class === 'ungated-branch' || x.class === 'unready-run'),
     `nav.mjs --patch --sec-ready: rc ${r.status} ${r.stdout.slice(0, 600)} ${r.stderr.slice(-300)}`);
     const off = runNav(['--patch', file], path.join(dir, 'off'));
     const docOff = JSON.parse(fs.readFileSync(path.join(dir, 'off', 'session.json'), 'utf8'));

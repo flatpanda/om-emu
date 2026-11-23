@@ -13,7 +13,7 @@ import { Worker, MessageChannel } from 'node:worker_threads';
 import { REPO, loadImage, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { startUnloaded, unloadedLine, startSecReady } from '../src/lab/patchaudit.mjs';
-import { secReadyLine } from '../src/lab/secready.mjs';
+import { secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { RuntimeError, ValueError } from '../src/lab/errors.mjs';
 import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
@@ -234,7 +234,7 @@ export async function main(argv) {
   // starts (src/lab/patchaudit.mjs)
   const unloaded = overlay ? startUnloaded(overlay, a.loaded) : undefined;
   if (unloaded !== undefined) say(`play: patch audit: ${unloadedLine(unloaded)}`);
-  if (secReady) say(`play: patch audit: ${secReadyLine({ static: secReady.static, runs: null })}`);
+  if (secReady) say(`play: patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
   if (cardFiles) say(`play: --card-put: ${cardFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')} onto ${process.env.OM_EMU_CARD} before the first session`);
   const rom = overlay?.rom ?? loadImage();
   let switchTo = null, trying = null;

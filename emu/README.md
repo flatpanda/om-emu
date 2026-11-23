@@ -1120,21 +1120,23 @@ default, and without it nothing changes) audits a patch against that order inste
 sets bit n - 1 of the stages' ready word (E143 `0xa32df1f4`, E146 `0xa32df2cc`, E147 `0xa32de58c`; `docs/hle-gaps.md`
 4.6.4), so a hook in an early section that reaches a later one before it is loaded runs on stale RAM; caduceus-om3's
 crop round 7 looped at every start that way, and passed the lab. Two checks, both in the patch audit as
-`sec_ready` (the status, session.json and the hosts' `patch audit: sec-ready: ...` lines):
+`sec_ready` (the status, session.json and the hosts' `patch audit: sec-ready: ...` lines), whose `findings` list
+each finding as `{class, site, disasm, ...}` (the strict mode's shape below; `site` the run-time address, `disasm` its
+code notation), with the static pass's counts in `static` and `watched` true while the watch runs:
 
 - `static`, at the start against the stock image: from each hook (a changed run over stock code; a run over the
-  `0xff` / `0x00` fill is a cave) the pass follows the patched code it reaches and lists, as `ungated`, each direct
+  `0xff` / `0x00` fill is a cave) the pass follows the patched code it reaches and lists, as class `ungated-branch`, each direct
   branch or call (or `jmp (An)` / `calls (An)` after a `mov imm32,An`) into a later load tier than the hook's section
   (sections 1 to 5 and the reset head's copies, 6 and 7, 8 to 10: the start tasks wait for stages 2 to 4, then 6 and
   7 in USTART4, then 8 to 10 in USTART5) with no gate before it on the path: an instruction naming the stage word or
   the copied mask, a call of the firmware's stage test or wait (E143 `0x50024dcf` / `0x50024de8`, E146 `0x50024e9a` /
   `0x50024eb3`, E147 `0x50024e19` / `0x50024e32`), or a call of patched code that does. Each entry gives the branch
-  (`at`, `disasm`), its `kind`, `target`, the sections (`from`, `to`) and the `hook` it was reached from; `crossings`
-  and `gated` count the rest. A list to review, not a verdict: the pass does not know when a hook's stock code runs,
+  (`site`, `disasm`), its kind (`branch`), its target (`addr`), the sections (`from`, `to`) and the `hook` it was
+  reached from; `static.crossings` and `static.gated` count the rest. A list to review, not a verdict: the pass does not know when a hook's stock code runs,
   and camera-tested releases have entries (below).
-- `runs`, during the session: a patched instruction run in section n while bit n - 1 of the lab's stage word is clear,
-  one record per section and `kind` (`before-bootstage`: before S-BOOTSTAGE sets the word at the settings store's
-  start; `never-readied`: sections 8 to 10, whose bits the lab never sets), with the first `pc`, the `caller` (MDR),
+- class `unready-run`, during the session: a patched instruction run in section n while bit n - 1 of the lab's stage
+  word is clear, one record per `section` and `phase` (`before-bootstage`: before S-BOOTSTAGE sets the word at the settings store's
+  start; `never-readied`: sections 8 to 10, whose bits the lab never sets), with the first pc (`site`), the `caller` (MDR),
   the `word`, the `copied` mask, the bits S-BOOTSTAGE set (`staged`), and the counts of instructions and changed
   pieces. The lab's start does not follow the camera's order and it readies no stage past 7, so a record says where
   to look, not that the camera fails.
@@ -1164,8 +1166,9 @@ modified firmware and that the lab otherwise runs as asked (caduceus-ep7's safet
   `0x61fc27d8`, which read 0 on the camera. `unloaded-read`: in the loaded-ranges mode, a load from a range the boot
   does not load or is not shown to load, which reads S-STALERAM's fill unreported otherwise.
 
-Each site (the accessing instruction's pc, in the code notation, with the run-time pc, the address, the size, the
-value, MDR as `ret` and a count) is listed under `strict` in the session summary and the play status, beside
+Each site is a finding `{class, site, disasm, addr, ...}` (the class above, the accessing instruction's run-time pc and
+its code notation, the address, then the size, the value, MDR as `ret` and a count; `sec_ready`'s shape), listed in
+`findings` under `strict` in the session summary and the play status, beside
 `patch_audit`, and as one `strict:` line on stderr at the end of a scripted run. The run goes on after a report (but
 not after a misaligned access's fault). Stock firmware's own sites are counted as `allowed`, not listed: the
 allowlist `src/fw/strict-allow.mjs`, per model, measured from stock sessions on E143, E147 and E142 (in-place

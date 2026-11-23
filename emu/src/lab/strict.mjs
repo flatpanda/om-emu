@@ -28,6 +28,8 @@ import { PatchRanges } from './patchaudit.mjs';
 
 const CODE = 0x50000000;
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
+// the classes a finding names (its `class`)
+export const STRICT_CLASSES = ['misaligned', 'image-store', 'init-read', 'unloaded-read'];
 export const STRICT_SITES_MAX = 256;           // distinct new sites kept; more are counted (dropped)
 
 // The mode from an option value ('on', 'off', true, false, undefined) and the environment's OM_STRICT ('1' or 'on'):
@@ -106,14 +108,16 @@ export class StrictLog {
     const s = this.sites.get(key);
     if (s) { s.n += 1; if (!s.addrs.includes(h8(a)) && s.addrs.length < 8) s.addrs.push(h8(a)); return; }
     if (this.sites.size >= this.max) { this.dropped += 1; return; }
-    this.sites.set(key, { kind: cls, at: h8(at), pc: h8(pc), addr: h8(a), addrs: [h8(a)], size: w, dir, value: h8(v), ret: h8(ctx.mdr()),
+    this.sites.set(key, { class: cls, site: h8(pc), disasm: h8(at), addr: h8(a), addrs: [h8(a)], size: w, dir, value: h8(v), ret: h8(ctx.mdr()),
       insns: ctx.insns(), n: 1, ...(where ? { where } : {}), ...(patched ? { patched: true } : {}) });
   }
-  // {sites: [...] in first-seen order, allowed: [{kind, at, why, n}], dropped}
+  // {findings: [...] in first-seen order, allowed: [{kind, at, why, n}], dropped}. A finding is the report shape the
+  // patch audit's sec_ready shares (src/lab/secready.mjs secReadyReport): {class, site (the instruction's run-time
+  // pc), disasm (its code notation), addr (the address accessed), ...}
   doc() {
     const span = (r) => (r ? `${h8(r[0])}..${h8(r[1])}` : 'any');
     const allowedList = [...this.allowedCounts].map(([e, n]) => ({ kind: e.kind, at: span(e.at), addr: span(e.addr), why: e.why, n }));
-    return { model: this.model, sites: [...this.sites.values()].map(({ addrs, ...s }) => (addrs.length > 1 ? { ...s, addrs } : s)), allowed: allowedList, dropped: this.dropped };
+    return { model: this.model, findings: [...this.sites.values()].map(({ addrs, ...s }) => (addrs.length > 1 ? { ...s, addrs } : s)), allowed: allowedList, dropped: this.dropped };
   }
 }
 
@@ -121,7 +125,8 @@ export class StrictLog {
 export function strictLine(d) {
   const allowedN = d.allowed.reduce((x, e) => x + e.n, 0);
   const tail = `${allowedN ? `; ${allowedN} access(es) at stock sites allowed (src/fw/strict-allow.mjs)` : ''}${d.dropped ? `; ${d.dropped} more site(s) not kept` : ''}`;
-  if (!d.sites.length) return `strict: no new site${tail}`;
-  const some = d.sites.slice(0, 8).map((s) => `${s.kind} at ${s.at}${s.patched ? ' (patched bytes)' : ''} ${s.dir === 'w' ? 'to' : 'from'} ${s.addr}${s.n > 1 ? ` x${s.n}` : ''}${s.where ? ` (${s.where})` : ''}, ret ${s.ret}`);
-  return `strict: ${d.sites.length} new site(s): ${some.join('; ')}${d.sites.length > 8 ? `; and ${d.sites.length - 8} more` : ''}${tail}`;
+  const f = d.findings;
+  if (!f.length) return `strict: no new site${tail}`;
+  const some = f.slice(0, 8).map((s) => `${s.class} at ${s.disasm}${s.patched ? ' (patched bytes)' : ''} ${s.dir === 'w' ? 'to' : 'from'} ${s.addr}${s.n > 1 ? ` x${s.n}` : ''}${s.where ? ` (${s.where})` : ''}, ret ${s.ret}`);
+  return `strict: ${f.length} new site(s): ${some.join('; ')}${f.length > 8 ? `; and ${f.length - 8} more` : ''}${tail}`;
 }

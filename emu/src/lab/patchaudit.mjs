@@ -25,13 +25,13 @@
 //   sec_ready        with --sec-ready (env.secReady, src/lab/secready.mjs): the static section-order pass, which the
 //                    hosts run at the start against the stock image (startSecReady; env.secReady.static), and the
 //                    run-time watch's records (the Simulator's secReady), live: the patched instructions that ran in
-//                    a section whose stage bit was clear
+//                    a section whose stage bit was clear; as secReadyReport's {static, watched, findings by class}
 import { insnLength } from '../core/cpu.mjs';
 import { FirmwareError, ValueError } from './errors.mjs';
 import { IMAGE_BASE, MODEL, ON_LAB_MODEL } from '../fw/model.mjs';
 import { PORTS, FACTS } from '../fw/ports.mjs';
 import { loadedRanges, secReadyWatch } from './sim.mjs';
-import { secOrder, secReadyLine } from './secready.mjs';
+import { secOrder, secReadyLine, secReadyReport } from './secready.mjs';
 
 export class PatchHooked extends FirmwareError {}
 
@@ -130,7 +130,7 @@ export function patchAudit(lab) {
   const a = auditTables(ranges, { hooks, ports, facts, len: lab.image.length });
   const w = lab.sim?.secReady ?? null;
   return { ...a, unloaded: unloadedRuns(ranges.ranges, lab.sim?.loads ?? null, ranges.base),
-    ...(w ? { sec_ready: { static: lab.env?.secReady?.static ?? null, runs: w.findings } } : {}) };
+    ...(w ? { sec_ready: secReadyReport(lab.env?.secReady?.static ?? null, w.findings) } : {}) };
 }
 
 // --sec-ready at a host's start (host/navcli.mjs, host/labworker.mjs, host/session.mjs): the static section-order pass

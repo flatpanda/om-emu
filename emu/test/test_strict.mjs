@@ -110,14 +110,14 @@ export async function strictUnits() {
     pc = B + 0x10c; L.report('read', B + 0x20020, 4, 'r', 5);
     pc = B + 0x110; L.report('misaligned', 0x6c000002, 4, 'r', 0);
     pc = B + 0x114; L.report('read', B + 0x9000, 4, 'r', 6);         // past the read ranges: not a site
-    const d = L.doc(), by = Object.fromEntries(d.sites.map((s) => [s.at, s]));
-    ok(d.sites.length === 5, `five sites: ${JSON.stringify(d.sites)}`);
-    ok(by[h8(code(0x100))]?.kind === 'image-store' && by[h8(code(0x100))].n === 2 && by[h8(code(0x100))].addrs?.length === 2 && by[h8(code(0x100))].ret === '0x6000abcd' && by[h8(code(0x100))].insns === 7 && !by[h8(code(0x100))].where,
+    const d = L.doc(), by = Object.fromEntries(d.findings.map((s) => [s.disasm, s]));
+    ok(d.findings.length === 5 && d.findings.every((s) => s.site === h8(B + Number(s.disasm) - code(0))), `five sites, each with its run-time site: ${JSON.stringify(d.findings)}`);
+    ok(by[h8(code(0x100))]?.class === 'image-store' && by[h8(code(0x100))].n === 2 && by[h8(code(0x100))].addrs?.length === 2 && by[h8(code(0x100))].ret === '0x6000abcd' && by[h8(code(0x100))].insns === 7 && !by[h8(code(0x100))].where,
       `a site per pc, counted, in the code notation: ${JSON.stringify(by[h8(code(0x100))])}`);
-    ok(by[h8(code(0x104))]?.kind === 'image-store' && /in the gap past section 1's loaded end/.test(by[h8(code(0x104))].where), `a store in a gap (uncached view) named so: ${JSON.stringify(by[h8(code(0x104))])}`);
-    ok(by[h8(code(0x108))]?.kind === 'init-read' && by[h8(code(0x108))].where === 'copied to 0x61000010 at the boot', `init-read with its copy: ${JSON.stringify(by[h8(code(0x108))])}`);
-    ok(by[h8(code(0x10c))]?.kind === 'unloaded-read' && /past section 1's loaded end/.test(by[h8(code(0x10c))].where), `unloaded-read with its range: ${JSON.stringify(by[h8(code(0x10c))])}`);
-    ok(by[h8(code(0x110))]?.kind === 'misaligned', `misaligned: ${JSON.stringify(by[h8(code(0x110))])}`);
+    ok(by[h8(code(0x104))]?.class === 'image-store' && /in the gap past section 1's loaded end/.test(by[h8(code(0x104))].where), `a store in a gap (uncached view) named so: ${JSON.stringify(by[h8(code(0x104))])}`);
+    ok(by[h8(code(0x108))]?.class === 'init-read' && by[h8(code(0x108))].where === 'copied to 0x61000010 at the boot', `init-read with its copy: ${JSON.stringify(by[h8(code(0x108))])}`);
+    ok(by[h8(code(0x10c))]?.class === 'unloaded-read' && /past section 1's loaded end/.test(by[h8(code(0x10c))].where), `unloaded-read with its range: ${JSON.stringify(by[h8(code(0x10c))])}`);
+    ok(by[h8(code(0x110))]?.class === 'misaligned', `misaligned: ${JSON.stringify(by[h8(code(0x110))])}`);
     const line = strictLine(d);
     ok(line.startsWith('strict: 5 new site(s): image-store at 0x50000100 to ') && line.includes('x2') && line.includes('init-read at 0x50000108 from'), `strictLine: ${line}`);
     // the allowlist: by pc, by address; its controls; patched bytes
@@ -126,22 +126,22 @@ export async function strictUnits() {
       const l = log(list);
       pc = B + 0x100; l.report('store', B + 0x4000, 4, 'w', 1); l.report('store', B + 0x4004, 4, 'w', 1);
       const x = l.doc();
-      ok(x.sites.length === 0 && x.allowed.length === 1 && x.allowed[0].n === 2 && strictLine(x) === 'strict: no new site; 2 access(es) at stock sites allowed (src/fw/strict-allow.mjs)', `allowed ${what}: ${JSON.stringify(x)}`);
+      ok(x.findings.length === 0 && x.allowed.length === 1 && x.allowed[0].n === 2 && strictLine(x) === 'strict: no new site; 2 access(es) at stock sites allowed (src/fw/strict-allow.mjs)', `allowed ${what}: ${JSON.stringify(x)}`);
     }
     for (const [list, what] of [[[{ ...E, at: [code(0x102), code(0x104)] }], 'another pc'], [[{ ...E, kind: 'init-read' }], 'another kind'], [[{ ...A, addr: [B + 0x4004, B + 0x4008] }], 'an address range that misses']]) {
       const l = log(list);
       pc = B + 0x100; l.report('store', B + 0x4000, 4, 'w', 1);
-      ok(l.doc().sites.length === 1, `control: an entry for ${what} does not allow the site: ${JSON.stringify(l.doc())}`);
+      ok(l.doc().findings.length === 1, `control: an entry for ${what} does not allow the site: ${JSON.stringify(l.doc())}`);
     }
     const P = log([E], [[0x101, 1]]);
     pc = B + 0x100; P.report('store', B + 0x4000, 4, 'w', 1);           // the instruction at +0x100 (0xcb... with rom[0x100] = 0x60, 1 byte) misses +0x101
     pc = B + 0x101; P.report('store', B + 0x4000, 4, 'w', 1);
     const pd = P.doc();
-    ok(pd.allowed[0]?.n === 1 && pd.sites.length === 1 && pd.sites[0].at === h8(code(0x101)) && pd.sites[0].patched === true, `a site on patched bytes reported despite an entry for it (${JSON.stringify(pd)})`);
+    ok(pd.allowed[0]?.n === 1 && pd.findings.length === 1 && pd.findings[0].disasm === h8(code(0x101)) && pd.findings[0].patched === true, `a site on patched bytes reported despite an entry for it (${JSON.stringify(pd)})`);
     ok(allowed([E], 'image-store', code(0x100), B) === E && allowed([E], 'image-store', code(0x102), B) === null, 'allowed: the pc range is [lo, hi)');
     const C = log([], null, 2);
     for (let k = 0; k < 4; k++) { pc = B + 0x200 + k; C.report('store', B + 0x4000, 4, 'w', 0); }
-    ok(C.doc().sites.length === 2 && C.doc().dropped === 2 && strictLine(C.doc()).endsWith('2 more site(s) not kept'), `the cap: ${JSON.stringify(C.doc())}`);
+    ok(C.doc().findings.length === 2 && C.doc().dropped === 2 && strictLine(C.doc()).endsWith('2 more site(s) not kept'), `the cap: ${JSON.stringify(C.doc())}`);
   } finally { mem.ctx.pc = pc0; mem.ctx.insns = ins0; mem.ctx.mdr = mdr0; }
   // strictOn
   ok(strictOn('on', {}) && !strictOn('off', { OM_STRICT: '1' }) && strictOn(undefined, { OM_STRICT: '1' }) && strictOn(undefined, { OM_STRICT: 'on' }) && !strictOn(undefined, {}) && !strictOn(undefined, { OM_STRICT: '0' }),
@@ -175,7 +175,7 @@ export async function strictSession() {
       const s = session(model, ['--strict', 'on'], tokens);
       const st = s.sum?.strict;
       allowedN += st?.allowed?.reduce((x, e) => x + e.n, 0) ?? 0;
-      ok(s.rc === 0 && st && st.sites.length === 0, `${model} stock session ${i + 1} with --strict on: rc ${s.rc}, ${st ? `${st.sites.length} new site(s) ${JSON.stringify(st.sites.slice(0, 4))}` : 'no strict in the summary'} ${s.rc ? s.err.slice(-300) : ''}`);
+      ok(s.rc === 0 && st && st.findings.length === 0, `${model} stock session ${i + 1} with --strict on: rc ${s.rc}, ${st ? `${st.findings.length} new site(s) ${JSON.stringify(st.findings.slice(0, 4))}` : 'no strict in the summary'} ${s.rc ? s.err.slice(-300) : ''}`);
     });
     ok(allowedN > 0, `${model}: the stock sessions' accesses at allowed sites: ${allowedN} (the allowlist keeps them quiet)`);
   }
@@ -200,19 +200,19 @@ export async function strictSession() {
     patchOf('E142', e142, [[R, LD(0x6025aa98), 'init word'], [R + 0x10, LD(0x61fc27d8), 'live copy'], [R + 0x20, SB(0x605b7400), 'section 3'], [R + 0x30, SB(0x6203c8ba), 'bss'], [R + 0x40, LD(0x601e356e), 'misaligned']]);
     const calls = [0, 0x10, 0x20, 0x30, 0x40].map((o) => `call:${h8(R + o)}:frame=0/0`);
     const s = session('E142', ['--strict', 'on', '--patch', e142], ['wait:1000', ...calls]);
-    const sites = s.sum?.strict?.sites ?? [];
-    const at = (o) => sites.find((x) => x.pc === h8(R + o));
-    ok(at(0)?.kind === 'init-read' && at(0).addr === '0x6025aa98' && at(0).where === 'copied to 0x61fc27d8 at the boot' && at(0).patched === true, `E142 issue #48's read of the init word: ${JSON.stringify(at(0))}`);
-    ok(at(0x20)?.kind === 'image-store' && at(0x20).addr === '0x605b7400' && at(0x20).size === 1, `E142 a byte store into section 3's range: ${JSON.stringify(at(0x20))}`);
-    ok(at(0x40)?.kind === 'misaligned' && at(0x40).addr === '0x601e356e' && s.sum?.failed?.step === 6 && /fault 3/.test(s.sum.failed.message), `E142 a misaligned word load, reported and faulted: ${JSON.stringify(at(0x40))} ${JSON.stringify(s.sum?.failed)}`);
-    ok(!at(0x10) && !at(0x30) && sites.length === 3, `E142 controls: the live copy's read and a .bss store report nothing (${sites.length} sites: ${sites.map((x) => x.pc).join(' ')})`);
+    const sites = s.sum?.strict?.findings ?? [];
+    const at = (o) => sites.find((x) => x.site === h8(R + o));
+    ok(at(0)?.class === 'init-read' && at(0).addr === '0x6025aa98' && at(0).where === 'copied to 0x61fc27d8 at the boot' && at(0).patched === true, `E142 issue #48's read of the init word: ${JSON.stringify(at(0))}`);
+    ok(at(0x20)?.class === 'image-store' && at(0x20).addr === '0x605b7400' && at(0x20).size === 1, `E142 a byte store into section 3's range: ${JSON.stringify(at(0x20))}`);
+    ok(at(0x40)?.class === 'misaligned' && at(0x40).addr === '0x601e356e' && s.sum?.failed?.step === 6 && /fault 3/.test(s.sum.failed.message), `E142 a misaligned word load, reported and faulted: ${JSON.stringify(at(0x40))} ${JSON.stringify(s.sum?.failed)}`);
+    ok(!at(0x10) && !at(0x30) && sites.length === 3, `E142 controls: the live copy's read and a .bss store report nothing (${sites.length} sites: ${sites.map((x) => x.site).join(' ')})`);
     ok(/strict: 3 new site\(s\): init-read at 0x501f08e0 \(patched bytes\)/.test(s.err), `E142 the stderr line: ${s.err.split('\n').find((l) => l.includes('strict:') && l.includes('site')) ?? s.err.slice(-300)}`);
     // E143: section 6's 0xFF tail (emu/test/test_sections.mjs SIX), a load past its loaded end 0x60f29000
     const e143 = path.join(tmp, 'e143.json'), T = 0x60f28f00;
     patchOf('E143', e143, [[T, LD(0x60f29100), 'gap'], [T + 0x10, LD(0x60f28f80), 'loaded']]);
     const g = session('E143', ['--strict', 'on', '--patch', e143], ['wait:500', `call:${h8(T)}:frame=0/0`, `call:${h8(T + 0x10)}:frame=0/0`]);
-    const gs = g.sum?.strict?.sites ?? [];
-    ok(g.rc === 0 && gs.length === 1 && gs[0].kind === 'unloaded-read' && gs[0].pc === h8(T) && /past section 6's loaded end 0x60f29000/.test(gs[0].where),
+    const gs = g.sum?.strict?.findings ?? [];
+    ok(g.rc === 0 && gs.length === 1 && gs[0].class === 'unloaded-read' && gs[0].site === h8(T) && /past section 6's loaded end 0x60f29000/.test(gs[0].where),
       `E143 a load past section 6's loaded end (unloaded-read), and its control inside reporting nothing: rc ${g.rc} ${JSON.stringify(gs)} ${g.rc ? g.err.slice(-300) : ''}`);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

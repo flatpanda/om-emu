@@ -283,16 +283,30 @@ export class SecReadyAudit {
   }
 }
 
-// The audit's sec_ready part as one line (the hosts' patch audit line, and their closing line)
+// The audit's sec_ready part (patchAudit's, the status's and session.json's) from the static pass's result (or null:
+// not run) and the watch's records (or null: not watching), in the report shape the strict mode's log shares
+// (src/lab/strict.mjs StrictLog.doc): {static: {hooks, crossings, gated} | null, watched, findings: [{class, site
+// (run-time), disasm (code notation), ...}]}. class 'ungated-branch' (a static entry: addr its target, branch its
+// kind, from, to, hook) or 'unready-run' (a watch record: section, phase its kind, word, copied, caller, staged,
+// insns, pieces, pcs)
+export const SEC_READY_CLASSES = ['ungated-branch', 'unready-run'];
+export function secReadyReport(st, runs) {
+  const findings = [
+    ...(st?.ungated ?? []).map(({ at, disasm, kind, target, ...x }) => ({ class: 'ungated-branch', site: at, disasm, addr: target, branch: kind, ...x })),
+    ...(runs ?? []).map(({ pc, disasm, kind, ...x }) => ({ class: 'unready-run', site: pc, disasm, phase: kind, ...x })),
+  ];
+  return { static: st ? { hooks: st.hooks, crossings: st.crossings, gated: st.gated } : null, watched: runs != null, findings };
+}
+
+// secReadyReport's report as one line (the hosts' patch audit line, and their closing line)
 export function secReadyLine(s) {
-  const st = s.static;
+  const st = s.static, ungated = s.findings.filter((x) => x.class === 'ungated-branch'), runs = s.findings.filter((x) => x.class === 'unready-run');
   const stat = st == null ? 'the static section-order pass not run (the host gave none)'
-    : st.ungated.length ? `${st.ungated.length} ungated branch(es) of patched code into a later section (of ${st.crossings} crossing(s), ${st.gated} gated): ` +
-      st.ungated.slice(0, 8).map((x) => `${x.at} ${x.kind} -> ${x.target} (section ${x.from} -> ${x.to})`).join(', ') + (st.ungated.length > 8 ? `, and ${st.ungated.length - 8} more` : '')
+    : ungated.length ? `${ungated.length} ungated branch(es) of patched code into a later section (of ${st.crossings} crossing(s), ${st.gated} gated): ` +
+      ungated.slice(0, 8).map((x) => `${x.site} ${x.branch} -> ${x.addr} (section ${x.from} -> ${x.to})`).join(', ') + (ungated.length > 8 ? `, and ${ungated.length - 8} more` : '')
       : `no ungated branch of patched code into a later section (${st.crossings} crossing(s), all gated)`;
-  const runs = s.runs ?? null;
-  const run = runs === null ? '' : !runs.length ? '; no patched instruction ran in a section whose stage bit was clear'
+  const run = !s.watched ? '' : !runs.length ? '; no patched instruction ran in a section whose stage bit was clear'
     : `; patched code ran in ${runs.length} section(s) and phase(s) whose stage bit was clear: ` +
-      runs.slice(0, 8).map((x) => `${x.pc} (section ${x.section}, ${x.insns} instruction(s) in ${x.pieces} piece(s), word ${x.word}, caller ${x.caller}, ${x.kind === 'before-bootstage' ? 'before S-BOOTSTAGE' : x.kind === 'never-readied' ? 'a stage the lab never readies' : 'its bit cleared since S-BOOTSTAGE'})`).join(', ') + (runs.length > 8 ? `, and ${runs.length - 8} more` : '');
+      runs.slice(0, 8).map((x) => `${x.site} (section ${x.section}, ${x.insns} instruction(s) in ${x.pieces} piece(s), word ${x.word}, caller ${x.caller}, ${x.phase === 'before-bootstage' ? 'before S-BOOTSTAGE' : x.phase === 'never-readied' ? 'a stage the lab never readies' : 'its bit cleared since S-BOOTSTAGE'})`).join(', ') + (runs.length > 8 ? `, and ${runs.length - 8} more` : '');
   return `sec-ready: ${stat}${run}`;
 }

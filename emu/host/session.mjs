@@ -343,7 +343,7 @@ export async function openSession(o = {}) {
   const E = await import('../checks/lib/env.mjs');
   const { PatchRefused, patchLine } = await import('../src/fw/patch.mjs');
   const { startUnloaded, unloadedLine, startSecReady } = await import('../src/lab/patchaudit.mjs');
-  const { secReadyLine } = await import('../src/lab/secready.mjs');
+  const { secReadyLine, secReadyReport } = await import('../src/lab/secready.mjs');
   const { StrictLog, strictOn, strictLine } = await import('../src/lab/strict.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { codePc, notationOf } = await import('../src/debug/live.mjs');
@@ -450,7 +450,7 @@ export async function openSession(o = {}) {
       if (e instanceof ValueError) throw new SessionRefused(e.message);
       throw e;
     }
-    say(`patch audit: ${secReadyLine({ static: secReady.static, runs: null })}`);
+    say(`patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
   }
   // the kept state: off (a blank camera at each start) unless a file is named
   const nvArg = o.nvram ?? 'off';

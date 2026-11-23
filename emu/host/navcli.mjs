@@ -17,7 +17,7 @@ import { MODEL } from '../src/fw/model.mjs';
 import { REPO, loadImage, loadBlock, createHash, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { patchAudit, auditLine, startUnloaded, unloadedLine, startSecReady } from '../src/lab/patchaudit.mjs';
-import { secReadyLine } from '../src/lab/secready.mjs';
+import { secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -120,7 +120,7 @@ function run(a) {
       process.stderr.write(`error: ${e.message}\n`);
       return 1;
     }
-    say(`patch audit: ${secReadyLine({ static: secReady.static, runs: null })}`);
+    say(`patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
   }
   const out = a.out ?? path.join(OUT, a.tag);
   fs.mkdirSync(out, { recursive: true });

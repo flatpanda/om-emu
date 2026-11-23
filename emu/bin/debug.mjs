@@ -92,7 +92,9 @@ function patchOverlay(args) {
   if (args.main !== undefined && args.patch.length) args.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   if (args.image !== undefined) args.error(`${opt} applies to the stock main code block: not with --image`);
   try {
-    const fw = patchedFirmware(overlayPatches(args), { resource: false });
+    const fw = patchedFirmware(overlayPatches(args, { resource: false }), { resource: false });
+    // (this tool runs the main code block as unpacked: a patch to its run-time image has no such block)
+    if (fw.raw === null) throw new PatchRefused('a patch to the main block\'s run-time image (a mods.json pack\'s edits): bin/debug.mjs runs the block as unpacked; use bin/session.mjs, play.mjs or nav.mjs');
     return { label: `patched: ${args.main ?? args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary, unloaded: startUnloaded(fw, args.loaded) };
   } catch (e) {
     if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: ${opt} refused: ${e.message}`);

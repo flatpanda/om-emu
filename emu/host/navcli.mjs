@@ -7,13 +7,17 @@
 // line first, a 'patch audit: ...' line after the bring-up (src/lab/patchaudit.mjs), and session.json's patch the
 // overlay's summary, its patch_audit the audit. --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
 // src/lab/sim.mjs loadedRanges; auto, the default, on with --patch or --main on a body whose section loader the lab
-// reads, a run in the unloaded ranges or those not shown loaded then an 'error: ...' line and rc 1). Node-only (host/).
+// reads, a run in the unloaded ranges or those not shown loaded then an 'error: ...' line and rc 1). --sec-ready (with
+// --patch or --main, on E143, E146 and E147; src/lab/secready.mjs): the static section-order pass in a 'patch audit:
+// sec-ready: ...' line before the lab and in the audit, the run-time watch's records in a 'sec-ready: ...' line at the
+// end and in session.json's patch_audit.sec_ready. Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
 import { REPO, loadImage, loadBlock, createHash, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
-import { patchAudit, auditLine, startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
+import { patchAudit, auditLine, startUnloaded, unloadedLine, startSecReady } from '../src/lab/patchaudit.mjs';
+import { secReadyLine } from '../src/lab/secready.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -60,6 +64,7 @@ export const ACTIONS = [
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
   { opt: '--main', type: 'path', metavar: 'FILE' },
   { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
+  { opt: '--sec-ready', type: 'flag', default: false },
 ];
 const say = (line) => process.stdout.write(line + '\n');
 // --seed FILE: a JSON object of setting id: value, both integers (an id as its decimal key), seeded in ascending id
@@ -108,6 +113,15 @@ function run(a) {
     const unloaded = startUnloaded(fw, a.loaded);
     if (unloaded !== undefined) say(`patch audit: ${unloadedLine(unloaded)}`);
   }
+  let secReady = null;
+  if (a.sec_ready) {
+    try { secReady = startSecReady(fw, loadImage()); } catch (e) {
+      if (!(e instanceof ValueError)) throw e;
+      process.stderr.write(`error: ${e.message}\n`);
+      return 1;
+    }
+    say(`patch audit: ${secReadyLine({ static: secReady.static, runs: null })}`);
+  }
   const out = a.out ?? path.join(OUT, a.tag);
   fs.mkdirSync(out, { recursive: true });
   const doc = { script: a.script, lang: a.lang, device: a.device, u1: a.u1, start, seed, clock: a.clock,
@@ -121,7 +135,7 @@ function run(a) {
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
   const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: a.loaded,
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: a.loaded, ...(secReady ? { secReady } : {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });
@@ -180,6 +194,7 @@ function run(a) {
       doc.b2 = lab.takeover_log;
       // the tasks the patch made that started (H-PATCHTASK, src/lab/kernel.mjs)
       if (doc.patch_audit) doc.patch_audit.tasks = lab.lt.patch_tasks.map((t) => '0x' + t.toString(16).padStart(8, '0'));
+      if (doc.patch_audit?.sec_ready) say(secReadyLine(doc.patch_audit.sec_ready));
     } finally { nav.close(); }
   } catch (e) {
     if (!(e instanceof FirmwareError || isValueError(e))) throw e;

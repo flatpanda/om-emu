@@ -18,7 +18,9 @@
 //   until a card:in token; a restart keeps the slot as the last session left it, card:out included, and restart:card=
 //   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
-//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, held [KEY...] (keys held down at power-on, released once
+//   loaded 'auto'|'on'|'off' (S-STALERAM), secReady true (--sec-ready, src/lab/secready.mjs: the static section-order
+//   pass at the start, said and in the audit, and the run-time watch; needs patch or main), strict 'on'|'off'
+//   (src/lab/strict.mjs; absent: OM_STRICT), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
 //   and --device), rotate 'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
@@ -340,14 +342,16 @@ export async function openSession(o = {}) {
   if (o.model && o.model !== MODEL) throw new SessionRefused(`model ${o.model}: the lab in this process is ${MODEL}'s (fixed at its first import; another model needs another process)`);
   const E = await import('../checks/lib/env.mjs');
   const { PatchRefused, patchLine } = await import('../src/fw/patch.mjs');
-  const { startUnloaded, unloadedLine } = await import('../src/lab/patchaudit.mjs');
+  const { startUnloaded, unloadedLine, startSecReady } = await import('../src/lab/patchaudit.mjs');
+  const { secReadyLine } = await import('../src/lab/secready.mjs');
+  const { StrictLog, strictOn, strictLine } = await import('../src/lab/strict.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { codePc, notationOf } = await import('../src/debug/live.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { BY_ID } = await import('../src/lab/play.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
   const { nvramUnsupported } = await import('../src/lab/menu.mjs');
-  const { LabError } = await import('../src/lab/errors.mjs');
+  const { LabError, ValueError } = await import('../src/lab/errors.mjs');
   const { memoryCard } = await import('../src/lab/sdcard.mjs');
   const { cardPut, withCardFiles, CardFsError } = await import('../src/lab/cardfs.mjs');
   const { openVolume } = await import('../refs/volume.mjs');
@@ -439,11 +443,20 @@ export async function openSession(o = {}) {
     // the summary's audit until a session's bring-up gives the whole one: hooks and ports not audited (null)
     startAudit = { hooks: null, ported: null, unloaded: u ?? null, tasks: [] };
   }
+  // --sec-ready: the static pass now, against the stock image; the watch in each session's lab (src/lab/secready.mjs)
+  let secReady = null;
+  if (o.secReady) {
+    try { secReady = startSecReady(fw, E.loadImage()); } catch (e) {
+      if (e instanceof ValueError) throw new SessionRefused(e.message);
+      throw e;
+    }
+    say(`patch audit: ${secReadyLine({ static: secReady.static, runs: null })}`);
+  }
   // the kept state: off (a blank camera at each start) unless a file is named
   const nvArg = o.nvram ?? 'off';
   if (nvArg === 'on') throw new SessionRefused('--nvram on: name the file (--nvram FILE), or off');
   const nv = nvramChoice({ arg: nvArg, env: null, model: MODEL, unsupported: nvramUnsupported(), scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle,
-    build: fw ? fw.summary.blocks.find((b) => b.block === 'main')?.sha256 ?? null : null });
+    build: fw ? fw.summary.blocks.find((b) => b.block === 'main' || b.block === 'image')?.sha256 ?? null : null });
   if (nv.refuse) throw new SessionRefused(nv.refuse);
   if (nv.file) {
     try { fileNvram(nv.file).load(); } catch (e) { throw new SessionRefused(`${/^S-NVRAM /.test(e.message) ? e.message : `S-NVRAM ${nv.file}: ${e.message}`} (--nvram off for a blank camera)`); }
@@ -473,12 +486,16 @@ export async function openSession(o = {}) {
   if (STORAGE) say(`${cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)'}${o.noCard ? '; the slot empty at the start (--no-card; card:in puts it in)' : ''}`);
   if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
+  // the strict mode (src/lab/strict.mjs): o.strict 'on' / 'off', else OM_STRICT; one log for the whole run
+  let strictLog;
+  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict) ? new StrictLog({ model: MODEL }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
+  if (strictLog) say('strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words; src/lab/strict.mjs)');
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
     take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
     wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r), settingNames: () => settingNames(MODEL) },
     onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16, device: meta.device }; }, onAudio: () => {} };
@@ -851,7 +868,7 @@ export async function openSession(o = {}) {
     let cardRows = null;
     if (STORAGE) { try { cardRows = listing(); } catch (e) { if (BUG(e)) throw e; cardRows = { error: e.message }; } }
     return { summary: true, ok: failed === null, model: MODEL, osd_errors_policy: osdPolicy, patch: fw ? patchLine(fw.summary) : null, patch_audit: audit ?? startAudit, stand_ins: [...standins], pokes, harness_inputs: harness, calls,
-      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed,
+      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed, ...(strictLog ? { strict: strictLog.doc() } : {}),
       traces: armedLog.length ? { armed: armedLog, now: describe(), counts: Object.fromEntries(hitTotals), hits_dropped: hitsDropped, stops: stopCount } : null, ended_at_stop: ended };
   };
   return {

@@ -65,6 +65,8 @@
 // Also here and there, the small units: the memory map's rules at addRegion (test_mem.mjs memUnits).
 // What a firmware file is, --main's patches from a .BIN container and the gate's reasons, on made-up bodies
 // (test_identify.mjs identifyUnits).
+// E-M1-Miii mods.json packs, --main's resource block and a container whose only change is its version field, on
+// made-up blocks (test_mods.mjs modsUnits).
 // The Stand-ins tab's rows: one for every label a session can report in use (test_standins.mjs standinsUnits).
 // What a picture is, said at the picture: the sentences and the two pages' copies (test_sources.mjs sourcesUnits).
 // The lab's call on a synthetic block of hand-written functions (test_slice.mjs sliceUnits).
@@ -79,6 +81,7 @@ import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
 import { memUnits } from '../test/test_mem.mjs';
 import { identifyUnits } from '../test/test_identify.mjs';
+import { modsUnits } from '../test/test_mods.mjs';
 import { standinsUnits } from '../test/test_standins.mjs';
 import { sourcesUnits } from '../test/test_sources.mjs';
 import { sliceUnits } from '../test/test_slice.mjs';
@@ -165,6 +168,7 @@ report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay
 report('command-line parser', argsTests());
 report('the memory map\'s rules at addRegion: offset alignment, the physical space, overlaps (src/core/mem.mjs)', await memUnits());
 report('what a firmware file is: stock, another version, modified, unknown; --main on a .BIN container; the gate\'s reasons (src/fw/identify.mjs)', await identifyUnits());
+report('E-M1-Miii mods.json packs on the run-time image, --main\'s resource block, a container whose only change is its version field (test_mods.mjs)', modsUnits());
 report('the Stand-ins tab: a row for every label a session can report in use (src/lab/playapi.mjs standInRows)', await standinsUnits());
 report('what a picture is, said at the picture: the frame\'s and a taken picture\'s sentences, the pages\' copies (src/lab/sources.mjs)', await sourcesUnits());
 report('the lab\'s call on a synthetic block: derived frames, arguments, nested calls, the saved registers, typed faults (src/lab/hle.mjs HLE.call)', await sliceUnits());

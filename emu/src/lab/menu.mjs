@@ -842,6 +842,7 @@ export class MenuLab extends T.TextDisplayLab {
     const word = bootFacts().stage, bits = this.stage_bits(), v = this.sim.u32(word);
     if (v & bits) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} holds ${h8(v)} before the store's start`);
     this.sim.write(word, pack('<I', (v | bits) >>> 0));
+    this.sim.secReady?.staged(bits);                 // --sec-ready: the watch's records from here on say so (src/lab/secready.mjs)
     this.boot_staged = true;
     this.stage_bits_set = bits;
   }

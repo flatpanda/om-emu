@@ -478,6 +478,7 @@ export class Player {
       ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
       ...(this.env.patch ? { patch: this.env.patch } : {}),                                              // a patch overlay only
       ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),                              // likewise, once the lab is up
+      ...(s?.lab?.sim?.strict ? { strict: s.lab.sim.strict.doc() } : {}),                                // --strict on only (src/lab/strict.mjs)
       ...(this.env.nvram && s?.lab?.store_log?.nvram ? { nvram: { loaded: [...s.lab.store_log.nvram.loaded], saves: s.lab.store_log.nvram.saves.length } } : {}) };   // S-NVRAM only: the stores restored, the saves
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {

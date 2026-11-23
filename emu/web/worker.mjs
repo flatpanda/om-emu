@@ -42,7 +42,7 @@
 // frames while a long input runs (the page answers the status, frame and audio long polls from what was pushed).
 import { labFirmware, labNand } from '../src/fw/labfw.mjs';
 import { extractSource, decodeExtract } from '../src/fw/nand.mjs';
-import { expandImage } from '../src/fw/expand.mjs';
+import { expandImage, expandBlobs } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { createHash } from '../src/util/sha256.mjs';
 import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../src/fw/patch.mjs';
@@ -120,11 +120,12 @@ async function boot(msg) {
     if (msg.args?.patch) {
       const p = msg.args.patch;      // a file the page could not read is refused, as checks/lib/env.mjs readPatchFiles does
       if (typeof p.text !== 'string') throw new PatchRefused(`${p.name}: cannot read it (${p.error ?? 'no text'})`);
-      const r = applyPatches({ main: fw.rom, resource: fw.res }, readPatchText(p.text, p.name), { layout: patchLayout(MODEL_INFO), createHash });
-      fw.rom = r.blocks.main; fw.res = r.blocks.resource; patch = r.summary; patchRanges = r.changed;
+      const r = applyPatches({ main: fw.rom, resource: fw.res }, readPatchText(p.text, p.name), { layout: patchLayout(MODEL_INFO), createHash, expand: expandBlobs });
+      fw.rom = r.blocks.image ?? r.blocks.main; fw.res = r.blocks.resource; patch = r.summary; patchRanges = r.changed;
     }
-    // The cache holds the verified original block; the player and its tables need the runtime image.
-    fw.rom = expandImage(fw.rom);
+    // The cache holds the verified original block; the player and its tables need the runtime image (a patch to the
+    // run-time image, a mods.json pack's, gave it already: only the preload rows are left).
+    fw.rom = expandImage(fw.rom, { expanded: !!patch?.blocks.some((b) => b.block === 'image') });
     a = playerArgs(msg.args);
     // the options the lab takes in its env (the page's lens=stand-in, kept settings unless nvram=0, and card_size=GiB):
     // the lens stood in by
@@ -140,7 +141,7 @@ async function boot(msg) {
     // sha256 (the stock one for a patch to the resource block alone), as bin/play.mjs keys its default file
     const noKeep = msg.args?.nvram ? nvramUnsupported() ?? OPFS.unsupported() : null;
     if (noKeep) post({ type: 'progress', stage: 'nvram-error', message: `the settings are not kept: ${noKeep}` });
-    const build = patch ? patch.blocks.find((b) => b.block === 'main')?.sha256 ?? MODEL_INFO.rom_sha256 : null, nvDir = OPFS.nvramDir(build);
+    const build = patch ? patch.blocks.find((b) => b.block === 'main' || b.block === 'image')?.sha256 ?? MODEL_INFO.rom_sha256 : null, nvDir = OPFS.nvramDir(build);
     const nvram = msg.args?.nvram && !noKeep ? browserNvram(await OPFS.loadNvram(nvDir), (text) => OPFS.storeNvram(text, nvDir),
       (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${nvDir}${build ? ', the patched build\'s own' : ''})`) : null;
     const env = {

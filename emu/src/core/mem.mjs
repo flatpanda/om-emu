@@ -41,7 +41,7 @@ let winNext = 0;
 let stub = null;                                                         // the lab stub (src/dev/stub.mjs)
 let smcHook = (o) => {};
 export function setSmcHook(f) { smcHook = f; }
-export const ctx = { pc: () => 0, insns: () => 0 };                      // current_cpu pc / insns for device logs
+export const ctx = { pc: () => 0, insns: () => 0, mdr: () => 0 };       // current_cpu pc / insns / MDR for device logs, strict
 // ---- debug hooks (src/debug/, machine.mjs): off unless a debugger installs them, and tested only on slow paths.
 // MT, the MMIO trace: MT(dir 0 read / 1 write, addr, value, size, region name, cpu 0 (the CPU) / -1 (the debugger), err).
 // The memory_region_ops_read/write lines: a read after the device returned (a bus error with value
@@ -68,7 +68,10 @@ export function setWatchpoints(list, hooks = WHOOK) {
   for (const r of WL) for (let p = Math.floor(r.lo / 65536); p <= Math.floor((r.hi - 1) / 65536) && p < 65536; p++) WPG[p] = 1;
   maskWatchedPages();
 }
-function maskWatchedPages() { if (WON) for (let p = 0; p < 65536; p++) if (WPG[p] !== 0) { RP[p] = -1; WP[p] = -1; } }
+function maskWatchedPages() {
+  if (WON) for (let p = 0; p < 65536; p++) if (WPG[p] !== 0) { RP[p] = -1; WP[p] = -1; }
+  if (SON) for (let p = 0; p < 65536; p++) { if (SPR[p] !== 0) RP[p] = -1; if (SPW[p] !== 0) WP[p] = -1; }
+}
 function restorePage(p) {             // addRegion's fast entries for a page (its RAM store entry stays lazy)
   RP[p] = -1; WP[p] = -1;
   const list = PAGES[p];
@@ -86,6 +89,37 @@ function watchCheck(a, w, dir, v) {
     }
   }
 }
+// ---- strict mode (src/lab/strict.mjs, --strict): off unless setStrict installs it, and tested only on slow paths, as
+// the watchpoints are. Two kinds of range, by CPU virtual address in the cached DRAM view (the uncached alias
+// +0x40000000 is the same range): stores, whose 64 KiB pages keep their fast store entry off (SPW), so every CPU store
+// there takes slowSt; reads, whose pages keep their fast read entry off (SPR), so every CPU load there takes slowLd
+// (code fetches still read them, through codePhys). A CPU store into a store range or a load from a read range calls
+// SREP(kind, addr, size, dir, value); so does a misaligned 16/32-bit access (kind 'misaligned'), just before its fault
+// 3, which stays. Debugger, DMA and device accesses never report. Off (SON false): no page is masked and the only cost
+// is the SON test on the slow paths and in the misalignment faults' branches.
+let SON = false, SSTORE = [], SREAD = [], SREP = null;
+const SPW = new Uint8Array(65536), SPR = new Uint8Array(65536);
+// cfg: {stores: [[lo, hi)], reads: [[lo, hi)], report(kind, addr, size, dir, value)} (cached-view addresses), or null
+export function setStrict(cfg) {
+  for (let p = 0; p < 65536; p++) if (SPW[p] !== 0 || SPR[p] !== 0) { SPW[p] = 0; SPR[p] = 0; if (WPG[p] === 0) restorePage(p); }
+  SON = cfg !== null; SREP = cfg?.report ?? null;
+  SSTORE = (cfg?.stores ?? []).map(([lo, hi]) => [lo >>> 0, hi >>> 0]);
+  SREAD = (cfg?.reads ?? []).map(([lo, hi]) => [lo >>> 0, hi >>> 0]);
+  const mark = (list, pg) => {
+    for (const [lo, hi] of list) {
+      for (const d of [0, 0x40000000]) for (let p = (lo + d) >>> 16; p <= (hi - 1 + d) >>> 16 && p < 65536; p++) pg[p] = 1;
+    }
+  };
+  mark(SSTORE, SPW); mark(SREAD, SPR);
+  maskWatchedPages();
+}
+const inList = (list, a) => {
+  if (a >= 0xA0000000 && a < 0xC0000000) a -= 0x40000000;
+  for (let i = 0; i < list.length; i++) if (a < list[i][1] && a >= list[i][0]) return true;
+  return false;
+};
+function strictMisaligned(a, w, dir) { if (SON) SREP('misaligned', a >>> 0, w, dir, 0); }
+
 // The CPU's last I/O access (a device, the lab stub or a ROM device's write): the insns
 // count and pc of the accessing instruction. An I/O access from an instruction that is not its TB's last ends the
 // TB there, so the next instruction starts a TB either way (interp.mjs refusal c).
@@ -121,6 +155,7 @@ export function initMemory(dramBytes) {
   RP.fill(-1); WP.fill(-1); WPL.fill(-1);
   PAGES = new Array(65536).fill(null);
   MT = null; WON = false; WL = []; WPG.fill(0); WHIT = null; WHOOK = { stop() {}, log() {} };
+  SON = false; SSTORE = []; SREAD = []; SREP = null; SPW.fill(0); SPR.fill(0);
   CODEPG = new Uint8Array((TOTAL >>> 12) + 1);
   winNext = DRAM_OFF + dramBytes;
   stub = null;
@@ -162,7 +197,7 @@ export function addRegion(r) {
     if (whole && r.kind !== K_MMIO) {
       RP[p] = r.off + (p * 0x10000 - r.base);
       if (r.kind === K_RAM) WPL[p] = RP[p];           // enabled by the first CPU store (slowSt)
-      if (WPG[p] !== 0) RP[p] = -1;                   // a watched page keeps its fast entries off (maskWatchedPages)
+      if (WPG[p] !== 0 || SPR[p] !== 0) RP[p] = -1;   // a watched or strict read page keeps its fast entries off (maskWatchedPages)
     }
   }
   return r;
@@ -180,6 +215,8 @@ export function pageState(p) { return { list: PAGES[p], rp: RP[p], wp: WP[p], wp
 export function setPageState(p, s) {
   PAGES[p] = s.list; RP[p] = s.rp; WP[p] = s.wp; WPL[p] = s.wpl;
   if (WPG[p] !== 0) { RP[p] = -1; WP[p] = -1; }
+  if (SPR[p] !== 0) RP[p] = -1;
+  if (SPW[p] !== 0) WP[p] = -1;
 }
 export function findRegion(a) {
   a >>>= 0;
@@ -210,9 +247,10 @@ function slowLd(a, w) {
     throw new Fault(2, a);
   }
   if (r.kind !== K_MMIO) {
-    if (!WON) return ramRead(r.off + ((a >>> 0) - r.base), w);
+    if (!WON && !SON) return ramRead(r.off + ((a >>> 0) - r.base), w);
     const v = ramRead(r.off + ((a >>> 0) - r.base), w);
-    watchCheck(a, w, 0, v);
+    if (WON) watchCheck(a, w, 0, v);
+    if (SON && inList(SREAD, a >>> 0)) SREP('read', a >>> 0, w, 'r', v >>> 0);
     return v;
   }
   // A region marked ram (the bus window's pages off bus DRAM) is RAM or unassigned memory: no I/O of its own
@@ -244,8 +282,9 @@ function slowSt(a, v, w) {
     if (r.kind === K_RAM) {
       const o = r.off + ((a >>> 0) - r.base), p = a >>> 16;
       DIRTY[o >>> 16] = 1;
-      if (WPL[p] >= 0 && WPG[p] === 0) WP[p] = WPL[p];   // a whole RAM page, not watched: its fast store path from now on
+      if (WPL[p] >= 0 && WPG[p] === 0 && SPW[p] === 0) WP[p] = WPL[p];   // a whole RAM page, not watched or strict: its fast store path from now on
       if (WON) watchCheck(a, w, 1, w === 4 ? v : v & (w === 2 ? 0xffff : 0xff));
+      if (SON && inList(SSTORE, a >>> 0)) SREP('store', a >>> 0, w, 'w', w === 4 ? v >>> 0 : v & (w === 2 ? 0xffff : 0xff));
       ramWrite(o, v, w);
       return;
     }
@@ -263,11 +302,11 @@ function slowSt(a, v, w) {
 }
 export function ld8(a) { const b = RP[a >>> 16]; return b >= 0 ? U8[b + (a & 0xffff)] : slowLd(a, 1) & 0xff; }
 export function ld16(a) {
-  if (a & 1) throw new Fault(3, a);
+  if (a & 1) { strictMisaligned(a, 2, 'r'); throw new Fault(3, a); }
   const b = RP[a >>> 16]; return b >= 0 ? U16[(b + (a & 0xffff)) >> 1] : slowLd(a, 2) & 0xffff;
 }
 export function ld32(a) {
-  if (a & 3) throw new Fault(3, a);
+  if (a & 3) { strictMisaligned(a, 4, 'r'); throw new Fault(3, a); }
   const b = RP[a >>> 16]; return b >= 0 ? I32[(b + (a & 0xffff)) >> 2] : slowLd(a, 4);
 }
 export function st8(a, v) {
@@ -276,13 +315,13 @@ export function st8(a, v) {
   const o = b + (a & 0xffff); if (CODEPG[o >>> 12] !== 0) cpuStore(o); U8[o] = v;
 }
 export function st16(a, v) {
-  if (a & 1) throw new Fault(3, a);
+  if (a & 1) { strictMisaligned(a, 2, 'w'); throw new Fault(3, a); }
   const b = WP[a >>> 16];
   if (b < 0) return slowSt(a, v, 2);
   const o = b + (a & 0xffff); if (CODEPG[o >>> 12] !== 0) cpuStore(o); U16[o >> 1] = v;
 }
 export function st32(a, v) {
-  if (a & 3) throw new Fault(3, a);
+  if (a & 3) { strictMisaligned(a, 4, 'w'); throw new Fault(3, a); }
   const b = WP[a >>> 16];
   if (b < 0) return slowSt(a, v, 4);
   const o = b + (a & 0xffff); if (CODEPG[o >>> 12] !== 0) cpuStore(o); I32[o >> 2] = v;

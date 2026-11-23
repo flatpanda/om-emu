@@ -2,9 +2,12 @@
 // without the PERF2 machinery (no host reads, register cache, write elision or HLE builtins), over
 // the machine API. Stats: g_count and g_digest (sha256 of every 'g' reply
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
-import { A, IMAGE_BASE, IMAGE_END, fact } from '../fw/model.mjs';
-import { SECTIONS_E143 } from '../fw/facts.mjs';
+import { A, IMAGE_BASE, IMAGE_END, MODEL, fact } from '../fw/model.mjs';
+import { BOARD } from '../fw/board.mjs';
+import { StrictLog, strictOn } from './strict.mjs';
+import { SECTIONS_E143, BOOT_E143 } from '../fw/facts.mjs';
 import { bootLoads, rangeMessage, POISON } from '../fw/sections.mjs';
+import { SecReadyAudit, secLayout } from './secready.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
 import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
@@ -52,6 +55,16 @@ export function loadedRanges(env) {
   return bootLoads(env.rom, IMAGE_BASE, f);
 }
 
+// The --sec-ready watch for an env (src/lab/secready.mjs SecReadyAudit): the overlay's changed bytes in the sections
+// read from env.rom; refused (ValueError) without an overlay or on a body whose section loader or stage word the
+// lab does not read
+export function secReadyWatch(env) {
+  if (!env.patchRanges) throw new ValueError('--sec-ready: no patch overlay (--patch or --main) to watch');
+  const f = sectionsFact(), stage = f === null ? null : fact('boot', BOOT_E143)?.stage ?? null;
+  if (f === null || stage === null) throw new ValueError('--sec-ready: this build holds no section loader and stage word the lab reads (src/fw/facts.mjs sectionLoader, bootState): E143, E146 and E147');
+  return new SecReadyAudit(secLayout(env.rom, IMAGE_BASE, f, stage), env.patchRanges);
+}
+
 export class Simulator {
   // env: { rom, createHash, clock?, stats? (a Stats or null), slice? (instructions per continue slice), onSlice?,
   // machine? (the machine options passed to createMachine: mutant, a negative control's number, oneInsn, the
@@ -66,7 +79,15 @@ export class Simulator {
     const f = this.loads ? sectionsFact() : null;
     this.unloaded = this.loads ? { gaps: [...this.loads.gaps, ...this.loads.unshown], fill: POISON, message: (g, pc) => rangeMessage(g, pc, IMAGE_BASE, f) } : null;
     const unloaded = this.unloaded;
-    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded });
+    // --sec-ready (env.secReady, src/lab/secready.mjs): the patched instructions run in a section whose stage bit is
+    // clear, recorded by a fetch audit; null without the option (no guard, nothing changes)
+    this.secReady = env.secReady ? secReadyWatch(env) : null;
+    // the strict mode (src/lab/strict.mjs): env.strict, the host's StrictLog for the run (or 'on' / 'off'), else
+    // OM_STRICT; this.strict the log (null: off)
+    this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL }) : null;
+    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null }) ?? null;
+    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded,
+      fetchAudit: this.secReady?.guard ?? null, strict });
     this.breakpoints = new Set();
     this.known_insns = 0; this.ran = false;
     this.fast = false;

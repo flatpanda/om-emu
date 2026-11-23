@@ -6351,6 +6351,13 @@ on all three bodies by `emu/test/test_bootstage.mjs` (X: the same sequence of co
   for (4.6.3). So code in section 9 or 10 is not in RAM before CPU 0 has run section 7's constructors, nor section 10's
   before CPU 1 has run section 8's; the lab holds every section from its start (S-SECLOADED's mask included, whose bit
   9 the camera sets only after stage 8).
+- **The audit of patched code against that order (2026-11-22, `--sec-ready`, FIDELITY 7.20).** `src/lab/secready.mjs`
+  reads the stage test and its wait from each image (the test's `mov (W),d1 ... retf [d2],4` form with W the stage
+  word, the wait right after it): E143 `0x50024dcf` / `0x50024de8`, E146 `0x50024e9a` / `0x50024eb3`, E147
+  `0x50024e19` / `0x50024e32` (X, `emu/test/test_secready.mjs`; E143's and E147's are the ones above). Its static
+  pass takes the load tiers from the readers above (stages 2 to 4 before USTART4, 6 and 7 in USTART4, 8 to 10 in
+  USTART5) and counts a branch behind a read of this word, the copied mask or a call of the test or wait as gated;
+  its run-time watch reads this word as S-BOOTSTAGE leaves it, so it cannot place a run in the camera's copy order.
 
 #### 4.6.5 USTART5's MENU state and the hidden menu (2026-11-19; D unless tagged, addresses E143's)
 

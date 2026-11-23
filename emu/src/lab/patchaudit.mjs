@@ -22,11 +22,16 @@
 //                    stops the session when it runs; data there reads the fill, which nothing reports (reads of a gap
 //                    are not watched), so the hosts report these at the start, before anything runs (startUnloaded),
 //                    and the audit carries them
+//   sec_ready        with --sec-ready (env.secReady, src/lab/secready.mjs): the static section-order pass, which the
+//                    hosts run at the start against the stock image (startSecReady; env.secReady.static), and the
+//                    run-time watch's records (the Simulator's secReady), live: the patched instructions that ran in
+//                    a section whose stage bit was clear
 import { insnLength } from '../core/cpu.mjs';
 import { FirmwareError, ValueError } from './errors.mjs';
 import { IMAGE_BASE, MODEL, ON_LAB_MODEL } from '../fw/model.mjs';
 import { PORTS, FACTS } from '../fw/ports.mjs';
-import { loadedRanges } from './sim.mjs';
+import { loadedRanges, secReadyWatch } from './sim.mjs';
+import { secOrder, secReadyLine } from './secready.mjs';
 
 export class PatchHooked extends FirmwareError {}
 
@@ -123,7 +128,18 @@ export function patchAudit(lab) {
   }
   const hooks = [...lab.hooks].map(([pc, [, name, pass]]) => [pc, name, pass === true]);
   const a = auditTables(ranges, { hooks, ports, facts, len: lab.image.length });
-  return { ...a, unloaded: unloadedRuns(ranges.ranges, lab.sim?.loads ?? null, ranges.base) };
+  const w = lab.sim?.secReady ?? null;
+  return { ...a, unloaded: unloadedRuns(ranges.ranges, lab.sim?.loads ?? null, ranges.base),
+    ...(w ? { sec_ready: { static: lab.env?.secReady?.static ?? null, runs: w.findings } } : {}) };
+}
+
+// --sec-ready at a host's start (host/navcli.mjs, host/labworker.mjs, host/session.mjs): the static section-order pass
+// (src/lab/secready.mjs secOrder) of an overlay (checks/lib/env.mjs patchedFirmware's {rom, changed}) against the
+// stock run-time image, as the lab's env.secReady ({static}); refused (ValueError) as the watch is (secReadyWatch)
+export function startSecReady(fw, stock) {
+  if (!fw) throw new ValueError('--sec-ready: no patch overlay (--patch or --main) to watch');
+  const w = secReadyWatch({ rom: fw.rom, patchRanges: fw.changed });
+  return { static: secOrder(fw.rom, stock, w.layout, fw.changed) };
 }
 
 // The pieces of the changed ranges (changed: sorted [offset, length] of the main block) that lie in the gaps of loads
@@ -182,5 +198,6 @@ export function auditLine(a, tasks = []) {
     : a.ported.length ? `${a.ported.length} ported address(es) or fact(s) on patched bytes, which the lab calls or reads as patched: ${a.ported.map((p) => p.fact ? `${p.at} (fact ${p.fact})` : `${p.at} (E143 ${p.e143.join(', ')})`).join(', ')}`
       : 'no ported address or fact on patched bytes';
   const unloaded = a.unloaded === undefined ? '' : `; ${unloadedLine(a.unloaded)}`;
-  return `${hooks}; ${ported}${unloaded}${tasks.length ? `; H-PATCHTASK: ${tasks.join(', ')}` : ''}`;
+  const sec = a.sec_ready ? `; ${secReadyLine(a.sec_ready)}` : '';
+  return `${hooks}; ${ported}${unloaded}${tasks.length ? `; H-PATCHTASK: ${tasks.join(', ')}` : ''}${sec}`;
 }

@@ -6,7 +6,7 @@ import { BOARD, boardKnows } from './fw/board.mjs';
 import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
-import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
+import { R, S, PC, PSW, MDR, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
 import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, setProbes, probeStep, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
 import { Intc, setIrqTrace } from './dev/intc.mjs';
 import { snapshotDevices, restoreDevices, devicesBytes } from './debug/snapshot.mjs';
@@ -85,9 +85,12 @@ export function onMachine(fn) {
 // unloaded (S-STALERAM: {gaps: [{lo, hi, ...}], fill, message(gap, pc)}, the run-time ranges of the image the boot does
 // not load, src/fw/sections.mjs bootLoads: their DRAM holds the byte fill instead of the image's, and an instruction
 // with a byte there is refused before it runs, UnloadedCode with message(gap, pc); reads and writes there are not
-// watched; null, the default: the whole image in DRAM, nothing changes).
+// watched; null, the default: the whole image in DRAM, nothing changes), fetchAudit (fn(pc, len), called as the fetch
+// guard is, after S-STALERAM's: it records and returns, src/lab/secready.mjs's watch, --sec-ready; null, the default:
+// none, and nothing changes), strict (the strict mode, src/lab/strict.mjs: {stores, reads, report}, src/core/mem.mjs
+// setStrict's; null, the default: off, nothing changes).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null, unloaded = null } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null, unloaded = null, fetchAudit = null, strict = null } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -122,6 +125,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   };
   mem.ctx.pc = () => R[PC] >>> 0;
   mem.ctx.insns = () => S.insns;
+  mem.ctx.mdr = () => R[MDR] >>> 0;
   // the debug hooks start off (mem.initMemory, resetCpu, resetInterp and the Intc constructor reset theirs)
   let inCont = false;                           // inside a continue: a stopping watchpoint ends it (S.kick)
   let lastStop = null;                          // the last run's end: {kind: 'break'|'fault'|'limit'|'paused'|'watch'|'undecidable', code}
@@ -211,7 +215,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     mem.U8.fill(unloaded.fill, copy + (g.lo - IMAGE_BASE), copy + (g.hi - IMAGE_BASE));
   }
   mem.markDirty(copy, rom.length);
-  setFetchGuard(unloaded?.gaps.length ? fetchGuard(unloaded) : null);
+  const stale = unloaded?.gaps.length ? fetchGuard(unloaded) : null;
+  setFetchGuard(stale && fetchAudit ? (pc, len) => { stale(pc, len); fetchAudit(pc, len); } : stale ?? fetchAudit);
+  if (strict !== null) mem.setStrict(strict);
   // The flash library's window (src/fw/board.mjs; E143 has none, its lab never reaches one): RAM holding the part of
   // the main block the boot copies there, which later builds call by address (E147: the image head at 0x3FFDEFE0,
   // a d32 call from flash into it, X; E144: file 0x1681fe0, 6 KiB at 0x47000800, the reset head's copy, D).

@@ -23,10 +23,14 @@
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch and
-// --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147), the
+// --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147),
+// caduceus-ep7's edits.json (test_ep7edits.mjs: the reader's rules, and each pinned release at hand on E142), the
 // boot's section loader (test_sections.mjs: the rules and the unloaded ranges on a synthetic block, a patched routine
 // past section 6's end through debug.mjs on E143 and E147, and S-SECLOADED with its negative control on E143), the
-// boot's stage bits S-BOOTSTAGE sets and the boot job they follow on E143, E146 and E147 (test_bootstage.mjs), the hidden
+// boot's stage bits S-BOOTSTAGE sets and the boot job they follow on E143, E146 and E147 (test_bootstage.mjs), staged
+// section availability for patched code, --sec-ready's static pass and run-time watch (test_secready.mjs), the
+// strict mode (test_strict.mjs: the machine's strict ranges and the log on a synthetic block, stock sessions on E143,
+// E147 and E142 with no new site, and patched routines of each class with their controls on E142 and E143), the hidden
 // service screens with MENU held at power-on on E143 and the MS count (H-MECCOUNT) on E143, E146 and E147
 // (test_hidemode.mjs), the HDMI
 // port and a plug in play on E143,
@@ -73,6 +77,8 @@
 // Also: the memory map's rules at addRegion (test_mem.mjs).
 // What a firmware file is, on made-up bodies and on the .BINs and blocks at hand, and --main with a .BIN container on
 // E143 and E147 (test_identify.mjs).
+// E-M1-Miii mods.json packs on E139's run-time image, --main's resource block and version-only containers, on made-up
+// blocks, on E139's blocks and the pinned pack, and through bin/session.mjs on E139 (test_mods.mjs).
 // The Stand-ins tab's rows against the labels a session can report, and does report on E143 and E147 (test_standins.mjs).
 // What a picture is, said at the picture, and a shot's source on E143 and E147 (test_sources.mjs).
 // The lab's call on a synthetic block of hand-written functions, without firmware (test_slice.mjs).
@@ -458,6 +464,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...pu.bad, ...ps.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += pu.bad.length + ps.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// caduceus-ep7's edits.json (src/fw/patch.mjs): the reader's rules on synthetic blocks, then each pinned release found
+// under ~/.om-emu/thirdparty/caduceus-ep7 (OM_THIRDPARTY) on E142 in a process of its own: pins, the patched blocks,
+// the flipped-expect controls and a --patch session to the menu (SKIPPED without the release's files)
+{
+  const { ep7Units } = await import('../test/test_ep7edits.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const u = ep7Units();
+  const r = spawnSync(process.execPath, [new URL('../test/test_ep7edits.mjs', import.meta.url).pathname, '--release'], { env: { ...process.env, OM_EMU_MODEL: 'E142' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n');
+  console.log(`caduceus-ep7 edits.json: units ${u.checks - u.bad.length}/${u.checks}; ${lines.filter((l) => !l.startsWith('   ')).join('; ')}`);
+  [...u.bad, ...(r.status === 0 ? [] : lines.filter((l) => l.startsWith('   ')).map((l) => `E142: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += u.bad.length + (r.status === 0 ? 0 : 1);
+}
 // the boot's section loader (src/fw/sections.mjs, S-SECLOADED, S-STALERAM): the units, then E143 here and E147 in a
 // process of its own (the model is fixed when the lab is imported)
 {
@@ -469,6 +488,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`section loader: units ${su.checks - su.bad.length}/${su.checks}; on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the strict mode (src/lab/strict.mjs, src/core/mem.mjs setStrict, src/fw/strict-allow.mjs): the units, then the stock
+// sessions and the patched routines, each model in a bin/session.mjs child of the test's own
+{
+  const { strictUnits, strictSession } = await import('../test/test_strict.mjs');
+  const u = await strictUnits(), s = await strictSession();
+  console.log(`strict mode: units ${u.checks - u.bad.length}/${u.checks}; sessions ${s.checks - s.bad.length}/${s.checks}`);
+  [...u.bad, ...s.bad].forEach((x) => console.log('  ', x));
+  bad += u.bad.length + s.bad.length;
 }
 // the boot's stage bits (S-BOOTSTAGE, src/lab/menu.mjs stage_bits): the boot job they follow read from the block and
 // the stage word after a play session's open, E143 here, E146 and E147 each in a process of its own
@@ -483,6 +511,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the boot's stage bits: E143's block ${bi.checks - bi.bad.length}/${bi.checks}, its session ${bs.checks - bs.bad.length}/${bs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...bi.bad, ...bs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += bi.bad.length + bs.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// staged section availability for patched code (--sec-ready, src/lab/secready.mjs): the static section-order pass and
+// the run-time watch on synthetic inputs, then on each of E143, E146 and E147's blocks (E146 and E147 each in a process
+// of its own), and nav.mjs --sec-ready on E143
+{
+  const { secreadyUnits, secreadyFirmware, secreadyCli } = await import('../test/test_secready.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const su = secreadyUnits(), sf = await secreadyFirmware(), sc = await secreadyCli();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_secready.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`sec-ready: units ${su.checks - su.bad.length}/${su.checks}; E143's block ${sf.checks - sf.bad.length}/${sf.checks}, nav.mjs ${sc.checks - sc.bad.length}/${sc.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...su.bad, ...sf.bad, ...sc.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + sf.bad.length + sc.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the hidden service screens (H-STARTKEY, docs/hle-gaps.md 4.6.5): USTART5's MENU state step read by its instructions,
 // then E143 sessions with and without MENU held at power-on (Monitor Adjust's OK to ID_ST_HIDE_MODE or back to the menu)
@@ -1127,6 +1170,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`firmware identity: units ${iu.checks - iu.bad.length}/${iu.checks}; the files at hand ${fi.checks - fi.bad.length}/${fi.checks}${fi.skipped.length ? `, ${fi.skipped.length} SKIPPED` : ''}; --main with a .BIN on E143 ${is.checks - is.bad.length}/${is.checks}${is.skipped.length ? `, ${is.skipped.length} SKIPPED` : ''}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...iu.bad, ...fi.bad, ...is.bad, ...[...fi.skipped, ...is.skipped].map((x) => `SKIPPED ${x}`), ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += iu.bad.length + fi.bad.length + is.bad.length + is.skipped.length + (r.status === 0 ? 0 : 1);
+}
+// E-M1-Miii mods.json packs (test_mods.mjs): the units; E139's blocks against the pinned pack (in ~/.om-emu/thirdparty,
+// outside the tree; without it a counted skip); then bin/session.mjs on E139 in a process of its own
+{
+  const { modsUnits, modsFiles } = await import('../test/test_mods.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const mu = modsUnits(), mf = await modsFiles();
+  const r = spawnSync(process.execPath, [new URL('../test/test_mods.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E139' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`E-M1-Miii mods.json: units ${mu.checks - mu.bad.length}/${mu.checks}; E139's blocks ${mf.checks - mf.bad.length}/${mf.checks}${mf.skipped.length ? `, ${mf.skipped.length} SKIPPED` : ''}; E139 sessions ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...mu.bad, ...mf.bad, ...mf.skipped.map((x) => `SKIPPED ${x}`), ...lines.map((l) => `E139: ${l.trim()}`)].forEach((x) => console.log('  ', x));
+  bad += mu.bad.length + mf.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the Stand-ins tab's rows (src/lab/playapi.mjs standInRows; test_standins.mjs): a row for every label a session can
 // report, then the labels a session reports on E143 here and on E147 in a process of its own

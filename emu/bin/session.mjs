@@ -5,7 +5,7 @@
 // (emu/README.md "Scripted sessions").
 //   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--no-card]
 //                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
-//                            [--loaded auto|on|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
+//                            [--loaded auto|on|off] [--sec-ready] [--strict on|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
 //                            [--rotate off|on]
 //                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
 // --rotate on runs PER_ROTATE natively (play's --rotate, H-ROTINIT; off by default), and tilt:roll=R[,pitch=P] is the
@@ -56,6 +56,8 @@ const SPEC = [
   { opt: '--card-get', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' },
   { opt: '--nvram', type: 'str', default: 'off', metavar: 'off|FILE' },
   { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
+  { opt: '--sec-ready', type: 'flag', default: false },
+  { opt: '--strict', type: 'str', choices: ['on', 'off'] },                 // absent: OM_STRICT (src/lab/strict.mjs)
   { opt: '--creative-dial', type: 'int', metavar: 'K' },
   { opt: '--held', type: 'str', repeat: true, metavar: 'KEY' },
   { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
@@ -87,7 +89,7 @@ async function main(argv) {
   if (await provision(PROG, { make: false })) return 1;       // no download here: a model without its blocks is refused
   let s;
   try {
-    s = await openSession({ patch: a.patch, main: a.main, card: a.card, noCard: a.no_card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded,
+    s = await openSession({ patch: a.patch, main: a.main, card: a.card, noCard: a.no_card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded, secReady: a.sec_ready, strict: a.strict ?? undefined,
       creativeDial: a.creative_dial, held: a.held, a15: a.a15, device: a.device, rotate: a.rotate, osdErrors: a.osd_errors, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
   } catch (e) {
     if (!(e instanceof SessionRefused)) throw e;
@@ -99,6 +101,10 @@ async function main(argv) {
   if (s.first.ok) s.run(tokens);              // each record printed as it ends (onRecord): a debug stop's record first
   const sum = s.close();
   line(sum);
+  if (sum.strict) {
+    const { strictLine } = await import('../src/lab/strict.mjs');
+    err(strictLine(sum.strict));
+  }
   const f = sum.failed;
   const poked = sum.pokes.length ? `; POKED: ${sum.pokes.length} write(s) (${sum.pokes.map((p) => `step ${p.step} ${p.addr ?? p.token}`).join(', ')}): the run depends on memory the firmware did not write` : '; no poke';
   const e = sum.ended_at_stop, atStop = e ? `; ended at the debug stop of step ${e.step} (${e.kind} at ${e.pc}): nothing ran after it` : '';

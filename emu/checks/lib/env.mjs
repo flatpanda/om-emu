@@ -1,7 +1,7 @@
 // The node side of a check: repository paths, the firmware image and resource block, sha256, the lab env the
 // harness modules take (as bin/run.mjs builds it, without tracing: no session, so no Stats or harness digest), and the
 // process conventions of a check (an exit with a message, a usage error, an uncaught error).
-import { expandImage } from '../../src/fw/expand.mjs';
+import { expandImage, expandBlobs } from '../../src/fw/expand.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -35,40 +35,48 @@ export function readPatched() {
   return applyPatches({ main: readBytes(ORIGINAL) }, patches, { layout: patchLayout(MODEL_INFO), createHash }).blocks.main;
 }
 // --patch FILE (bin/play.mjs, bin/nav.mjs, bin/debug.mjs): the patches of the files, in order (src/fw/patch.mjs
-// readPatchText; a file that cannot be read is refused as its patches are, PatchRefused).
+// readPatchText; a file that cannot be read is refused as its patches are, PatchRefused). FILE#id,id... names the
+// mods to take from an E-M1-Miii mods.json pack (when FILE itself is no file: a name with # in it is read as it is).
 export function readPatchFiles(files) {
   return files.flatMap((f) => {
+    const m = /^(.+)#([^#/]+)$/.exec(f), [file, mods] = m && !fs.existsSync(f) ? [m[1], m[2].split(',').filter(Boolean)] : [f, null];
     let text;
-    try { text = fs.readFileSync(f, 'utf8'); } catch (e) { throw new PatchRefused(`${f}: cannot read it (${e.code ?? e.message})`); }
-    return readPatchText(text, f);
+    try { text = fs.readFileSync(file, 'utf8'); } catch (e) { throw new PatchRefused(`${file}: cannot read it (${e.code ?? e.message})`); }
+    return readPatchText(text, file, { mods });
   });
 }
 // --main FILE (bin/play.mjs, bin/nav.mjs, bin/debug.mjs, bin/modelcheck.mjs, bin/session.mjs): a whole patched main
 // code block as unpacked (caduceus-om3's firmware/build.py main.bin), or the .BIN container that holds one, as the
 // patches that make it from the stock block, checked against its MODELS digest: one per run of bytes that differ
 // (src/fw/patch.mjs mainFilePatches, with what src/fw/identify.mjs finds the file to be; a file of another length,
-// another body's, the stock block itself, or one that cannot be read is refused, PatchRefused).
-export function readMainFile(file) {
+// another body's, the stock block itself, or one that cannot be read is refused, PatchRefused). A container's
+// resource block is compared with the stock one's too (resource: false for a tool that loads the main code block
+// alone: not read).
+export function readMainFile(file, { resource = true } = {}) {
   let b;
   try { b = readBytes(file); } catch (e) { throw new PatchRefused(`${file}: cannot read it (${e.code ?? e.message})`); }
-  return mainFilePatches(checkImage(readBytes(ORIGINAL)), b, file, identifyBytes(b, createHash), MODEL);
+  const id = identifyBytes(b, createHash);
+  const res = resource && id.kind === 'container' ? { res: loadBlock(), layout: patchLayout(MODEL_INFO) } : {};
+  return mainFilePatches(checkImage(readBytes(ORIGINAL)), b, file, id, MODEL, res);
 }
 // The run's firmware with a patch overlay: the stock main code block and resource block, each checked against its
 // MODELS digest, then the patches applied to copies (src/fw/patch.mjs applyPatches, which refuses a patch whose old
-// bytes are not the stock block's, or that overlaps another). {raw (the patched main code block as unpacked), rom (its
-// run-time image, src/fw/expand.mjs), resBlock, summary, changed (the main block's changed bytes, the lab's
-// env.patchRanges)}. Nothing is cached: loadImage and loadBlock stay the stock blocks'. resource: false for a tool that
+// bytes are not the stock block's, or that overlaps another). {raw (the patched main code block as unpacked; null when
+// the patches were to its run-time image, a mods.json pack's: there is no such block without packing its containers
+// again), rom (its run-time image, src/fw/expand.mjs), resBlock, summary, changed (the main block's changed bytes, the
+// lab's env.patchRanges)}. Nothing is cached: loadImage and loadBlock stay the stock blocks'. resource: false for a tool that
 // loads the main code block alone (bin/debug.mjs): the resource block is not read and a patch to it is refused ('the
 // resource block is not loaded here'), not counted as applied.
 export function patchedFirmware(patches, { resource = true } = {}) {
   const blocks = { main: checkImage(readBytes(ORIGINAL)), ...(resource ? { resource: loadBlock() } : {}) };
-  const r = applyPatches(blocks, patches, { layout: patchLayout(MODEL_INFO), createHash });
-  return { raw: r.blocks.main, rom: expandImage(r.blocks.main), resBlock: r.blocks.resource, summary: r.summary, changed: r.changed };
+  const r = applyPatches(blocks, patches, { layout: patchLayout(MODEL_INFO), createHash, expand: expandBlobs });
+  const image = r.blocks.image ?? null;
+  return { raw: image ? null : r.blocks.main, rom: expandImage(image ?? r.blocks.main, { expanded: !!image }), resBlock: r.blocks.resource, summary: r.summary, changed: r.changed };
 }
 // The overlay a tool's --patch FILE... or --main FILE gives (the two exclude each other: the caller refuses both), as
-// patches, or null for neither.
-export function overlayPatches({ patch = [], main }) {
-  if (main !== undefined && main !== null) return readMainFile(main);
+// patches, or null for neither. resource: as readMainFile's.
+export function overlayPatches({ patch = [], main }, { resource = true } = {}) {
+  if (main !== undefined && main !== null) return readMainFile(main, { resource });
   return patch.length ? readPatchFiles(patch) : null;
 }
 export const BLOCK = path.join(REPO, resPath(MODEL_INFO));

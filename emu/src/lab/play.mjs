@@ -164,6 +164,9 @@ export const SCP_STATES = [0x0401, 0x0403, 0x0404], CONTROL_SETTINGS_ID = 330;
 // each test at its first read; the components' 0 (control camapp 3, 0x50ca4ae1) reaches the second (X: switch-scp's
 // LV and eye switch; docs/hle-gaps.md 4.3.6)
 const MODULE9_SECOND_READS = [MM.TAKEOVER_READERS[1], A(0x50ABB044)];
+// S-USBCABLE: the module-9 readers the USB switch's code reaches (X, E143 2026-10-25: docs/hle-gaps.md 4.7, the
+// inbound path in play) and the lab time a cable step runs
+export const USB_MODULE9_READERS = [A(0x50ABB01D), A(0x50B7A2DE)], USB_SETTLE_MS = 1500;
 // S-TOUCHMAP: HFW status -> GUI touch kind, by name (I)
 export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], [227, [3, 'RELEASE']], [228, [4, 'TAP']],
   [230, [5, 'DOUBLE TAP']], [229, [6, 'SLIDE']], [300, [7, 'FLICK -> 7 (unnamed)']]]);
@@ -1947,6 +1950,31 @@ export class PlaySession extends N.NavSession {
     const off = new PowerOff(this, POWER_OFF).run();
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
+  }
+  // S-USBCABLE (docs/hle-gaps.md 4.10.1): the USB cable at the event level. The producer of EV_USB_CONNECTED is the
+  // sub-CPU's port scan: PC13 (GIO port 45) high posts the MN the message 0x08 {1} (scpudev.mjs port, D), PER_SCPU's
+  // dispatch 0x5005d43e gives it to UI_IN's group-4 producer as the switch 0x0400 (H-UIINSCAN's path, X), and the
+  // application's filter of the code 0x02020400 reads module 9 (0x50abb01d, then 0x50b7a2de, X 2026-10-25). Those
+  // two readers are let through S-TAKEOVER's guard from the first cable step on (I: what module 9's state 2 means to them is
+  // not read). The unplug drops PC13 again. Refused: a session without the sub-CPU's model, a scan report not yet
+  // enabled (no 0x88 read), a second plug, an unplug without the cable
+  usb_input(action) {
+    const lab = this.lab, dev = lab.scpu_dev;
+    if (!lab.scpu_link || typeof dev?.port !== 'function') throw new ValueError(`usb: ${MODEL} has no sub-CPU model here (S-SCPUDEV)`);
+    if (action !== 'plug' && action !== 'unplug') throw new ValueError(`usb: action ${show(action)} (plug, unplug)`);
+    const plug = action === 'plug';
+    if (plug === !!this.usb_plugged) throw new ValueError(`usb ${action}: the cable is ${plug ? 'in' : 'out'} already`);
+    if (!dev.scanReport) throw new PlayError('usb: the port scan\'s report is not enabled (no 0x88 read, H-UIINSCAN)');
+    const tag = `usb ${action}`;
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
+    for (const x of USB_MODULE9_READERS) lab.takeover_allowed.add(x);   // the unplug's code reads 0x50abb01d too (X)
+    const c0 = lab.uiin_codes.length, f0 = dev.frames.length, state0 = lab.state();
+    dev.port('PC13', plug ? 1 : 0);
+    this.usb_plugged = plug;
+    this.usb_used = true;
+    return this.wait_until(lab.lab_time() + USB_SETTLE_MS * 1000000, tag, true,
+      { kind: 'usb', extra: () => ({ usb: { cable: plug ? 'in' : 'out', state_before: '0x' + state0.toString(16), state: '0x' + lab.state().toString(16),
+        frames: dev.frames.slice(f0).map((f) => f.cmd), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => '0x' + (x >>> 0).toString(16)) } }) });
   }
   // The HDMI cable (see HDMI_PLUG_MS): plug, and unplug once it is in (the transmitter's side A-HDMI-1, the device
   // model's header). A second plug and an unplug without the cable are refused.

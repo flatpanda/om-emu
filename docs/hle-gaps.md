@@ -9647,6 +9647,25 @@ session with `--hdmi on` (X unless tagged).
 - **Seams:** the event level first (connect, disconnect, the select screen, charging state), then a class level (the
   PC_USB queue with a host-side PTP / MTP client), and only later the DWC3 device model with the SD-USB link for MSC.
 
+#### 4.10.1 The cable at the event level (2026-11-22)
+
+- **The producer (D, X):** on the E143 board the USB connection reaches the MN as the sub-CPU's port-scan report: PC13
+  (GIO port 45) changing posts the message `0x08` {PC13} (the sub-CPU's `0x801a436` through `0x801271c`, 4.7, D),
+  PER_SCPU's dispatch `0x5005d43e` hands bit 0 to UI_IN's group-4 producer `0x5014d537` as the switch `0x0400` (X,
+  H-UIINSCAN's path). On the E144 family the same switch becomes the module event the application's broker gives
+  CA_MAIN as event 8 OLY_USB_CONNECTED, followed by PC_START_PC_USB_SELECT (D, X; `src/lab/play.mjs`
+  IDLE_SWITCH_STATES). The VBUS sensing behind PC13 on the board, ADC flag `0xbf`, the PD controller and the
+  `0x14` / `0x40` power-source paths are not read here (?).
+- **S-USBCABLE (`src/lab/play.mjs` usb_input, input `{type: 'usb', action: 'plug' | 'unplug'}`):** sets the sub-CPU
+  model's PC13 and runs 1.5 s of lab time. S-TAKEOVER's guard lets `0x50abb01d` and `0x50b7a2de` read module 9 from
+  the first cable step on (both plug and unplug read `0x50abb01d`, X); what state 2 means to them is I.
+- **Result (X, E143, `emu/test/test_usbcable.mjs`):** the plug's `0x08` {1} is polled (`0x8f`) and UI_IN decodes
+  `0x02020400`; the GUI stays at `0x0108` (SS_COMMON / ID_ST_CA_REQ_DISP) and no USB select screen is drawn within
+  1.5 s. The unplug decodes `0x02020400` again and leaves the GUI at `0x0108`. So on E143 the switch code alone does not
+  reach EV_USB_CONNECTED: the step from `0x02020400` to event 8 (whether E143's shooting service publishes the switch
+  as the E144 family's does, or a PC_* task posts it after the PD / power-source notice) is ? and is the next read.
+  Not run: EV_USB_RXDETECT 363 (`0x040d00d2`), PC_USB's init and IRQ 223.
+
 ### 4.11 Wireless
 
 - **Three layers:** CPU 0 is a thin client (SSID and BLE name from the serial at `0x50a6c371` / `0x50a6c459`, state in

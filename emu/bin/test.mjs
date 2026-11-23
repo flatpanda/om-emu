@@ -541,6 +541,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// the USB cable at the event level (S-USBCABLE): plug and unplug through the sub-CPU's PC13 on E143
+{
+  const { usbSession } = await import('../test/test_usbcable.mjs');
+  const r = await usbSession();
+  console.log(`USB cable (E143): ${r.checks - r.bad.length}/${r.checks}`);
+  r.bad.forEach((x) => console.log('  ', x));
+  bad += r.bad.length;
+}
 // the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and E147 and its PER_ROTATE
 // groups R1 and R2 (--rotate on, with their mutant on E143) on E143, E146 and E147, each in a process of its own
 // (E143's default runs are checks/runs.json's; the model is fixed when the lab is imported)

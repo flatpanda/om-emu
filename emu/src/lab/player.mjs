@@ -559,6 +559,7 @@ export class Player {
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
+    if (this.session?.usb_used) used.push('S-USBCABLE');                                   // a usb input ran
     if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
@@ -1132,6 +1133,7 @@ export class Player {
       return s.touch(act, x, y);
     }
     if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
+    if (t === 'usb') return s.usb_input(get(inp, 'action'));
     if (t === 'card') {                                              // slot: 1 (the default) or 2; size: a new second card's GiB
       const slot = has(inp, 'slot') ? get(inp, 'slot') : 1, size = has(inp, 'size') ? get(inp, 'size') : null;
       return s.card_input(get(inp, 'action'), slot, size);

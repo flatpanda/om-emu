@@ -1,4 +1,4 @@
-// The MN's side of the sub-CPU link in the lab (docs/hle-gaps.md 4.7.1, docs/om1-scpu-spec.md 3 and 8): the firmware's
+// The MN's side of the sub-CPU link in the lab (docs/hle-gaps/4.7.md 4.7.1, docs/om1-scpu-spec.md 3 and 8): the firmware's
 // PER_SCPU runs natively (its start with the reset pulse and the 0x85 {2} handshake, every request through its state
 // machine; its poll and inbound dispatch run when the model posts a message; its watchdog is native but not reached:
 // the model answers at once),

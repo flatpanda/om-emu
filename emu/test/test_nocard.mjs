@@ -1,6 +1,6 @@
 // A power-on with the first card slot empty, and the first slot's media status around a removal and an insertion
 // (src/lab/storage.mjs: the card holder's out; src/lab/media.mjs S-MEDIA's media status; src/lab/camapp.mjs S-CARD's;
-// docs/hle-gaps.md 4.8.3; emu/FIDELITY-NOTES.md 7.9):
+// docs/hle-gaps/4.8.md 4.8.3; emu/FIDELITY-NOTES.md 7.9):
 //   nocardUnits    (firmware-free) the session tokens card:out and card:in (:2 the second slot's) and the Player
 //                  input each sends; a malformed card: token refused
 //   nocardSession  (firmware) on the body of OM_EMU_MODEL (E143 by default; bin/test.mjs runs E147 in a process of its

@@ -1,5 +1,5 @@
 // The HLS media side of the card, on a body whose file system runs natively (src/lab/storage.mjs; MODEL_INFO.card_fs.hls
-// in src/fw/models.mjs has the evidence for every address, docs/hle-gaps.md 4.8.3 the record). The camera application's
+// in src/fw/models.mjs has the evidence for every address, docs/hle-gaps/4.8.md 4.8.3 the record). The camera application's
 // media control (OlyHfwOpeMdaCtrl: its requests, its receptor and its reactive) runs natively; the two HLS components
 // it talks to, the function component CmpCst_Function and the media manager CapMed_MediaManager, do not run in the lab
 // (camapp 1 runs no HLS component, camapp 2's bring-up does not create them: X, neither reacted to a format or a card
@@ -17,21 +17,21 @@
 //              result (its class is not read; a remount, I). The component sends 1513 / 1514 through the reception's
 //              asynchronous slot, to the reactive's OXF main thread, which does not run in camapp 1: the synchronous
 //              slot stands in for that thread's dispatch (I). Since 2026-11-16 the erase all (command 3, the
-//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps.md 4.8.15) as well, where the build's
+//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps/4.8.md 4.8.15) as well, where the build's
 //              erase-all call is read (src/fw/facts.mjs pictureErase, fact erase.erase_all) and the DCF database
 //              holds the pictures: executeEraseAllStart's call of the picture file API's erase all natively (it
 //              posts FILECLBK the DCF edit's ALL_DELETE, which erases every picture but the locked ones natively,
 //              its own delete mount among its steps), the progress as the format's (the same getMediaProgress and
 //              progress event), and at the reply the same end, without the DCF numbering mount (the component
 //              starts its remount request for the format alone, D) and with S-CARD's records of the erased
-//              pictures dropped. Since 2026-11-22 (docs/hle-gaps.md 4.8.16) the unlock all (command 5, Reset All
+//              pictures dropped. Since 2026-11-22 (docs/hle-gaps/4.8.md 4.8.16) the unlock all (command 5, Reset All
 //              Images' Reset Protect, f.ctrl.unlock_all): executeUnlockAllStart's notification of the Wi-Fi remote
 //              take component natively (f.ctrl.wifi), then the picture file API's unlock all (fact
 //              erase.unlock_all), which posts FILECLBK the DCF edit's OBJ_UNLOCK of every object, natively; and the
 //              rating-exclusive erase all (command 6, Erase All's Save, f.ctrl.rating_erase, on E143 and E148):
 //              the API's ALL_DELETE with the option 0x10 (fact erase.rating_erase), whose walk keeps every picture
 //              with an Exif Rating of 1 or more, natively; both with the erase all's progress and end (the unlock all
-//              erases nothing, S-CARD's records stay). Since 2026-11-22 too (docs/hle-gaps.md 4.8.21) the copy
+//              erases nothing, S-CARD's records stay). Since 2026-11-22 too (docs/hle-gaps/4.8.md 4.8.21) the copy
 //              all (command 2, f.ctrl.copy_all, E143): the picture file API's copy all between the two slots
 //              natively, with its own progress function and the component's end check of the record's media's
 //              count. Any other command (the copy all 2 where f.ctrl has no copy_all, and command 6 where f.ctrl
@@ -48,7 +48,7 @@
 //              mount state mounted and 711 {kind, 1, 2} (notifyRecMountEnd: EV_MEDIA_MOUNT_REC) and {kind, 1, 8}
 //              (mountProcEnd). Each notification's layout and sender is D; which ones the media manager sends at a
 //              change, and in which order, is I. The level's meaning is D on E143 and E146 (the SD driver's detect
-//              takes level 0 for a card in the slot, docs/hle-gaps.md 4.8.12), I elsewhere (models.mjs slots).
+//              takes level 0 for a card in the slot, docs/hle-gaps/4.8.md 4.8.12), I elsewhere (models.mjs slots).
 //              The same for the second slot's card and switch on a body whose second slot the lab models
 //              (storage.mjs S-SDCARD), where no media manager runs. With control camapp 3 the firmware's own media
 //              manager runs and takes the second slot's change itself (X): S-MEDIA then only reads the slot's state
@@ -96,7 +96,7 @@ const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
 // sequence parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and
 // then by the manager's status update of every slot from its device, after its notification of the change (D on E143
 // and E147, both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes
-// NOT_PRESENT so, X; the addresses are in docs/hle-gaps.md 4.8.3). The second slot's word is not placed in the lab (no
+// NOT_PRESENT so, X; the addresses are in docs/hle-gaps/4.8.md 4.8.3). The second slot's word is not placed in the lab (no
 // rule reads the setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
 export const MEDIA_NO_MOUNT = 0, MEDIA_NOT_PRESENT = 0x1001, MEDIA_OK = 0xF000;
 // S-MDACTRL's commands, by their key in f.ctrl (src/fw/models.mjs card_fs.hls.ctrl: the command each sends), and the

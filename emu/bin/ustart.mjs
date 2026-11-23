@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The firmware's start tasks and the conditions they wait for (docs/hle-gaps.md 4.6.3; E143 only), and the start
+// The firmware's start tasks and the conditions they wait for (docs/hle-gaps/4.6.md 4.6.3; E143 only), and the start
 // probe: each start task run natively from the state the lab's reset path leaves, as far as it goes. Off by default:
 // no session runs it (this tool and test/test_ustart.mjs do); it is a tool's module and not the lab's, so that its
 // addresses, which no other body needs, are none of the port's literals (bin/port.mjs reads src/). Addresses are

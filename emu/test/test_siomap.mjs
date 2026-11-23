@@ -1,5 +1,5 @@
-// PER_SIO's channel map at the play bring-up (src/lab/play.mjs sio_map_bring_up, H-SIOMAP; docs/hle-gaps.md
-// 2026-11-22):
+// PER_SIO's channel map at the play bring-up (src/lab/play.mjs sio_map_bring_up, H-SIOMAP; docs/hle-gaps/4.7.md
+// 4.7.12):
 //   sioMapSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): on a body whose PER_SIO
 //                  driver has the map (src/fw/facts.mjs sioDriver, fact 'sio'), the map word is set by the firmware's
 //                  setter (E143 0x5005f0b2) when the session is open, the panel's channel 2 has a controller index

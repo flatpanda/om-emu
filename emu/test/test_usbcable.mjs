@@ -1,4 +1,4 @@
-// The USB cable at the event level (S-USBCABLE; play.mjs usb_input; docs/hle-gaps.md 4.10.1):
+// The USB cable at the event level (S-USBCABLE; play.mjs usb_input; docs/hle-gaps/4.10.md 4.10.1):
 //   usbSession  (firmware; OM_EMU_MODEL, E143 by default) a play session: usb plug sets the sub-CPU model's PC13, which
 //               posts 0x08 {1}; UI_IN decodes the switch 0x0400 (0x02020400); the step records the GUI state after
 //               it (E143: unchanged, the select screen is not reached); S-USBCABLE is listed; usb unplug leaves the GUI in the state before the plug; a second unplug is
@@ -22,7 +22,7 @@ export async function usbSession() {
   const plug = pl.run_input({ type: 'usb', action: 'plug' });
   console.log(MODEL, 'plug', JSON.stringify(plug.usb), plug.error ?? '');
   ok(plug.usb?.frames.includes('0x8f') || plug.usb?.uiin_codes.length > 0, `${MODEL}: the plug reached UI_IN: ${JSON.stringify(plug.usb)}`);
-  // X 2026-11-22 (E143): the GUI stays in its state; the USB select screen is not reached (docs/hle-gaps.md 4.10.1)
+  // X 2026-11-22 (E143): the GUI stays in its state; the USB select screen is not reached (docs/hle-gaps/4.10.md 4.10.1)
   ok(plug.usb?.uiin_codes.includes("0x2020400"), `${MODEL}: UI_IN decoded the switch 0x0400 on the plug: ${JSON.stringify(plug.usb)}`);
   ok(pl.stand_ins_in_use().includes('S-USBCABLE'), `${MODEL}: S-USBCABLE listed`);
   const un = pl.run_input({ type: 'usb', action: 'unplug' });

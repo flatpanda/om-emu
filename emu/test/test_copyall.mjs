@@ -1,4 +1,4 @@
-// The playback menu's Copy All with two cards, natively (src/lab/media.mjs S-MDACTRL's copy all; docs/hle-gaps.md
+// The playback menu's Copy All with two cards, natively (src/lab/media.mjs S-MDACTRL's copy all; docs/hle-gaps/4.8.md
 // 4.8.21):
 //   copyAllSession  (firmware, E143) a blank card formatted by the lab in slot 1 of a first session, then put in slot
 //                   2 of a second session with another blank card in slot 1; S1 and S2 twice (two pictures on card

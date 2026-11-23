@@ -1,4 +1,4 @@
-// CPU 2 natively (--cpu2 native, E143, off by default; docs/hle-gaps.md 4.6.1): the machine's second core
+// CPU 2 natively (--cpu2 native, E143, off by default; docs/hle-gaps/4.6.md 4.6.1): the machine's second core
 // (src/core/cores.mjs) run from CPU 2's entry through its kernel to its idle loop, then beside CPU 0 for the session.
 //   H-CPU2RELEASE  the two words CPU 2 waits for before its kernel and its init task's starts, which CPU 0 writes in
 //                  code the lab does not run: the release flag (0xa3258360) = 1 (CPU 0's reset head, 0x50000282..329)

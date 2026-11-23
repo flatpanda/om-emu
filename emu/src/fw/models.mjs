@@ -45,19 +45,19 @@ const G4SET_UNCHECKED = false;
 const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is set up at a movie take, none yet (the time left is the card\'s)'];
 
 // `scpu_port`: UI_IN's group 0 through the SCPU interface's port and event words (src/lab/play.mjs H-SCPUIRQ,
-// H-UIINPORT, H-SCPUPORT; docs/hle-gaps.md 4.7.2), in the model's disassembly notation: irq [handler, level], the IRQ
+// H-UIINPORT, H-SCPUPORT; docs/hle-gaps/4.7.md 4.7.2), in the model's disassembly notation: irq [handler, level], the IRQ
 // 320 handler the SCPU init attaches; register, the IRQ 320 callback registration; callback, UI_IN's callback, which
 // its port init registers; old_state, the init of UI_IN's group-0 old state from the port byte, which UI_IN's start
 // stage calls first. A body without it pushes group 0 as the other groups (S-KEYBITS)
 //
 // `hdmi`: the HDMI port (src/dev/hdmi.mjs with the board's hdmi; src/lab/display.mjs H-GIOSLOTS, src/lab/play.mjs the
-// hdmi input; docs/hle-gaps.md 4.9), in the model's disassembly notation: gio_slots, the reset of the GIO interrupt
+// hdmi input; docs/hle-gaps/4.9.md 4.9), in the model's disassembly notation: gio_slots, the reset of the GIO interrupt
 // slots the GIO init ends with (the init does not run in the lab; without the reset the display init's registration
 // of the hot-plug pin finds no free slot and does nothing); state [address, bytes], the driver's EDID state, which its
 // getter reads (0xf0 the EDID read and parsed, 0xff failed, 0 not read). A body without it has no HDMI port
 //
 // `acc`: the accelerometer, stood in at its sample cache (src/lab/acc.mjs H-ACCINIT, S-ACCREG, S-ACCSAMPLE,
-// H-SLOPEINIT; docs/hle-gaps.md 4.7.3), in the model's disassembly notation (data at run-time addresses): init, the ACC
+// H-SLOPEINIT; docs/hle-gaps/4.7.md 4.7.3), in the model's disassembly notation (data at run-time addresses): init, the ACC
 // module init, run natively with its device part, the call at device (the data-ready pin's set-up and the register
 // API's kernel objects), stepped over; ptrs [counter slot, copy slot], the two pointers the init stores (the sample
 // counter's address and the cache copy's run-time address); main, ACC_MAIN's entry (task 121, which the init starts);
@@ -85,7 +85,7 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // Adjust's sampling loop calls instead of malloc and free; S-HEAP (src/lab/play.mjs), whose memory is that pool's,
 // serves them too. A body without it runs them natively
 //
-// `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.4): native, at
+// `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps/4.8.md 4.8.4): native, at
 // the seams src/fw/facts.mjs fileSystem reads (fact storage); errlog, the error logs its card's queries make in the lab
 // (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
 // the menu, the card out and in; E143, E146, E147 and E148, whose HLS function component formats the card), or 'rule'
@@ -93,7 +93,7 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // application formats it itself). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs); second_slot, the lab models the body's
 // second card slot (src/lab/storage.mjs S-SDCARD: two slots, the second empty unless the host gives its card, each
-// slot's card-detect pin; docs/hle-gaps.md 4.8.12) at what src/fw/facts.mjs cardSlots reads (fact 'card.slots'):
+// slot's card-detect pin; docs/hle-gaps/4.8.md 4.8.12) at what src/fw/facts.mjs cardSlots reads (fact 'card.slots'):
 // given for a body whose two slots are known to run so (X); a body that gives it and whose forms the rule does not
 // read throws at its first session
 //
@@ -110,7 +110,7 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // (src/lab/play.mjs H-CHAINREST): E146 and E147, whose touch driver sleeps 1 ms each time it wakes the controller (D,
 // at each body's entry). A body without it ends those steps at their settle, as E143, whose chains have no sleep
 // `lens_native`: the lens on the mount runs natively, the default (src/lab/lens.mjs with S-LENSMCU; OM_EMU_LENS=stand-in
-// takes S-LENS; docs/hle-gaps.md 4.4.2), on a body whose card's file system runs too; the driver's addresses are read
+// takes S-LENS; docs/hle-gaps/4.4.md 4.4.2), on a body whose card's file system runs too; the driver's addresses are read
 // by src/fw/facts.mjs lensDriver (fact lens_driver). A body without it has S-LENS (src/lab/camapp.mjs)
 // `res_nand`: the resource tables are loaded natively from the NAND at the play bring-up where the host gives the
 // NAND (env.nand; src/lab/resnand.mjs H-RESINIT, S-RESNAND): loader, USTART_L's resource loader; size and read,
@@ -119,14 +119,14 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // image may cover; extract_sha256, the digest of the NAND extract the hosts keep (src/fw/labfw.mjs labNand; on node
 // unpacked/<code>/<bin>.nand.bin, nandPath). A body without it (or a host without env.nand) keeps the tables at 0
 // `power_native`: the power manager starts at the play bring-up and the power lever's off runs the firmware's own
-// power-off to its last write (src/lab/power.mjs H-PWRSTART, S-IOEXP, S-SHUTDOWN, H-POWER; docs/hle-gaps.md 4.7.4), at
+// power-off to its last write (src/lab/power.mjs H-PWRSTART, S-IOEXP, S-SHUTDOWN, H-POWER; docs/hle-gaps/4.7.md 4.7.4), at
 // the addresses src/fw/facts.mjs powerOff reads (fact 'power.off'); given for a body whose power-off is known to run so
 // (X). A body without it closes the session at the lever's off at once
 //
 // `rec_native`: REC_FILE's own task records S2's picture from the packet REC_IMAGE's own task posts it, with the
 // file's header built by REC_IMAGE's header maker natively (src/lab/rec.mjs H-EXIFINIT, H-RECINIT, H-RECSHARED,
-// H-RECIMGPRO, H-RECFILE, H-RECIMAGE, S-EXIFPRM, S-RECREQ, S-JPEGENC with the encode alone; docs/hle-gaps.md 4.8.10,
-// 4.3.3, 4.3.5), at the addresses and layouts src/fw/facts.mjs recFile and recImage read (facts 'rec_file' and
+// H-RECIMGPRO, H-RECFILE, H-RECIMAGE, S-EXIFPRM, S-RECREQ, S-JPEGENC with the encode alone; docs/hle-gaps/4.8.md 4.8.10,
+// docs/hle-gaps/4.3.md 4.3.3, docs/hle-gaps/4.3.md 4.3.5), at the addresses and layouts src/fw/facts.mjs recFile and recImage read (facts 'rec_file' and
 // 'rec_image'; recImage throws where REC_IMAGE's forms differ, so a body with recFile's parts read has both); on the
 // E144 family's REC version (REC_FILE waiting on its queue alone, no header fill) at the addresses src/fw/facts.mjs
 // recFileQueue reads, with no 'rec_image': REC_IMAGE's part in the lab's call (H-EXIFINIT, H-RECINIT, H-RECFILE,
@@ -197,11 +197,11 @@ export const MODELS = {
       slope: { init: 0x5005FB31, main: 0x5005FB9C, get: 0x5005F982 },
       rotate: { init: 0x5005A08C, main: 0x5005A17E, get: 0x5005A155, pose: 0xA32C64F8, index: 0xA32C64F4, publish: 0x50025088, event: 0x04020310 },
     },
-    // the lens on the mount natively, the default (src/lab/lens.mjs, src/lab/lensmcu.mjs; docs/hle-gaps.md 4.4.2): the
+    // the lens on the mount natively, the default (src/lab/lens.mjs, src/lab/lensmcu.mjs; docs/hle-gaps/4.4.md 4.4.2): the
     // driver's entry points, LENS_EXEC's queue, the lens-0 flags and the lens caches' NAND are read by src/fw/facts.mjs
     // lensDriver (E143's LENS_DRIVER_E143 there, with their evidence)
     lens_native: true,
-    // The resource tables natively (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5): USTART_L's loader
+    // The resource tables natively (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps/4.5.md 4.5): USTART_L's loader
     // 0x501a8ca0 (its call 0x500241d8), res_size 0x501a976d and res_read 0x501a921f (USTART_L's sound 0 at
     // 0x5002433b / 0x50024353, into the slot 0xa4000000), the NAND erase operation 0x10300 (the type-2 write path's,
     // 0x501a9a76); the sound area: load, the loader's first read (0x501a8cc0); guard, the flash access guard's window
@@ -217,7 +217,7 @@ export const MODELS = {
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
-    // the power manager started and the power-off run natively (src/lab/power.mjs; docs/hle-gaps.md 4.7.4), at the
+    // the power manager started and the power-off run natively (src/lab/power.mjs; docs/hle-gaps/4.7.md 4.7.4), at the
     // addresses src/fw/facts.mjs powerOff reads (POWER_OFF_E143 there, with their evidence)
     power_native: true,
     // REC_FILE and REC_IMAGE natively (src/lab/rec.mjs), at the addresses src/fw/facts.mjs recFile and recImage read
@@ -231,9 +231,9 @@ export const MODELS = {
     // (0x5014f4f3..0x5014f566). The task drains the first without replies and answers each request of the second
     // with {u16 status, word 1, word 3} to the queue in its word 0 (0x5014f6aa..0x5014f736), S-MODACK's layout; a
     // message of kind 2 is a sound request (0x5014f7e0). The sound API 0x5041ee45 the AF beep reaches sends to the
-    // first (docs/hle-gaps.md 4.5)
+    // first (docs/hle-gaps/4.5.md 4.5)
     ui_out: { init: 0x5014F4E9, task: 0x5014F56C },
-    // The card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): its seams are read by
+    // The card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps/4.8.md 4.8.2): its seams are read by
     // src/fw/facts.mjs fileSystem (fact storage; E143's values STORAGE_E143 there, with their evidence), the SD host's
     // pages are the board's (src/fw/board.mjs sd). errlog: the logs its card's queries make in the lab. The movie
     // time query (0x5042da58) takes the time left from the movie module's copy, which the DCF remain count fills from
@@ -245,9 +245,9 @@ export const MODELS = {
     card_fs: {
       native: true,
       errlog: [MOVIE_TIME_ERRLOG],
-      // the second card slot (X: test_storage's --slot2 sessions, docs/hle-gaps.md 4.8.12)
+      // the second card slot (X: test_storage's --slot2 sessions, docs/hle-gaps/4.8.md 4.8.12)
       second_slot: true,
-      // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps.md 4.8.3). D unless tagged.
+      // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps/4.8.md 4.8.3). D unless tagged.
       // reception: OlyHfwReception's singleton getter (0x6035f0fc, made by 0x50af8959) and its vtable slot 2
       // (0x50af8c96: the receive body 0x50af89f9 with d0 = 1), which hands an event to every receptor of its list
       // (+20: u16 count at +2, items at +8; 0x50af8156, 0x50af818b) whose isInterested (vt[3]) takes it, through the
@@ -284,15 +284,15 @@ export const MODELS = {
         // sends 1513 {CBC, 3, percent, 0} (0x50cebeb4). An error status ends in kinds 70 / 71 / 118 (0x50cec268..)
         // erase_all: the command the playback menu's Erase All sends (X: its Erase and Yes send command 3, media 0;
         // the start table's command 3 is executeEraseAllStart 0x50cebba1, getMediaProgress and executeEraseAllEnd
-        // 0x50cebc19, X; getMediaCtrlCBC gives 54; the same command from E146's, E147's and E148's menus, X; docs/hle-gaps.md
-        // 4.8.15). unlock_all and rating_erase (docs/hle-gaps.md 4.8.16): the commands Reset All Images' Reset Protect
+        // 0x50cebc19, X; getMediaCtrlCBC gives 54; the same command from E146's, E147's and E148's menus, X; docs/hle-gaps/4.8.md
+        // 4.8.15). unlock_all and rating_erase (docs/hle-gaps/4.8.md 4.8.16): the commands Reset All Images' Reset Protect
         // and Erase All's Save send (X, E143: 5 and 6, media 0; the start table's executeUnlockAllStart 0x50cebc59 and
         // executeRatingExclusiveEraseAllStart 0x50cebd29). wifi: what executeUnlockAllStart calls before the picture
         // file API's unlock all, CapWif_WifiRemoteTake's instance getter 0x50bd6bb9 (the singleton 0x60362b64, made
         // at the first call) and its Wifi_Notify_Callback 0x50bd8f5e with the event 0x041b0055 (d1 0, a1 0, a0 the
         // instance; 0x50cebc9d..0x50cebcad, D; the same three calls on E146, E147 and E148, D)
         // copy_all: the start table's command 2 (executeCopyAllStart 0x50ceba68, getCopyAllProgress 0x50cebaf6,
-        // executeCopyAllEnd 0x50cebb61; getMediaCtrlCBC gives 56; docs/hle-gaps.md 4.8.21). The start registers for
+        // executeCopyAllEnd 0x50cebb61; getMediaCtrlCBC gives 56; docs/hle-gaps/4.8.md 4.8.21). The start registers for
         // 0x04020011 as the format's, keeps the count of the record's media (+2) at the record's +20 (api 0x503fdc1d,
         // API 0x70011: the DCF count of the drive, 0x50874b39) and calls the picture file API's copy all
         // (0x503fd811, API 0x7000e) with d0 the record's +2 and d1 its +4: both below 2, it posts FILECLBK code 38
@@ -518,12 +518,12 @@ export const MODELS = {
     // test/test_dispswitch.mjs
     chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
-    // the lens on the mount natively, the default (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3): its driver is E143's
+    // the lens on the mount natively, the default (src/lab/lens.mjs; docs/hle-gaps/4.4.md 4.4.3): its driver is E143's
     // but for addresses, the debug log's line numbers and the order of a few instructions (X: its serial layer, init
     // chain, power-on and detect paths and frame table compared with E143's instruction for instruction), the addresses
     // read by src/fw/facts.mjs lensDriver; its start sends E143's 15 frames (X)
     lens_native: true,
-    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5, D unless
+    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps/4.5.md 4.5, D unless
     // tagged): USTART_L's loader 0x501ada65 (its call 0x500242b5, before the lens data cache load 0x500242eb), res_size
     // 0x501ae532 and res_read 0x501adfe4 (USTART_L's sound 0 at 0x500243ef / 0x50024407, into 0xa4000000), the NAND
     // erase operation 0x10300 (the type-2 write path's, 0x501ae83b); the sound area: load, the loader's first read
@@ -571,7 +571,7 @@ export const MODELS = {
     // as E143's (D): pool 2's get 0x5000314d and release 0x50003157, block 16512 (the table 0x60029910), memory 0x62424700
     heap_pool: { get: 0x5000314D, put: 0x50003157, bytes: 16512 },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card), and its HLS side (src/lab/media.mjs;
-    // docs/hle-gaps.md 4.8.7): E143's (its entry has the meaning of each field), each function paired by the map
+    // docs/hle-gaps/4.8.md 4.8.7): E143's (its entry has the meaning of each field), each function paired by the map
     // (bin/xto.mjs) and compared with E143's instruction for instruction but for absolute addresses and source line
     // numbers (D): the reception's getter, slot 2 and the receive body, operator new, the event classes' ctors (697,
     // 711 and 696 as E143's; the senders allocate 44, 36 and 40 bytes), the media control's class ctor (0x50aca769),
@@ -593,7 +593,7 @@ export const MODELS = {
         reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
         events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },
         ids: { progress: 1511, result: 1512 },
-        // no rating_erase on E146 and E147 (docs/hle-gaps.md 4.8.16): Erase All's Save sends command 6 there too (X),
+        // no rating_erase on E146 and E147 (docs/hle-gaps/4.8.md 4.8.16): Erase All's Save sends command 6 there too (X),
         // but the DCF edit's walk takes its 64 KiB buffer from a memory pool past the lab's DRAM (X: 0xbc849400 on
         // E146, the DRAM 384 MiB to 0xb8000000, src/fw/facts.mjs dramSize), and its Exif read there faults: refused
         ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5,
@@ -606,10 +606,10 @@ export const MODELS = {
       },
     },
     // the power manager and the power-off natively, with E143's IO expanders (X: test_scpu's and test_scpum4's power
-    // sessions; docs/hle-gaps.md 4.7.4)
+    // sessions; docs/hle-gaps/4.7.md 4.7.4)
     power_native: true,
     // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
-    // Model 'OM-1MarkII', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
+    // Model 'OM-1MarkII', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps/4.3.md 4.3.5)
     rec_native: true,
     // S-NVRAM's B store (src/lab/menu.mjs B_WORDS): its format, the halfword the registry bootstrap gives the store
     // (`movhu (0x6009a3cc),d0` at 0x50041778, E143's 0x50040b71; 0x000a, D)
@@ -640,7 +640,7 @@ export const MODELS = {
     vsc_features: { 0x428: [0x22], 0x580: [0], 0x584: [0], 0x588: [0], 0x58c: [0], 0x598: [0] },
     // the touch panel runs (no touch: false) since 2026-11-14: E143's driver and controller (slave 0x70, the power mode
     // register 0xa5, the 11-byte report at register 2, D; X: a tap on the touch mode icon reaches HFW at its pixel,
-    // test/test_touch.mjs), with two differences (D; docs/hle-gaps.md 4.4.4). Its close (0x501f2327) waits for the
+    // test/test_touch.mjs), with two differences (D; docs/hle-gaps/4.4.md 4.4.4). Its close (0x501f2327) waits for the
     // touch task before its release: OlyEvSt of pattern 4 on its flag (0x501f2350), then OlySmWt without timeout
     // (0x501f2360) on a semaphore the task signals after its own work and clearing the open byte (0x501f2203), then
     // E143's inline release (0x501f2367..0x501f2391); E143's close (0x501e4139) does the release without the wait, and
@@ -654,10 +654,10 @@ export const MODELS = {
     // chain_sleeps
     chain_sleeps: true,
     g4set: G4SET_UNCHECKED,
-    // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3; X: the same
+    // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps/4.4.md 4.4.3; X: the same
     // compares and frames); LLPSW is bit 6 of group 1 byte 0 in its UI_IN tables (E143's bit 4 of byte 1)
     lens_native: true,
-    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5, D unless
+    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps/4.5.md 4.5, D unless
     // tagged): USTART_L's loader 0x501b5a59 (its call 0x50024234, before the lens data cache load 0x5002426a), res_size
     // 0x501b6526 and res_read 0x501b5fd8 (USTART_L's sound 0 at 0x5002436e / 0x50024386, into 0xa4000000), the NAND
     // erase operation 0x10300 (the type-2 write path's, 0x501b682f); the sound area: load, the loader's first read
@@ -722,10 +722,10 @@ export const MODELS = {
     },
     // the power manager and the power-off natively; its power-off sends no IO expander a command (D: the sequence
     // 0x50045807; X: a scan finds the expanders' task names only in a name list no code loads), so S-IOEXP does not
-    // run (X: test_scpu's power session; docs/hle-gaps.md 4.7.4)
+    // run (X: test_scpu's power session; docs/hle-gaps/4.7.md 4.7.4)
     power_native: true,
     // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
-    // Model 'OM-3', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
+    // Model 'OM-3', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps/4.3.md 4.3.5)
     rec_native: true,
     // S-NVRAM's B store (src/lab/menu.mjs B_WORDS): its format, the halfword the registry bootstrap gives the store
     // (`movhu (0x60095508),d0` at 0x500416f7, E143's 0x50040b71; 0x000a, D)
@@ -746,7 +746,7 @@ export const MODELS = {
     // positions 0 and 1 the application's setting 44 reads 1, at 2 it reads 0 (X); E143 sets 44 to 1 at the mode
     // dial's MOVIE (X), its button functions take their movie column while 44 is 1 and OlyHfwOpeShoot::ctrlRelease
     // is then given no release keys, so S1 and S2 never reach the shooting sequence's phase 101 cases (D, X under
-    // control camapp 3: phase 101 throughout; docs/hle-gaps.md 4.1.13). The lab's sessions are stills sessions: the
+    // control camapp 3: phase 101 throughout; docs/hle-gaps/4.1.md 4.1.13). The lab's sessions are stills sessions: the
     // switch starts at position 2. The Super Control Panel agrees (X): at position 2 its shooting-mode cell shows the
     // stills icon and P, at position 1 that cell is empty, the other cells the same. That 44 is the movie mode is I
     // (its name is not read)
@@ -754,13 +754,13 @@ export const MODELS = {
     // the switch as a player input (src/lab/play.mjs still_movie): UI_IN's level getter answers 0x1909 from the board's
     // value table at its decoded position (0..2), which for board 0 holds 3, 2, 1, and the mode reader above gives the
     // shooting mode 10, the mode dial's MOVIE code on E143 and E146, for the levels 2 and 3 and the mode dial's own
-    // mode for 1 (D; the addresses in docs/hle-gaps.md 4.1.13). What tells positions 0 and 1 apart is not read (?):
+    // mode for 1 (D; the addresses in docs/hle-gaps/4.1.md 4.1.13). What tells positions 0 and 1 apart is not read (?):
     // the labels name the level
     still_movie: { labels: ['movie (level 3)', 'movie (level 2)', 'stills'] },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },
-    // E146's layout with E147's own probe and cadence (D; docs/hle-gaps.md 4.7.3, 2026-11-22): the init 0x50049416
+    // E146's layout with E147's own probe and cadence (D; docs/hle-gaps/4.7.md 4.7.3, 2026-11-22): the init 0x50049416
     // clears the enable halfword 0x6298d7b0, calls the device part at 0x5004941d, stores the counter 0x603579d4 and
     // the run-time 0x6006a9c1 (= the copy 0x500499a1) at 0x6298d750 / 0x6298d754, the references 0x5004947d write
     // 0x603579b0.., and it starts ACC_MAIN 0x50049640 (task id halfword 0x60042dc0). ACC_MAIN's first call 0x5004962b
@@ -917,7 +917,7 @@ export const MODELS = {
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
     // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps/4.8.md 4.8.17)
     card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkIII')
@@ -980,7 +980,7 @@ export const MODELS = {
     // 0x506595b8), and with UI_OUT not run the 54th send blocked FILECLBK in S-RECFILE's first fopen (X: 53 sends, no
     // read in 10 s of lab time). E143's and E144's file layers make no such request (X). Its HLS media side by the
     // rule as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps/4.8.md 4.8.17)
     card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1X')
@@ -1119,7 +1119,7 @@ export const MODELS = {
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
     // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps/4.8.md 4.8.17)
     card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkII')
@@ -1316,7 +1316,7 @@ export const MODELS = {
     // (0x50710d83) posts its request to CATEGORY_MAIN (D; E145 has the same check as a stub that returns 0,
     // 0x50743489, D). Without the answer the screen stayed (X). LOGGER_MAIN: its request is posted at the start;
     // without the answer the session stopped after the clock was set, the application's queue 6 full (X; why is ?);
-    // it no longer stops without it (X, 2026-11-10: three of its queue's four messages held; docs/hle-gaps.md 4.3.2)
+    // it no longer stops without it (X, 2026-11-10: three of its queue's four messages held; docs/hle-gaps/4.3.md 4.3.2)
     modack_queues: [[0xE6, 'CATEGORY_MAIN'], [0xDF, 'LOGGER_MAIN']],
   },
   E118: {

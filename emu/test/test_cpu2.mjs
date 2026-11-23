@@ -1,4 +1,4 @@
-// CPU 2 natively (--cpu2 native, src/lab/cpu2.mjs, src/core/cores.mjs; docs/hle-gaps.md 4.6.1, 4.6.2), E143:
+// CPU 2 natively (--cpu2 native, src/lab/cpu2.mjs, src/core/cores.mjs; docs/hle-gaps/4.6.md 4.6.1, 4.6.2), E143:
 //   cpu2Session  a default session has no second core (the machine's cores null, no cpu2 option, S-CPU2 serves the
 //                Super Control Panel's post); with --cpu2 native CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 start and wait
 //                (H-CPUCONN0), then the second core runs CPU 2 from its entry 0x50008f01 through its kernel
@@ -80,7 +80,7 @@ const BOOT_LOG = ['start CPU 0: CPUCONN_CPU0 153, CPUCALL_CPU0 154', 'skip H-CPU
 const TASKS = [['WB_MOV', 0x200F, 0x5046AAE2], ['MVR_MAIN', 0x2002, 0x5045FD4C], ['SDET', 0x2010, 0x5050CD22], ['OSD_DRAW_CPU2', 0x2015, 0x51015F56]];
 const PROXY = 'CPUCONN proxy (CPU 0)';
 const STARTS = ['BOOT_CPU2', 'CPUCONN2', 'CPUCALL2', 'CONTEST_CPU2', 'USTART_L2', ...TASKS.flatMap(([n]) => [PROXY, n]), PROXY, 'AUD_WAKEUP', PROXY, 'AUD_LEVEL_MONITOR'];
-// AUD_WAKEUP on core 2 (docs/hle-gaps.md 4.6.7, X): its power-on list's PER_SIO calls of channel 14 served by
+// AUD_WAKEUP on core 2 (docs/hle-gaps/4.6.md 4.6.7, X): its power-on list's PER_SIO calls of channel 14 served by
 // S-WM8946 at core 2's stops (open, configure, transfer, close: 7 opens and closes, 1356 register writes), its reply
 // 0x50035afd(0, 0x60a83d95, 0) (the call of 0x50a62d75) posted from its own task, 248 ms of lab time after its start
 const WAKEUP_CALLS = { open: 7, configure: 1356, transfer: 1356, close: 7, transfers: 1356 }, WAKEUP_MS = 248;
@@ -216,7 +216,7 @@ export async function cpu2Session() {
 
 // OSD_DRAW_CPU2 natively under control camapp 3: the GUI's two histogram buffers (OSDControl::drawHistogram's
 // requests: rectangle x 4, y 110, 256 x 63, stride 1664), and the firmware's bins with IMG1 off (0, and 64 in bin 5:
-// the VSC histogram's cmd 16, docs/hle-gaps.md 4.2.1), whose column is bins 5's two columns x 14, 15
+// the VSC histogram's cmd 16, docs/hle-gaps/4.2.md 4.2.1), whose column is bins 5's two columns x 14, 15
 const HIST_BUFFERS = [0xB7493000, 0xB767A800], HIST_STRIDE = 1664, HIST_COLUMNS = [14, 15], HIST_ROWS = [110, 172];
 export async function cpu2Histogram() {
   const bad = [];

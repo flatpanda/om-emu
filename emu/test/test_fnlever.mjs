@@ -1,4 +1,4 @@
-// The Fn lever and the AF mode in the default session (docs/hle-gaps.md 4.3.8; E143, control camapp 1):
+// The Fn lever and the AF mode in the default session (docs/hle-gaps/4.3.md 4.3.8; E143, control camapp 1):
 //   fnLeverSession  the idle image has the lever at API_LEVER_SW_1 (the lever read 0), the factory lever function
 //                  (MODE_LEVER_SWITCH_TYPE 4) and MODE_AF_CHANGE 0, the S-AF bank; S-SEQSTANDBY answers
 //                  OlyHfwOpeShoot's standby gate from the start, and only the gate (the lab's own call of the phase
@@ -38,7 +38,7 @@ const TAKE_STATUS_GET = 0x50AB5716, TAKE_IS_FOCUS = 0x62AF6E28, SEQ_READY = 2, S
 const AF_POINT = [0.72, 0.35], SIGNPOST_M = 1.5, HAND_M = 5;
 // the sequence parts' StartFocus sender, the builder of TRA 1323 it calls where its test passes, READY's phase and
 // the phase after it once S-TAKERDY's take-ready event (794) is taken there, which S1 down reaches in camapp 3 since
-// S-TAKERDY (X: 102 with S-TAKERDY off; docs/hle-gaps.md 4.1.12)
+// S-TAKERDY (X: 102 with S-TAKERDY off; docs/hle-gaps/4.1.md 4.1.12)
 const START_FOCUS_SENDER = 0x50CAD835, BUILD_1323 = 0x50AF2775, PHASE_READY = 102, PHASE_TAKE_READY = 103;
 // The transaction exec's two entries (camapp.mjs TRA_EXEC_CALLS / CALL: a1 the request, its id at +4) and what a
 // change of the focus mode sends through them (X): 974, then OlyHfwOpeShoot::setAelState's 958 and 1515 (returns

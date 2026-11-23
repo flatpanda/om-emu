@@ -1,4 +1,4 @@
-// The playback menu's Erase All, natively (src/lab/media.mjs S-MDACTRL's erase all; docs/hle-gaps.md 4.8.15):
+// The playback menu's Erase All, natively (src/lab/media.mjs S-MDACTRL's erase all; docs/hle-gaps/4.8.md 4.8.15):
 //   eraseAllSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): start, S1 and S2 three
 //                    times (three pictures on the card), the first one locked by the firmware's own DCF edit
 //                    (FILECLBK's DCFED_OBJ_LOCK, the test's own action, as test_erase.mjs's), MENU, the sub dial to the
@@ -13,7 +13,7 @@
 //                    firmware's count 1 and S-CARD's records 1. Unlocked by the DCF edit, the second Erase All: no
 //                    picture counted, the emptied folder removed from DCIM, the free count the start's. MENU back to
 //                    the shooting screen and S2: the next picture counted and on the card. Then (2026-11-22,
-//                    docs/hle-gaps.md 4.8.16) a second picture, the first locked again by the DCF edit, Reset All
+//                    docs/hle-gaps/4.8.md 4.8.16) a second picture, the first locked again by the DCF edit, Reset All
 //                    Images, Reset Protect and Yes: the media control's unlock all (command 5) natively, the first
 //                    file's read-only bit cleared on the card and its fnode's lock bit; the second picture rated 3 by
 //                    the firmware's own DCF edit (OBJ_RATING, the test's own action, the Exif Rating tag 0x4746 read
@@ -35,7 +35,7 @@ export const ERASE_ALL = new Set(['E143', 'E146', 'E147', 'E148']);
 export const ERASE_ALL_BODIES = ['E146', 'E147', 'E148', 'E144', 'E122'];
 // the bodies whose rating-exclusive erase all (Erase All's Save, command 6) runs natively (X, 2026-11-22; models.mjs
 // card_fs.hls.ctrl.rating_erase): E146's and E147's DCF edit takes its buffer from a memory pool past the lab's DRAM
-// (docs/hle-gaps.md 4.8.16), so S-MDACTRL refuses the command there
+// (docs/hle-gaps/4.8.md 4.8.16), so S-MDACTRL refuses the command there
 export const RATING_ERASE = new Set(['E143', 'E148']);
 const DCFED_OBJ_LOCK = 0x23, DCFED_OBJ_UNLOCK = 0x24, DCFED_OBJ_RATING = 0x2b, READ_ONLY = 0x01, ERASE_ALL_CMD = 3, UNLOCK_ALL_CMD = 5, SAVE_CMD = 6, MAX_TABS = 8;
 // the DCF edit's OBJ_RATING block (dcfedit.c op 6, E143 0x508744e4, D): +2 the drive, +4 the fnode, +20 the rating,

@@ -1,4 +1,4 @@
-// The audio hardware in a play session (--audio auto, the default, or on; E143; docs/hle-gaps.md 4.5, where the
+// The audio hardware in a play session (--audio auto, the default, or on; E143; docs/hle-gaps/4.5.md 4.5, where the
 // firmware addresses cited here are listed): the machine's audio serial port and SCA page (src/dev/audio.mjs), the
 // sound IC on PER_SIO's channel 14 (S-WM8946, src/lab/wm8946.mjs), the CPU 2 side of AUD_MAIN's start (S-AUDCPU2),
 // AUD_MAIN's start (H-AUDSTART) and the sink that hands the port's PCM to the session's audio output
@@ -27,7 +27,7 @@
 // (set_flg 0xf9) on ring [0][2] with bank-0's bit, as S-CPU2 posts CPU 2's reply. CPU 0 then takes IRQ 324 natively
 // and the drain sets flag 0xf9, which AUD_MAIN waits for. The power-on list does not run (its codec writes are CPU
 // 2's). Any other OlyTaStCpu call runs natively; a second start of the same id is an error.
-// With --cpu2 native (src/lab/cpu2.mjs; docs/hle-gaps.md 4.6.7) neither start is stood in: both go to CPU 2's CPUCONN
+// With --cpu2 native (src/lab/cpu2.mjs; docs/hle-gaps/4.6.md 4.6.7) neither start is stood in: both go to CPU 2's CPUCONN
 // (cpu_conn kind 9) and its proxy starts the task there. AUD_WAKEUP's power-on list then runs on core 2, its
 // PER_SIO calls of channel 14 served by S-WM8946 at core 2's stops (wm8946.mjs serve_cpu2), and its list's waits
 // (kind 1 entries: 0x50a630de..0x50a6310b close the channel and sleep the entry's ms, 0x50a644fd) take lab time, so

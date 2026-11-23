@@ -1,5 +1,5 @@
 // The picture's orientation tag: PER_ROTATE's getter read by TAKE's takepic into the shot's record, and the EXIF set's
-// Orientation from that field (docs/hle-gaps.md 4.7.3, 2026-11-22):
+// Orientation from that field (docs/hle-gaps/4.7.md 4.7.3, 2026-11-22):
 //   orientUnits    (firmware-free) the session's tilt:roll=R[,pitch=P] token and the Player input it sends; malformed
 //                  ones refused
 //   orientSites    (firmware, no lab) on E143, E146 and E147, by their bytes in each body's main block: takepic's call

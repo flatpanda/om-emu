@@ -1,4 +1,4 @@
-// The play module natively under control camapp 3 (docs/hle-gaps.md 4.8.11, 4.8.13, 4.8.18; E143, E146 and E147, the
+// The play module natively under control camapp 3 (docs/hle-gaps/4.8.md 4.8.11, 4.8.13, 4.8.18; E143, E146 and E147, the
 // Player's camapp_play_native, off by default): segment 9's PLAY tasks take the HLS play components' requests on
 // PLAY_EXEC themselves, load the picture's file from the card, parse its Exif and JPEG headers and ask the image
 // library for the view's decode, which runs natively on the pipeline block's model (src/dev/imgpipe.mjs). Addresses
@@ -15,7 +15,7 @@
 //                0x50155412 is the play module's; neither runs in the lab). Run after CA_MAIN's start: on the camera
 //                USTART4 starts CA_MAIN (0x501e9e03) before it starts USTART5 (0x501e9e5c, D). The conditions the
 //                camera waits for first are not met in the lab then (X: the stages 8 and 10 not readied, USTART4's
-//                two bytes 0; what they mark is ?, docs/hle-gaps.md 4.8.11). PLAY_EXEC (0x3f) leaves S-MODACK:
+//                two bytes 0; what they mark is ?, docs/hle-gaps/4.8.md 4.8.11). PLAY_EXEC (0x3f) leaves S-MODACK:
 //                PLAY_MAIN takes the play API's requests and answers them to their reply queue
 //   S-IMGPIPE    the view's decode, the image library's request the play module makes: the library's issue
 //                0x5048f331 and its wait 0x5048f6e4, called only by the play module, from

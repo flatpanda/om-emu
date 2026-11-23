@@ -1,12 +1,12 @@
-// S-CAMFE, the camera front end's control plane as cam.c's second init programs it (src/dev/camfe.mjs; docs/hle-gaps.md
+// S-CAMFE, the camera front end's control plane as cam.c's second init programs it (src/dev/camfe.mjs; docs/hle-gaps/4.2.md
 // 4.2.5), on a bare machine: the program's 256 registers by block, a write of a value the program holds kept and any
 // other value refused, A-CAMFE-1's read-before-write registers (0, then what was written; the init's |= 1, |= 2, |= 4
 // and &= ~bit read back), A-CAMFE-2's start bit (+0xa08 of the clock block reads 0 after its write of 1), the reads of
 // write-only registers (the clock gates among them) and of addresses outside the program refused, widths, unaligned and
 // debugger accesses refused, no interrupt line driven, and a second device over the same blocks refused. And the
-// power-on's clock enables (docs/hle-gaps.md 4.2.6; POWER_ON): the gate +0x870 = 1, +0x008 = 0x700 beside the init's
+// power-on's clock enables (docs/hle-gaps/4.2.md 4.2.6; POWER_ON): the gate +0x870 = 1, +0x008 = 0x700 beside the init's
 // 0x100, cam_cpm.c's |= 0x10 of +0x9a0 and +0x9e0 (A-CAMFE-1: 0, then what was written), any other value or gate
-// refused. And SSG1's command unit (docs/hle-gaps.md 4.2.6, 2026-11-22; camfe.mjs SSG): its configuration words,
+// refused. And SSG1's command unit (docs/hle-gaps/4.2.md 4.2.6, 2026-11-22; camfe.mjs SSG): its configuration words,
 // +0x60c (A-CAMFE-4), a mode-0 batch and a mode-1 entry by +0xa04 bit 8, each ending after A-CAMFE-3's lab time on
 // status bit 21 / 20 with IRQ 18 high under the mask +0x014, the write-back that clears it, and its refusals (the
 // sensor's reply +0xa10, a busy start, a bad start word, the RAM read or past 120 entries), each by name. And
@@ -65,7 +65,7 @@ export function camFeUnits() {
   ok([[0x9B500870, 2], [0x9B500878, 1], [0x9B500004, 0x700], [0x9B5009A0, 0x30], [0x9B5009A4, 0x10]].every(([a, x]) => throwsAs(() => wr(a, x), BUS))
     && throwsAs(() => rd(0x9B500870), BUS) && throwsAs(() => rd(0x9B500008), BUS),
     'another value, the gates\' other words (+0x878, +0x004) and a read of a gate are bus errors');
-  // SSG1's command unit (docs/hle-gaps.md 4.2.6, 2026-11-22): the configuration words, a mode-0 batch and a mode-1
+  // SSG1's command unit (docs/hle-gaps/4.2.md 4.2.6, 2026-11-22): the configuration words, a mode-0 batch and a mode-1
   // entry ending on IRQ 18 after A-CAMFE-3's lab time, the status written back, and what stays refused
   const { clock } = m.devices, g = fe.ssg, l0 = lines.length;
   ok(throwsAs(() => wr(SSG.start, 0x101), BUS) && throwsAs(() => rd(SSG.mode), BUS) && rd(SSG.dummy) === 0 && rd(SSG.status) === 0 && g.starts === 0,
@@ -104,7 +104,7 @@ export function camFeUnits() {
   return t;
 }
 
-// SSG1's command unit in a session (docs/hle-gaps.md 4.2.6, 2026-11-22; E143, camapp 1, --take probe --cpu2 native
+// SSG1's command unit in a session (docs/hle-gaps/4.2.md 4.2.6, 2026-11-22; E143, camapp 1, --take probe --cpu2 native
 // with cam_fe): the test makes cam.c's request 6 as TAKE_FUNC_CP's start does (argument 0, its completion +72 TAKE's
 // 0x502cd4d0; test_expcb.mjs camFrontEndSession). The power-on now passes the command unit: the SSG's request 8
 // configures it and the three 0x50171ade(1, n; 131) send 13 mode-0 batches (ten of 120 entries, 27, 1 and 1, the

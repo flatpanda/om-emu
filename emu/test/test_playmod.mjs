@@ -1,5 +1,5 @@
 // The play module natively under control camapp 3 on the body of OM_EMU_MODEL (E143, E146, E147; the Player's
-// camapp_play_native, src/lab/playmod.mjs; docs/hle-gaps.md 4.8.11, 4.8.13, 4.8.18):
+// camapp_play_native, src/lab/playmod.mjs; docs/hle-gaps/4.8.md 4.8.11, 4.8.13, 4.8.18):
 //   playBodySession  the session of test_c3take.mjs stillSession up to one full shot, with the play opt-in: H-PLAYSTART
 //                    starts the six PLAY tasks the body's rule reads (src/fw/facts.mjs playTasks), each waiting on its
 //                    queue afterwards; the shot's picture is on the card; PLAY shows the single-frame view
@@ -12,7 +12,7 @@
 //                    On E146 and E147 PLAY gets as far as the decode's go: the request is recorded with E143's
 //                    values through the body's own layout (playDecode), the library's ratios are the lab's, and the
 //                    go is refused at its stream, whose address (the play buffer) no backed range of om1.bus holds
-//                    there (docs/hle-gaps.md 4.8.18): the test pins that stop
+//                    there (docs/hle-gaps/4.8.md 4.8.18): the test pins that stop
 //   node emu/test/test_playmod.mjs            (OM_EMU_MODEL=E146 / E147 for the other bodies)
 import { fileURLToPath } from 'node:url';
 

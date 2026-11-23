@@ -1,5 +1,5 @@
 // CapMov_MovieRecorderSLR's observer lists and api_movie's start / stop under control camapp 2 (E143;
-// docs/hle-gaps.md 4.5, 2026-11-22): a session with the HLS components, the mode dial at Movie and REC pressed twice.
+// docs/hle-gaps/4.5.md 4.5, 2026-11-22): a session with the HLS components, the mode dial at Movie and REC pressed twice.
 // Watched (lab.observe at the disassembly address):
 //   the recorder facade's seven add-observer methods 0x50bf27d4..0x50bf286a (each: the impl at +4, its list at
 //     +536..+560 by the getters 0x50bf1c36..0x50bf1c8a, then the list add 0x50d7f472 with a1, the observer)

@@ -118,7 +118,7 @@ export async function nvramSessions() {
   const base = await labBase();
   // the session idles idle_ms after its start (the comparison with a session without S-NVRAM takes the start's frame:
   // with the native lens, E143's default, the application leaves the date prompt for the shooting screen when the lens
-  // module's state event comes, about 120 ms later, docs/hle-gaps.md 4.4.2)
+  // module's state event comes, about 120 ms later, docs/hle-gaps/4.4.md 4.4.2)
   let last = null;
   const open = (nvram, idle_ms = 1500) => {
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, { ...base, ...(nvram ? { nvram } : {}) });

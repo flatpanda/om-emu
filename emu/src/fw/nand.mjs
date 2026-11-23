@@ -1,4 +1,4 @@
-// The OM-1's NAND as its resource loader reads it (docs/hle-gaps.md 4.5, "The resource tables"; src/lab/resnand.mjs
+// The OM-1's NAND as its resource loader reads it (docs/hle-gaps/4.5.md 4.5, "The resource tables"; src/lab/resnand.mjs
 // S-RESNAND): every block of the update sits in the NAND's logical space at its container head's load address (field
 // 0x08), stored as the head (32 bytes) + the descrambled body + the tail (32 bytes), the form the .BIN carries it in
 // (src/fw/olyfw.mjs). D: the loader 0x501a8ca0 reads the resource block's index at 0x41ec0000, the large-data block's

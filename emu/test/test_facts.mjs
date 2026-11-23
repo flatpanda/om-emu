@@ -589,7 +589,7 @@ const REC_IMAGE_FOUND = {
 };
 // TAKE's request protocol (take_requests; src/fw/facts.mjs takeRequests) where recFile reads: E143's as S-MODPOST's
 // and S-TAKERDY's E143 lists use it (src/lab/camapp.mjs MODPOST_E143's API_POST and TAKE_SEND, TAKERDY_E143's event
-// and offsets; D, docs/hle-gaps.md 4.1.11, 4.1.12), E146's and E147's as read in their code by hand (D, 2026-11-13:
+// and offsets; D, docs/hle-gaps/4.1.md 4.1.11, 4.1.12), E146's and E147's as read in their code by hand (D, 2026-11-13:
 // the API's direct post E146 0x503e8038 / E147 0x503f5d3e calling OlyQeWr, E146's 0x5002c1cb, at +36; TAKE's send E146
 // 0x502e635e / E147 0x502f7c24 at +10; the take API's control 0x40 `mov 5,a0` at E146 0x504137fb / E147 0x5042191a;
 // TAKE_FUNC 29's sender E146 0x5039fb54 / E147 0x503a9c28 with `mov 29,d0` and its parameter's mov imm32; TAKE_MAIN's
@@ -845,12 +845,12 @@ const DETECT_FOUND = {
   E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
   E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1], E148: [0xA2750A68, 1],
 };
-// The second card slot (card.slots; src/fw/facts.mjs cardSlots; docs/hle-gaps.md 4.8.12): E143's as read by hand (D:
+// The second card slot (card.slots; src/fw/facts.mjs cardSlots; docs/hle-gaps/4.8.md 4.8.12): E143's as read by hand (D:
 // the SD driver's detect 0x508b0221 with its helper 0x508b0859, the GIO codes 0x0200000f / 0x02000010 through the
 // class-2 reader 0x50052e28 to the IO expander's input shadow 0xa32c5310, the command layer's port index +12, the
 // record controller's settings 1129 and 1130 at 0x50c73f16), E146's by the same reading of its code (D: 0x508ca01d,
 // 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others). The
-// other two-slot bodies' UI_IN-level detects as read by hand (docs/hle-gaps.md 4.8.17, D: E139's detect 0x5066466d
+// other two-slot bodies' UI_IN-level detects as read by hand (docs/hle-gaps/4.8.md 4.8.17, D: E139's detect 0x5066466d
 // with the helper 0x50664a3d `clr d0; retf`, E134's 0x50678449 and E125's 0x50622561 of their own, each asking for
 // 0x1506 and 0x1518; the port index +12 at their command layers) with the save settings their remaining-shots
 // queries load (D: E139 0x502f7d26 / 0x502f7d6c, E134 0x50313e68 / 0x50313eae, E125 0x503073b1 / 0x503073f7)
@@ -1349,7 +1349,7 @@ export function factsTests() {
       ok(kept === true && set === true, `recImage: the create's handle kept in another form and another test after the set's call refused: ${kept}, ${set}`);
     }
     // TAKE's request protocol (take_requests, src/fw/facts.mjs takeRequests) where recFile reads: E143's equals the
-    // values S-MODPOST's and S-TAKERDY's E143 lists use; E146's and E147's as found (docs/hle-gaps.md 4.1.13)
+    // values S-MODPOST's and S-TAKERDY's E143 lists use; E146's and E147's as found (docs/hle-gaps/4.1.md 4.1.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_requests, TAKE_REQUESTS_FOUND[code]), `${code}: take_requests ${hx(placed?.take_requests ?? placed)}, found ${hx(TAKE_REQUESTS_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the event's `mov imm32,d1` made `mov imm32,d0`
     // (0x503c325b: fc cd -> fc cc) and with RdyTrig2Wait's row of command 11 made 13 (its command table's row, D)
@@ -1366,7 +1366,7 @@ export function factsTests() {
       ok(event === true && row === true, `takeRequests: the event's load into another register and RdyTrig2Wait without command 11 refused: ${event}, ${row}`);
     }
     // TAKE's exposure for a still's record (take_exposure, src/fw/facts.mjs takeExposure) where recFile reads: E143's
-    // equals the values S-EXIFPRM uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // equals the values S-EXIFPRM uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_exposure, TAKE_EXPOSURE_FOUND[code]), `${code}: take_exposure ${hx(placed?.take_exposure ?? placed)}, found ${hx(TAKE_EXPOSURE_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the fill's shutter read made another setting
     // (0x503bf6bf: 41002 -> 41003), with takepic's copy storing Tv through a3 (0x503bcdb7: movhu d0,(a0) -> (a3)) and
@@ -1383,7 +1383,7 @@ export function factsTests() {
       ok(tv === true && copy === true && range === true, `takeExposure: the fill without the shutter's read, takepic's copy through another register and the range copied through another register refused: ${tv}, ${copy}, ${range}`);
     }
     // TAKE's shot for a still (take_shot, src/fw/facts.mjs takeShot) where recFile reads: E143's equals the values
-    // H-SHOTALLOC uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // H-SHOTALLOC uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_shot, TAKE_SHOT_FOUND[code]), `${code}: take_shot ${hx(placed?.take_shot ?? placed)}, found ${hx(TAKE_SHOT_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the allocation's kind for the setting's value made 2
     // (0x5040f47d: mov 1,d0 -> mov 2,d0), with the lookup testing the entry's bit 2 (0x503afc54: btst 4,d1 -> btst
@@ -1399,7 +1399,7 @@ export function factsTests() {
       ok(kind === true && look === true && free === true, `takeShot: another kind for the setting's value, a lookup by another bit and the free handing on another register refused: ${kind}, ${look}, ${free}`);
     }
     // TAKE's own fills (take_fills, src/fw/facts.mjs takeFills) where recFile reads: E143's equals the values
-    // H-TAKEFILLS uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // H-TAKEFILLS uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_fills, TAKE_FILLS_FOUND[code]), `${code}: take_fills ${hx(placed?.take_fills ?? placed)}, found ${hx(TAKE_FILLS_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the frame count's step made a decrement (0x503b23e9:
     // inc d1 -> inc d0), with Standby's entry taking its block by d0 (0x503b09e2: mov d1,a1 -> mov d0,a1) and with

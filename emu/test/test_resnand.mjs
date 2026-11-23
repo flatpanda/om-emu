@@ -1,4 +1,4 @@
-// The resource tables from the NAND (src/fw/nand.mjs; src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5):
+// The resource tables from the NAND (src/fw/nand.mjs; src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps/4.5.md 4.5):
 //   resnandUnits    without firmware: the NAND view of a container (each block at its head's load address as head +
 //                   descrambled body + tail; reads across the head, an unaligned body tail and the tail; a range
 //                   outside every block or across two answered null; overlapping blocks refused), the resource body

@@ -1,6 +1,6 @@
 // The display switch and the frame at idle on the bodies whose touch driver's close waits for the touch task before its
 // release and sleeps in its wake (E146, E147: src/fw/models.mjs chain_sleeps and their touch panel; src/lab/play.mjs
-// H-CHAINREST; docs/hle-gaps.md 4.4.4), in play on the process's model:
+// H-CHAINREST; docs/hle-gaps/4.4.md 4.4.4), in play on the process's model:
 //   dispswitchSession  E146, E147 (bin/test.mjs runs each in a child with OM_EMU_MODEL): through bin/session.mjs, a
 //                      session started on the TFT whose open already ends on the shooting screen with a published
 //                      frame (no key, no wait), one long play token WAIT:4000 that keeps it, then the eye sensor to

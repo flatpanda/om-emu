@@ -151,7 +151,7 @@ export function controlsTests() {
 // docs/om1-input-spec.md section 2, "The mode change"); the order is kept, so the page's inputs stay as they were. The
 // touch is on the shooting screen's touch-mode icon, which the camera application, forwarding the touch itself with the
 // native lens, turns to its next mode (X); at (90, 30), the wireless icon, it opens Wi-Fi Connection (X), so the touch
-// is no longer there (docs/hle-gaps.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and
+// is no longer there (docs/hle-gaps/4.4.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and
 // mode_label: the position it ends at and that position's name (the mouse group: the dial's arrows at their centres,
 // then E143's P on its ring, position 8: src/fw/facts.mjs MODE_DIAL_E143).
 const KEY = (id) => [{ type: 'key', id, action: 'down' }, { type: 'key', id, action: 'up' }];

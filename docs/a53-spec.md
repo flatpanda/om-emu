@@ -3,7 +3,7 @@
 What the OM-1 line's second processor is, what it runs, the hardware it sees, and what it would take to emulate it
 low-level (LLE) by running its own kernel and userland instead of a JS stand-in. This is a reverse-engineering spec
 like the others under `docs/`; nothing here is wired into `emu/` yet. The MN side's view of the A53 (how CPU 1 powers
-it and talks to it over ISC) is in `docs/hle-gaps.md` §4.6, §4.11 and §4.11.1 and `docs/om1-cores-spec.md`; this
+it and talks to it over ISC) is in `docs/hle-gaps/4.6.md` §4.6, `docs/hle-gaps/4.11.md` §4.11 and `docs/hle-gaps/4.11.md` §4.11.1 and `docs/om1-cores-spec.md`; this
 document is the A53 side.
 
 Evidence tags (as in `docs/README.md`): **D** read from the firmware's code or data with the address shown; **X**
@@ -53,7 +53,7 @@ So, answering the open questions: **HHHR is really computed on the A53** (D: `hh
 image buffers it mmaps, keyed by ISC ports 30/31), not merely coordinated. **The network stack (Wi-Fi/BLE/HTTP/PTP-IP)
 lives on the A53**: the radio is a Cypress/Infineon **CYW43455** on SDIO (`bcmdhd`), BT on its Broadcom BSA half over
 `/dev/ttyS1`. **USB (dwc3) is NOT an A53 role**: `CONFIG_USB_SUPPORT is not set` in the A53 kernel (D), and both dwc3
-nodes, though `okay` in the DT, have no driver here — USB/PTP/MTP/MSC stays on the MN (`docs/hle-gaps.md` §4.10). The DT
+nodes, though `okay` in the DT, have no driver here — USB/PTP/MTP/MSC stays on the MN (`docs/hle-gaps/4.10.md` §4.10). The DT
 also lists Ethernet (`dwmac`, `disabled`) and nine serial/i2c/spi ports mostly `disabled`.
 
 ## 2. Hardware resources (from the DTB and the kernel)
@@ -68,7 +68,7 @@ embedded (`CONFIG_IKCONFIG`, recovered to `scratchpad/a53/img/kconfig.txt`, X).
   (~81 MiB) (D). The rootfs squashfs sits in RAM just above it at phys `0x5140000` (`slram=mtd0,0x05140000,+0x00ec0000`
   in the bootargs); the kernel maps it as `/dev/mtdblock0` (D, and X: "slram: Mapped ... Mounted root (squashfs)").
   This DRAM is a window the MN places the image into; the ISC shared memory lives at A53 phys `0x2_a3fe0000` vs the
-  MN's `0x63fe0000` for nodes 0..3 (`docs/hle-gaps.md` §4.11.1), a `0x2_40000000` offset (D). The A53 has **no flash
+  MN's `0x63fe0000` for nodes 0..3 (`docs/hle-gaps/4.11.md` §4.11.1), a `0x2_40000000` offset (D). The A53 has **no flash
   of its own** — root is RAM-resident squashfs, `init=/temproot` overlays a tmpfs on top (D, `temproot` + `inittab`).
 - **How the image gets there (D, MN side `0x5003bcd9`..`0x5003c953`).** The MN "load arm linux" path reads five parts
   named in `C:\relbin\`: `mapinfo`, `bl31.bin`, `imgprod.dtb`, `zImage`, `rfs.squ`. In production they come from the
@@ -111,7 +111,7 @@ provide to reach each phase (§4).
 | irqcon | `0x99200000`/`0x99300000`/`0x99b00000`/`0x99b80000` | `irqcon_postcore_init`, `irqam32_*` (builtin) | **custom** | the four MN INTC banks; A53 side of the IPI/doorbell |
 | ISC hw lock | `0x97000000` (+`0x200`) | `isc_lock_init` → ioremap | **custom** | byte-per-id test-and-set lock array (`0x97000000+64*id`) |
 | SCCORE ctrl | `0x97f00b80` (len `0x80`) | `scc_init` → ioremap | **custom** | part of the `0x97f00000` shared block |
-| ISC control blk / FIFOs | `0x97f00c00` (1 KiB), shmem `0x2_a3fe0000` (128 KiB) | `iscdrv.ko` | **custom** | the transport (`docs/hle-gaps.md` §4.11.1) |
+| ISC control blk / FIFOs | `0x97f00c00` (1 KiB), shmem `0x2_a3fe0000` (128 KiB) | `iscdrv.ko` | **custom** | the transport (`docs/hle-gaps/4.11.md` §4.11.1) |
 | SD/MMC (SDIO) | `0x9ac02000` etc. | `mn-sdmmc.ko` + `bcmdhd.ko` | **custom** | model enough that `isc_olnet` insmod succeeds, or stub |
 | Wi-Fi radio | CYW43455 on SDIO | `bcmdhd` + firmware blobs | external | stub absent, or model for daemons to start (§6) |
 | BT | `/dev/ttyS1` + BCM4345C0 hcd | BSA `bsa_server` | external | stub the UART; BSA will fail gracefully |
@@ -128,7 +128,7 @@ add a bank from `*(port+0x190)`; store word at `membase+off`; `dsb`. `console_pu
 
 **The custom ISC windows, decoded register by register (D).** These are the four windows phase (c) needs; each fact
 is read from the A53's own aarch64 code (`iscdrv.ko` offsets, or kernel VAs against `vmlinux.elf`) and cross-checks the
-MN side in `docs/hle-gaps.md` §4.11.1. The oracle models them; `tools/a53-oracle/README.md` holds the same table with
+MN side in `docs/hle-gaps/4.11.md` §4.11.1. The oracle models them; `tools/a53-oracle/README.md` holds the same table with
 the reproduction.
 
 - **`irqcon`** banks `0x99200000 / 0x99300000 / 0x99b00000 / 0x99b80000` (D, DT `irqcon@99200000`; same four in
@@ -161,7 +161,7 @@ the reproduction.
   frame of that node's view of the pool: `isc_mem_paddr` (`0x2830`) adds it `<< 12` to `block << shift` for the
   attach's `vm_mmap` (`0x5bc`) (D); left 0, an attach mapped physical page `block` outside the pool (X).
   FIFO header and message format are in
-  `docs/hle-gaps.md` §4.11.1 and implemented in `tools/a53-oracle/iscpeer.mjs`.
+  `docs/hle-gaps/4.11.md` §4.11.1 and implemented in `tools/a53-oracle/iscpeer.mjs`.
 
 ## 4. LLE feasibility: phases and the minimum device set
 
@@ -182,7 +182,7 @@ These phases are the device budget for an in-emulator LLE, whatever engine runs 
   doorbell at bank `+0x880`. On bare QEMU `iscdrv` cannot start (X: "isc: isc_start failed -6", `ENXIO`, because none
   of those windows exist and `scc_init`/`isc_lock_init`/`irqcon` all `ioremap`-fault), and `sccore`'s first
   `OlyISC_...` call errors. So phase (c) is exactly the work of modelling the four custom windows above plus the
-  transport already decoded in `docs/hle-gaps.md` §4.11.1. Once node-4's FIFO and doorbell exist and the MN side (CPU 1,
+  transport already decoded in `docs/hle-gaps/4.11.md` §4.11.1. Once node-4's FIFO and doorbell exist and the MN side (CPU 1,
   or a JS stand-in for it) drains/fills them, `iscdrv` would start and `sccore`/`isc_socket`/`isc_olnet` would get
   replies.
   **Phase (c) result: ISC is up, live (X, `tools/a53-oracle`).** On stock virt `isc_start` fails `-6` (`ENXIO`): with
@@ -231,21 +231,21 @@ engine used only as an oracle.
   weeks; AArch32 EL0 (a second decoder for the user ABI, plus the compat syscall layer the kernel already provides) is
   the big one, ~4–6 weeks and the main reason this is a large undertaking. NEON/FP (needed for `hhhr` and for
   `memcpy`) adds more. Total for "boots to a shell and answers ISC": on the order of a quarter of focused work, versus
-  weeks for the HLE ISC-node-4 stand-in that `docs/hle-gaps.md` §4.11 already scopes.
+  weeks for the HLE ISC-node-4 stand-in that `docs/hle-gaps/4.11.md` §4.11 already scopes.
 - **An external engine (QEMU/Unicorn).** Already proven here as an oracle (§7): it boots the kernel to userspace in
   seconds. But it is a native dependency and cannot ship inside the pure-JS/browser emulator, so it can only ever be a
   development and cross-check tool, never part of `emu/`.
 
 **Recommendation.** Do not build an A53 interpreter to satisfy the camera GUI. For the emulator's actual goal (running
 the MN firmware far enough to reproduce the camera), the A53 only needs to *answer* CPU 1's ISC messages, so the
-cheapest correct path is the **HLE ISC-node-4 service** already planned (`docs/hle-gaps.md` §4.11 "Seam"): a JS service
+cheapest correct path is the **HLE ISC-node-4 service** already planned (`docs/hle-gaps/4.11.md` §4.11 "Seam"): a JS service
 that replies on ports 26/27 (power), 30/31 (HHHR), 1/2, 3/4, 11..16, etc. Keep the real A53 image + QEMU as the oracle
 that tells you what those replies should be. Treat a full in-JS AArch64 LLE as a separate, optional long-horizon track
 (a "run the camera's own Linux in the browser" showcase), not a prerequisite for anything.
 
 **Scheduling against the MN cores.** CPU 1 owns the A53 (D). The MN side today emulates **CPU 0 only** (`CPU 2`/`CPU 3`
 and CPU 1 are stand-ins, `ARCHITECTURE.md` C02). So a *native* A53-answers-CPU-1 loop depends on first having an
-emulated CPU 1 and the ISC transport on it — i.e. it sits behind the multi-core work (`docs/hle-gaps.md` §4.6) and the
+emulated CPU 1 and the ISC transport on it — i.e. it sits behind the multi-core work (`docs/hle-gaps/4.6.md` §4.6) and the
 ISC decode (§4.11.1). **But the A53 can be brought up standalone first**, independent of the MN: a lab loader places
 `Image` + DTB (+ squashfs) exactly as the MN loader would (§2) and enters the kernel — which is precisely what the
 QEMU harness here does. So an LLE spike (phase a/b) needs no MN emulation at all; only phase (c) needs the MN side (or
@@ -255,7 +255,7 @@ a JS stand-in for CPU 1's half of the ISC rings) to exchange messages.
 
 The CYW43455 (SDIO) and its BT half (`/dev/ttyS1` + `BCM4345C0_003.001.025.0144.0266.hcd`) are external. For an LLE
 that only needs ISC up (phase c), **stub them as absent**: leave `mn-mmc` returning "no card", and `isc_olnet` /
-`blebridge` will report "not available" on their ISC ports — the same seam `docs/hle-gaps.md` §4.11 describes for the
+`blebridge` will report "not available" on their ISC ports — the same seam `docs/hle-gaps/4.11.md` §4.11 describes for the
 MN side. To actually exercise the Wi-Fi daemons you would either model the SDIO controller enough for `bcmdhd` to
 attach to a faked CYW43455 (large, firmware-blob territory) or intercept at the `wl`/`wpa_supplicant`/`hostapd`
 boundary. Not worth it for the emulator's goals.
@@ -281,7 +281,7 @@ boots it from the same `0106` block: on E144 the MN copies `res_read(0x800e, par
 releases the A9 via `0x98800160`/`0x9880014c`/`0x98800140` (the A9 analogue of the A53's `0x988003xx` gates), and the
 ISC runs with the A9 as node 3 of a 4-node mesh (node ids differ: A53 = node 4, A9 = node 3). The **userland is the
 same** (`isc_olnet`/`isc_socket`/`lighttpd`/`hostapd`/BSA/`hhhr`), and the ISC transport is the same shared-FIFO design
-(`docs/hle-gaps.md` §4.11.1), just with fewer nodes.
+(`docs/hle-gaps/4.11.md` §4.11.1), just with fewer nodes.
 
 **Does the LLE plan generalise?** The *structure* does, the *engine* does not. The custom-device work (irqcon, MN UART,
 MN-MMC, the ISC lock/control windows), the boot handoff (MN stages image + DTB and releases the core), the device-set
@@ -321,7 +321,7 @@ insmod `bcmdhd`/`mn-sdmmc`, `/etc/init.d/wifi` cannot bring an interface up, and
 a "not available" status rather than crashing; `blebridge`/`bsa_server` find no `/dev/ttyS1` BT and likewise report BLE
 unavailable. `sccore`'s port-26 kind-1 "wifi start" still runs the init script (which then fails internally). HHHR and
 the socket/CGI/file relays are **radio-independent** and would answer normally — they are the endpoints the emulator
-actually needs. This matches the MN-side seam in `docs/hle-gaps.md` §4.11 (network tasks report "not available").
+actually needs. This matches the MN-side seam in `docs/hle-gaps/4.11.md` §4.11 (network tasks report "not available").
 
 **Live, with the console captured (X, `run-isc.sh` + the oracle's `mn_sio_uart` model).** The A53 boots to userspace
 and runs its boot daemons: `Starting OLYMPUS APP...`, then `sccore start!!` and `dbgterm server start!!` (S99oly starts

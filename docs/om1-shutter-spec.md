@@ -179,7 +179,7 @@ IBM Rhapsody OXF-generated classes (`./../../../../base_framework/include/rhapso
 | AF phase / ranging | PFP_AF1..3 subblocks, PDMIX (`CAM_KEEP_FLAG_SSG1_PDMIX_SETTING`), FCS_IP on CPU 0 posts jobs to CPU 1 (`0x5090fc6d..`, `0x50932401..`) and waits on CPU 0 flag 0x92 FCS_IP; FCS code uses MMIO 0x9bf00000 (24 operands at `0x50957687..0x5095799e`, plus `0x5002563b` and `0x502c0e99/9f`), a unit with its own IRQ 281 | cores spec §5.2 (D/I), MMIO D | CPU 1 not modelled: any AF request that needs CPU 1 waits forever |
 | Exposure calc | EXP / TAKE_EXPOSE (software; TAKE_EXPOSE region 0x50570000..0x505a0000 has ~no MMIO), cam_expcal/cam_ev; flags EXP_APERT, EXP_EXPOSE, EXP_START, EXP_UPDATE, TAKE_EXPOSE_SYNC | D names | not run (H-AEINIT runs only the interpolation table init) |
 | Lens | LENS_MAIN/COMMAND/ASKDATA on CPU 0; lens record (L_ID, L_FT_VERSION, FuncFlag[], L_VERSION +0x488, MAG_CNG, L_PRIVATE_ID_DATA; cmd 0x50 page/item requests, analysis/lens-gates); the lens serial device 0x9b980000 (IRQ 14) and the IRQ-60 edge unit 0x9b883e40..0x9b883e6c in the pin block, both driven by the lens serial and sync layers, not LENS_COMMAND (2.5); flags LENS, LENS_APERTURE, LENS_FOCUS, FCS_IP_LENS, EXP_LENS sem | D | not run; no lens attached (lens record empty, ?) |
-| Mechanical shutter | `SHUTTER_MOTOR_ON/OFF/CLOSE_CHARGE_CONDITION_A`, `SHUTTER_MAGNET_*`, `INITIAL_SHUTTER_READY` (0x6020ddfd..0x6020e21a), debug tags `mec`, `sht`, `mot`; driver block 0x9b900000 (271 registers), IRQs 11-13 | D; the block, its driver and the `mec` shell in `docs/hle-gaps.md` section 7 | not modelled |
+| Mechanical shutter | `SHUTTER_MOTOR_ON/OFF/CLOSE_CHARGE_CONDITION_A`, `SHUTTER_MAGNET_*`, `INITIAL_SHUTTER_READY` (0x6020ddfd..0x6020e21a), debug tags `mec`, `sht`, `mot`; driver block 0x9b900000 (271 registers), IRQs 11-13 | D; the block, its driver and the `mec` shell in `docs/hle-gaps/7.md` section 7 | not modelled |
 | Capture sequence | ISEQ_* (`iseq_*.c`), ISEQ_ASIC (flags ISEQ_ASIC_WAIT_PIXSHIFT, ISEQ_MAIN_WAIT), `cam_still_seq.c` (`0x5085fb13..`) | D | not run |
 | Record | REC_* CPU 0 + REC_*_CPU2 / STLNML on CPU 2; DCF/file (`dcffnode.c`), card (UHS-II strings, `SD Card Media 1st SLOT`), EV_MEDIA_MOUNT_REC | D | no card, no CPU 2 (S-CPU2 serves one GUI post only) |
 | Movie | TAKE_MOV, EXP_MOVIE (CPU 0); MVR_* on CPU 2; AV encode on CPU 1 (AVPI VEN BACD) | cores spec §4 | not modelled |
@@ -201,7 +201,7 @@ IBM Rhapsody OXF-generated classes (`./../../../../base_framework/include/rhapso
 | 0x9b980000 | 121 | 0x502c0ea5 | lens serial controller (LENS_SSC strings), IRQ 14, handler `0x502c12c0` |
 | 0x9bf00000 | 24 + 3 | 0x50957687 (FCS) | AF: a DMA-driven unit, IRQ 281 |
 
-Corrected 2026-10-22 (D; `docs/hle-gaps.md` section 9): `0x99990000`, listed here before as "215 refs, lens OIS / IS
+Corrected 2026-10-22 (D; `docs/hle-gaps/9.md` section 9): `0x99990000`, listed here before as "215 refs, lens OIS / IS
 info", is not a device. 214 of its 215 operands are `0x9999999a` loaded by `mov imm32`, the low word of a double (at
 `0x50128f0f`: d0:d1 = 0.2 passed to a soft-float routine), and the remaining hit at `0x5188337a` is not a load or
 store. The lens serial device `0x9b980000` was missing from this table; the 12 operands first filed under
@@ -226,7 +226,7 @@ tables every access is DENIED and raises a bus error (fault 2). That is the proj
    the card.
 5. `OlyHfwOpeShoot::ctrlRelease` busy-waits on `0x50ab5716(3)` status bits (2.3).
 6. Level Adjust showed the pattern: the GUI task slept in `0x5004ad13`'s dly_tsk loop for
-   12 sensor samples that never came, until the accelerometer's stand-in delivered them (2026-10-23, hle-gaps.md
+   12 sensor samples that never came, until the accelerometer's stand-in delivered them (2026-10-23, hle-gaps/4.7.md
    4.7.3).
 
 ---------------------------------------------------------------------------------------------------
@@ -521,7 +521,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    the layout of DISPLAY's replies, `0x501c48bf`) wakes it: `RECV APP_EVENT [0xF0020000]`. Running TAKE_FUNC
    (`0x502cd1ca`) natively instead only moves the wait down: it forwards to TAKE_FUNC_CP (`0x502cd604`, queue `0x5f`),
    which waits on event flag 66 (`0x502cd49f`) and then sends to BC_EXEC and LENS_EXEC. Corrected 2026-10-23 (D,
-   hle-gaps.md 4.1.1): `0x2000a` is the API's id, and the message's third word, 0, is TAKE_FUNC command 0. Flag 66 is
+   hle-gaps/4.1.md 4.1.1): `0x2000a` is the API's id, and the message's third word, 0, is TAKE_FUNC command 0. Flag 66 is
    TAKE_CAM_EVENT (0x42), set by the completion `0x502cd4d0` of the camera driver's request 148, which TAKE_FUNC_CP's
    ready sequence makes before its BC_EXEC and LENS_EXEC messages; their replies come back on TAKE_FUNC_CP_POST (0x61).
 15. **A generic module seam (X).** `--ack-modules` answers every request the API sender posts to a module queue (the
@@ -535,7 +535,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    removed by TRA 486, `0x50af8b3f..`), then hands the request to a remote channel that answers `0xf0000001` at once.
    TRA ids seen in the probe: 415, 598, 614, 691, 958, 990, 1503. `--ack-tra` makes the synchronous exec (`0x50af7cb9` by
    calls, `0x50af7cbe` by call) return 0 without touching the request; then `startShootingService end = 0x00000000`
-   and the application reaches `state = 0x5100`. Corrected 2026-10-23 (D, hle-gaps.md 4.1.2): no code builds a TRA 485
+   and the application reaches `state = 0x5100`. Corrected 2026-10-23 (D, hle-gaps/4.1.md 4.1.2): no code builds a TRA 485
    or 486 request (their vtables `0x60dcb54c` / `0x60dcb594` occur nowhere in the main block), so the local list is
    empty on the camera too and the remote channel, through the State Mediator to the components, is the normal path.
 17. **The GUI driven by the application (X).** The lab's play bring-up builds the shooting screen itself (S-CAMSEQ
@@ -573,7 +573,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    CBS_REQUEST_DISPLAY_RECVIEW (294), 1328 CBS_START_READY_MOVIE (205), 1329/1330 CBS_END_READY_MOVIE (206),
    1298/1326/1350/1351/1376/1382 CBS_START_RECORDING_MOVIE (216), 1327 CBS_END_RECORDING_MOVIE (217), 1314 CBS_AF_LOCK (155),
    1325 CBS_UPDATE_SHOOTING_TIME (108) (an earlier version of this list gave the table's entries, the ids less 423).
-   Which module sends which id is ? (the senders do not run). Corrected 2026-10-23 (D, hle-gaps.md 4.1.3): no module
+   Which module sends which id is ? (the senders do not run). Corrected 2026-10-23 (D, hle-gaps/4.1.md 4.1.3): no module
    sends them. Their classes (gap@0x50af1ebd) are built by the HLS itself, most of them by CmpSqp_SequencePartsBase
    (1308, 1319..1329 among them), others by Cmp_StillShootingComponentBase, CapTak_Take and CmpSts_RecordController;
    S-RELSEQ stands in for the sequence parts, which act on the capabilities' observer events.
@@ -787,7 +787,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    from `0x51014a64`. It never reaches cpu_conn, because S-MODACK answers every synchronous send whose receiver does
    not run with E_OK (D), so no inter-core traffic shows: the histogram is a CPU 2 consumer answered by that blanket
    rule, not a listed site. (Since 2026-11-09, with `--cpu2 native` under `control camapp 3`, the send goes through
-   cpu_conn and OSD_DRAW_CPU2 answers it natively; camapp 1 and 2 keep S-MODACK's answer: `docs/hle-gaps.md` 4.6.2.)
+   cpu_conn and OSD_DRAW_CPU2 answers it natively; camapp 1 and 2 keep S-MODACK's answer: `docs/hle-gaps/4.6.md` 4.6.2.)
    While recording (camapp 1) the GUI's draw log has the three
    layer clears (layer 1 index 255 with one column of 125, layer 2 index 31) and their copies to OSD2 / OSD3 only;
    GESetEvent sets 0x1002 about every 70 ms and the dispatch observer sees none taken, while the GUI task waits in
@@ -821,7 +821,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    parts (the sequence object, controllers) run on it once S-BOOTDONE's 415 lets the category start; none answers the
    request. The module requests made meanwhile (synchronous sends to queue 94, commands 13, 18, 29, 22; queue 207
    command 8 repeatedly) are answered E_OK by S-MODACK and no module notification follows, which is the likely wait (I).
-   Corrected 2026-10-23 (D, hle-gaps.md 4.1.2): the object that takes 990 is the shooting component. The hashed
+   Corrected 2026-10-23 (D, hle-gaps/4.1.md 4.1.2): the object that takes 990 is the shooting component. The hashed
    dispatcher of CmpSht_ShootingComponent_NEW (`0x50d725f0`, ids 414..1492, the one a camapp 2 session runs, X) answers
    990 at once at case `0x50d72a2d` through Com_ResponserUnit (`0x50d7f197`) and only then sets the service up, and 991
    at case `0x50d72eb5` before it starts or stops the through capability; "the component's answer to 990 waits on the
@@ -1112,7 +1112,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    `0x11`, steps `0x800`): A19 is on for both channels, with nearest-neighbour scaling (vsc spec), and S-DISPFRAME
    sets the face-plane colours of both.
 
-Next steps, in order: why startShootingService's TRA 990 went unanswered in the native run (item 43; the shooting component answers it, hle-gaps.md 4.1.2); whether a camera's GUI holds a root for output 0 (item 47); the AF module's frames and the TAKE module's frame mode in place of S-AFOSD and S-TAKEFRAME (item 50); what the GUI's recording display waits for (item 42); why the GUI keeps the power-on panel (item 41); the module notifications at their own boundary (the HLS event manager, task 166 `0x50abbf0c`,
+Next steps, in order: why startShootingService's TRA 990 went unanswered in the native run (item 43; the shooting component answers it, hle-gaps/4.1.md 4.1.2); whether a camera's GUI holds a root for output 0 (item 47); the AF module's frames and the TAKE module's frame mode in place of S-AFOSD and S-TAKEFRAME (item 50); what the GUI's recording display waits for (item 42); why the GUI keeps the power-on panel (item 41); the module notifications at their own boundary (the HLS event manager, task 166 `0x50abbf0c`,
 receives module event codes through `0x50abc393`, and the TRA notifications reach the components) in place of
 S-RELSEQ's callbacks, now that the components that take them run; the module-ready bits (`0x62a3f148`) the modules
 would set; the REC mark (item 35) and the lens record's layout (item 37).
@@ -1136,7 +1136,7 @@ would set; the REC mark (item 35) and the lens record's layout (item 37).
    it showed 1/60 F2.8 ISO 1600, shutter and aperture blinking (I: the ISO-auto ceiling's warning); for EV 12 it shows 1/250 F5.6 ISO 200. S-EXPOSE
    sets the three objects through the setter `0x5004188b` and runs the plan natively once the application has started
    and after each input on the shooting screen; S-SCENE's auto exposure is the plan. On the camera EXP calls
-   `0x50596187` back through TAKE_EXPOSE's callbacks (EXP_MOVIE for the through start's request, D; `docs/hle-gaps.md`
+   `0x50596187` back through TAKE_EXPOSE's callbacks (EXP_MOVIE for the through start's request, D; `docs/hle-gaps/4.2.md`
    4.2.2). Open: what fixes
    the ISO-auto range (base 200, ceiling 1600 in the lab); whether `0xc12a` and `0xc0ca` are the other metering modes'.
 61. **The shutter's sound (I, X, D, S-SHUTTERSND; 2026-11-02).** The stock firmware plays no sound at a release (I). The
@@ -1149,13 +1149,13 @@ would set; the REC mark (item 35) and the lens record's layout (item 37).
    setting. The native output it relies on is 48 kHz stereo PCM16, copied block by block (at most 768 bytes) through
    `0x5000290a` (all I, from that tool's notes and its `SHUTTER_SOUND_KO.md`; that address is run-time, the flash
    library's memcpy, notation `0x3ffe18ea`, which the audio driver's copy wrapper `0x50aa7439` calls, D). So the
-   camera's shutter sound is the mechanism's (the shutter block, `docs/hle-gaps.md` section 7), and the electronic
+   camera's shutter sound is the mechanism's (the shutter block, `docs/hle-gaps/7.md` section 7), and the electronic
    shutter is silent (I). The lab's trace does not settle this, because its release is a stand-in: in an E143 session,
    S1 then S2, S-RELSEQ stands in for the release and the capture's begin `0x50b8467c`, om-c's call site, does not run
    (fwmap: neither it nor its four CapBuf callers is entered). There, the sound engine's singleton getter (`0x50b56569`,
    object `0x62afee0c`) is called only at S2, twice, from IOlyApiShooting (`0x51059373`, `0x51059919`, through
    `0x5108c19f`), which then call the object's vtable +68, a query; its play method (fwmap's entry `0x50b569a4`) is
-   never called; the audio driver's blocks `0x9bb00000..0x9bb003c0` and `0x9b700000..0x9b70011c` (`docs/hle-gaps.md`
+   never called; the audio driver's blocks `0x9bb00000..0x9bb003c0` and `0x9b700000..0x9b70011c` (`docs/hle-gaps/4.5.md`
    4.5) are never accessed; the sound table pointers `(0xa32db180)`, `(0xa32db19c)`, `(0xa32db32c)` and `(0xa32db1bc)`
    are 0, and their loader `0x501a8ca0` (which stores `(0xa32db17c)` / `(0xa32db180)` and reads a 1024-byte index from
    flash `0x4e420000` through `0x501a986a`) never runs (X, of the lab's stood-in release only). No RIFF / WAVE data is

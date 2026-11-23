@@ -1,4 +1,4 @@
-// TAKE's take-ready under control camapp 3, E143 (docs/hle-gaps.md 4.1.10, 4.1.12): with --take probe and --cpu2
+// TAKE's take-ready under control camapp 3, E143 (docs/hle-gaps/4.1.md 4.1.10, 4.1.12): with --take probe and --cpu2
 // native (focusSession's configuration, test_take_release.mjs), where TAKE runs natively, and without the probe,
 // where S-MODACK and S-TAKERDY answer for TAKE_MAIN:
 //   secondShotSession  two play sessions. In both the first S1 goes as in focusSession (the record S1_EXP) and the
@@ -12,11 +12,11 @@
 //                  waits in phase 111, whose table takes 793 and not S1 or its release (its default case takes
 //                  them). TAKE_EXEC then holds the command 7, which TAKE_MAIN does not read in RdyFcsRdy3 (whose
 //                  command table is empty).
-//                  The power manager's 0x14 (docs/hle-gaps.md 4.7.6): at S1 TAKE_MAIN's RdyFcsRdy1 clears and then
+//                  The power manager's 0x14 (docs/hle-gaps/4.7.md 4.7.6): at S1 TAKE_MAIN's RdyFcsRdy1 clears and then
 //                  sets the power manager's cyclic-check byte (0x50043c6c: 0 from the state's entry, 1 from its
 //                  handler 0x503c2d08), so the manager's next cyclic tick (731.7 ms after S1
 //                  since H-AUDSTART runs AUD_WAKEUP's 248 ms; the rest of the timer's period, which is 1.08 to 1.63
-//                  s, docs/hle-gaps.md 4.7.6), runs a source check, the
+//                  s, docs/hle-gaps/4.7.md 4.7.6), runs a source check, the
 //                  session's first: the body's battery reads as inserted, its recommend byte becomes 3, and the notice
 //                  0x500444b3 sends the sub-CPU 0x14 {0, 1, 0, 3, 0} from the manager's task (task 10). It is the
 //                  link's only transfer from S1 on and nothing comes back, with S-SCPUDEV, which keeps the two slots'
@@ -25,7 +25,7 @@
 //                  The second S1 is event 826 in phase 111, which makes no take request: no 794, TAKE takes nothing;
 //                  MENU after it reaches UI_IN and sets no GUI event, with no event to the sequence and no
 //                  isCtrlReleaseEnable call (where it is dropped: not read)
-//   takeReadyUnits  (no firmware) S-TAKERDY's rule take_ready_rule (src/lab/camapp.mjs; docs/hle-gaps.md 4.1.12): a
+//   takeReadyUnits  (no firmware) S-TAKERDY's rule take_ready_rule (src/lab/camapp.mjs; docs/hle-gaps/4.1.md 4.1.12): a
 //                  request the API sender posts to TAKE_EXEC is the take-ready (command 0 of the packet's kind 0: the
 //                  reply, then TAKE's event), the take-picture request (command 11: taken, not answered), a command 0
 //                  of another kind (S-MODACK's status alone, logged) or none of S-TAKERDY's (the stop's command 7
@@ -78,9 +78,9 @@ const EVENT_TASK = 0x50ABBF0C, PWR_TASK = 0x50043CDB;
 const PHASE111_TABLE = 0x60E9AEB0, PHASE111_BASE = 281, PHASE111 = 0x50C611D5, PHASE111_DEFAULT = 0x50C615E4;
 // the stop's request as the API sender posts it (OlyQeWr's return 0x503eba07): {reply queue 6, token, command 7}; the
 // token's slot is 6 since the second card slot is empty by default (X: 7 before slot2's merge, 6 after it; I: camapp
-// 3's media manager no longer sends drive 1's mount through the API sender at the start, docs/hle-gaps.md 4.8.12)
+// 3's media manager no longer sends drive 1's mount through the API sender at the start, docs/hle-gaps/4.8.md 4.8.12)
 const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0060000;
-// the frame the power manager sends (docs/hle-gaps.md 4.7.6): its builder 0x500435b0 (a0 the two inserted bits, a1 the
+// the frame the power manager sends (docs/hle-gaps/4.7.md 4.7.6): its builder 0x500435b0 (a0 the two inserted bits, a1 the
 // two recommend bytes), called from its notice 0x500444b3 (a0 the published state record, a1 the new one: +22
 // pwr_ins, +30 and +64 the slots' recommend bytes; returning to 0x50044533); the cyclic-check byte's setter
 // 0x50043c6c and TAKE_MAIN's two calls of it in RdyFcsRdy1 (returns 0x503c29c2, d0 0, and 0x503c2d32, d0 1); TAKE_MAIN
@@ -206,7 +206,7 @@ export async function secondShotSession() {
         && !s3.length && !s4.length && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE,
         `${tag}: the second S1 and its release in phase 111 go to its default case, make no take request and get no 794 (${JSON.stringify([...seen3, ...seen4])}), TAKE takes nothing (${JSON.stringify([...s3, ...s4])}), TAKE_EXEC holds ${held()}`);
       // and the keys: MENU reaches UI_IN and sets no GUI event; nothing reaches the sequence and isCtrlReleaseEnable
-      // is not asked (in phase 102 it refuses MENU, docs/hle-gaps.md 4.3.2)
+      // is not asked (in phase 102 it refuses MENU, docs/hle-gaps/4.3.md 4.3.2)
       refused.length = 0;
       const rec = s.key('menu', 'down'); s.camapp.pump(); idle(100); s.key('menu', 'up'); s.camapp.pump(); idle(800);
       const seen5 = seen.splice(0);
@@ -218,7 +218,7 @@ export async function secondShotSession() {
   return { checks, bad };
 }
 
-// S-TAKERDY (docs/hle-gaps.md 4.1.12). Observed besides the above (none hooked by the lab):
+// S-TAKERDY (docs/hle-gaps/4.1.md 4.1.12). Observed besides the above (none hooked by the lab):
 //   the sequence parts' phase setter (0x50cc6121, d0 the phase); the take capability's TakeReadyEndDone observer
 //   (0x50bcb823, CapTak_NotifyTakeReadyEndDoneObserver.cpp, which builds event 143) and CapTak_Take's case for that
 //   event (0x50bca7ea), which builds 793; the returns of the two module-9 reads of the sequence parts (the STANDBY

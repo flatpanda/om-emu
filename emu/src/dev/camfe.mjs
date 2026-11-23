@@ -1,4 +1,4 @@
-// S-CAMFE: the camera front end's control plane as cam.c's second init programs it (docs/hle-gaps.md 4.2.5; E143,
+// S-CAMFE: the camera front end's control plane as cam.c's second init programs it (docs/hle-gaps/4.2.md 4.2.5; E143,
 // --take probe with the probe's cam_fe opt-in, off by default). The second init (0x50155357, USTART's call at
 // 0x50024d80) writes 256 registers in 15 blocks (the sync generators 0x9b000000 and 0x9b080000, the SLVS receiver
 // 0x98280000, the PRO, AE / AWB, AF, PFP and DMA units, the camera clock and control block 0x9b500000, 0x9b180000,
@@ -19,9 +19,9 @@
 //     width other than 4, an address outside PROGRAM and a debugger write are UNKNOWN (a bus error, printed for a CPU
 //     access)
 // No other interrupt line is driven: the units' status registers (IRQs 15-17, 19-22, 24-42 and 243-247, attached by
-// the init) are not modelled, so none of their handlers runs (docs/hle-gaps.md 4.2.5: who would raise them, and why no
+// the init) are not modelled, so none of their handlers runs (docs/hle-gaps/4.2.md 4.2.5: who would raise them, and why no
 // stand-in does); IRQ 18 is SSG1's command unit's (below).
-// The power-on's clock enables (docs/hle-gaps.md 4.2.6; POWER_ON below). cam_seq_power.c's power-on (cam.c's request
+// The power-on's clock enables (docs/hle-gaps/4.2.md 4.2.6; POWER_ON below). cam_seq_power.c's power-on (cam.c's request
 // 6) turns the camera clocks on before it programs anything else in these blocks (its event 0x10800000,
 // 0x5019caac -> 0x5019d213), through the clock block's gate functions: each keeps a count in RAM and writes its gate's
 // bit to the gate's "on" word when the count leaves 0 and to its "off" word when it returns to 0 (D: 0x5015ff11 /
@@ -35,7 +35,7 @@
 //                       (0x50165955..0x50165962), each read first: A-CAMFE-1 again (the code branches on neither
 //                       value, D); then the update strobe +0xa08 = 1 and its poll (0x50165b31, A-CAMFE-2's word)
 // They are enables with no reader in the lab, so the register file takes them.
-// SSG1's command unit (docs/hle-gaps.md 4.2.6 and its 2026-11-22 subsection; SSG below), the unit that sends the
+// SSG1's command unit (docs/hle-gaps/4.2.md 4.2.6 and its 2026-11-22 subsection; SSG below), the unit that sends the
 // sensor its serial commands (that role I). Its driver 0x5019deed..0x5019e47c (D) and the SSG's requests 7 / 8
 // (0x5019d91a, 0x5019dacb -> 0x5019dc8f) use, of SSG1 at 0x9b000000:
 //   +0x000      bit 6 cleared before a start (0x5019e076) and set again when a queue empties (0x5019e2e7,

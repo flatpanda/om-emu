@@ -1,4 +1,4 @@
-// H-SHOTALLOC over many shots (src/lab/rec.mjs; src/fw/facts.mjs takeShot; docs/hle-gaps.md 4.3.13): the picture's
+// H-SHOTALLOC over many shots (src/lab/rec.mjs; src/fw/facts.mjs takeShot; docs/hle-gaps/4.3.md 4.3.13): the picture's
 // shot in TAKE's shot table, allocated through api_rec as the application's CapBuf_TakeBuff allocates it and freed
 // through api_rec after REC_FILE's reply, must leave nothing behind: TAKE's table and MM's handles are the camera's own
 // state, and a shot that kept its entry or a buffer would starve a later one.
@@ -12,7 +12,7 @@
 //                     and Exif version as the first file's, the body's Model) before the lab's stream. Over all
 //                     pictures TAKE's lookups and MM's handle-to-address log no refusal for a missing buffer
 //                     (0x25000402, 0x08010004). The first and the last file decode (refs/jpeg.mjs)
-//                     S-RAWFRAME (src/lab/rawframe.mjs; docs/hle-gaps.md 4.3.14; E143, where the body's bytes have
+//                     S-RAWFRAME (src/lab/rawframe.mjs; docs/hle-gaps/4.3.md 4.3.14; E143, where the body's bytes have
 //                     its form; on E146 and E147 not in use, with the reason): each picture's fill is the shot's
 //                     Bayer buffer (the entry's +2 handle, MM's address of it) and, as rec_ImgProCtrl_Src_Bayer reads
 //                     it natively later in the picture, the source's address, format (1031: 12 bits), stride, frame

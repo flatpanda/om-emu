@@ -1,4 +1,4 @@
-// The boot's stage bits (src/lab/menu.mjs S-BOOTSTAGE, stage_bits; docs/hle-gaps.md 4.6.4), on the bodies whose section
+// The boot's stage bits (src/lab/menu.mjs S-BOOTSTAGE, stage_bits; docs/hle-gaps/4.6.md 4.6.4), on the bodies whose section
 // loader src/fw/facts.mjs sectionLoader reads with the E143 family's reset head (E143, E146, E147; the flash-copy
 // family's loader, head null, has another boot job and keeps bit 0):
 //   bootstageImage   (the model's block, no lab) the boot job the bits follow, read from the image: CPU 2's USTART_L2

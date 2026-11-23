@@ -120,7 +120,7 @@ export function trimTests() {
     checks++;
     // bounded caches, not logs: the call-frame analyses per function, the names of the opt-in assumptions in use; and
     // not the harness's: S-HEAP's blocks are the guest heap's, which grows by about 5 blocks a second on the idle
-    // shooting screen with either lens (the events S-TRAACK keeps, docs/hle-gaps.md 4.4.2) up to its area's end
+    // shooting screen with either lens (the events S-TRAACK keeps, docs/hle-gaps/4.4.md 4.4.2) up to its area's end
     const bounded = new Set(['lab.frames', 'lab.assumptions_in_use', 'lab.heap_sizes', 'lab.heap_free']);
     const grows = [...sizes()].filter(([k, n]) => n > (a.get(k) ?? 0) && !listed.has(k) && !bounded.has(k)).map(([k, n]) => `${k} ${a.get(k) ?? 0} -> ${n}`);
     if (grows.length) bad.push(`trim: grows while idling and trim() does not cut it: ${grows.join(', ')}`);

@@ -3829,19 +3829,19 @@
   {
    "commit": "548735d",
    "sessions": 86,
-   "reason": "S-SCPU answers the SCPU requests at the request API 0x5005cd17 and calls their completions natively (hle-gaps.md 4.7.1, D), replacing S-SCPU-MSG; the API's 36-byte messages are no longer allocated (heap pointers 0x90 lower: final registers, step records, heap top), the OlyEvWt router is no longer wrapped (hook names), the 0x86 reply is the word the 0x06 wrote (1c020080), S-SCPU is listed in the stand-ins, check_perf P6 counts 125,979,479 instructions and check_nav checks the ticking clock; no screen changed",
+   "reason": "S-SCPU answers the SCPU requests at the request API 0x5005cd17 and calls their completions natively (hle-gaps/4.7.md 4.7.1, D), replacing S-SCPU-MSG; the API's 36-byte messages are no longer allocated (heap pointers 0x90 lower: final registers, step records, heap top), the OlyEvWt router is no longer wrapped (hook names), the 0x86 reply is the word the 0x06 wrote (1c020080), S-SCPU is listed in the stand-ins, check_perf P6 counts 125,979,479 instructions and check_nav checks the ticking clock; no screen changed",
    "evidence": "firmware"
   },
   {
    "commit": "fb48222",
    "sessions": 28,
-   "reason": "UI_IN's group 0 (power lever, Fn lever, S1) reaches UI_IN through the SCPU interface's port and event words and IRQ 320 natively (hle-gaps.md 4.7.2, D: the SCPU init's attach, the IRQ 320 handler, UI_IN's callback and its old-state init), in place of S-KEYBITS for group 0 (H-SCPUIRQ, H-UIINPORT, H-SCPUPORT). No screen changes. Devices: only in the four sessions with a group-0 input (inputs, keys, power, power-replay): one accepted IRQ 320 row per input and the controller's presented/accepted counters one higher; every other row and the final registers equal. Output: only the harness counters the replayed outcomes carry (per-step hook-stop and stand-in counts: the bring-up no longer pushes group 0 and a group-0 input is a doorbell store and a native IRQ instead of a push call and set_flg; harness_entries; the stand-in list gains H-SCPUIRQ, H-UIINPORT, H-SCPUPORT) and check_perf P10b's play-workload register digest and instruction count (159,897,385 -> 159,893,967), not pinned.",
+   "reason": "UI_IN's group 0 (power lever, Fn lever, S1) reaches UI_IN through the SCPU interface's port and event words and IRQ 320 natively (hle-gaps/4.7.md 4.7.2, D: the SCPU init's attach, the IRQ 320 handler, UI_IN's callback and its old-state init), in place of S-KEYBITS for group 0 (H-SCPUIRQ, H-UIINPORT, H-SCPUPORT). No screen changes. Devices: only in the four sessions with a group-0 input (inputs, keys, power, power-replay): one accepted IRQ 320 row per input and the controller's presented/accepted counters one higher; every other row and the final registers equal. Output: only the harness counters the replayed outcomes carry (per-step hook-stop and stand-in counts: the bring-up no longer pushes group 0 and a group-0 input is a doorbell store and a native IRQ instead of a push call and set_flg; harness_entries; the stand-in list gains H-SCPUIRQ, H-UIINPORT, H-SCPUPORT) and check_perf P10b's play-workload register digest and instruction count (159,897,385 -> 159,893,967), not pinned.",
    "evidence": "firmware"
   },
   {
    "commit": "6ecdc47",
    "sessions": 32,
-   "reason": "The accelerometer at its sample cache (hle-gaps.md 4.7.3, D: the ACC module init, ACC_MAIN, its probe, the sampler's completion stores, the cache copy and correction, PER_SLOPE and the gauge's getter): every play session's bring-up runs the ACC module init natively with its device part stepped over (H-ACCINIT), the probe through the register file S-ACCREG, one primed copy and correction, and PER_SLOPE's init (H-SLOPEINIT); ACC_MAIN then runs its 80 ms cycle with one sample per cycle (S-ACCSAMPLE: the level camera, the firmware's pose-0 reference) and PER_SLOPE its 20 ms loop once the application's startLevel has started it. No screen changes (all 28 changed sessions are the play sessions plus check_perf's two runs). Devices: no IRQ or inter-CPU doorbell row added or removed; the rows' instruction stamps shift by the added instructions (2889 at the first IRQ row); the lab stub's ring has five more entries, the probe's last call 0x50051a7d(129) enabling the data-ready pin's GIO interrupt (words 0x9b883080 / 0x9b8831c0), and final.devices' stub log_total is five higher. Stops and harness: the new hooks (S-ACCREG, S-ACCSAMPLE, the H-ACCINIT call skip, S-HEAP pool get/release) and the extra task wake-ups. Output: the replayed outcomes' step records (per-step stand-in and hook counts, hook_stops, the stand-in list with H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT, A-ACC-1..3) and check_perf P10b's unpinned play-workload digest (159,893,967 -> 160,294,888 instructions); P6 unchanged. New runs: run/level, run/level-mutants, run/level-l3, run/level-usage (checks/check_level.mjs). WORKLOAD_DIGEST re-pinned 59e15f337f58cf57 -> 0a8f94603ae67b51: frames, lab time and hook-log length identical, the last 2000 hook-log entries hold the new hooks.",
+   "reason": "The accelerometer at its sample cache (hle-gaps/4.7.md 4.7.3, D: the ACC module init, ACC_MAIN, its probe, the sampler's completion stores, the cache copy and correction, PER_SLOPE and the gauge's getter): every play session's bring-up runs the ACC module init natively with its device part stepped over (H-ACCINIT), the probe through the register file S-ACCREG, one primed copy and correction, and PER_SLOPE's init (H-SLOPEINIT); ACC_MAIN then runs its 80 ms cycle with one sample per cycle (S-ACCSAMPLE: the level camera, the firmware's pose-0 reference) and PER_SLOPE its 20 ms loop once the application's startLevel has started it. No screen changes (all 28 changed sessions are the play sessions plus check_perf's two runs). Devices: no IRQ or inter-CPU doorbell row added or removed; the rows' instruction stamps shift by the added instructions (2889 at the first IRQ row); the lab stub's ring has five more entries, the probe's last call 0x50051a7d(129) enabling the data-ready pin's GIO interrupt (words 0x9b883080 / 0x9b8831c0), and final.devices' stub log_total is five higher. Stops and harness: the new hooks (S-ACCREG, S-ACCSAMPLE, the H-ACCINIT call skip, S-HEAP pool get/release) and the extra task wake-ups. Output: the replayed outcomes' step records (per-step stand-in and hook counts, hook_stops, the stand-in list with H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT, A-ACC-1..3) and check_perf P10b's unpinned play-workload digest (159,893,967 -> 160,294,888 instructions); P6 unchanged. New runs: run/level, run/level-mutants, run/level-l3, run/level-usage (checks/check_level.mjs). WORKLOAD_DIGEST re-pinned 59e15f337f58cf57 -> 0a8f94603ae67b51: frames, lab time and hook-log length identical, the last 2000 hook-log entries hold the new hooks.",
    "evidence": "firmware"
   },
   {
@@ -3853,7 +3853,7 @@
   {
    "commit": "58aa80f",
    "sessions": 28,
-   "reason": "E143's card is a real one (src/lab/storage.mjs, docs/hle-gaps.md 4.8.2): every play session's bring-up runs the file system's bring-up from the boot task's place, starts FILECLBK and mounts the card through the firmware's own path at the SD command layer, formatting the blank 8 GiB card first (FAT32; about 2.5 s of lab time, with the timer and input interrupts that time brings, X); the shooting screens show the firmware's own remaining shots and movie time from the card (803 and 05:25 on the TFT's top bar) where S-CARD's 999 and 1:00:00 stood; a release writes the picture's file through the file module (S-RECFILE); a power session's later starts mount the card the player kept, without a format. Every check lab's session and check run is identical but run/perf and run/perf-fault, whose play workload (P10b) takes 6074 ms of lab time with the card's bring-up instead of 3572 ms",
+   "reason": "E143's card is a real one (src/lab/storage.mjs, docs/hle-gaps/4.8.md 4.8.2): every play session's bring-up runs the file system's bring-up from the boot task's place, starts FILECLBK and mounts the card through the firmware's own path at the SD command layer, formatting the blank 8 GiB card first (FAT32; about 2.5 s of lab time, with the timer and input interrupts that time brings, X); the shooting screens show the firmware's own remaining shots and movie time from the card (803 and 05:25 on the TFT's top bar) where S-CARD's 999 and 1:00:00 stood; a release writes the picture's file through the file module (S-RECFILE); a power session's later starts mount the card the player kept, without a format. Every check lab's session and check run is identical but run/perf and run/perf-fault, whose play workload (P10b) takes 6074 ms of lab time with the card's bring-up instead of 3572 ms",
    "evidence": "firmware"
   },
   {
@@ -3924,13 +3924,13 @@
   {
    "commit": "9bd2111",
    "sessions": 69,
-   "reason": "Four changes merged together. (1) The native lens is E143's default (S-LENSMCU in place of S-LENS; docs/hle-gaps.md 4.4.2): every play session's IRQ rows gain the lens's IRQ 14 and the deferred calls' 53..58, and the application now gets the lens module's state event 0x04060051, which leaves the date prompt about 120 ms after the start and briefly shows 25mm; run/perf's play workload shows 6 distinct frames, not 3. (2) The power manager starts natively and the power-off runs to the SCPU window's last write (H-PWRSTART, S-SHUTDOWN; 4.7.4): two more link transactions and 4 ms of lab time at the bring-up. (3) H-DPCINIT, S-BOOTKEY and S-BOOTSTAGE at the bring-up (model-survey findings 20, 21): stops, harness and outcomes only. (4) S-RELSEQ posts same-time callbacks before one settle (finding 22): keys' steps after S2 come 83.4 ms earlier.",
+   "reason": "Four changes merged together. (1) The native lens is E143's default (S-LENSMCU in place of S-LENS; docs/hle-gaps/4.4.md 4.4.2): every play session's IRQ rows gain the lens's IRQ 14 and the deferred calls' 53..58, and the application now gets the lens module's state event 0x04060051, which leaves the date prompt about 120 ms after the start and briefly shows 25mm; run/perf's play workload shows 6 distinct frames, not 3. (2) The power manager starts natively and the power-off runs to the SCPU window's last write (H-PWRSTART, S-SHUTDOWN; 4.7.4): two more link transactions and 4 ms of lab time at the bring-up. (3) H-DPCINIT, S-BOOTKEY and S-BOOTSTAGE at the bring-up (model-survey findings 20, 21): stops, harness and outcomes only. (4) S-RELSEQ posts same-time callbacks before one settle (finding 22): keys' steps after S2 come 83.4 ms earlier.",
    "evidence": "firmware"
   },
   {
    "commit": "7d8fd59",
    "sessions": 28,
-   "reason": "S-TRAACK now deletes getHistogramData's request through its vtable slot 1, as the exec does on its local and no-receiver paths (docs/hle-gaps.md 4.4.2, model-survey finding 26): the deletion's instructions on the transaction's task move when later interrupts are presented, which changes the devices, stops, harness and replayed-outcome layers of the 26 play sessions and check_perf's run/perf and run/perf-fault (P10b's hook-log and register-digest figures); no screen changes. The other tracks of the round (the TG-5s, E134's card and E146's HLS side, the native lens on E146 and E147, the power-off on E146 and E147) leave every E143 session as it was.",
+   "reason": "S-TRAACK now deletes getHistogramData's request through its vtable slot 1, as the exec does on its local and no-receiver paths (docs/hle-gaps/4.4.md 4.4.2, model-survey finding 26): the deletion's instructions on the transaction's task move when later interrupts are presented, which changes the devices, stops, harness and replayed-outcome layers of the 26 play sessions and check_perf's run/perf and run/perf-fault (P10b's hook-log and register-digest figures); no screen changes. The other tracks of the round (the TG-5s, E134's card and E146's HLS side, the native lens on E146 and E147, the power-off on E146 and E147) leave every E143 session as it was.",
    "evidence": "firmware"
   },
   {
@@ -4166,25 +4166,25 @@
   {
    "commit": "87d254f",
    "sessions": 23,
-   "reason": "REC_IMAGE's task runs natively on E143 (src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3): 22 sessions that take no picture differ in the output layer only, the player's stand-in list on E143 naming the four in S-RECIMAGE's place; keys, the one session with S2, makes its picture in REC_IMAGE's task, the header clear's fill running on the imgpro unit and ending 1 ms later, so the lab runs one more 5 ms slice (one compose 5 ms later with the same pixels; IRQ 300 x1, IRQ 324 x1, 5 kernel ticks and 3 OSD engine IRQs more) and ends at the same lab time",
+   "reason": "REC_IMAGE's task runs natively on E143 (src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps/4.3.md 4.3.3): 22 sessions that take no picture differ in the output layer only, the player's stand-in list on E143 naming the four in S-RECIMAGE's place; keys, the one session with S2, makes its picture in REC_IMAGE's task, the header clear's fill running on the imgpro unit and ending 1 ms later, so the lab runs one more 5 ms slice (one compose 5 ms later with the same pixels; IRQ 300 x1, IRQ 324 x1, 5 kernel ticks and 3 OSD engine IRQs more) and ends at the same lab time",
    "evidence": "firmware"
   },
   {
    "commit": "117a9a7",
    "sessions": 1,
-   "reason": "S-JPEGENC on E143 starts at rec_ImgPro_ImageParam's call of the image library's parameter set (src/lab/rec.mjs; docs/hle-gaps.md 4.3.4): in keys, the one session with S2, rec_ImgPro_CreateParam, the create, ImageParam's body and the release run natively in REC_IMAGE's task, 18,866 instructions more, so the irq rows' instruction counts after it (IRQ 324 x1, 138 x4, 158 x2), the stops (+97) and the harness digests shift and the 40 replayed outcomes after S2 differ in the player's status only (harness entries +8, heap new and freed +4 each, heap top +22,240: the create's four allocations, freed by the release); with instruction counts masked every devices item is identical, every screen identical, the session ends at the same lab time and the picture's bytes are unchanged",
+   "reason": "S-JPEGENC on E143 starts at rec_ImgPro_ImageParam's call of the image library's parameter set (src/lab/rec.mjs; docs/hle-gaps/4.3.md 4.3.4): in keys, the one session with S2, rec_ImgPro_CreateParam, the create, ImageParam's body and the release run natively in REC_IMAGE's task, 18,866 instructions more, so the irq rows' instruction counts after it (IRQ 324 x1, 138 x4, 158 x2), the stops (+97) and the harness digests shift and the 40 replayed outcomes after S2 differ in the player's status only (harness entries +8, heap new and freed +4 each, heap top +22,240: the create's four allocations, freed by the release); with instruction counts masked every devices item is identical, every screen identical, the session ends at the same lab time and the picture's bytes are unchanged",
    "evidence": "firmware"
   },
   {
    "commit": "4e08ef9",
    "sessions": 28,
-   "reason": "Round 5's four default-mode changes on E143, recorded once on the merged tree (each analysed on its branch, where the same 28 sessions changed): the Fn lever at API_LEVER_SW_1 with S-SEQSTANDBY answering the standby gate and S-RELSEQ's S1 asking the focus-mode test (hle-gaps 4.3.8); the empty second card slot: its card-detect pin, switch 0x1518 and media flags 15261 = 1, 15262 = 0 (4.8.12); S-CARD setting the first slot's HLS media status to OK beside the mount state (model-survey finding 138); the event broker's init before the HighLevel create and init (4.6.3). The screen layer is identical in every session; devices, stops, harness and the replayed outcomes shift, run/perf and run/perf-fault in their instruction counts and digests only.",
+   "reason": "Round 5's four default-mode changes on E143, recorded once on the merged tree (each analysed on its branch, where the same 28 sessions changed): the Fn lever at API_LEVER_SW_1 with S-SEQSTANDBY answering the standby gate and S-RELSEQ's S1 asking the focus-mode test (hle-gaps/4.3.md 4.3.8); the empty second card slot: its card-detect pin, switch 0x1518 and media flags 15261 = 1, 15262 = 0 (4.8.12); S-CARD setting the first slot's HLS media status to OK beside the mount state (model-survey finding 138); the event broker's init before the HighLevel create and init (4.6.3). The screen layer is identical in every session; devices, stops, harness and the replayed outcomes shift, run/perf and run/perf-fault in their instruction counts and digests only.",
    "evidence": "firmware"
   },
   {
    "commit": "2054b78",
    "sessions": 67,
-   "reason": "S-SECLOADED sets the section loader's copied mask at the store's start (load_section's RMW, FIDELITY 7.17) and joins the stand-ins list; S2 runs the EXIF set natively after H-RECPRECON (IMG_PRECON's init; docs/hle-gaps.md 4.3.11)",
+   "reason": "S-SECLOADED sets the section loader's copied mask at the store's start (load_section's RMW, FIDELITY 7.17) and joins the stand-ins list; S2 runs the EXIF set natively after H-RECPRECON (IMG_PRECON's init; docs/hle-gaps/4.3.md 4.3.11)",
    "evidence": "firmware"
   },
   {
@@ -4215,25 +4215,25 @@
   {
    "commit": "26b3d15c",
    "sessions": 23,
-   "reason": "H-SHOTALLOC (01734e40): the picture's shot is allocated and freed in TAKE's table through api_rec, natively (E143 0x5040f43a / 0x5040f52e; docs/hle-gaps.md 4.3.13, D): the replayed sessions with a shot move in the output layer, keys also in devices (a later interrupt taken 259 instructions earlier, 104611 -> 104352); X: with the allocation off (this.shot = null) all 23 sessions are the previous recording's on screen, devices and output (harness-only), and single-session checks give identical at 9d2ff5bf and DIFFERENT at 01734e40",
+   "reason": "H-SHOTALLOC (01734e40): the picture's shot is allocated and freed in TAKE's table through api_rec, natively (E143 0x5040f43a / 0x5040f52e; docs/hle-gaps/4.3.md 4.3.13, D): the replayed sessions with a shot move in the output layer, keys also in devices (a later interrupt taken 259 instructions earlier, 104611 -> 104352); X: with the allocation off (this.shot = null) all 23 sessions are the previous recording's on screen, devices and output (harness-only), and single-session checks give identical at 9d2ff5bf and DIFFERENT at 01734e40",
    "evidence": "firmware"
   },
   {
    "commit": "bf53bdd9",
    "sessions": 53,
-   "reason": "H-TAKEFILLS: TAKE's own fills of the shot natively up to takepic (docs/hle-gaps.md 4.3.13, D); the Player's list of stand-ins gains H-TAKEFILLS, which moves the 23 replayed sessions' output layer only (X: with the name left out of the list the 23 are identical on screen, devices and output); the round's other branches (LV in the rec view, the debug call at a watch stop, F08, REC_FILE and HLS on more bodies, the built-in focal length, the double-slot modes, Erase All, nav) moved no screen, devices or output layer",
+   "reason": "H-TAKEFILLS: TAKE's own fills of the shot natively up to takepic (docs/hle-gaps/4.3.md 4.3.13, D); the Player's list of stand-ins gains H-TAKEFILLS, which moves the 23 replayed sessions' output layer only (X: with the name left out of the list the 23 are identical on screen, devices and output); the round's other branches (LV in the rec view, the debug call at a watch stop, F08, REC_FILE and HLS on more bodies, the built-in focal length, the double-slot modes, Erase All, nav) moved no screen, devices or output layer",
    "evidence": "firmware"
   },
   {
    "commit": "b02de02b",
    "sessions": 23,
-   "reason": "(1d): H-TAKEFILLS runs takepic, the lens fill and the third fill natively, S-AFMKNT standing in for takepic's AF maker-note fill (docs/hle-gaps.md 4.3.13, D): the Player's list of stand-ins gains S-AFMKNT (22 sessions, output layer only; X: with the name left out tokens, playback, the three power sessions and scp-edge are identical); keys' shot runs the three fills (devices, stops, harness, output); no screen layer moves. The caduceus pins of the same round move no session",
+   "reason": "(1d): H-TAKEFILLS runs takepic, the lens fill and the third fill natively, S-AFMKNT standing in for takepic's AF maker-note fill (docs/hle-gaps/4.3.md 4.3.13, D): the Player's list of stand-ins gains S-AFMKNT (22 sessions, output layer only; X: with the name left out tokens, playback, the three power sessions and scp-edge are identical); keys' shot runs the three fills (devices, stops, harness, output); no screen layer moves. The caduceus pins of the same round move no session",
    "evidence": "firmware"
   },
   {
    "commit": "9e06e930",
    "sessions": 28,
-   "reason": "H-STARTKEY runs USTART5's MENU state step: the key state read and the camera state write of kind 0x2751 (property 4519 = 1 without the hold); hle-gaps 4.6.5",
+   "reason": "H-STARTKEY runs USTART5's MENU state step: the key state read and the camera state write of kind 0x2751 (property 4519 = 1 without the hold); hle-gaps/4.6.md 4.6.5",
    "evidence": "firmware"
   },
   {

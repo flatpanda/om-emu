@@ -1,5 +1,5 @@
 // S-A53ISC (not wired): the Cortex-A53's half of ISC node 4 as a JS service, for the records whose replies were
-// observed live in the QEMU oracle (tools/a53-oracle; docs/a53-spec.md 9, 9.1 and 10; docs/hle-gaps.md 4.11). It
+// observed live in the QEMU oracle (tools/a53-oracle; docs/a53-spec.md 9, 9.1 and 10; docs/hle-gaps/4.11.md 4.11). It
 // answers what CPU 1 sends to node 4 as the A53's daemons do, and plays isc_cgi's client role for an HTTP request
 // the lab injects. Nothing in a session builds it yet: CPU 1 is a stand-in, so there is no MN side to talk to
 // (ROADMAP item 7). The transport (FIFOs, doorbells, the hardware lock) is not here; the caller hands in each

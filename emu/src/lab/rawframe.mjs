@@ -1,4 +1,4 @@
-// S-RAWFRAME: a declared fill of the still shot's Bayer buffer, where the lab has no sensor readout (docs/hle-gaps.md
+// S-RAWFRAME: a declared fill of the still shot's Bayer buffer, where the lab has no sensor readout (docs/hle-gaps/4.3.md
 // 4.3.13, 4.3.14). On the camera the sensor's DRAM capture (4.3's seam C1: cam_seq_dram_capture.c, TAKE_DRAMCAP)
 // writes the RAW frame into the buffer TAKE's allocation took from MM for the shot; in the lab nothing did, and a
 // reader of its pixels got what the lab's DRAM held there. S-RAWFRAME writes a lab pattern (not a scene) of the
@@ -7,7 +7,7 @@
 // tagged); each is taken through A() and its bytes are checked on the body before use: a body whose bytes differ keeps
 // the buffer unwritten, with the reason (geometry() returns {skip}). So does a body whose MM block for the Bayer is no
 // memory of the lab's: E143's bank 0 starts at 0xb8000000, where the lab's 384 MiB of DRAM end (src/fw/board.mjs
-// dram_size), so by default S-RAWFRAME is not in use there; with 512 MiB it runs (X, docs/hle-gaps.md 4.3.14).
+// dram_size), so by default S-RAWFRAME is not in use there; with 512 MiB it runs (X, docs/hle-gaps/4.3.md 4.3.14).
 //
 // Where each value comes from (E143):
 //   the buffer    the shot entry's +2, the handle TAKE's Bayer lookup gives (0x503af9de: the entry's flag 1, `movhu

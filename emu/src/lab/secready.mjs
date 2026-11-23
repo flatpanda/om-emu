@@ -1,7 +1,7 @@
 // Staged section availability for patched code (--sec-ready, env.secReady; off by default): the lab holds every
 // section of the image from the reset (emu/FIDELITY-NOTES.md 7.18), while on the camera CPU 2's USTART_L2 copies
 // section n and only then posts its per-section step, which ORs bit n - 1 into the stages' ready word (fact
-// boot.stage: E143 0xa32df1f4, E146 0xa32df2cc, E147 0xa32de58c; docs/hle-gaps.md 4.6.4, D). A patch hook in an
+// boot.stage: E143 0xa32df1f4, E146 0xa32df2cc, E147 0xa32de58c; docs/hle-gaps/4.6.md 4.6.4, D). A patch hook in an
 // early section that reaches a later section before that section is in RAM boots in the lab and loops on the camera
 // (caduceus-om3's crop round 7: their section-2 hook at 0x6057fb1b ran into their code in section 6 before section
 // 6 was loaded, their report). Two checks, on the bodies whose section loader src/fw/facts.mjs sectionLoader reads
@@ -137,7 +137,7 @@ function runStart(img, stock, lo) {
 }
 const ENDS = new Set(['jmp', 'ijmp', 'ret']);
 const JOIN = 8;         // the longest instruction is 7 bytes
-// The load tiers the start tasks' waits give (docs/hle-gaps.md 4.6.4, D): USTART_L, USTART2 and USTART3 wait for
+// The load tiers the start tasks' waits give (docs/hle-gaps/4.6.md 4.6.4, D): USTART_L, USTART2 and USTART3 wait for
 // stages 2, 3 and 4 at most, USTART4 first for 6 and 7, USTART5 for 8, 9 and 10 (9 is copied after stage 7, 10 after
 // stage 8). So the reset head's copies and sections 1 to 5 are early (section 5, 14 KiB copied right after section 4,
 // has no reader: early by caduceus-om3's convention, their hooks in sections 1-5, I), 6 and 7 the middle, 8 to 10

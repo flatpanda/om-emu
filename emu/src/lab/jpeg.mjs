@@ -5,7 +5,7 @@
 //   jpegOfFrame([w, h, rows], { dht }) -> Uint8Array
 // dht (optional): a DHT segment (ff c4, its length, then the tables) holding the four tables the stream uses (DC and
 // AC, ids 0 and 1), written in place of the lab's own four and used for the coding (the firmware's own tables with the
-// play module native, src/lab/playmod.mjs A-JPEGDHT-1; docs/hle-gaps.md 4.8.11). Without it the output is as before.
+// play module native, src/lab/playmod.mjs A-JPEGDHT-1; docs/hle-gaps/4.8.md 4.8.11). Without it the output is as before.
 
 // T.81 Annex K.3's DC tables (code lengths 1..16 and the categories), and an AC table with its one symbol, EOB
 const DC_LUMA = [[0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]];

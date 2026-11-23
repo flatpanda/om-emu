@@ -54,7 +54,7 @@ export const CAPABILITIES = {
   // ---- lab features no branch is building
   'staged-load': { kind: 'lab', what: "the camera's staged section loading run in the lab (CPU 2's copies and per-section stage steps in the camera's order, stale RAM before a section's copy), so that patched code reaching a section before its load fails as on the camera. Without it --sec-ready's findings are a list to review, not a verdict: the camera-tested fixed builds have them too (X, 2026-11-23: 19 on v0.40-alpha, 20 on v0.40.3-beta3 against beta2's 22)",
     probe: null },
-  'lv-magnify': { kind: 'lab', what: "the shooting screen's magnify (and MF assist) view: the camera application is a stand-in (S-CAMAPP), docs/hle-gaps.md's live-view row lists magnify among what the lab lacks, and no wired E147 control reaches it (front1 and AEL/AFL are not wired)",
+  'lv-magnify': { kind: 'lab', what: "the shooting screen's magnify (and MF assist) view: the camera application is a stand-in (S-CAMAPP), docs/hle-gaps/3.md 3.2's live-view row lists magnify among what the lab lacks, and no wired E147 control reaches it (front1 and AEL/AFL are not wired)",
     probe: null },
 };
 

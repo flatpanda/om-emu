@@ -1,4 +1,4 @@
-// S-HDMISINK: the sink the lab puts on the HDMI port (src/dev/hdmi.mjs, the play input hdmi plug; docs/hle-gaps.md 4.9):
+// S-HDMISINK: the sink the lab puts on the HDMI port (src/dev/hdmi.mjs, the play input hdmi plug; docs/hle-gaps/4.9.md 4.9):
 // a 1080p60 monitor's EDID composed for the lab by the VESA E-EDID 1.3 and CTA-861 layouts, not captured from a
 // monitor. Base block: manufacturer ZZZ (no vendor), product 1, serial 0, week 1 of 2026; digital input, 60 x 34 cm,
 // gamma 2.2, RGB, the preferred timing first; sRGB chromaticity; 640x480, 800x600, 1024x768 at 60 Hz established,
@@ -21,7 +21,7 @@ function checksum(b) {
   return b;
 }
 // The sink's EDID, 256 bytes. checksum: false leaves the base block's checksum off by one (a negative control: the
-// firmware retries the block and gives up, docs/hle-gaps.md 4.9).
+// firmware retries the block and gives up, docs/hle-gaps/4.9.md 4.9).
 export function sinkEdid({ checksum: valid = true } = {}) {
   const base = new Uint8Array(128);
   base.set([0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00]);

@@ -235,7 +235,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length + fr.bad.length;
 }
 // CapMov_MovieRecorderSLR's add-observer methods and api_movie's start / stop watched over a camapp 2 recording
-// (test_movobs.mjs, docs/hle-gaps.md 4.5; E143)
+// (test_movobs.mjs, docs/hle-gaps/4.5.md 4.5; E143)
 {
   const { movieObserverSession } = await import('../test/test_movobs.mjs');
   const mo = await movieObserverSession();
@@ -243,7 +243,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   mo.bad.forEach((x) => console.log('  ', x));
   bad += mo.bad.length;
 }
-// the Fn lever and the AF mode in the default session (test_fnlever.mjs, docs/hle-gaps.md 4.3.8; E143): the idle lever
+// the Fn lever and the AF mode in the default session (test_fnlever.mjs, docs/hle-gaps/4.3.md 4.3.8; E143): the idle lever
 // at API_LEVER_SW_1, S-SEQSTANDBY at the standby gate, S1 with and without the half-press AF; the sequence parts' own
 // StartFocus by the focus mode under control camapp 3
 {
@@ -262,9 +262,9 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...mu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
   bad += mu.bad.length + ms.bad.length;
 }
-// control camapp 3 with the play module native (src/lab/playmod.mjs, docs/hle-gaps.md 4.8.11): the PLAY tasks load the
+// control camapp 3 with the play module native (src/lab/playmod.mjs, docs/hle-gaps/4.8.md 4.8.11): the PLAY tasks load the
 // card's picture, its header and still information natively; the view's decode runs on the pipeline block's model
-// (S-IMGPIPE, docs/hle-gaps.md 4.8.13: playDecodeSession), the detail view's is S-PLAYDEC's
+// (S-IMGPIPE, docs/hle-gaps/4.8.md 4.8.13: playDecodeSession), the detail view's is S-PLAYDEC's
 {
   const { playNativeSession, playDecodeSession } = await import('../test/test_camapp.mjs');
   const pn = await playNativeSession(), pd = await playDecodeSession();
@@ -272,7 +272,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
   bad += pn.bad.length + pd.bad.length;
 }
-// the play module native per body (test_playmod.mjs, docs/hle-gaps.md 4.8.18): E143's view decoded after one shot;
+// the play module native per body (test_playmod.mjs, docs/hle-gaps/4.8.md 4.8.18): E143's view decoded after one shot;
 // E146 and E147, each in a process of its own, to the decode's go, refused at the play buffer outside om1.bus
 {
   const { playBodySession } = await import('../test/test_playmod.mjs');
@@ -286,7 +286,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...pb.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += pb.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// control camapp 3 against the golden sessions (test_c3power.mjs, docs/hle-gaps.md 4.3.6, 4.3.10): where the power-off
+// control camapp 3 against the golden sessions (test_c3power.mjs, docs/hle-gaps/4.3.md 4.3.6, 4.3.10): where the power-off
 // stops and why, the lever's off in the components, the display switch as the firmware's own output change, the
 // sequence parts' module-9 read
 {
@@ -296,7 +296,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...po.bad, ...lv.bad, ...ev.bad, ...sb.bad].forEach((x) => console.log('  ', x));
   bad += po.bad.length + lv.bad.length + ev.bad.length + sb.bad.length;
 }
-// the VSC's histogram unit in play (test_hist.mjs, docs/hle-gaps.md 4.2.7): the live histogram with S-SCENE's live
+// the VSC's histogram unit in play (test_hist.mjs, docs/hle-gaps/4.2.md 4.2.7): the live histogram with S-SCENE's live
 // view and playback's four histograms from the unit's bins, without and with --cpu2 native; the EVF switch under a run
 {
   const { histLiveSession, histInfoSession, histEvfSession } = await import('../test/test_hist.mjs');
@@ -345,7 +345,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3; with --cpu2 native (round 4: H-CAMINIT,
 // H-EXPINIT) TAKE_EXPOSE's request reaches EXP_MOVIE, which waits for the frame events; S2's DISPLAY commands go in the
 // DISPLAY task's order (S-DISPQ's queue) and its idle goes on past the power manager's sub-CPU command 0x14, which
-// S-SCPUDEV takes (docs/hle-gaps.md 4.7.6)
+// S-SCPUDEV takes (docs/hle-gaps/4.7.md 4.7.6)
 {
   const { focusSession } = await import('../test/test_take_release.mjs');
   const fs = await focusSession();
@@ -353,7 +353,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   fs.bad.forEach((x) => console.log('  ', x));
   bad += fs.bad.length;
 }
-// S-DISPQ's queue (test_dispq.mjs, docs/hle-gaps.md 4.1.9): the discipline's order without firmware, and under
+// S-DISPQ's queue (test_dispq.mjs, docs/hle-gaps/4.1.md 4.1.9): the discipline's order without firmware, and under
 // control camapp 3 PLAY at the start's end: task 168's synchronous cmd 4, sent while cmd 15 waits, kept and run after
 // it, its reply to its own queue; PLAY shows No Picture; control: the dispq-at-once mutant stops at depth 1
 {
@@ -367,7 +367,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // S1's 794 comes from TAKE_MAIN's event 0x04080032 through Com_EvSenderManager; S1's release stops the take-ready with
 // TAKE_EXEC command 7, which TAKE_MAIN does not read in RdyFcsRdy3, so the sequence waits in phase 111 and the second
 // S1 makes no take request; the power manager's 0x14, which the first S1 brings at the manager's next cyclic tick, is
-// taken by S-SCPUDEV as by the sub-CPU's own firmware, with the same bytes kept (docs/hle-gaps.md 4.7.6)
+// taken by S-SCPUDEV as by the sub-CPU's own firmware, with the same bytes kept (docs/hle-gaps/4.7.md 4.7.6)
 {
   const { secondShotSession } = await import('../test/test_take_ready.mjs');
   const ss = await secondShotSession();
@@ -426,7 +426,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   ch.bad.forEach((x) => console.log('  ', x));
   bad += ch.bad.length;
 }
-// the firmware's start tasks (bin/ustart.mjs, docs/hle-gaps.md 4.6.3): the start conditions' call sites in the image,
+// the firmware's start tasks (bin/ustart.mjs, docs/hle-gaps/4.6.md 4.6.3): the start conditions' call sites in the image,
 // and the start probe's record of each start task run natively in a bare lab of its own (no session runs it)
 {
   const { ustartMap, ustartProbe } = await import('../test/test_ustart.mjs');
@@ -529,7 +529,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...sf.bad, ...sc.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + sf.bad.length + sc.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// the hidden service screens (H-STARTKEY, docs/hle-gaps.md 4.6.5): USTART5's MENU state step read by its instructions,
+// the hidden service screens (H-STARTKEY, docs/hle-gaps/4.6.md 4.6.5): USTART5's MENU state step read by its instructions,
 // then E143 sessions with and without MENU held at power-on (Monitor Adjust's OK to ID_ST_HIDE_MODE or back to the menu)
 {
   const { hideModeSite, hideModeSession } = await import('../test/test_hidemode.mjs');
@@ -538,7 +538,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...hi.bad, ...hs.bad].forEach((x) => console.log('  ', x));
   bad += hi.bad.length + hs.bad.length;
 }
-// the MS count (H-MECCOUNT, docs/hle-gaps.md 4.6.6): the mechanism driver's counter sites on E143, E146 and E147 (each
+// the MS count (H-MECCOUNT, docs/hle-gaps/4.6.md 4.6.6): the mechanism driver's counter sites on E143, E146 and E147 (each
 // in a process of its own), PAGE 2's MS row after three shots on E143, and the count over a power cycle under S-NVRAM
 {
   const { mecCountSites, mecCountSession } = await import('../test/test_hidemode.mjs');
@@ -664,7 +664,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...cu.bad, ...cc.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += cu.bad.length + cc.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// the HLS media side with a 64 GiB SDXC card (test_sdxchls.mjs; docs/hle-gaps.md 4.8.19): E146, E147, E148 and E139
+// the HLS media side with a 64 GiB SDXC card (test_sdxchls.mjs; docs/hle-gaps/4.8.md 4.8.19): E146, E147, E148 and E139
 // in processes of their own (E143's is storageSdxc's above; E144 stops at its start's divide, 4.8.7)
 {
   const { spawnSync } = await import('node:child_process');
@@ -690,7 +690,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the second card slot (test_storage.mjs --slot2: E143's and E146's two card slots, one card and two, the save slot,
 // the cards out and in, the save settings from the menu, Dual Same on both cards, Auto Switch off a full card, on
-// E143 also under control camapp 3; docs/hle-gaps.md 4.8.12, 4.8.14), each body in a process of its own
+// E143 also under control camapp 3; docs/hle-gaps/4.8.md 4.8.12, 4.8.14), each body in a process of its own
 {
   const { spawnSync } = await import('node:child_process');
   const runs = ['E143', 'E146'].map((m) => {
@@ -1134,7 +1134,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += ar.bad.length + ec.bad.length + cd.bad.length + cf.bad.length;
 }
 // SSG1's command unit in S-CAMFE: request 6's mode-0 batches end on IRQ 18 through the firmware's handler and the
-// power-on passes the unit to the units' set-up (test_camfe.mjs camFeSsgSession; docs/hle-gaps.md 4.2.6)
+// power-on passes the unit to the units' set-up (test_camfe.mjs camFeSsgSession; docs/hle-gaps/4.2.md 4.2.6)
 {
   const { camFeSsgSession } = await import('../test/test_camfe.mjs');
   const r = await camFeSsgSession();

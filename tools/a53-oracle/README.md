@@ -151,7 +151,7 @@ stops at `isc: isc_start failed -6` -- the measurement that motivates the device
 
 All register facts are **D** from the A53's own aarch64 code at the address
 shown (`iscdrv.ko` offsets, or kernel VAs against `vmlinux.elf`); doorbell/IRQ
-numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
+numbers cross-check the MN side in `docs/hle-gaps/4.11.md` 4.11.1.
 
 - **`mn_sio_uart` console** `0x9a500600` (D, `mn_sio_uart_serial_out`
   `0xffffff80082934e8`, `console_putchar` `0xffffff8008293c00`): TX byte at
@@ -210,7 +210,7 @@ numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
   `+4 >> shift` on), and each FIFO header's `+8` the page frame of that node's
   view of the pool (`isc_mem_paddr` `+0x2830` adds it for an attach). Layout, the
   FIFO format, and the pool are implemented in `iscpeer.mjs`; also `docs/a53-spec.md`
-  9.1 and `docs/hle-gaps.md` 4.11.1.
+  9.1 and `docs/hle-gaps/4.11.md` 4.11.1.
 - **`mn-mmc`** SDIO `0x9ac02000` (CYW43455): model as "no card / no SDIO
   device" so `isc_olnet`'s Wi-Fi bring-up fails cleanly (see `docs/a53-spec.md`
   6). Not needed for ISC itself.

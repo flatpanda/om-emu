@@ -1,4 +1,4 @@
-// control camapp 3 against what keeps it from being the player's default (docs/hle-gaps.md 4.3.6, 4.3.10; E143):
+// control camapp 3 against what keeps it from being the player's default (docs/hle-gaps/4.3.md 4.3.6, 4.3.10; E143):
 //   powerOffSession  the lever's off: S-SHUTDOWN's shutDown sends TRA 586 (startShutDown 0x50af6865, a 10 s wait),
 //                  which the camera base takes by tearing the shoot mode down; the shooting component's state 20 sends
 //                  the flash capability (its +908) event 422 and waits for the flash's stop notification (event 25
@@ -70,7 +70,7 @@ const APP_TEST_READS = [0x50ABB039, 0x50ABB044];
 const PROP_TFT = 1, PROP_EVF = 8, OPEN_TFT = 1, TRA_HIST_START = 938, GUI_SHOOTING = '0x0108';
 // the OSD planes' level after the firmware's own open of the EVF: PLANC = level 101 << 1, entry 7 of the EVF level
 // table 0x602ae4b4 (docs/om1-vsc-spec.md section 9 items 3 and 12), which DISPLAY cmd 7's index 7 selects (X; sent by
-// the OXF main thread after the open, docs/hle-gaps.md 4.3.10); the compositor refuses it (A7)
+// the OXF main thread after the open, docs/hle-gaps/4.3.md 4.3.10); the compositor refuses it (A7)
 const EVF_PLANC = 0xCA;
 // the property at whose 0 the application's eye handler asks for no output (play.mjs EYE_SWITCH_PROPERTY)
 const EYE_SWITCH_PROPERTY = 1947;

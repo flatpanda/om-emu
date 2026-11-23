@@ -1,4 +1,4 @@
-// The hot shoe's serial channel with nothing on the shoe (S-HOTSHOE; --take probe, E143; docs/hle-gaps.md 4.12.1).
+// The hot shoe's serial channel with nothing on the shoe (S-HOTSHOE; --take probe, E143; docs/hle-gaps/4.12.md 4.12.1).
 // Addresses are E143's (D unless tagged).
 //
 // STB_EXTERNAL talks to the shoe over PER_SIO channel 11. PER_SIO's channel map (0x6011be1c, which the map setter

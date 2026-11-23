@@ -20,17 +20,17 @@ const NS = 1e9;
 // the doorbell's command: bits 31..24 the command, bits 23..0 its argument
 export const SET_INPUTS = 1;
 
-// The clock (docs/hle-gaps.md 4.7.1, D from its readers and its writer): CLK0 counts seconds since 1970 in local time,
+// The clock (docs/hle-gaps/4.7.md 4.7.1, D from its readers and its writer): CLK0 counts seconds since 1970 in local time,
 // CLK1 bits 14..5 the 1/1024 s phase. Both tick with the lab clock (integer ns), so a run is deterministic: `clk` is
 // the second CLK0 counts at lab time `at`, where a second began. A write of CLK0 sets the second and keeps the phase;
 // a write of 0 to CLK1 restarts the phase at the current second (the firmware's setter writes it when told to, I: that
 // it zeroes the phase). CLK1's bits 4..0 read 0 and a nonzero write to it is UNKNOWN (A-SCPU-3: no writer of another
 // value is known).
 //
-// The event and port words (docs/hle-gaps.md 4.7.2; board scpu.events {pending, ports, count, irq}): port k (the word
+// The event and port words (docs/hle-gaps/4.7.md 4.7.2; board scpu.events {pending, ports, count, irq}): port k (the word
 // at ports + 4k, k < count) reads its input level in bit 31, which the firmware's port byte reader packs into bit k of
 // a byte (D); its other bits read 0 (A-SCPU-4: the configuration word the firmware's port setter writes there, which
-// UI_IN's power-off path writes, docs/hle-gaps.md 4.7.4, is kept but has no effect: its meaning is ?, and nothing
+// UI_IN's power-off path writes, docs/hle-gaps/4.7.md 4.7.4, is kept but has no effect: its meaning is ?, and nothing
 // reads it back but the level bit). The event word holds a pending bit per port: bit k is set when
 // port k's level changes, either way (I: the firmware's callbacks pair event bit k with port bit k and act on both
 // edges, D), and IRQ 320's line is high while a bit is pending. A write clears the bits it has set (I: the IRQ 320

@@ -1,4 +1,4 @@
-// A second MN103 core on the machine's bus (createMachine's cores option, off by default; docs/hle-gaps.md 4.6.1).
+// A second MN103 core on the machine's bus (createMachine's cores option, off by default; docs/hle-gaps/4.6.md 4.6.1).
 // The CPU model is one set of registers (cpu.mjs R, S) and one interpreter (interp.mjs); a core switch saves the
 // running core's registers, its fields of S, its interpreter state (breakpoints, TB-start and look records) and its own
 // pages, and puts the other core's back:

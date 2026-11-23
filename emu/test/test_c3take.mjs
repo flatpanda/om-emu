@@ -1,4 +1,4 @@
-// A still under control camapp 3 on the body of OM_EMU_MODEL (E143, E146, E147; docs/hle-gaps.md 4.1.11, 4.1.12,
+// A still under control camapp 3 on the body of OM_EMU_MODEL (E143, E146, E147; docs/hle-gaps/4.1.md 4.1.11, 4.1.12,
 // 4.1.13):
 //   stillSession  the session of test_take_ready.mjs takeReadySession on any of the three bodies, read through the
 //                  body's own shooting phase query (OlyHfwOpeShoot's 0x50ab57e9, the sequence controller's phase, or

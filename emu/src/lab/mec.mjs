@@ -1,4 +1,4 @@
-// H-MECCOUNT: the shutter mechanism driver's release count (docs/hle-gaps.md 4.6.6, section 7.2). The driver
+// H-MECCOUNT: the shutter mechanism driver's release count (docs/hle-gaps/4.6.md 4.6.6, section 7.2). The driver
 // (gap@0x50108fe0 on E143) keeps the count in its global 0x6296597c and in the camera state kind 0x8344, a word of
 // store E (template 0 at 0x600e56c8), which the hidden menu's PAGE 2 shows as its MS row (API 0x40406 index 0):
 //   the init's read 0x5010f00f..0x5010f025, the end of the driver's counter init 0x5010efc6 (called by 0x501129b0

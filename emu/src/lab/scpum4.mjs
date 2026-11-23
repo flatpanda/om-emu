@@ -78,7 +78,7 @@ export class LeadClock {
 // The frame log from the wire, in S-SCPUDEV's form ({cmd, data, reply} in hex, a long write's with long: true). A
 // transaction is the MN's request line low, from its fall to its rise, with the transfers the MN clocks in it. The
 // first transfer is the command frame [length, command, data], of which the MN clocks 10 bytes (D: its descriptor's
-// counts, hle-gaps 4.7.1): the data are the frame's bytes 2 .. length, those past the tenth written as zeros (as
+// counts, hle-gaps/4.7.md 4.7.1): the data are the frame's bytes 2 .. length, those past the tenth written as zeros (as
 // S-SCPUDEV's log has them: the sub-CPU's 20-byte context reads 0 there, I). A long write's header [7, 0x0f, u32 size,
 // command] is followed by its chunks, whose bytes are the data. A read's reply is what the sub-CPU shifted out in the
 // transfers after the command frame, up to the length its first byte gives (the whole frame, or a long read's 255-byte

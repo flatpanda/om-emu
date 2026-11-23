@@ -31,7 +31,7 @@
 //   scpuSession  (firmware; the model of OM_EMU_MODEL) a play session's start through the link: the stand-ins, the
 //              frames of PER_SCPU's start and the store init with their replies, IRQ 119 attached, the pins in
 //              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; S-SCPUDEV taking the power manager's
-//              0x14 on E143 and E146 only (docs/hle-gaps.md 4.7.6); H-UIINSCAN's 0x88 where the body has it;
+//              0x14 on E143 and E146 only (docs/hle-gaps/4.7.md 4.7.6); H-UIINSCAN's 0x88 where the body has it;
 //              the inbound path natively: 0x08 {0} polled and dispatched to the producer, PC13 high reported as 0x08
 //              {1} and decoded by UI_IN as the switch 0x0400; a body without the link's pins stops at its start; on
 //              a body that runs its power manager and power-off (power.mjs: E143, E146, E147): the power manager's start frames
@@ -168,7 +168,7 @@ function memoryTests(ok) {
   ok(hexOf(dateBytes(Date.UTC(2099, 11, 31, 23, 59, 59) / 1000, 7)) === hexOf(date(2099, 12, 31, 23, 59, 59, 7)), 'the date bytes');
 }
 
-// A scripted MN on the link, as PER_SCPU drives it (docs/hle-gaps.md 4.7.1): request low, wait for the ready line to
+// A scripted MN on the link, as PER_SCPU drives it (docs/hle-gaps/4.7.md 4.7.1): request low, wait for the ready line to
 // drop, clock the 10-byte frame, wait for it to rise; for a read, wait for it to drop, clock the length byte and the
 // rest, wait for it to rise; release. Long writes and reads by their chunks.
 function mnScript(dev) {
@@ -267,7 +267,7 @@ function devTests(ok) {
   sourceTests(ok, now);
 }
 
-// The power manager's 0x14 (docs/hle-gaps.md 4.7.6): {x, inserted 0, inserted 1, recommend 0, recommend 1}, slot 0 the
+// The power manager's 0x14 (docs/hle-gaps/4.7.md 4.7.6): {x, inserted 0, inserted 1, recommend 0, recommend 1}, slot 0 the
 // body's battery and slot 1 the PBH's; the sub-CPU keeps per slot the inserted byte (0, 1, else 0xff) and a second
 // one (0xff with the inserted byte 0, else 1 for recommend 1, 0 for 2, 0xff for any other), builds no reply and
 // sends no message; `kept` below is the two slots' [inserted byte, second byte]
@@ -454,7 +454,7 @@ export async function scpuSession() {
   ok(pins.startsWith('r1 s1 r0 s0 q1 r1 q0 r0 r1 r0 r1 q1 '), `${MODEL}: the pins in PER_SCPU's order (r ready, s reset, q request): ${pins}`);
   ok(lab.nk.state(link.tid) === 4 && lab.scpu_dev.state === 'idle' && lab.scpu_dev.powered && !link.open, `${MODEL}: PER_SCPU waits, the sub-CPU idle with its gate open, the channel closed`);
   // the power manager's 0x14: taken where the sub-CPU's image is the one its handler is read from (E143's, which E146
-  // carries), refused on the other linked bodies (src/lab/menu.mjs; docs/hle-gaps.md 4.7.6)
+  // carries), refused on the other linked bodies (src/lab/menu.mjs; docs/hle-gaps/4.7.md 4.7.6)
   const sources = ['E143', 'E146'].includes(MODEL);
   ok(lab.scpu_dev.takesSources === sources, `${MODEL}: S-SCPUDEV ${sources ? 'takes' : 'refuses'} the power manager's 0x14 (takesSources ${lab.scpu_dev.takesSources})`);
   // (a log the body's entry expects is not PER_SCPU's: E147's card's file system asks the SCPU clock first, models.mjs)
@@ -471,7 +471,7 @@ export async function scpuSession() {
   return { checks, bad };
 }
 
-// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps.md 4.7.4; E143, E146,
+// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps/4.7.md 4.7.4; E143, E146,
 // E147): the firmware from the HFW's shutDown to the window's last write, the session closed after it; the sub-CPU's
 // 0x85 {1, 0, 0} answered, the sub-CPU in bkground (PC13 low) with its link stopped (pin 102 low, polled by the MN);
 // the IO expanders' power-off commands on a body with them (E143's and E146's: the GIO extension's two writes from the

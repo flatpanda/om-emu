@@ -1,5 +1,5 @@
 // The lens on the mount, natively (models.mjs lens_native: E143, E146 and E147; the default, play.mjs lens_option:
-// env.lens 'stand-in', node's OM_EMU_LENS=stand-in, takes S-LENS instead; docs/hle-gaps.md 4.4.2, 4.4.3): the firmware's
+// env.lens 'stand-in', node's OM_EMU_LENS=stand-in, takes S-LENS instead; docs/hle-gaps/4.4.md 4.4.2, 4.4.3): the firmware's
 // lens tasks, its lens driver, its serial driver LENS_SSC and its interrupt run natively against the lens serial
 // controller (src/dev/lensssc.mjs) with the lens's microcontroller at the far end (S-LENSMCU, src/lab/lensmcu.mjs). The
 // driver's entry points, queue, flags and cache area are the body's, read by src/fw/facts.mjs lensDriver (fact

@@ -1,4 +1,4 @@
-// The power manager and the camera's power-off natively (docs/hle-gaps.md 4.7.4), on a body whose src/fw/models.mjs
+// The power manager and the camera's power-off natively (docs/hle-gaps/4.7.md 4.7.4), on a body whose src/fw/models.mjs
 // entry gives power_native (E143, E146, E147), at the addresses src/fw/facts.mjs powerOff reads from its firmware (fact
 // 'power.off'; E143's POWER_OFF_E143 there, with the evidence for every address). At the play bring-up the power
 // manager's task, PWR_MAIN, starts as the boot starter would start it, with the IO expanders it talks to (where the
@@ -71,7 +71,7 @@ const IOEXP_WRITE = POWER_OFF_LIB.ioexp_write;
 // 0.1 s (X); the firmware's own waits on the way end in 1 to 5 s (the IO expanders', PER_SCPU's), so a stuck path
 // shows as one of them or as this deadline. Under control camapp 3 startShutDown's TRA 586 waits for the HLS's answer
 // up to 10 s itself (0x50af6829: the exec's timeout 10000, then 0xf0000043; D), so this deadline, counted from the
-// call, ends first when the components do not answer (docs/hle-gaps.md 4.3.6)
+// call, ends first when the components do not answer (docs/hle-gaps/4.3.md 4.3.6)
 export const POWER_OFF_MS = 10000;
 // the sub-CPU's steps per poll of pin 102 (H-SCPUPOLL), and the polls before the lab gives up on the pin
 const POLL_STEPS = 64, POLL_LIMIT = 1000;
@@ -144,7 +144,7 @@ export function startPowerManager(session, f) {
   return { tid, frames, later };
 }
 
-// H-PWRLATER (opt-in, power_later 'on'; docs/hle-gaps.md 4.7.6 and its entry of 2026-11-22): the boot's two later
+// H-PWRLATER (opt-in, power_later 'on'; docs/hle-gaps/4.7.md 4.7.6 and its entry of 2026-11-22): the boot's two later
 // inits of the power manager, E143's 0x50044ed7 (called from 0x50024d43: the source check {0x10, 2} through the
 // task's handler, then UI_IN's and the timer API's calls) and 0x50044f7d (from 0x501e9943: {0x10, 2} again, event 9
 // posted to queue 10, then the setters of C 0x50043c6c(1) and A 0x50043c63(1)), on the lab task after H-PWRSTART.

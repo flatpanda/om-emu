@@ -73,7 +73,7 @@ export const REGISTRY_INIT = A(0x50040AEB), SETTINGS_DB_INIT = A(0x503C5473), GE
 // store starts
 export const propStoreInit = () => fact('prop_store', PROP_STORE_E143);
 // the settings init chain (E143's, called once from the boot at 0x501e9060): 14 inits called while each returns 0,
-// then three unconditional calls (docs/hle-gaps.md 4.6.8)
+// then three unconditional calls (docs/hle-gaps/4.6.md 4.6.8)
 export const SETTINGS_CHAIN = A(0x503DAE30);
 export const API_SET = A(0x50AC4AFE), API_WRITE = A(0x50B4F28B), DESC_LOOKUP = A(0x503DA999), CUSTOM_LOOKUP = A(0x503C681F);
 export const KEY_SELECTORS = new Map([[A(0x503C589B), 64], [A(0x503C58B9), 141]]);
@@ -768,7 +768,7 @@ export class MenuLab extends T.TextDisplayLab {
     // backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of these sites, and the lab
     // does not start its PER_SCPU. The sub-CPU is S-SCPUDEV, or its own firmware (scpu_native). S-SCPUDEV takes the
     // power manager's 0x14 on the bodies whose sub-CPU image is the one its handler is read from (scpu_lle's digest
-    // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps.md 4.7.6)
+    // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps/4.7.md 4.7.6)
     if (SCPU_BACKUP) {
       this.scpu_dev = this.scpu_native() ? this.scpu_m4(nvram)
         : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE });
@@ -836,7 +836,7 @@ export class MenuLab extends T.TextDisplayLab {
   // E143, E146, E147: the same region set-up and the highest section done, a word only the step reads; D). E129's
   // settings flash read waits for bit 0 (2 ms sleeps, no timeout, D), and without it the store's registry bootstrap
   // blocked (X); the other bodies' starts test the bits at most. The addresses are in docs/model-survey.md (E129) and
-  // docs/hle-gaps.md 4.6.4 (E143, E146, E147)
+  // docs/hle-gaps/4.6.md 4.6.4 (E143, E146, E147)
   boot_stage() {
     if (bootFacts().stage === null) return;          // a build without the stage test (the E118 family's)
     const word = bootFacts().stage, bits = this.stage_bits(), v = this.sim.u32(word);
@@ -850,7 +850,7 @@ export class MenuLab extends T.TextDisplayLab {
   // whose section loader src/fw/facts.mjs sectionLoader reads (E143, E146, E147) stage n is section n: CPU 2's
   // USTART_L2 copies the sections in order and after each posts the per-section step for it, to CPU 0 but for section
   // 8's, which goes to CPU 1; it waits for stage 7's bit before posting section 8's step and for stage 8's before
-  // section 9's, and posts section 10's after that (D; the addresses in docs/hle-gaps.md 4.6.4). The step's work the lab has to do is the section's static constructors (its table in the
+  // section 9's, and posts section 10's after that (D; the addresses in docs/hle-gaps/4.6.md 4.6.4). The step's work the lab has to do is the section's static constructors (its table in the
   // section's loaded range, src/fw/facts.mjs ctorTables; sections 1, 4 and 9 have empty tables, 3, 5 and 10 none):
   // section 2's run at the lab's start (src/lab/osd.mjs mm_ctors), 6's and 7's in run_static_ctors (CTOR_TABLES), 8's
   // are CPU 1's and do not run. So the bits are those of the sections in order up to the first whose constructors the
@@ -879,7 +879,7 @@ export class MenuLab extends T.TextDisplayLab {
   // S-SECLOADED: the boot's sections copied, one bit per section in the section loader's copied mask (fact
   // 'sections.copied', src/fw/facts.mjs sectionLoader), as load_section sets bit n - 1 after section n's copy on CPU 2
   // (USTART_L2; on the flash-copy family the boot task's calls, src/fw/facts.mjs sectionLoader), which the lab does
-  // not run (docs/hle-gaps.md 4.6.3): the lab's image is in place from the machine's creation, every section of it
+  // not run (docs/hle-gaps/4.6.md 4.6.3): the lab's image is in place from the machine's creation, every section of it
   // (S-STALERAM leaves out only what lies past a section's end). The count is the image's own, the cases of its end
   // switch (patched firmware's as it is: 10 on E143, E146, E147 and E137, 9 on E125, E130, E133, E140 and E142). On
   // E143, E146 and E147 no stock instruction reads the word (X); on the flash-copy family the per-section step waits
@@ -901,7 +901,7 @@ export class MenuLab extends T.TextDisplayLab {
   // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage,
   // node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
   // the settings init chain run whole in H-STOREINIT's place (experimental, OM_EMU_SETTINGS_CHAIN=1; E143 only:
-  // docs/hle-gaps.md 4.6.8)
+  // docs/hle-gaps/4.6.md 4.6.8)
   settings_chain() { return ON_LAB_MODEL && (this.env.settings_chain ?? globalThis.process?.env?.OM_EMU_SETTINGS_CHAIN) === '1'; }
   scpu_native() { return !!MODEL_INFO.scpu_lle && (this.env.scpu ?? globalThis.process?.env?.OM_EMU_SCPU) === 'native'; }
   scpu_m4(nvram) {

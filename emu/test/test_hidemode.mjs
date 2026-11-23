@@ -1,4 +1,4 @@
-// The hidden service screens (docs/hle-gaps.md 4.6.5; src/lab/play.mjs H-STARTKEY):
+// The hidden service screens (docs/hle-gaps/4.6.md 4.6.5; src/lab/play.mjs H-STARTKEY):
 //   hideModeSite     (firmware) the MENU state step's site in USTART5 read by its instructions (startKeySite) on E143:
 //                    MENU's code 0x0089, the camera state kind 0x2751, the key state read 0x5014c015 and the write
 //                    0x5004188b; and a byte of the site changed is refused with its offset (the control).

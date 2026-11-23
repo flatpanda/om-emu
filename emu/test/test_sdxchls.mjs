@@ -1,4 +1,4 @@
-// The HLS media side with an SDXC card (docs/hle-gaps.md 4.8.6, 4.8.7, 4.8.19) on the body of OM_EMU_MODEL: Card
+// The HLS media side with an SDXC card (docs/hle-gaps/4.8.md 4.8.6, 4.8.7, 4.8.19) on the body of OM_EMU_MODEL: Card
 // Formatting from the menu (E143's line) or Format from Card Setup (the E144 and E118 families' media control
 // process), then the card out and in, each on a blank 64 GiB card the insertion formats (exFAT), with the checks
 // test_storage.mjs's 8 GiB HLS run makes (the volume formatted again and consistent, the counts reset; the card out:

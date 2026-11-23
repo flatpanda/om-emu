@@ -1,4 +1,4 @@
-// S-IMGPRO: the imgpro unit at 0x9c600000 (board imgpro; docs/om1-imgpro-spec.md, docs/hle-gaps.md 4.3.1), the
+// S-IMGPRO: the imgpro unit at 0x9c600000 (board imgpro; docs/om1-imgpro-spec.md, docs/hle-gaps/4.3.md 4.3.1), the
 // image library's unit 7 (its record 0x50481790(7), its trace record 0x50483474(7, ...)), which the library's request
 // kinds 6, 13, 14, 16 and 17 drive (the kind table 0x6065a834: 13, 14, 16 and 17 to the handler 0x5046daa2, 6 to
 // 0x5046dc32). A register file at the board's base with the behaviour the firmware's driver relies on, and of the

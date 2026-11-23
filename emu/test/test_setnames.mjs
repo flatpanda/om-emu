@@ -92,7 +92,7 @@ export async function setnamesSession() {
     const past = rec('setting:4000');
     ok(past.ok && past.setting?.name === null && Number.isInteger(past.setting?.value), `${MODEL}: an id past the table: ${JSON.stringify(past.setting)}`);
     if (MODEL === 'E147') {
-      // the name and the role: the still / movie switch moves MODE_MOVIE and MODE_ACTION_DIAL (docs/hle-gaps.md 4.1.13)
+      // the name and the role: the still / movie switch moves MODE_MOVIE and MODE_ACTION_DIAL (docs/hle-gaps/4.1.md 4.1.13)
       const sw = rec('switch:still_movie=0'), m0 = rec('setting:MODE_MOVIE'), ad = rec('setting:MODE_ACTION_DIAL'), sw2 = rec('switch:still_movie=2'), m2 = rec('setting:MODE_MOVIE');
       ok(sw.ok && sw2.ok && m0.setting?.value === 1 && ad.setting?.id === 2188 && ad.setting?.value === 2 && m2.setting?.value === 0,
         `E147: MODE_MOVIE at the switch's 0 ${m0.setting?.value}, MODE_ACTION_DIAL ${JSON.stringify(ad.setting)}, MODE_MOVIE at 2 ${m2.setting?.value}`);

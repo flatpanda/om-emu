@@ -121,7 +121,7 @@ const EVF_PLAY = new Set(['E118', 'E120', 'E122', 'E148', 'E144', 'E139', 'E134'
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
-// (0x5032553f) divide by 0 at 0x5032574f, the firmware's own result for this state (docs/hle-gaps.md 4.8.7, D): the
+// (0x5032553f) divide by 0 at 0x5032574f, the firmware's own result for this state (docs/hle-gaps/4.8.md 4.8.7, D): the
 // blank store's movie mode, UHD 4K at 60p, has no rate in E144's table, so the first rate query fails and leaves its
 // size 0, which this build does not test (E143's, E139's, E137's and E125's do); the second query answers from
 // constants for an exFAT volume, so the exFAT branch runs and divides by that size. The manual leaves a divide by 0's
@@ -184,7 +184,7 @@ const rec = (k) => {
 // idle to lab time t in slices that end at each of the camera's timed events due before t: src/lab/camapp.mjs tick
 // posts them only at an idle slice's end, so one slice to t would post them as late as the step's end (X: E146's and
 // E147's TFT S2 then got END_RECVIEW at the end of its 1200 ms and composed 1.2 ms later, before the GUI's redraw,
-// its OSD planes blank; docs/hle-gaps.md 4.3.5)
+// its OSD planes blank; docs/hle-gaps/4.3.md 4.3.5)
 const idle = (t) => {
   for (let due; (due = s.camapp.timed.find(([d]) => d > lab.lab_time())?.[0]) !== undefined && due < t;) s.idle_slice(due);
   s.idle_slice(t);

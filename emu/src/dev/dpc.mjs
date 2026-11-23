@@ -1,4 +1,4 @@
-// The deferred-call triggers (board dpc; docs/hle-gaps.md 4.4.2): six words, one per interrupt line, by which the
+// The deferred-call triggers (board dpc; docs/hle-gaps/4.4.md 4.4.2): six words, one per interrupt line, by which the
 // firmware's deferred calls interrupt the core that posts them. The posts (0x500503cf IRQ 53, 0x5005043f IRQ 54,
 // 0x500504aa IRQ 55, 0x500504d9 IRQ 56; D) put {function, argument, value} on a ring of 32, enable the IRQ for the
 // posting core (0x50054012) and write 1 to the line's word; the handlers run the ring (0x5005062d). The handlers of

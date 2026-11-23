@@ -1,4 +1,4 @@
-// The firmware's start tasks and the start probe (bin/ustart.mjs; docs/hle-gaps.md 4.6.3), E143:
+// The firmware's start tasks and the start probe (bin/ustart.mjs; docs/hle-gaps/4.6.md 4.6.3), E143:
 //   ustartMap    (the image, no lab) the start conditions' code as the map gives it: every call of the phase wait
 //                0x50024de8 and of the phase test 0x50024dcf with its phase, SetPermit's four calls (1, 2, 4, 5), the
 //                start flag's sets and the state waits, each by its site; the phase setter 0x50024eda has no direct

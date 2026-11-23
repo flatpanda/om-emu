@@ -39,7 +39,7 @@ function clockTests(ok) {
 }
 
 // ---- the frame log from the wire against S-SCPUDEV's own
-// A scripted MN on the link (PER_SCPU's handshake, docs/hle-gaps.md 4.7.1), every request edge and transfer also given
+// A scripted MN on the link (PER_SCPU's handshake, docs/hle-gaps/4.7.md 4.7.1), every request edge and transfer also given
 // to a WireFrames: request low, wait for ready to drop, clock the 10-byte frame, wait for it to rise; for a read, wait
 // for it to drop, clock the length byte and the rest, wait for it to rise; release. Long writes and reads by chunks.
 function tappedMn(dev, wire) {

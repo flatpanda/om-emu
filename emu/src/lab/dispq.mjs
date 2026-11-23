@@ -1,4 +1,4 @@
-// S-DISPQ's queue discipline (src/lab/play.mjs; docs/hle-gaps.md 4.1.9), firmware-free so its order is unit-tested
+// S-DISPQ's queue discipline (src/lab/play.mjs; docs/hle-gaps/4.1.md 4.1.9), firmware-free so its order is unit-tested
 // (test/test_dispq.mjs). The DISPLAY task (E143: static id 54, priority 26, entry 0x501c3035) takes one message at a
 // time: its receive (OlyQeRd at 0x501c308b, timeout -1), the command's handler, the reply (0x501c48bf from
 // 0x501c38a3), and back to the receive (jmp at 0x501c38b6), D. A message posted while it handles one waits in the

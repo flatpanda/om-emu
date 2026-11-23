@@ -63,7 +63,7 @@ export function deviceMask(device) {
   return mask;
 }
 export const PERIODS_US = [16683, 20000, 10000, 8341];
-// E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps.md 4.9; D)
+// E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps/4.9.md 4.9; D)
 export const HDMI_CHANNEL = 0, HDMI_MASK = 0xFF000004, HDMI_PERIOD_FN = A(0x501D5996), HDMI_VTOTAL_FN = A(0x501D5A67);
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
 // the vsync event flag id word of each channel (E143 ch0 HDMI, ch1 EVF, ch2 TFT; kind 2 ch0 TFT and EVF, ch1 HDMI)
@@ -714,7 +714,7 @@ export class DisplayLab extends OsdLab {
       // with the kernel native (a lab task), two reads are not the run's and go where they went before it: another
       // task's (a native task the run woke and that preempted the run's task) and the run's own read of another
       // queue (a reply the body waits for). The HDMI open does both: it posts AUD_EXEC, which runs and reads its
-      // queue again, and then reads AUD_EXEC's reply (docs/hle-gaps.md 4.9)
+      // queue again, and then reads AUD_EXEC's reply (docs/hle-gaps/4.9.md 4.9)
       if (runner !== null && (this.lt.current() !== runner || (r.d0 & 0xFFFF) !== queue)) { if (saved) saved[0](hle, r); else this.passthrough(r); return; }
       if ((r.d0 & 0xFFFF) !== queue) throw new FirmwareError(`OlyQeRd on queue ${r.d0 & 0xFFFF} from ${where(r.mdr)}`);
       n += 1;
@@ -922,7 +922,7 @@ export class DisplayLab extends OsdLab {
     this.time_log_boot = { steps: log, table: h8(table), enabled, attached, running, ie: h8(timer.ie()) };
     return this.time_log_boot;
   }
-  // H-GIOSLOTS (the HDMI port, src/dev/hdmi.mjs; docs/hle-gaps.md 4.9): the reset of the GIO interrupt slots that the
+  // H-GIOSLOTS (the HDMI port, src/dev/hdmi.mjs; docs/hle-gaps/4.9.md 4.9): the reset of the GIO interrupt slots that the
   // GIO init ends with (src/fw/models.mjs hdmi.gio_slots), natively and before the display init. The GIO init does not
   // run in the lab, so without the reset the display init's registration of the hot-plug pin finds no free slot and
   // gives up without a word (X); after it the registration takes slot and handler and attaches the pin's group IRQ
@@ -974,7 +974,7 @@ export class DisplayLab extends OsdLab {
       else if (!K3) this.vsc.set_line_ns(d.channel, line);
     }
   }
-  // The HDMI channel's line time (E143, docs/hle-gaps.md 4.9): once the firmware has opened the HDMI device (mask, the
+  // The HDMI channel's line time (E143, docs/hle-gaps/4.9.md 4.9): once the firmware has opened the HDMI device (mask, the
   // opened word's HDMI part), its frame period and vertical total are fields of the firmware's own format table (the
   // format in the mask's bits 24..31; getters HDMI_PERIOD_FN and HDMI_VTOTAL_FN, D), as the panels' period word and
   // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above)
@@ -1227,7 +1227,7 @@ export class DisplayLab extends OsdLab {
     return !!flags[off >> 2] && (this.sim.u32(VSC_CHANNEL[c] + 0x2000 + off) & 0x11) === 0;
   }
   // IMG1 of channel c latched onto a frame the pipeline block's decode wrote (img_decoded: the play module native,
-  // src/lab/playmod.mjs; docs/hle-gaps.md 4.8.13) and drawn one source pixel per output pixel: no horizontal resize
+  // src/lab/playmod.mjs; docs/hle-gaps/4.8.md 4.8.13) and drawn one source pixel per output pixel: no horizontal resize
   // (RSZ1 bit 0 clear) and no vertical one (bit 4 clear, or RSZ4 the channel's unit, A12). The firmware's own DISPLAY
   // cmd 5 attaches it, so no attach of the lab's records it; the guard then measures the fetched span against the
   // frame the newest such run wrote there. null for any other plane
@@ -1320,7 +1320,7 @@ export class DisplayLab extends OsdLab {
       if (p === 2 && (header.assumed & A19_BIT)) continue;             // A19: the face/AF frame plane reads its own buffer
       // IMG2 or IMG3 latched with RSZ1 bits 0 and 4 clear: one source pixel per output pixel, so no second tap and no
       // edge question for A6 (no attach records these planes: under camapp 3 DISPLAY cmd 5 shows the through image's
-      // bank as IMG2 behind the menu, docs/hle-gaps.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
+      // bank as IMG2 behind the menu, docs/hle-gaps/4.2.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
       // on A12)
       if (p > 0 && this.unscaled(c, p)) continue;
       const regs = name === 'IMG1' ? this.img_steps(c, true) : null;

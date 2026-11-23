@@ -1,4 +1,4 @@
-// H-TAKEFILLS (src/lab/rec.mjs take_fills; src/fw/facts.mjs takeFills; docs/hle-gaps.md 4.3.13): TAKE's own fills of
+// H-TAKEFILLS (src/lab/rec.mjs take_fills; src/fw/facts.mjs takeFills; docs/hle-gaps/4.3.md 4.3.13): TAKE's own fills of
 // a still's shot natively, in the still states' order, on H-SHOTALLOC's shot and TAKE's context, in place of the parts
 // of S-EXIFPRM that wrote what they write.
 //   takeFillsSession  (firmware; the body of OM_EMU_MODEL: E143 by default, E146, E147, the bodies whose rule reads
@@ -34,13 +34,13 @@ const tester = () => {
   return { bad, ok: (cond, what) => { checks++; if (!cond) bad.push(what); }, get checks() { return checks; } };
 };
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
-// the halfwords of the record the fills change against S-EXIFPRM's copies (X); E143's fields (D, docs/hle-gaps.md 4.3.13)
+// the halfwords of the record the fills change against S-EXIFPRM's copies (X); E143's fields (D, docs/hle-gaps/4.3.md 4.3.13)
 // (40 on each before takepic, the lens fill and the third fill ran, 2026-11-16; 110 before the strobe request ran,
 // 2026-11-17)
 const DIFFS = { E143: 119, E146: 119, E147: 119 }, KEY = 38532, AE_SETTING = 41082, AE_AT = 38190, COUNTER = 25380, CTX_TIMER = 3128, COUNT = 3088;
 const AF_CALLS = 0x508C9CDD, AF_WORD = 0xA33B262C, TAKEPIC = 0x503BCD51;
 // Sv in the record (takepic's copy of TAKE's context's Sv, D) and the setting the strobe decision answers it from
-// without a flash mode (docs/hle-gaps.md 4.3.13)
+// without a flash mode (docs/hle-gaps/4.3.md 4.3.13)
 const SV = { E143: 38174, E146: 37826, E147: 37826 }, SV_SETTING = 50522;
 const LENS_FLAG = 37982, LENS_BIT = 0x1000, FOCAL = 38792, FOCAL_12MM = 120, WB = [[37992, 33057], [37988, 33073]];
 

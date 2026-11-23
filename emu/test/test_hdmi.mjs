@@ -1,4 +1,4 @@
-// The HDMI port (src/dev/hdmi.mjs, src/lab/edid.mjs, the play option --hdmi on and its input hdmi; docs/hle-gaps.md
+// The HDMI port (src/dev/hdmi.mjs, src/lab/edid.mjs, the play option --hdmi on and its input hdmi; docs/hle-gaps/4.9.md
 // 4.9):
 //   hdmiUnits    without firmware: no port without the machine's option; the sink's EDID blocks sum to 0; the plug
 //                raises the sink's lines (0x08 bits 3, 4), the pin's level and its status bit, IRQ 109 follows status &

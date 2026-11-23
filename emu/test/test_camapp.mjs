@@ -18,11 +18,11 @@
 //   heapSession    S-HEAP's live blocks over a long idle on the shooting screen, with the native lens and with S-LENS:
 //                  from HEAP_FROM_S to HEAP_TO_S of lab time no block allocated stays allocated, and S-TRAACK has
 //                  deleted its requests (the histogram's events, about 5 a second); before S-TRAACK deleted them the
-//                  live blocks grew by about 5 a second (docs/hle-gaps.md 4.4.2)
+//                  live blocks grew by about 5 a second (docs/hle-gaps/4.4.md 4.4.2)
 //   heapWorkloadSession  S-HEAP's live blocks over passes of S1, S2, the menu and playback, without and with the HLS
 //                  components: after two passes they grow by the decoded kinds alone (the events the OXF main thread
 //                  frees with the components, S-RPC's requests), and with S-DISPQ's replies recorded only (the control)
-//                  the display manager's 192-byte buffers stay (docs/hle-gaps.md 4.4.2)
+//                  the display manager's 192-byte buffers stay (docs/hle-gaps/4.4.md 4.4.2)
 //   traRoutingSession  control camapp 3 (E143): the HLS components with their transaction path native (S-TRAACK
 //                  and S-RPC out of it): the application's own TRA 415 and the mode change's 420 bring the camera base
 //                  to its state 13 and the still category to its state 11 (no S-BOOTDONE), the start's transactions
@@ -40,7 +40,7 @@
 //                  fills the other bank) and left are taken, PLAY returns; then S1 makes the session's first take
 //                  request, S-TAKERDY's event finishes the take-ready (794, phase 103) and the through image's
 //                  histogram runs again with IMG1 on, left enabled by playback: its bins' read is not modelled and
-//                  stops the session (the furthest point, docs/hle-gaps.md 4.1.12; where it is modelled: S2's
+//                  stops the session (the furthest point, docs/hle-gaps/4.1.md 4.1.12; where it is modelled: S2's
 //                  take-picture request is not answered, phase 106, MENU not taken); control: S-MODACK's requests left
 //                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
 //                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
@@ -49,7 +49,7 @@
 //   camapp3FramesSession  control camapp 3's frames (E143): the TFT composes with the histogram's registers under
 //                  A-VSCHIST-3 at the shooting screen, the menu (the through image's bank as IMG2, the background's
 //                  colour) and its close, PLAY and its return; with --cpu2 native the histogram's bin 5 column is the
-//                  one change (docs/hle-gaps.md 4.2.4); against camapp 1 the shooting screen is the same, S-AF, with
+//                  one change (docs/hle-gaps/4.2.md 4.2.4); against camapp 1 the shooting screen is the same, S-AF, with
 //                  the Fn lever at its idle position (API_LEVER_SW_1), both show MF with the lever at API_LEVER_SW_2
 //                  (MODE_AF_CHANGE, which camapp 1 writes behind S-SEQSTANDBY's answer at the standby gate and
 //                  refuses without it) and S-AF again with it back (4.3.8); the menu's movie Card Slot Settings row
@@ -69,12 +69,12 @@
 //                  getNumber 2 of file 2 in folder 100; right and left move between the two (1, then 2) and PLAY
 //                  returns; INFO's detail view takes its still information from the file's own Exif and SOF (the
 //                  date, size, exposure and ISO the file holds, not still_record's), and DISPLAY cmd 16's reads of
-//                  the VSC histogram's bins are answered: four runs on the picture's plane (docs/hle-gaps.md 4.2.7;
+//                  the VSC histogram's bins are answered: four runs on the picture's plane (docs/hle-gaps/4.2.md 4.2.7;
 //                  the model refused the first until 2026-11-11, 4.8.11); control:
 //                  with the lab's own one-symbol AC tables the play module's JPEG parse refuses the second DHT
 //                  (12428), the header getter answers 6152 and PLAY shows No Picture
 //   playDecodeSession  control camapp 3 with the play module native: the view's decode on the pipeline block's model
-//                  (S-IMGPIPE, docs/hle-gaps.md 4.8.13). Two pictures of two scenes are taken in camapp 1 with the
+//                  (S-IMGPIPE, docs/hle-gaps/4.8.md 4.8.13). Two pictures of two scenes are taken in camapp 1 with the
 //                  live view (the reference: S-PLAYVIEW shows each scene's frame through the VSC's scaler), and under
 //                  camapp 3 the same two from the same scene views and a third of the first scene; there PLAY runs the
 //                  firmware's kind-10 request on the model: the codec's stream is the card's file from SOI, the 1620 x
@@ -270,7 +270,7 @@ export async function heapSession() {
   return { checks, bad };
 }
 
-// A workload's passes (E143; docs/hle-gaps.md 4.4.2): S1 and S2 (a shot and its rec view), the menu opened and
+// A workload's passes (E143; docs/hle-gaps/4.4.md 4.4.2): S1 and S2 (a shot and its rec view), the menu opened and
 // closed, playback shown and left, then 2 s of idle. After two passes (the one-off allocations, and the event task's
 // parked replies, which it ages out after 10 later replies, 0x50abc2e7..f4, X: 10 from the second pass on) the live
 // blocks grow by the decoded kinds alone, by size and vtable word, the same number every pass:
@@ -285,7 +285,7 @@ export async function heapSession() {
 // -> the observer 0x50d7e0f4): 19 a pass since 2026-11-11, 21 before, when PLAY's return wrote MODE_SELF_SHOT_BEAUTY
 // (679) and MODE_SELF_SHOT_CUSTOM (680) besides 2108: the application writes those two only where the Fn lever stands
 // at API_LEVER_SW_2 with MODE_AF_CHANGE still 0, the state the refused setFocusModeChange left the lab in (X: the same
-// three writes again with S-SEQSTANDBY's standby taken away and the lever moved; docs/hle-gaps.md 4.3.8)
+// three writes again with S-SEQSTANDBY's standby taken away and the lever moved; docs/hle-gaps/4.3.md 4.3.8)
 const HEAP_KINDS = [['event 294', 32, 0x60EF3504], ['event 0x60dcb42c', 32, 0x60DCB42C], ['S-RPC request', 80, 0x60DE54E8]];
 const HEAP_PASS_KEPT = { default: { 'event 294': 19, 'event 0x60dcb42c': 1, 'S-RPC request': 5 }, components: { 'S-RPC request': 5 } };
 const DISPQ_BUFFER = 0x503EB922, DISPQ_BUFFERS_A_PASS = 6;
@@ -345,19 +345,19 @@ export async function heapWorkloadSession() {
   return { checks, bad };
 }
 
-// control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames (camapp3FramesSession takes them: the
-// histogram's registers HIST1, HISTAREA1..3, HIST2 and HIST3 compose under A-VSCHIST-3, docs/hle-gaps.md 4.2.4)
+// control camapp 3 (docs/hle-gaps/4.1.md 4.1.5; E143). The sessions take no frames (camapp3FramesSession takes them: the
+// histogram's registers HIST1, HISTAREA1..3, HIST2 and HIST3 compose under A-VSCHIST-3, docs/hle-gaps/4.2.md 4.2.4)
 // (until 2026-11-11 the start, with the Fn lever at API_LEVER_SW_2, also sent 958 and 1515, setAelState's, and 955,
 // endMfAssist's, after its setFocusModeChange(1), with 994 between them: the lever's change to API_LEVER_SW_2 sends
-// them now, test_fnlever.mjs; docs/hle-gaps.md 4.3.8)
+// them now, test_fnlever.mjs; docs/hle-gaps/4.3.md 4.3.8)
 const START_TRAS = [415, 598, 614, 990, 1001, 1061, 992, 1503, 994, 1065, 1045, 938, 974];
 const NATIVE_RESULT = { 992: 0xF0000058 };
-// the imgpro unit's run as the menu opens (docs/hle-gaps.md 4.3.1; X): kind 14's rectangle fill (op 3, mode 5) of the
+// the imgpro unit's run as the menu opens (docs/hle-gaps/4.3.md 4.3.1; X): kind 14's rectangle fill (op 3, mode 5) of the
 // through image's bank, 600 rows of 1800 bytes (900 pixels) at a pitch of 11136 bytes, with the YCbCr pair 0x800b800b
 // (Y 0x0b, Cb and Cr 0x80); the GUI states the menu, playback and their returns reach
 const MENU_FILL = { op: 3, mode: 5, dst: 0x98D4D800, bytes: 1800, rows: 600, pitch: 11136, value: 0x800B800B };
 const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
-// the next stops (docs/hle-gaps.md 4.3.2; D unless tagged):
+// the next stops (docs/hle-gaps/4.3.md 4.3.2; D unless tagged):
 //   CapThr's state word (getter 0x50bcccc9), whose top byte 1 the sequence parts' S1 guard 0x50bcdef7 asks for (X: 2
 //   before the menu, the static 0x02010202; 1 after it closes)
 //   playback: Play_Get_Picture_Header_Info's getter in the play module (0x518b629e) has its code in d2 at
@@ -368,7 +368,7 @@ const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
 //   the control: PLAY_EXEC's queue (0x3f), which holds two messages (X: 40 bytes, 20 a message)
 const THR_STATE = 0x60362B38, THR_RUNNING = 1, THR_NOT_RUNNING = 2;
 const HEADER_INFO_CODE = 0x518B62DC, HEADER_NOT_LOADED = 6152, PLAY_CAP_STATE = 0x62B0DC8C, PLAY_CAP_FAILED = 4;
-//   the furthest point (docs/hle-gaps.md 4.1.12): the sequence parts' phases 103 (the take-ready finished, 794) and
+//   the furthest point (docs/hle-gaps/4.1.md 4.1.12): the sequence parts' phases 103 (the take-ready finished, 794) and
 //   106 (after S2, waiting for TAKE's answer to the take-picture request); the TFT channel's DMAEN (bit 5: IMG1) and
 //   the VSC model's refusal of a read of the histogram's bins (+0x4000) of a run whose source plane was on (its
 //   value 1, src/dev/vsc.mjs)
@@ -385,7 +385,7 @@ const recvWaiter = (lab, q) => {
   const cb = lab.sim.u32(lab.nk.kcb(232) + 4 * (q - 1)), first = lab.sim.u32(cb + 12), id = lab.sim.read(first + 16, 2);
   return first === cb + 12 ? 0 : id[0] | id[1] << 8;
 };
-// the histogram (docs/hle-gaps.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
+// the histogram (docs/hle-gaps/4.2.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
 // ms), HIST_BIN_WORDS bin words a read (128 bins, 0x501d6aa6..cb's clamp, D); cmd 15's wait returns within two frames
 // and the key's own step (the TFT's 16.68 ms frame, X)
 const HIST_RUNS_MIN = 30, HIST_BIN_WORDS = 64, HIST_WAIT_MAX_NS = 3 * 16683000;
@@ -422,7 +422,7 @@ export async function traRoutingSession() {
       idle(2000);
       const quiet = taken();
       ok(quiet.some(([id]) => id === 944) && quiet.every(([, , res]) => res === 0), `${tag}: the idle's getHistogramData (944) answered natively: ${JSON.stringify(quiet.slice(0, 4))}`);
-      // the VSC histogram (docs/hle-gaps.md 4.2.1): runs on the TFT channel only, each ended natively and its DISPLAY
+      // the VSC histogram (docs/hle-gaps/4.2.md 4.2.1): runs on the TFT channel only, each ended natively and its DISPLAY
       // cmd 16 run by S-DISPQ, whose bin reads are answered under A-VSCHIST-2 (HIST_BIN_WORDS words a read)
       const hist = [0, 1, 2].map((c) => lab.vsc.hist(c).runs), reads = lab.vsc.hist_zero_reads();
       const cmd16 = [...s.steps.flatMap((x) => x.dispq ?? []), ...lab.dispq].filter((x) => x.cmd === 16).length;
@@ -444,11 +444,11 @@ export async function traRoutingSession() {
         continue;
       }
       // the take API (0x50417cd9, d0 the control) and Com_EvSenderManager's 794 build (0x50d77eaf) from here on, read
-      // after the last pass (docs/hle-gaps.md 4.1.10)
+      // after the last pass (docs/hle-gaps/4.1.md 4.1.10)
       const takeApi = [], built794 = [];
       lab.observe(0x50417CD9, (l, r) => takeApi.push(r.d0 >>> 0), 'test: the take API');
       lab.observe(0x50D77EAF, () => built794.push(lab.lab_time()), 'test: the 794 build');
-      // passes of S1 and S2: the OXF main thread's events do not stay (docs/hle-gaps.md 4.4.2)
+      // passes of S1 and S2: the OXF main thread's events do not stay (docs/hle-gaps/4.4.md 4.4.2)
       const oxf = () => [...lab.heap_sizes].filter(([a, size]) => size === 32 && [0x60EF3504, 0x60DCB42C].includes(lab.sim.u32(a) >>> 0)).length;
       const pass = () => {
         s.key('s1', 'down'); s.camapp.pump(); idle(600);
@@ -463,7 +463,7 @@ export async function traRoutingSession() {
         `${tag}: over two passes of S1 and S2 the OXF events kept ${n0} -> ${oxf()}, S2's 1030 answered natively (${JSON.stringify([...new Set(shots.map(([id]) => id))])})`);
       ok(s.status().gui === '0x0108', `${tag}: the shooting screen after the passes: ${s.status().gui}`);
       // the menu: DISPLAY cmd 15 waits for the run's end (S-HISTEND), E_OK within two frames; then udf07, the imgpro
-      // unit's fill and the image player's stage 9 (docs/hle-gaps.md 4.3.1): the menu opens
+      // unit's fill and the image player's stage 9 (docs/hle-gaps/4.3.md 4.3.1): the menu opens
       const unit = lab.sim.m.devices.imgpro, runs0 = unit.runs;
       const key = (k) => { const rec = s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); return [s.status().gui, rec]; };
       const t15 = lab.lab_time();
@@ -480,14 +480,14 @@ export async function traRoutingSession() {
         && ['H-IMGPROINIT', 'S-STAGE9', 'S-IMGPRO', 'A-IMGPRO-1'].every((x) => now.includes(x)),
         `${tag}: the menu opens (${menu}) after the imgpro unit's fill of the through image's bank (runs ${unit.runs - runs0}, ${JSON.stringify(fill)}, its first and last words ${[...edge, ...tail]}; powered ${unit.powered}, status ${unit.status}; ${now.filter((x) => /IMGPRO|STAGE9/.test(x))})`);
       // the menu closes, and the components have restarted the through image (CapThr's state word's top byte 1, where
-      // the passes before had it 2, the static value S-TAKEOVER leaves: docs/hle-gaps.md 4.1.7)
+      // the passes before had it 2, the static value S-TAKEOVER leaves: docs/hle-gaps/4.1.md 4.1.7)
       const thr = () => lab.sim.u32(THR_STATE) >>> 24, thr0 = thr();
       const [closed] = key('menu'), thr1 = thr();
       ok(closed === GUI_SHOOTING && thr0 === THR_NOT_RUNNING && thr1 === THR_RUNNING,
         `${tag}: MENU closes the menu (${closed}); CapThr's state word's top byte ${thr0} before the menu, ${thr1} after`);
       // playback shows No Picture although the card holds the passes' pictures: the play module does not run, S-MODACK
       // answers its Play_Picture request, and Play_Get_Picture_Header_Info's getter finds the picture not loaded, so
-      // the play capability's state goes to 4 (docs/hle-gaps.md 4.3.2)
+      // the play capability's state goes to 4 (docs/hle-gaps/4.3.md 4.3.2)
       const codes = [];
       lab.observe(HEADER_INFO_CODE, (l, r) => codes.push(r.d2 & 0xFFFF), 'test: the header info getter\'s code');
       const [play] = key('play'), cap = lab.sim.read(PLAY_CAP_STATE, 2), capState = cap[0] | cap[1] << 8;
@@ -498,7 +498,7 @@ export async function traRoutingSession() {
       const runs1 = unit.runs, [right] = key('right'), fillR = unit.last(), [left] = key('left'), [back] = key('play');
       ok(right === GUI_NO_PICTURE && unit.runs - runs1 === 1 && fillR?.dst === RIGHT_BANK && left === GUI_NO_PICTURE && back === GUI_SHOOTING,
         `${tag}: right (${right}) fills ${hx(fillR?.dst)} (runs ${unit.runs - runs1}), left (${left}), PLAY returns (${back})`);
-      // the furthest point (docs/hle-gaps.md 4.1.12): with the through image running, S1 after them passes the
+      // the furthest point (docs/hle-gaps/4.1.md 4.1.12): with the through image running, S1 after them passes the
       // sequence parts' guard: the session's first take request (the passes before the menu make none), to S-MODACK's
       // TAKE_EXEC, whose status S-TAKERDY follows with TAKE's event 0x04080032; Com_EvSenderManager builds 794 and the
       // sequence goes to phase 103 (until 2026-11-11 nothing finished the take-ready and it waited in phase 102).
@@ -560,14 +560,14 @@ export async function traRoutingSession() {
   return { checks, bad };
 }
 
-// control camapp 3's frames (docs/hle-gaps.md 4.2.4; E143): with the histogram's registers in a composite under
+// control camapp 3's frames (docs/hle-gaps/4.2.md 4.2.4; E143): with the histogram's registers in a composite under
 // A-VSCHIST-3 (src/dev/vsccompose.mjs histForm) the TFT composes at the shooting screen, in the menu and its close,
 // in playback and its return; the menu shows the through image's bank as IMG2 (DISPLAY cmd 5, unscaled, the imgpro
 // fill's rectangle), which the harness's IMG edge guard lets pass (src/lab/display.mjs unscaled), and whose pixels are
 // the background's (the fill's Y 11, Cb and Cr 128: the composite without IMG2 is the same, X); with --cpu2 native
 // OSD_DRAW_CPU2's histogram adds bin 5's column (the firmware's 64 in bin 5 for an IMG1 that is off, A-VSCHIST-2)
 // and nothing else: two columns of the histogram box (FRAMES_HIST_COLUMN)
-// Against camapp 1 (docs/hle-gaps.md 4.3.8, which supersedes 4.3.7's AF item; X): the shooting screen's focus mode is
+// Against camapp 1 (docs/hle-gaps/4.3.md 4.3.8, which supersedes 4.3.7's AF item; X): the shooting screen's focus mode is
 // MODE_AF_CHANGE (535), which the application sets from the Fn lever (the factory lever function 4) and which
 // OlyHfwOpeShoot writes only behind its standby gate (LEVER_GATE: d0 at the return of setFocusModeChange's call of
 // it). With the lever at the idle image's API_LEVER_SW_1 both camapps hold 0 and show the same screen, S-AF; at
@@ -576,8 +576,8 @@ export async function traRoutingSession() {
 // from S-SEQSTANDBY (the lab's own call of the query still reads 100: only the gate's is answered); back at
 // API_LEVER_SW_1 both write 0 and show the start's frame. Control: camapp 1 with S-SEQSTANDBY's standby taken away
 // is refused at the gate (0), keeps 0 and its frame, as before 2026-11-11. The menu's movie Card Slot Settings row
-// (docs/hle-gaps.md 4.3.7) is greyed unless both slots' media flags (MEDIA_FLAGS, 15261 and 15262) are 1. Since
-// 2026-11-11 (docs/hle-gaps.md 4.8.12) the lab's second card slot is empty by default: camapp 3's media manager finds
+// (docs/hle-gaps/4.3.md 4.3.7) is greyed unless both slots' media flags (MEDIA_FLAGS, 15261 and 15262) are 1. Since
+// 2026-11-11 (docs/hle-gaps/4.8.md 4.8.12) the lab's second card slot is empty by default: camapp 3's media manager finds
 // no card there (api_media's status of that slot SLOT2_STATUS, 1) and leaves the flags 1 and 0, as S-CARD does in
 // camapp 1, so the two menus are the same word for word, the row grey; with both flags set through the store's setter
 // the slot update uses (MEDIA_FLAG_SET) camapp 1's menu has the row enabled (FRAMES_SLOT_ROW: the pixels that differed
@@ -680,7 +680,7 @@ export async function camapp3FramesSession() {
     ok(diff.length === FRAMES_HIST_COLUMN.pixels && JSON.stringify(box) === JSON.stringify(FRAMES_HIST_COLUMN.box),
       `--cpu2 native: OSD_DRAW_CPU2's histogram changes ${diff.length} pixels in ${JSON.stringify(box)}, want ${FRAMES_HIST_COLUMN.pixels} in ${JSON.stringify(FRAMES_HIST_COLUMN.box)}`);
   } else ok(false, 'the two shooting frames for the histogram comparison');
-  // the pinned differences against camapp 1 (FRAMES_AF_MODE, FRAMES_SLOT_ROW; docs/hle-gaps.md 4.3.7)
+  // the pinned differences against camapp 1 (FRAMES_AF_MODE, FRAMES_SLOT_ROW; docs/hle-gaps/4.3.md 4.3.7)
   const [c3, c1] = [pinned['camapp 3'], pinned['camapp 1']], same = (d, want) => d.pixels === want.pixels && JSON.stringify(d.box) === JSON.stringify(want.box);
   const keys = ['start', 'menu', 'before', 'lever', 'back'];
   const frames = keys.every((k) => Array.isArray(c3?.[k]) && Array.isArray(c1?.[k])) && Array.isArray(c1?.flagged);
@@ -714,7 +714,7 @@ export async function camapp3FramesSession() {
   return { checks, bad };
 }
 
-// control camapp 3 with the play module native (docs/hle-gaps.md 4.8.11; E143; src/lab/playmod.mjs). D unless tagged:
+// control camapp 3 with the play module native (docs/hle-gaps/4.8.md 4.8.11; E143; src/lab/playmod.mjs). D unless tagged:
 //   the six tasks H-PLAYSTART starts, [tid, name], in USTART5's order (X: the id words' values)
 //   the header getter's code at its end (d2 at 0x518b63da: 0; 6152 where neither the thumbnail's nor the main image's
 //   size is found, 0x518b638c..0x518b63a3), the play capability's state (PLAY_CAP_STATE), the size parse's results (d0
@@ -726,7 +726,7 @@ export async function camapp3FramesSession() {
 //   at its return; the record's fields as test_playinfo.mjs GUI names them, ISO at +88, fact play.still)
 //   the view's decode's request, recorded at the issue (X): the source format 7170 (the lab's 4:2:2 picture), 1620 x
 //   1080, to the through image's bank in format 3074, 900 x 600 at a pitch of 5568 pixels
-//   INFO's histogram (X; docs/hle-gaps.md 4.2.7): DISPLAY cmd 16's reads of the VSC histogram's bins (0x501e150e, from
+//   INFO's histogram (X; docs/hle-gaps/4.2.md 4.2.7): DISPLAY cmd 16's reads of the VSC histogram's bins (0x501e150e, from
 //   0x501d7121) are answered, the unit counting the picture's plane in four runs (Y, R, G, B); until 2026-11-11 the
 //   model refused the first (HIST_UNMODELLED at 0x501e153d) and INFO stopped there
 const PN_TASKS = [[25, 'PLAY_MAIN'], [24, 'PLAY_LOAD'], [23, 'PLAY_IMAGE'], [26, 'PLAY_SOUND'], [118, 'PLAY_DECODE'], [119, 'PLAY_LOADDRAW']];
@@ -825,7 +825,7 @@ export async function playNativeSession() {
   return { checks, bad };
 }
 
-// control camapp 3 with the play module native: the view's decode on the pipeline block's model (docs/hle-gaps.md
+// control camapp 3 with the play module native: the view's decode on the pipeline block's model (docs/hle-gaps/4.8.md
 // 4.8.13; E143; src/dev/imgpipe.mjs, src/lab/playmod.mjs). D unless tagged:
 //   the through image's two banks the decode writes in turn and their pitch in bytes (X); the view's size and the
 //   picture's; the prefilter's taps [centre, next, outer] of the image library's row for the ratio of 1620 to 900
@@ -957,7 +957,7 @@ export async function playDecodeSession() {
       // the album, the stand-ins, the file system's part
       const fired = [...new Set(lab.log.slice(log0))].filter((n) => /^S-(PLAYSEQ|PLAYCOMP|PLAYVIEW|PLAYDEC|ALBM)/.test(n));
       const tasks = Object.fromEntries(pm.tids.map(([t, n]) => [n, t]));
-      // (S-ALBM's answers after the bring-up's log: none since the second slot is empty by default, docs/hle-gaps.md
+      // (S-ALBM's answers after the bring-up's log: none since the second slot is empty by default, docs/hle-gaps/4.8.md
       // 4.8.12; before it camapp 3's media manager mounted drive 1 from the lab's one card on both ports, and S-ALBM
       // answered that mount's init, drive 1, once, X)
       const albm = s.storage.log.filter(([k]) => k === 'albm');

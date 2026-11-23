@@ -1,4 +1,4 @@
-// The still's stage builders on stock firmware, called standalone (docs/hle-gaps.md 4.3.12, "The still's stage
+// The still's stage builders on stock firmware, called standalone (docs/hle-gaps/4.3.md 4.3.12, "The still's stage
 // builders"): on E122, E143 and E147 each builder of the family the image library's stage list calls for a still
 // (the RGB gamma stage, the six-axis colour builder, the COLOR stage and its HSL builder, the luminance-LUT builder and
 // its tone selector's wrapper, the tone step, the chroma control, and beside the list the YC packing builder with the
@@ -38,7 +38,7 @@
 //             reason in the commit message; never to make a failure pass)
 //
 // Facts used (D, the stock blocks, each entry a CALL target with the one frame its call sites give; notation). The
-// job context C (a0 of every stage): C+4 the request R, C+8 the register image G (docs/hle-gaps.md 4.8.13; a block of
+// job context C (a0 of every stage): C+4 the request R, C+8 the register image G (docs/hle-gaps/4.8.md 4.8.13; a block of
 // its own in this job), C+12 the output block O, C+48 the picture-mode key, C+56 (E147 C+60) a flags word the stages
 // test. R+8..+11 is the request's format word (byte, byte, halfword: the key again, 4.3.12). The PEN-F entries and
 // the fields' meanings (mode, sensitivity, sharpness, grain level) are leads from olyom-isp-bench (src/native.js),

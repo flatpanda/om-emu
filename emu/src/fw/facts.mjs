@@ -283,7 +283,7 @@ export function vectorPage(img) {
 }
 
 // The resource API's tables as USTART_L's loader reads them from the NAND (src/lab/resnand.mjs H-RESINIT, S-RESNAND;
-// docs/hle-gaps.md 4.5), read from the loader's own bytes at `loader` (disassembly notation; MODELS res_nand.loader).
+// docs/hle-gaps/4.5.md 4.5), read from the loader's own bytes at `loader` (disassembly notation; MODELS res_nand.loader).
 // The loader (E143 0x501a8ca0, E146 0x501ada65, E147 0x501b5a59, D) clears three words, the second res_read's type-2
 // last entry (`clr d0; mov d0,(abs32) x3`), then reads four indexes in this order, each `mov <size>,d0; call alloc;
 // mov <nand>,a0; mov d0,a1; mov <len>,d0; mov 1,d1; call read; mov a0,(<buffer>); mov a0,d0; add 32,d0;
@@ -1528,7 +1528,7 @@ function powerTask(img, kcb) {
   return taskRunningTo(img, kcb, [...modules].flatMap((m) => callsTo(img, m)), PWR_TASK_SPAN, 'powerTask', `a call of the power init calling ${h8(0x50000000 + init)}`);
 }
 
-// The power manager and the power-off natively (fact 'power.off', src/lab/power.mjs; docs/hle-gaps.md 4.7.4), read
+// The power manager and the power-off natively (fact 'power.off', src/lab/power.mjs; docs/hle-gaps/4.7.md 4.7.4), read
 // at the port's place of E143's flash save (FLASH_SAVE_E143) and the file system's NAND access (fileSystem). E143's
 // values (POWER_OFF_E143) with their evidence, D unless tagged; each part below is read by its shape, the same on E146
 // and E147 (X: read on each, test/test_facts.mjs POWER_OFF_FOUND):
@@ -2218,7 +2218,7 @@ export function builtinFocal(img) {
 }
 
 // The lens driver's entry points and flags that the native lens runs (fact 'lens_driver', src/lab/lens.mjs; docs/
-// hle-gaps.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
+// hle-gaps/4.4.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
 // (OLYQERD_E143) and LENS_COMMAND's queue-id word (LENS_COMMAND_QUEUE_E143 0x60043226, the module queue 0x31 of the
 // target table, src/lab/camapp.mjs MODULE_QUEUE_WORDS). D on E143, from its code:
 // - tasks [LENS_MAIN, LENS_COMMAND, LENS_ASKDATA]: the boot starts LENS_MAIN and LENS_ASKDATA right after the lens
@@ -2244,7 +2244,7 @@ export function builtinFocal(img) {
 //   driver's lens-cache table that follow one another from its first, `asl 4,d2; mov d2,a1; add T,a1; mov a1,(abs32)`
 //   (0x501a9597, T 0x602a4a24: 7 areas of 0x40000 from 0x416e0000; a string follows the table)
 // On E146 and E147 every one of them reads (X: their code at the places, the boot starts and USTART_L's calls in
-// E143's shapes; the same 15 frames of the lens's start, docs/hle-gaps.md 4.4.2). Returns {module_init, cache_init,
+// E143's shapes; the same 15 frames of the lens's start, docs/hle-gaps/4.4.md 4.4.2). Returns {module_init, cache_init,
 // task_vars, tasks, exec_queue, flags, cache_area} (disassembly notation, run-time words), or undefined where a part
 // is not found in E143's shape; throws for a part found twice.
 export const LENS_COMMAND_QUEUE_E143 = 0x60043226;
@@ -2591,7 +2591,7 @@ export function cardDetect(img) {
 }
 
 // The second card slot (fact 'card.slots', src/lab/storage.mjs S-SDDETECT and S-SDCARD's ports, src/lab/camapp.mjs
-// S-CARD's save slot; docs/hle-gaps.md 4.8.12). D, E143's addresses:
+// S-CARD's save slot; docs/hle-gaps/4.8.md 4.8.12). D, E143's addresses:
 // - detect: the SD driver's card detect of a port (0x508b0221: `mov d0,d2; mov 0x1301,d0; movhu d0,(4,sp); exthu d2;
 //   mov d2,d0; mov sp,a0; inc4 a0; call H`), which the drive status (0x508a8327: 1, no card, where it is not 0), the
 //   sdmem request's card check (0x508b3acf) and logsec's init (0x508ac195) call. Its helper H (0x508b0859) reads a GIO
@@ -2611,7 +2611,7 @@ export function cardDetect(img) {
 // - record: the settings the HLS record controller picks a still's card by (CmpSts_RecordController 0x50c73f16:
 //   `mov a0,(8,sp); mov MODE,d0; call G; mov d0,d3; mov SLOT,d0; call G; movhu d0,(12,sp)`): mode 1129 (0 and 1:
 //   the card of slot, 1 + its value; 2 to 5: both cards where both are usable) and slot 1130
-// The other bodies with two slots (card.detect drives 2: E139, E134, E125; docs/hle-gaps.md 4.8.17) detect by UI_IN's
+// The other bodies with two slots (card.detect drives 2: E139, E134, E125; docs/hle-gaps/4.8.md 4.8.17) detect by UI_IN's
 // level alone, in one of two forms (D):
 // - E139: the detect of E143's form (0x5066466d) whose helper is `clr d0; retf` (0x50664a3d), so the UI_IN path is
 //   always taken: port 0 answers 0 where the level of 0x1506 (+0x1f) is 0, port 1 where that of 0x1518 (+0x2f) is,
@@ -2869,7 +2869,7 @@ export function bootState(img) {
   return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
 }
 // The boot's section loader, which the lab does not run (fact 'sections', src/fw/sections.mjs bootLoads, src/lab/menu.mjs
-// S-SECLOADED, the loaded-ranges mode; docs/om1-cores-spec.md 3.6, docs/hle-gaps.md 4.6.3). CPU 2's USTART_L2 copies
+// S-SECLOADED, the loaded-ranges mode; docs/om1-cores-spec.md 3.6, docs/hle-gaps/4.6.md 4.6.3). CPU 2's USTART_L2 copies
 // the main block's sections from flash to DRAM one by one, load_section(n) for n = 1..count (E143 0x50024e6b, E147
 // 0x50024eb5, D):
 //   mov d0,a3; mov -1,d3; add d0,d3; call END,[],0; mov d0,d2; mov d3,d0; extbu d0; mul 12,d0; mov d0,a2;
@@ -2992,7 +2992,7 @@ function oneAt(img, pat, rule, what, from = 0, to = img.length) {
 }
 const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 
-// The card's file system (fact 'storage', src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): the seams the lab runs it at,
+// The card's file system (fact 'storage', src/lab/storage.mjs; docs/hle-gaps/4.8.md 4.8.2): the seams the lab runs it at,
 // in a library the bodies share instruction for instruction but for addresses, registers' allocation and a few
 // immediate forms (X: every pattern below on each expanded image). D unless tagged, from E143's code:
 // - FILECLBK, the file module's task, opens its loop with `clr d0; mov d0,(busy); movhu (Q),d0; mov a2,a0; exth d0;
@@ -3570,7 +3570,7 @@ export function dcfCounts(img) {
 // - erase_all (id 0x70010, 0x503fdaf6: d0 the media; 2 or more returns 0) builds the DCF edit's ALL_DELETE request:
 //   +2 the media, +12 0, FILECLBK's code 37 (0x25: `mov 37,d0; mov d0,(40,sp)`, 0x503fdba2), and posts it through
 //   the API's sender with the API's reply queue (0x503fdbdc), returning the token (src/lab/media.mjs S-MDACTRL's
-//   erase all; docs/hle-gaps.md 4.8.15). An image without it gives erase_all null;
+//   erase all; docs/hle-gaps/4.8.md 4.8.15). An image without it gives erase_all null;
 // - unlock_all (id 0x70025, 0x503ff28b: d0 the media, d1 1 to lock, else unlock; a media 2 or more, or 0x8010,
 //   returns 0) builds the DCF edit's request for every picture: +2 the media, +12 the option 0x40000 (the edit's
 //   walk of all objects, 0x50872dfc: option bits 0x60000), FILECLBK's code 35 (0x23, OBJ_LOCK) for d1 1, else 36
@@ -3688,7 +3688,7 @@ export function recorder(img) {
   return { time: 0x50000000 + time };
 }
 
-// REC_FILE's task natively (fact 'rec_file', src/lab/rec.mjs; docs/hle-gaps.md 4.8.10): the EXIF module's template,
+// REC_FILE's task natively (fact 'rec_file', src/lab/rec.mjs; docs/hle-gaps/4.8.md 4.8.10): the EXIF module's template,
 // REC's module init, REC_FILE's task and the packet REC_IMAGE posts it, REC_IMAGE's rec_jpeg_exec with the image
 // pipeline's seams, and REC_FILE's file contexts, read at the port's place of E143's CPU 0 kcb (KCB0_E143). D on E143
 // (REC_FILE_E143: the values src/lab/rec.mjs gave by hand before the rule) unless tagged:
@@ -3717,7 +3717,7 @@ export function recorder(img) {
 //   rec_ImgPro_CreateParam's extension reads for the size of its first buffer (S-RECREQ gives it 16; this version's
 //   dump only: the other versions' rules do not read it); and RecordMediaMode (1 byte, +297; E146 and E147 +267), the
 //   save mode REC_MAIN copies from the request and REC_FILE's double-slot test reads (0x5053dcf8; S-RECREQ gives it
-//   the setting's value, docs/hle-gaps.md 4.8.14; this version's dump only too)
+//   the setting's value, docs/hle-gaps/4.8.md 4.8.14; this version's dump only too)
 // - jpeg: make_image (S-JPEGENC) by its trace; rec_jpeg_exec by its trace too, read as the form but not given since
 //   2026-11-11 (no stand-in reads it: REC_IMAGE's task runs it); header, the size rec_jpeg_exec clears before the
 //   encode, the
@@ -3746,7 +3746,7 @@ export function recorder(img) {
 // - clock_set: the camera's clock setting, the function that ends right before the clock read (fact 'recorder') with
 //   `mov 10499,d0; movhu d0,(8,a2); ret` (0x5012b7a7; the storage test sets the clock with it, X)
 // E146 and E147 read every part (X: their sessions record S2's file natively with them; E146's values as read by hand
-// before the rule, D). The E144 family's REC is another version (docs/hle-gaps.md 4.8.10: its REC_FILE receives without
+// before the rule, D). The E144 family's REC is another version (docs/hle-gaps/4.8.md 4.8.10: its REC_FILE receives without
 // the file name, its EXIF init has no cache flush), where no part past the trace table reads (recFileQueue below
 // reads that version). Returns the parts in
 // E143's shape, or undefined where the trace table, the receive or a part is not found in its shape; throws for a
@@ -3975,7 +3975,7 @@ export function recFile(img, kcb) {
 }
 
 // REC_IMAGE's task natively (fact 'rec_image', src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ,
-// S-EXIFPRM; docs/hle-gaps.md 4.3.3, 4.3.5), read where recFile reads REC_FILE's parts (rec, its result), at the port's
+// S-EXIFPRM; docs/hle-gaps/4.3.md 4.3.3, 4.3.5), read where recFile reads REC_FILE's parts (rec, its result), at the port's
 // place of E143's CPU 0 kcb. D on E143 (REC_IMAGE_E143: the values src/lab/rec.mjs gave by hand before the rule) unless
 // tagged; REC's traced functions by recTraced (rec_bracket_entry 0x5053b1dc and rec_make_image_finish 0x50541ec5 with K
 // 0x31010000, rec_bracket_update 0x5053b39c with 0x31000000, "REC post_msg_main" 0x5053984b with 0x11010000):
@@ -4011,7 +4011,7 @@ export function recFile(img, kcb) {
 //   `movbu`, one site each), and the picture mode in its own, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a2; add
 //   OFF,a2; movbu d0,(a2); extbu d0; cmp W,d0; bne; mov ID2,d0; mov 0,a0; clr d1; call S; movbu d0,(a2)`, one site,
 //   which reads ID2 instead where ID gives W: [ID, OFF, 1, W, ID2] (38017 and 40209 where it gives 6, D on the three)
-// - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps.md
+// - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps/4.3.md
 //   4.3.4, 4.3.9; given there by hand for E143 before the rule, REC_ENCODE_E143). rec_jpeg_make_image (rec's
 //   jpeg.make_image) calls, to its return, its trace, a clear, rec_ImgPro_CreateParam (by its trace, K 0x31000000),
 //   the image library's create, rec_ImgPro_ImageParam (by its trace), an error log, the run, rec_ImgPro_Jpeg_Result
@@ -4023,7 +4023,7 @@ export function recFile(img, kcb) {
 //   its one call, `mov (An),d0; call d32; mov d0,d2; mov d2,d1; exthu d1; cmp 0,d1; beq`, of the function right after
 //   the getter's 7 bytes, set, the library's parameter set (0x50542c97, 0x50491c9f)
 // E146 and E147 read every part (X: their sessions make S2's picture in REC_IMAGE's task with them; D: E146's task
-// 0x5051ee03 and the rest at docs/hle-gaps.md 4.3.5; the encode's points D on E146: 0x5051ff50, 0x50484597,
+// 0x5051ee03 and the rest at docs/hle-gaps/4.3.md 4.3.5; the encode's points D on E146: 0x5051ff50, 0x50484597,
 // 0x5051f653, 0x5051ff9a, 0x50520568). Returns the parts in REC_IMAGE_E143's shape; throws where a part is not found
 // in its shape or is found twice.
 export const REC_IMAGE_E143 = {
@@ -4179,7 +4179,7 @@ export function recImage(img, kcb, rec) {
   };
 }
 
-// TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps.md
+// TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps/4.1.md
 // 4.1.11, 4.1.12, 4.1.13), read at the E143 functions' places where recFile reads REC_FILE (E143, E146, E147). D on
 // E143 unless tagged; each site is E143's instructions with addresses, displacements and the values read left open
 // (the direct post's first stack store too: no form here is a 32-byte run of the firmware's bytes, bin/pubaudit.mjs;
@@ -4197,7 +4197,7 @@ export function recImage(img, kcb, rec) {
 // - TAKE_MAIN's state table, loaded at its loop's head (TAKE_MAIN_E143: 15 bytes of frame set-up, then `mov
 //   imm32,a3`; 20 bytes a state, +4 its name, +12 its command table of 8-byte {u16 command, u16, handler} rows ended by
 //   0xffff): Idle's table holds the take-ready and its stop (0, 7), RdyTrig2Wait's the stop and takePicture (7, 11)
-//   (TAKE_COMMANDS); X on E143 and E147: the rows the probe's TAKE_MAIN dispatches (docs/hle-gaps.md 4.1.7)
+//   (TAKE_COMMANDS); X on E143 and E147: the rows the probe's TAKE_MAIN dispatches (docs/hle-gaps/4.1.md 4.1.7)
 // Throws where a form or a command row is missing
 export const TAKE_REQUESTS_E143 = { api_post: 0x503EBE71, take_send: 0x502CE58C, control_post: 5, func29: { command: 29, param: 0x62A3F2BE },
   kind_at: 8, queue_at: 4, event: 0x04080032 };
@@ -4257,7 +4257,7 @@ export function takeRequests(img, at, qewr) {
     kind_at: img[kind + 5], queue_at: img[keep + 2], event: u32(img, ev + 8) };
 }
 
-// TAKE's exposure for a still's record as S-EXIFPRM gives it (fact 'take_exposure', src/lab/rec.mjs; docs/hle-gaps.md
+// TAKE's exposure for a still's record as S-EXIFPRM gives it (fact 'take_exposure', src/lab/rec.mjs; docs/hle-gaps/4.3.md
 // 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the single still's TAKE_MAIN
 // states in order are StlRdy1, StlRdy2 and StlTake (the state table as takeRequests reads it, by name):
 // - record {size, fill, flags, reads}: StlRdy1's entry takes an exposure record from TAKE's ring and fills it, `call G;
@@ -4341,9 +4341,9 @@ export function takeExposure(img, at) {
   };
 }
 
-// TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps.md 4.3.13),
+// TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps/4.3.md 4.3.13),
 // read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged (E146's and E147's callers, intake
-// and still states read against E143's: docs/hle-gaps.md 4.3.13). A normal still's shot is not
+// and still states read against E143's: docs/hle-gaps/4.3.md 4.3.13). A normal still's shot is not
 // TAKE_MAIN's to allocate: its still states allocate one only under TAKE context bytes of other modes (StlRdy1
 // 0x503b1365 kind 8, 0x503b1341, 0x503b1391), and keep the take-picture request's own id, the packet's +0, which
 // api_rec's takePicture (0x5040ee43) stores from its second argument. The id is the take buffer the application's
@@ -4399,7 +4399,7 @@ export function takeShot(img) {
   };
 }
 
-// TAKE's own fills of a still's shot as H-TAKEFILLS runs them (fact 'take_fills', src/lab/rec.mjs; docs/hle-gaps.md
+// TAKE's own fills of a still's shot as H-TAKEFILLS runs them (fact 'take_fills', src/lab/rec.mjs; docs/hle-gaps/4.3.md
 // 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the still states by name in
 // TAKE_MAIN's state table (as takeExposure reads it), each fill a function of TAKE's context and the take-picture
 // request's packet or its shot id:
@@ -4555,7 +4555,7 @@ export function takeFills(img, at, exif) {
 }
 
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
-// reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
+// reads none; src/lab/rec.mjs; docs/hle-gaps/4.8.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
 // - REC's trace table and functions as recFile reads them, but the table's first name may follow other bytes than a
 //   NUL (E134 0x6055d190, E137, E125: the word before it; X)
@@ -6198,7 +6198,7 @@ export function objectNameId(img, name) {
   return hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
 }
 
-// The play module's start (fact 'play.tasks', src/lab/playmod.mjs H-PLAYSTART; docs/hle-gaps.md 4.8.11, 4.8.18):
+// The play module's start (fact 'play.tasks', src/lab/playmod.mjs H-PLAYSTART; docs/hle-gaps/4.8.md 4.8.11, 4.8.18):
 // USTART5 starts its six tasks one after the other, each as `movhu (W),d0; exth d0; call OlyTaSt` (fc ac W, 18, a
 // 7-byte call) and then logs it by name, `mov <name>,a0` (fc dc) 14 bytes after the movhu, the names the six
 // NUL-terminated strings of PLAY_TASK_NAMES (E143 0x501e9f10..0x501e9fab, the names from 0x602c55b8; E146
@@ -6226,7 +6226,7 @@ export function playTasks(img) {
   return starts.map((p, k) => [u32(img, p + 2), PLAY_TASK_NAMES[k]]);
 }
 // The play module's view decode at the image library (fact 'play.decode', src/lab/playmod.mjs S-IMGPIPE, S-PLAYDEC;
-// docs/hle-gaps.md 4.8.11, 4.8.13, 4.8.18), from the library's issue (the place of E143's 0x5048f331). D unless
+// docs/hle-gaps/4.8.md 4.8.11, 4.8.13, 4.8.18), from the library's issue (the place of E143's 0x5048f331). D unless
 // tagged, from E143's code and E146's and E147's:
 // - issue_from: the issue's two calls, both the play module's (E143 0x518b446f, 0x518b478b; E146 0x518c2dce,
 //   0x518c3180; E147 0x518cacb3, 0x518cb065), their return addresses in their order;

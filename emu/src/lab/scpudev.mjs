@@ -63,7 +63,7 @@
 // nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan, 0x82 a GIO port's level
 // (0x800cfef -> 0x800cdc4: one byte, the pin's; the model's levels are the port scan's inputs, ports 45 PC13 and 37
 // PC5, and another port is refused) and the power manager's 0x12 {5}, which the sub-CPU answers with its own message
-// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps.md 4.7.4) and its 0x14, the notice of
+// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps/4.7.md 4.7.4) and its 0x14, the notice of
 // its power sources (below, PWR_SOURCES). The words a body uses are its
 // fact scpu.words, [index, byte], and a request for another is refused (no caller sends one); a body's fact
 // scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?). Every other command stops the
@@ -89,7 +89,7 @@
 // switch 0x0400. In the model the result follows the levels at once (I: the 3-sample debounce on the scan's cyclic
 // timer is not timed), the scan is never busy (I: busy is set by 0x8012664, whose caller is not read), the report is
 // disabled by a reset, and PC5's other effects in the power manager (0x801a49a -> 0x801acb0) are not modelled.
-// The power sources (docs/hle-gaps.md 4.7.6, D both ends unless tagged): the MN's power manager sends 0x14 {0,
+// The power sources (docs/hle-gaps/4.7.md 4.7.6, D both ends unless tagged): the MN's power manager sends 0x14 {0,
 // inserted 0, inserted 1, recommend 0, recommend 1} when a slot's recommend byte changes, slot 0 the body's battery
 // and slot 1 the PBH's (I: the grip's), and waits for the write's end only (its sender waits for a message of the
 // sub-CPU's after 0x11 and 0x12 alone). The handler 0x8015345 gives the 5 bytes to the sub-CPU's power manager as
@@ -487,7 +487,7 @@ export class ScpuDev {
     // leaving steady, the task's transition stops the command manager's link first: PB12's edge interrupt off
     // (0x80134e0) and PC3 low (0x8013498: GIO port 35 = 0), from bkground's 0x801678c (through 0x80134a0, while the
     // state it reads is steady), pwr_save's 0x80167e2 (0x80134e6), standby's 0x8016872 (0x8013488) and
-    // hibernation's 0x8016810 (0x8013510), D; the MN polls pin 102 low after its power-off (docs/hle-gaps.md 4.7.4)
+    // hibernation's 0x8016810 (0x8013510), D; the MN polls pin 102 low after its power-off (docs/hle-gaps/4.7.md 4.7.4)
     if (from === 'steady' && to !== 'steady') { this.later('ready', 0); this.log.push('the link stopped: PC3 low'); }
     this.power = to;
   }
@@ -533,7 +533,7 @@ export class ScpuDev {
     if (cmd === WRITE_WORD) { this.size(cmd, data, 6, 'write backup word'); this.memory.setReg(this.word(data), new DataView(data.buffer, data.byteOffset + 1, 4).getUint32(0, true)); return; }
     if (cmd === PWR_WRITE && data[0] === PWR_SYNC) { this.size(cmd, data, 1, 'power manager sync'); this.post(PWR_WRITE, [PWR_SYNC]); return; }
     if (cmd === PWR_SOURCES) {
-      if (!this.takesSources) this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): the power manager's source notice is read from E143's sub-CPU image only (its handler 0x8015345, docs/hle-gaps.md 4.7.6), and this body's image is another`);
+      if (!this.takesSources) this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): the power manager's source notice is read from E143's sub-CPU image only (its handler 0x8015345, docs/hle-gaps/4.7.md 4.7.6), and this body's image is another`);
       this.size(cmd, data, 1 + 2 * SOURCE_SLOTS.length, 'power sources');
       this.setSources(data);
       return;

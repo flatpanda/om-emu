@@ -1,4 +1,4 @@
-// The audio hardware (--audio on; src/dev/audio.mjs, src/lab/wm8946.mjs, src/lab/audiohw.mjs; docs/hle-gaps.md 4.5):
+// The audio hardware (--audio on; src/dev/audio.mjs, src/lab/wm8946.mjs, src/lab/audiohw.mjs; docs/hle-gaps/4.5.md 4.5):
 //   audioHwUnits    without firmware: no port without the machine's audio option; the port's register file and
 //                   interrupt enables; TX enable rising sets status bit 4 and IRQ 43 follows status & +0x50; a write
 //                   of 1s clears status bits; a start plays slot A then slot B, each fetched from memory as it starts,

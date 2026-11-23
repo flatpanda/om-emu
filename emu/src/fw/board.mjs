@@ -62,7 +62,7 @@ export const FAMILIES = {
     // level is the sub-CPU's message line, PC2 of the sub-CPU (PER_SCPU's IRQ 320 callback 0x5005c8d9 acts on event
     // bit 3 with port bit 3 low and polls the sub-CPU then, D; the sub-CPU drives PC2 low to post a message,
     // 0x8012c42, and high when it answers the poll, 0x8012e9e, D; docs/om1-scpu-spec.md 3.1)
-    // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
+    // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps/4.7.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
     // (the wake / reset cause word, I) with its commit; 0x5004dffc writes 1 << n to 0x9c and 0x5004e02c reads its bit
     // n, and 0x5004dfd0 writes 127 there and commits, the sequence's last write (its meaning, a power cut, is I); no
     // reader of 0x90 runs in the lab
@@ -83,7 +83,7 @@ export const FAMILIES = {
       request: { pin: 103, word: 0x9B881BC0 },
       reset: { pin: 107, word: 0x9B881CC0 },
     },
-    // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps.md 4.9): the
+    // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps/4.9.md 4.9): the
     // transmitter's byte registers (the driver's register reader 0x501d55d8 and writer 0x501d5645), the writer's lane
     // word, IRQ 239 (the HDMI init 0x501d15e8 attaches 0x501d508a at level 5); the hot-plug pin 77's level word and
     // bit (the pin read 0x50002a35: bit 4 of the word (0x60025ff8)[77]) and its GIO record (slot 124 of the slot table
@@ -91,7 +91,7 @@ export const FAMILIES = {
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
     // the audio serial port and the SCA (src/dev/audio.mjs, built only with the machine's audio option;
-    // docs/hle-gaps.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
+    // docs/hle-gaps/4.5.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
     // (0x50aa9515 attaches 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e
     // attaches 0x50aab51d at level 5). E143's (D); E146's and E147's audio drivers are not read
     audio: { port: 0x9B700000, irq: 43, sca: 0x9BB00000, sca_irq: 45 },
@@ -118,22 +118,22 @@ export const FAMILIES = {
     // board, their drivers not read; passive until a start
     ems1: { base: 0x9BD80000, irq: 276 },
     // the imgpro unit at 0x9c600000, the image library's unit 7 (src/dev/imgpro.mjs, S-IMGPRO; docs/om1-imgpro-spec.md,
-    // docs/hle-gaps.md 4.3.1): its registers (every operand of its driver 0x5050a6b2..0x5050b547 and of the handler
+    // docs/hle-gaps/4.3.md 4.3.1): its registers (every operand of its driver 0x5050a6b2..0x5050b547 and of the handler
     // 0x5048bfe3: +0x000..+0x3b0) and IRQ 300, which the library's init attaches with that handler at level 4 on CPUs
     // 0..3 (0x5048c728..0x5048c799) and each request's go enables on the calling core (0x5050a8bd). E143's (D); E146
     // and E147 sit on the same board, their drivers not read; passive until a start
     imgpro: { base: 0x9C600000, irq: 300 },
-    // the image library's pipeline block and the JPEG codec (src/dev/imgpipe.mjs, S-IMGPIPE; docs/hle-gaps.md 4.8.13):
+    // the image library's pipeline block and the JPEG codec (src/dev/imgpipe.mjs, S-IMGPIPE; docs/hle-gaps/4.8.md 4.8.13):
     // the words the play module's view decode writes (the units' set-up 0x5048134d, the go 0x504814d2, the end
     // 0x504814ef, the codec's start 0x5050a2ba) and IRQ 288, which the library's init attaches with the handler
     // 0x5048bb88 at level 5 on CPUs 0..3 (0x5048c3a0..0x5048c40a). E143's (D); E146 and E147 sit on the same board,
     // their drivers not read; passive until a start
     imgpipe: { base: 0x9C200000, codec: 0x99900000, irq: 288 },
-    // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
+    // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps/4.4.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
     // (0x502c0e99, 0x502c0e9f; the unit's extent from FCS's operands, 0x50957687..0x5095799e), and the mechanism unit
-    // (0x9b900000, 271 registers, docs/hle-gaps.md section 7), whose power-on the lens attach calls (0x5010b957,
+    // (0x9b900000, 271 registers, docs/hle-gaps/7.md section 7), whose power-on the lens attach calls (0x5010b957,
     // 0x5010b978, 0x5010b9bb, 0x5010b9e8, 0x5010ba15); the lens-detect pin 172 (read by 0x502c0b0a, its word
     // (0x60025ff8)[172], the level in bit 4 as every GIO pin's, 0x50002a35). E143's (D); E146 and E147 sit on the
     // same board, their lens drivers not read (X: a scan of their main blocks finds the controller's base 7 and 9 times

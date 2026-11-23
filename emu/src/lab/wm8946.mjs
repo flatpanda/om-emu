@@ -1,5 +1,5 @@
 // The sound IC at the far end of PER_SIO's channel 14 (S-WM8946; with the audio hardware, --audio auto or on, E143;
-// docs/hle-gaps.md 4.5). The firmware names the chip a Wolfson WM8946 (the string
+// docs/hle-gaps/4.5.md 4.5). The firmware names the chip a Wolfson WM8946 (the string
 // "dev_ctrl_wm8946_sub_adj_calc_adcvol", D). Its register access exec_data 0x50a632c5 opens the channel with a callback
 // (0x5005f0f7(14, 0x50a63385, the frame word); 1 back means busy, and it retries), and the callback 0x50a63385
 // configures it (0x5005f4ae: 4 MHz, configuration 0xa33dac60) and sends one frame from the buffer 0xa33dcd60
@@ -27,7 +27,7 @@
 // PCM it takes from the audio port: its DAC volume registers (output_vol_list 0x60dc5298: 0x0a, 0x0b, 0x28, 0x29, 0x47,
 // D) are kept and shown, not used.
 //
-// With --cpu2 native (docs/hle-gaps.md 4.6.7) AUD_WAKEUP's power-on list runs on core 2 and calls the same four entries
+// With --cpu2 native (docs/hle-gaps/4.6.md 4.6.7) AUD_WAKEUP's power-on list runs on core 2 and calls the same four entries
 // there; core 2's stops serve channel 14 with the same channel and chip (serve_cpu2), and a transfer's end is delivered
 // on CPU 0 at its next idle point like any other (A-WM8946-1): the end callbacks set the waiter's flag through
 // 0x50a6435b (iset_flg 0x5002bd77 in interrupt context, else set_flg 0x5002bd01; D), whose id names its core (the list

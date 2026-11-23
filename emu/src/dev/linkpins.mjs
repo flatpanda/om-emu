@@ -1,4 +1,4 @@
-// The MN's three GIO pins of the sub-CPU link (board scpu_link; docs/om1-scpu-spec.md 3.1, docs/hle-gaps.md 4.7.1):
+// The MN's three GIO pins of the sub-CPU link (board scpu_link; docs/om1-scpu-spec.md 3.1, docs/hle-gaps/4.7.md 4.7.1):
 // ready (MN pin 102, an input driven by the sub-CPU's PC3, with its GIO interrupt), request (pin 103, an output to the
 // sub-CPU's PB12) and reset (pin 107, an output to its reset). The far end is the sub-CPU (src/lab/scpudev.mjs, or a
 // later LLE), wired by the lab (src/lab/scpulink.mjs) with connect(): this device tells it the outputs' levels and it

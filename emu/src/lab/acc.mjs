@@ -1,4 +1,4 @@
-// The accelerometer (src/fw/models.mjs acc; docs/hle-gaps.md 4.7.3), stood in at its sample cache: what the firmware
+// The accelerometer (src/fw/models.mjs acc; docs/hle-gaps/4.7.md 4.7.3), stood in at its sample cache: what the firmware
 // runs natively and what the lab stands in for.
 //
 // Natively: the ACC module init (H-ACCINIT runs it in the boot's place, its device part stepped over), ACC_MAIN (task
@@ -13,7 +13,7 @@
 // With --rotate on (a body whose fact gives rotate) PER_ROTATE runs natively too (H-ROTINIT: its init in the boot's
 // place, which starts task 59): every 100 ms the corrected sample, the remap, mg, the magnitude gate, the orientation
 // with its hysteresis and, on a change, event 0x4020310, which the GUI answers by reading the orientation through the
-// getter (docs/hle-gaps.md 4.7.3); the tilt input then turns the camera all the way round. Off, the default, it does
+// getter (docs/hle-gaps/4.7.md 4.7.3); the tilt input then turns the camera all the way round. Off, the default, it does
 // not run, the orientation stays 0 and the tilt keeps the body's y axis dominant (A-ACC-2).
 //
 // The sample: a camera at rest reads gravity's reaction, 1 g along the body's up axis. The level camera's sample is the

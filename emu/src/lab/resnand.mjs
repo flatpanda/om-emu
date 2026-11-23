@@ -1,4 +1,4 @@
-// The resource tables, natively (docs/hle-gaps.md 4.5 "The resource tables"; MODELS res_nand: E143, E146, E147): the
+// The resource tables, natively (docs/hle-gaps/4.5.md 4.5 "The resource tables"; MODELS res_nand: E143, E146, E147): the
 // firmware's resource API (res_size 0x501a976d, res_version 0x501a971e, res_read 0x501a921f) looks a resource up in
 // tables that USTART_L's loader 0x501a8ca0 (its call at 0x500241d8) reads from the NAND: the sound index (type 2,
 // RES_MODE_SOUND) at 0x4e420000, the images block's (type 3) at 0x4e1e0000, the large-data block's (type 0x8000) at 0x458c0000 and

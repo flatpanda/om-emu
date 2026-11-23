@@ -80,7 +80,7 @@ export const G4_IMAGE = A(0x629887E4), JS_DIR_CODE = 0x1234, JS_QUERY = A(0x5042
 const g4set = () => fact('g4set', true);
 // UI_IN's group 0 (the power lever, the Fn lever, S1, 0x1229 and three of the SCPU's request lines) through the SCPU
 // interface's port and event words (src/dev/scpu.mjs, board scpu.events) on a body that gives the firmware's part
-// (src/fw/models.mjs scpu_port; docs/hle-gaps.md 4.7.2), null elsewhere: the bring-up attaches IRQ 320 and registers
+// (src/fw/models.mjs scpu_port; docs/hle-gaps/4.7.md 4.7.2), null elsewhere: the bring-up attaches IRQ 320 and registers
 // UI_IN's callback (H-SCPUIRQ, H-UIINPORT) and a group-0 input sets the ports' levels (H-SCPUPORT), so the IRQ's
 // handler, UI_IN's callback, its push and its flag run natively; a body without it pushes group 0 with S-KEYBITS
 const scpuPort = () => (BOARD.scpu.events && MODEL_INFO.scpu_port) || null;
@@ -93,7 +93,7 @@ export const SCPU_PORT_GROUP = 0;
 // sub-CPU's message 0x08, which PER_SCPU's poll takes and its handler 0x5005d43e gives the same producer (D)
 export const UIIN_PORT_SCAN = A(0x5005D36A);
 const uiinScan = () => fact('scpu.port_scan', true);
-// The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps.md 4.9): the machine
+// The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps/4.9.md 4.9): the machine
 // gets the transmitter, the hot-plug pin and the sink, the lab runs H-GIOSLOTS, and the input hdmi plug puts the sink
 // (S-HDMISINK, src/lab/edid.mjs) on the port and lets HDMI_PLUG_MS of lab time run, in which the firmware takes the
 // pin's interrupt, starts the transmitter, reads and parses the sink's EDID over the DDC and reports the connection to
@@ -121,7 +121,7 @@ export const DISPQ_SEND_RETURN = A(0x503EBA07), DISPQ_REPLY_RETURNS = [A(0x501C4
 // S-DISPQ's sends: E143's, the display manager's request (its lab list); a ported model's, every asynchronous DISPLAY
 // request of its build too (fact dispq.sends, src/fw/facts.mjs displaySends: E137's cmd 19 after about 5 s of idle)
 export const DISPQ_SEND_RETURNS = [DISPQ_SEND_RETURN, ...fact('dispq.sends', [])];
-// S-DISPQ's queue (src/lab/dispq.mjs, docs/hle-gaps.md 4.1.9): the synchronous send's own post, OlyQeWr(target,
+// S-DISPQ's queue (src/lab/dispq.mjs, docs/hle-gaps/4.1.md 4.1.9): the synchronous send's own post, OlyQeWr(target,
 // {msg, 16}, -1) at 0x5002e40c (a 5-byte call) with msg {its reply queue, get_tid's id, cmd, param}, after which it
 // waits for the reply on that queue (OlyQeRd(queue, -1) at 0x5002e422) and deletes it (0x5002bfec), D: the send's own
 // task waits while the DISPLAY task runs the command
@@ -162,9 +162,9 @@ export const SCP_STATES = [0x0401, 0x0403, 0x0404], CONTROL_SETTINGS_ID = 330;
 // the second reads of the module-9 tests that read the state twice, a 2 first and then a 3 or a 1 (D): ChangeOutline's
 // at 0x50abcfe2 (menu.mjs TAKEOVER_READERS) and the application's in 0x50abb032 at 0x50abb044. S-TAKEOVER's 2 ends
 // each test at its first read; the components' 0 (control camapp 3, 0x50ca4ae1) reaches the second (X: switch-scp's
-// LV and eye switch; docs/hle-gaps.md 4.3.6)
+// LV and eye switch; docs/hle-gaps/4.3.md 4.3.6)
 const MODULE9_SECOND_READS = [MM.TAKEOVER_READERS[1], A(0x50ABB044)];
-// S-USBCABLE: the module-9 readers the USB switch's code reaches (X, E143 2026-10-25: docs/hle-gaps.md 4.7, the
+// S-USBCABLE: the module-9 readers the USB switch's code reaches (X, E143 2026-10-25: docs/hle-gaps/4.7.md 4.7, the
 // inbound path in play) and the lab time a cable step runs
 export const USB_MODULE9_READERS = [A(0x50ABB01D), A(0x50B7A2DE)], USB_SETTLE_MS = 1500;
 // S-TOUCHMAP: HFW status -> GUI touch kind, by name (I)
@@ -403,7 +403,7 @@ export function mode_dial_names(v, n) {
 // dial (CONTROLS creative_dial) starts there too unless the session asks for another position (opts.creative_dial);
 // on E147 the second is COLOR (src/fw/models.mjs creative_dial). A body's MODELS entry can name another idle
 // position for a code (switch_idle): E147's 0x1909 is its still / movie switch, whose first two positions the
-// application takes for movie mode (src/fw/models.mjs switch_idle; docs/hle-gaps.md 4.1.13), so it starts at the
+// application takes for movie mode (src/fw/models.mjs switch_idle; docs/hle-gaps/4.1.md 4.1.13), so it starts at the
 // third; its positions change neither the picture-mode family nor the screen (X)
 export const SWITCH_IDLE_POSITION = 1;
 export const POSITION_SWITCHES = [];
@@ -418,7 +418,7 @@ export const POSITION_SWITCHES = [];
 // E139, E137, E142, E140, E125, E130; E134's polarity 1 gave it state 1, and only E134 took S2; the addresses are in
 // docs/model-survey.md, E144). Not in the group of the HDMI report 0x0501, which the firmware's group-4 producer
 // pushes from its own image (H-G4SET; the HDMI plug's report, a lens or grip input): there the USB connection is the
-// SCPU port scan's, reported through that producer (docs/hle-gaps.md 4.7, the 0x88 reply), which does not run, and the
+// SCPU port scan's, reported through that producer (docs/hle-gaps/4.7.md 4.7, the 0x88 reply), which does not run, and the
 // lab's level would be undone by the producer's next push (X: E146, E147). So the E143 family keeps 0x0400 at state
 // 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I). The
 // composite video cable 0x0500 (the E118 family's; its switch-table names EV_CONPOSITE_CONNECTED for state 0 and
@@ -440,7 +440,7 @@ export function mode_start() {
   return k < 0 ? 0 : k;
 }
 // The Fn lever at the session's start (E143): UI_IN's state 1 of 0x1223, API_LEVER_SW_1, the first of the lever's two
-// positions (docs/hle-gaps.md 4.3.8; D unless tagged). The lever read 0x50abdd4b answers 0 for that state and 1 for any
+// positions (docs/hle-gaps/4.3.md 4.3.8; D unless tagged). The lever read 0x50abdd4b answers 0 for that state and 1 for any
 // other, and the shell's enum names 0 API_LEVER_SW_1 and 1 API_LEVER_SW_2; as a power switch (property 15260 at 1, the
 // menu's "ON/OFF") the switch table gives SW_1 EV_POWER_SW_ON and SW_2 EV_POWER_SW_OFF. The firmware has no default
 // for a lever, but its factory store reads as the store of a camera at SW_1 (I): with the factory lever function
@@ -452,7 +452,7 @@ export function mode_start() {
 // default session showed S-AF (the gate's refusal, not the lever) and ran an AF at S1. A ported model's lever keeps
 // bit 0: what its start makes of the lever is not read.
 // The TAKE probe's sessions (--take probe) start at API_LEVER_SW_2 instead, the lever every result of the probe was
-// measured at before its position was known to matter (docs/hle-gaps.md 4.1.10, 4.2.3, 4.2.5): MF under control
+// measured at before its position was known to matter (docs/hle-gaps/4.1.md 4.1.10, docs/hle-gaps/4.2.md 4.2.3, docs/hle-gaps/4.2.md 4.2.5): MF under control
 // camapp 3, where TAKE_MAIN's take-ready runs with no request to TAKE_FOCUS and ends (RdyFcsRdy3, event 794), while
 // at API_LEVER_SW_1 it waits for an AF the lab's TAKE_FOCUS does not finish (RdyFcsRdy1, pending 0x5b, X: 4.3.8)
 export const LEVER_IDLE_STATE = 1, LEVER_PROBE_STATE = 0;
@@ -765,7 +765,7 @@ export class PlayLab extends N.NavLab {
   // blocked sends, by the calling task and the call site: a task makes one such call at a time, and tasks share the
   // sites (OlyQeWr's). Keyed by the site alone, a later call from another task named its queue in the blocked call's
   // record: the OXF main thread's send to PLAY_EXEC was reported as one to queue 6, the queue of UI_IN's key posts
-  // through the same site (X, docs/hle-gaps.md 4.3.2)
+  // through the same site (X, docs/hle-gaps/4.3.md 4.3.2)
   _tsnd_task() { return unpack('<H', this.sim.read(this.sim.u32(this.nk.kcb(96)) + K.TCB_ID, 2))[0]; }
   _tsnd_entry(lab, r) {
     if (r.a1 !== 0xFFFFFFFF) return;
@@ -862,7 +862,7 @@ export class PlayLab extends N.NavLab {
   // not display runs and stay S-MODACK's (camapp.mjs)
   _sync_send(hle, r) {
     // S-DISPQ's queue: another task's synchronous DISPLAY send while a DISPLAY run is open (task 168's cmd 4 or 17 in
-    // the OXF main thread's cmd 15, docs/hle-gaps.md 4.1.9) runs natively, as on the camera: S-DISPQ keeps its post
+    // the OXF main thread's cmd 15, docs/hle-gaps/4.1.md 4.1.9) runs natively, as on the camera: S-DISPQ keeps its post
     // and its task waits for the reply, which the kept message's run sends to the send's queue. Run at once (the
     // lab's synchronous send) it ran inside the other command's run and its task went on to post before that command
     // ended (X). The run's own task's sends (a handler's) stay the lab's
@@ -1224,7 +1224,7 @@ export class PlaySession extends N.NavSession {
     if (this.lens) this.lens.lock(this.images);
     // the second card slot (storage.mjs STORAGE.slots, a body with its facts): its card, the host's (env.card2) or
     // none; while the slot is empty its card switch is at the no-card level in the idle image, before the groups are
-    // pushed (S-KEYBITS: the level the camera's switch has without a card, docs/hle-gaps.md 4.8.12)
+    // pushed (S-KEYBITS: the level the camera's switch has without a card, docs/hle-gaps/4.8.md 4.8.12)
     this.card2 = null;
     if (STORAGE?.slots && this.storage_runs()) {
       this.card2 = env.card2?.open() ?? null;
@@ -1236,7 +1236,7 @@ export class PlaySession extends N.NavSession {
       if (!STORAGE.hls) throw new ValueError(`a start with no card: ${MODEL} runs no HLS media side in the lab (src/fw/models.mjs card_fs.hls), so its card switch is not modelled`);
       this.card_switch(STORAGE.hls.slots[0].switch, false);
     }
-    // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
+    // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps/4.4.md 4.4.2, D unless
     // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts
     // each to the GUI as index 109 with its kind (0x5108ba30), then waits for the GUI's answer 0x0400001f, the GUI's
     // forward of event 35 through the CA caller (0x51084994); it skips this while its touch inhibit mask (0x603660b4,
@@ -1381,7 +1381,7 @@ export class PlaySession extends N.NavSession {
     for (const id of this.held) this.key(id, 'up');    // released once the start is done (opts.held)
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
   }
-  // H-STARTKEY: USTART5's step between its marks 5_a and 5_b (E143 0x501ea096..0x501ea0a9, docs/hle-gaps.md), which
+  // H-STARTKEY: USTART5's step between its marks 5_a and 5_b (E143 0x501ea096..0x501ea0a9, docs/hle-gaps/4.6.md 4.6.5), which
   // the lab's start does not run (the 5_a..5_r row of USTART5's table), natively after S-CAMAPP's start as USTART5
   // runs after CA_MAIN's: UI_IN's state of MENU (its key state read 0x5014c015(0x0089): 1 released, 0 held, X) written
   // to the camera state kind 0x2751 index 0 (the write 0x5004188b), the store's property 4519, which Monitor Adjust's
@@ -1435,7 +1435,7 @@ export class PlaySession extends N.NavSession {
   // bring-up, then its task started and settled to its wait on its queue, which takes the lamps' requests (a send
   // without a timeout). E134's file layer asks it for the card's access lamp at each access, so with nobody reading
   // the queue it filled and the file module's task blocked in a send (X: S-RECFILE's first fopen, 53 sends;
-  // docs/hle-gaps.md 4.8.7). E143's UI_OUT also plays the operation sounds: the AF beep's request reaches it
+  // docs/hle-gaps/4.8.md 4.8.7). E143's UI_OUT also plays the operation sounds: the AF beep's request reaches it
   // (S-AFLOCK, camapp.mjs), and its second queue, UI_OUT_EXEC, which it answers itself, leaves S-MODACK's queues
   // (camapp.mjs install)
   ui_out_bring_up() {
@@ -1472,7 +1472,7 @@ export class PlaySession extends N.NavSession {
   // byte by the firmware's own init, which UI_IN's start stage (not run) calls first: group 0 then decodes no code at
   // bring-up. A later registration of another callback is refused (none has the firmware's evidence); PER_SCPU's own
   // callback is registered natively before, at its task's start (H-SCPUSTART, src/lab/scpulink.mjs), and acts on the
-  // message port's events (docs/hle-gaps.md 4.7.2)
+  // message port's events (docs/hle-gaps/4.7.md 4.7.2)
   scpu_port_bring_up() {
     const lab = this.lab, ev = BOARD.scpu.events, { irq: [handler, level], register, callback, old_state } = this.scpu_port;
     const g0 = uiin_layout(lab.image).groups[SCPU_PORT_GROUP];
@@ -1960,7 +1960,7 @@ export class PlaySession extends N.NavSession {
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
   }
-  // S-USBCABLE (docs/hle-gaps.md 4.10.1): the USB cable at the event level. The producer of EV_USB_CONNECTED is the
+  // S-USBCABLE (docs/hle-gaps/4.10.md 4.10.1): the USB cable at the event level. The producer of EV_USB_CONNECTED is the
   // sub-CPU's port scan: PC13 (GIO port 45) high posts the MN the message 0x08 {1} (scpudev.mjs port, D), PER_SCPU's
   // dispatch 0x5005d43e gives it to UI_IN's group-4 producer as the switch 0x0400 (H-UIINSCAN's path, X), and the
   // application's filter of the code 0x02020400 reads module 9 (0x50abb01d, then 0x50b7a2de, X 2026-10-25). Those
@@ -2040,7 +2040,7 @@ export class PlaySession extends N.NavSession {
     if ((action === 'remove') !== !!card?.present) throw new ValueError(`card ${action}${at}: the card is ${card?.present ? 'in' : 'out of'} the slot already`);
     if (media.busy()) throw new ValueError(`card ${action}${at}: the media layer is busy (a format or a card change runs)`);
     // (E139, E134 and E125: the HLS side's facts read the first slot's switch and media kind alone, src/fw/facts.mjs
-    // mediaHls, so the second slot's change at run time is not modelled there; docs/hle-gaps.md 4.8.17)
+    // mediaHls, so the second slot's change at run time is not modelled there; docs/hle-gaps/4.8.md 4.8.17)
     if (!media.f.slots[drive]) throw new ValueError(`card ${action}${at}: ${MODEL}'s HLS media side has no second slot's switch and media kind read (src/fw/facts.mjs mediaHls): the second card goes in at the start only (OM_EMU_CARD2)`);
     const sw = media.f.slots[drive].switch, tag = `card ${action}${drive ? ' 2' : ''}`, lab = this.lab;
     if (card === null) {                                                           // a new card for the second slot
@@ -2165,7 +2165,7 @@ export class PlaySession extends N.NavSession {
   // chain with a sleep in it is not at its end when the settle returns: E146's and E147's touch driver sleeps 1 ms
   // after it wakes the controller, at the end of the panel's open, of its close and of each set of the gesture mask
   // (D: the OlyTaSS after the write of the controller's power mode register, which E143's wake does not have; the
-  // addresses are in src/fw/models.mjs and docs/hle-gaps.md 4.4.4), so their TFT start ended at the power-on state
+  // addresses are in src/fw/models.mjs and docs/hle-gaps/4.4.md 4.4.4), so their TFT start ended at the power-on state
   // with no frame and their switch to the TFT before the re-entry (X). Returns {ns, slices, asleep: the tasks still
   // asleep at the bound}; a body without chain_sleeps, and a chain none of the tasks sleeps in, gets no lab time
   // (slices 0). The mutant no-chain-rest leaves it out (test/test_dispswitch.mjs's control).
@@ -2243,7 +2243,7 @@ export class PlaySession extends N.NavSession {
     // the module-9 reads a switch may make: ChangeOutline's first (S-TAKEOVER's state 2 ends it there, X) and the
     // application's; under control camapp 3, where the components write the state themselves (0x50ca4ae1), also
     // the second reads that state 0 reaches (MODULE9_SECOND_READS), not the other readers of the session's
-    // S-TAKEOVER scope (camapp.mjs CMP_MODULE9_READERS: none is read at a switch, X; docs/hle-gaps.md 4.3.6)
+    // S-TAKEOVER scope (camapp.mjs CMP_MODULE9_READERS: none is read at a switch, X; docs/hle-gaps/4.3.md 4.3.6)
     const may = new Set([MM.TAKEOVER_READERS[0], ...CA_MODULE9_READERS,
       ...(this.camapp?.native_tra ? MODULE9_SECOND_READS : [])]);
     if (reads.some((x) => !may.has(x))) problems.push(`module 9 read from ${show(reads.map(hex))}`);
@@ -2261,7 +2261,7 @@ export class PlaySession extends N.NavSession {
     const indices = [CONNECT_INDEX];
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
   }
-  // SWITCH under control camapp 3 (docs/hle-gaps.md 4.3.10): the firmware's own output change. The lab gives two
+  // SWITCH under control camapp 3 (docs/hle-gaps/4.3.md 4.3.10): the firmware's own output change. The lab gives two
   // inputs: the eye sensor's state (H-EYESTATE, whose setter publishes EV_EYESENSOR_STATUS natively) and the
   // application's choice of output (S-OUTDISP answers INTERNAL_EVF while this.device is the EVF). From there the
   // firmware runs (X): the application's display change asks getOutputDisplay, on the way to the EVF stops the VSC

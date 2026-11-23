@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The accelerometer, the level gauge and Level Adjust in a play session (src/lab/acc.mjs, src/fw/models.mjs acc;
-// docs/hle-gaps.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 and E147 also give the fact):
+// docs/hle-gaps/4.7.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 and E147 also give the fact):
 //   L1  the probe ran natively through S-ACCREG: open (6, 107), the WHO_AM_I read answered with the value the probe
 //       wants, the two set-up writes, close; the probe's success halfword is 1; ACC_MAIN waits in its cycle; the
 //       stand-ins are listed
@@ -58,7 +58,7 @@ const TILTS = [[5, 0], [-3, 0], [0, 6], [2, -9], [-4.5, 7.5]];
 // R2's boxes (X, E143's TFT): the gauge for portrait with its arc at the left and its bar at the bottom (EXIF 8), and
 // the other way round's bar at the top (EXIF 6)
 const ARC_LEFT = [262, 226, 310, 372], BAR_TOP = [380, 168, 520, 200];
-// R1's steps, from level: [roll, pitch, the orientation word 0..5, the getter's EXIF code] (D, docs/hle-gaps.md 4.7.3)
+// R1's steps, from level: [roll, pitch, the orientation word 0..5, the getter's EXIF code] (D, docs/hle-gaps/4.7.md 4.7.3)
 const ROTATIONS = [
   [48, 0, 0, 1], [52, 0, 3, 8], [42, 0, 3, 8], [38, 0, 0, 1],          // portrait past 50 degrees, landscape below 40
   [-48, 0, 0, 1], [-52, 0, 1, 6], [-42, 0, 1, 6], [-38, 0, 0, 1],      // the other way round
@@ -130,7 +130,7 @@ function l2(mutant = null) {
     // after it, and the application's work on it held CPU 0 through one 129 ms ACC_MAIN cycle, 11 in the second (X).
     // 11 to 13 cycles a second: an 80 ms cycle (A-ACC-2) that other tasks' work stretches to about 100 ms comes a few
     // times a second with either lens; on E146 with the native lens three of them fall in the first second after the
-    // shooting screen, while the application shows the lens's focal length (X: 11 there, 12 with S-LENS; docs/hle-gaps.md
+    // shooting screen, while the application shows the lens's focal length (X: 11 there, 12 with S-LENS; docs/hle-gaps/4.4.md
     // 4.4.3)
     s.wait(500);
     const [, c0] = cache(lab, 'raw');

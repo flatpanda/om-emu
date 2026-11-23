@@ -1,4 +1,4 @@
-// S-DISPQ's queue (src/lab/dispq.mjs, src/lab/play.mjs; docs/hle-gaps.md 4.1.9), E143:
+// S-DISPQ's queue (src/lab/dispq.mjs, src/lab/play.mjs; docs/hle-gaps/4.1.md 4.1.9), E143:
 //   dispqUnits     the queue discipline without firmware: a message posted while a DISPLAY run is open runs after
 //                  the outermost run's end, in the order of the posts, a kept message's own posts behind the ones
 //                  before it, one at a time; a run nested in an open one (a handler's send) runs at once; a throw

@@ -9214,7 +9214,7 @@ Independent stops the session (below).
   test_eraseall passes its 18 checks on each (the locked picture kept, the second erase, the next picture, Save's
   command 6 refused). The other bodies run the media control in their application (S-MDAEND, which still stops at
   any command but the format): there the test holds that no S-MDACTRL erase all is offered.
-- **Open.** The copy all (2: a second card; its end check), the unlock all (5: its start notifies the Wi-Fi remote
+- **Open.** The copy all (2: run on E143 since 2026-11-22, 4.8.21), the unlock all (5: its start notifies the Wi-Fi remote
   take component, CapWif_WifiRemoteTake's Wifi_Notify_Callback `0x50bd8f5e` with the event `0x041b0055`, before
   the API `0x503ff28b(media, 0)`, API `0x70025`, which posts FILECLBK code 36, OBJ_UNLOCK, with the option
   `0x40000`; that notification is not read further, so the command stays refused), the rating-exclusive erase all
@@ -9462,6 +9462,39 @@ object, 2 or 3) writes the second slot's +38000, +38016, +38020 and +37898 itsel
   and the second slot's own quality and size from 20785, 20801, 33105 and 33121, which the menu would set); REC_MAIN's
   first-slot copy (`0x5053b832..0x5053b968`) still not run (S-RECREQ: the record's first-slot fields are what TAKE's
   fill and the template leave); E146.
+
+#### 4.8.21 The media control's copy all: S-MDACTRL's command 2 (2026-11-22; D unless tagged, addresses E143's)
+
+- **Why.** 4.8.15 left the copy all (command 2) open: it needs a second card, and its end check was not read.
+- **The start (D).** executeCopyAllStart `0x50ceba68` takes the start record (`0x50ce7034`), registers for the file
+  module's progress event `0x04020011` as the format's start does, keeps the count of the record's media (+2) at the
+  record's +20 (`0x503fdc1d`, api_picfile's API `0x70011`: the DCF count of the drive, `0x50874b39`, the word at
+  `0xa33aa5b4 + 52 * drive`, fact dcfCounts) and calls the picture file API's copy all `0x503fd811` (API `0x7000e`)
+  with d0 the record's +2 and d1 its +4. Both below 2, it builds a 56-byte block with +2 and +28 the two drives
+  (`0x503f1878` each), +12 0, and posts FILECLBK code 38 through the API's sender (`0x503fd92e`, target 17), returning
+  the token (`0x503fd96c`); either media 2 or more returns 0. getCopyAllProgress `0x50cebaf6` answers 100 for an
+  argument of 100, else the copied of the total from `0x5041899b`, times 100.
+- **The end check (D).** `0x50cec5d1` reads the record's media's count again (`0x503fdc1d`); for command 2 (the record's
+  byte +0) a count still the start's (+20) is the error `0xf0000024`, so the record's +2 is the card copied to, and a
+  copy that adds no picture is the component's error.
+- **S-MDACTRL's copy all** (`emu/src/lab/media.mjs`, `src/fw/models.mjs` E143 `card_fs.hls.ctrl.copy_all` and
+  `ctrl.copy`): at TRA 1511 with command 2 the stand-in checks that the copy API and the count open with their own API
+  ids' loads in the build, that both media are the lab's two slots and differ, calls the count and then the copy all
+  natively with the request's media and option in d0 and d1 (that the start record's +2 and +4 are the request's media
+  and option is I), drives 1513 from getCopyAllProgress, and at the reply runs the end check: an unchanged count stops
+  the session naming `0xf0000024` (the component's error kinds are not modelled), else the end as the erase all's
+  (no remount) and 1514 {56, 72, 0, 0}. E143 alone: the other bodies' ids are not read.
+- **What the menu does (X, E143, `emu/test/test_copyall.mjs`, not wired into `bin/test.mjs`).** A blank card
+  formatted by the lab in slot 1 of a first session, then in slot 2 of a second session with another blank card in
+  slot 1 (both mount, flags 1, 1); two pictures on card 1. The playback menu's File page draws the row as
+  `Copy All ` (a trailing space). OK on it opens SS_EDIT/ID_ST_EDIT_FROM_MENU with the title alone (no text but the
+  title: the choice it shows is drawn without strings, not read), OK there shows Yes / No, UP and OK go back to the
+  menu's File page, and no media control start comes (S-MDACTRL's `started` stays null): the copy all is not sent as
+  TRA 1511 from this walk, so the stand-in has not run. Why the application returns without the start is not read:
+  whether the first screen's OK picks a direction or a card that the walk leaves wrong, or the edit state's Yes
+  tests something of the second card first, is ?. The test's last three checks fail for it (3 of 6 pass).
+- **Open.** The SS_EDIT copy screen's choice and the path from its Yes to the media control's start (or the test that
+  ends it); then the copy run natively through FILECLBK's code 38 and card 2 read back.
 
 ### 4.9 HDMI and DisplayPort
 

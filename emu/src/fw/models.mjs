@@ -291,10 +291,19 @@ export const MODELS = {
         // file API's unlock all, CapWif_WifiRemoteTake's instance getter 0x50bd6bb9 (the singleton 0x60362b64, made
         // at the first call) and its Wifi_Notify_Callback 0x50bd8f5e with the event 0x041b0055 (d1 0, a1 0, a0 the
         // instance; 0x50cebc9d..0x50cebcad, D; the same three calls on E146, E147 and E148, D)
+        // copy_all: the start table's command 2 (executeCopyAllStart 0x50ceba68, getCopyAllProgress 0x50cebaf6,
+        // executeCopyAllEnd 0x50cebb61; getMediaCtrlCBC gives 56; docs/hle-gaps.md 4.8.21). The start registers for
+        // 0x04020011 as the format's, keeps the count of the record's media (+2) at the record's +20 (api 0x503fdc1d,
+        // API 0x70011: the DCF count of the drive, 0x50874b39) and calls the picture file API's copy all
+        // (0x503fd811, API 0x7000e) with d0 the record's +2 and d1 its +4: both below 2, it posts FILECLBK code 38
+        // with the block's +2 and +28 the two drives and returns the token (0x503fd935..0x503fd96c). The progress is
+        // the copied of the total (0x5041899b, getCopyAllProgress). The end check (0x50cec5d1) answers 0xf0000024 for
+        // command 2 where the +2 media's count is still the start's (D)
         ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5, rating_erase: 6,
           wifi: { instance: 0x50BD6BB9, notify: 0x50BD8F5E, event: 0x041B0055 }, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
           api: 0x503F0820, reply_queue: 0x600431D0, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
-          status: 0x503F0BD7, flag: [0x50AB4F75, 15261] },
+          status: 0x503F0BD7, flag: [0x50AB4F75, 15261],
+          copy_all: 2, copy: { api: 0x503FD811, count: 0x503FDC1D, progress: 0x50CEBAF6, no_copy: 0xF0000024 } },
         // The HLS mount state words, by media kind (getter 0x50aca51d, setter 0x50aca6b1(kind d0, a0 -> value)):
         // CapMed_MediaManager's unmountPreprocess (0x50bb8292) sets 0 (0x50bb8288), S-CARD's start value is 8.
         // CapMed's notifications to the application's media control (event 711 through the reception's slot 2):

@@ -1151,6 +1151,13 @@ export class MenuLab extends T.TextDisplayLab {
     if (q === this._queue(D.DISPLAY_QUEUE)) return super._sync_send(hle, r);
     for (const [qa, c, ra] of DROPPED_SENDS) {
       if (q === this._queue(qa) && cmd === c && site === ra) {
+        // H-PWRSEND: where the power manager runs (H-PWRSTART, src/lab/power.mjs), its queue's send goes to it
+        if (this.pwr_main_tid != null && this.lt?.tid != null && this.nk.state(this.pwr_main_tid) !== 0x10) {
+          this.kernel.events.push(['send', `queue ${q} cmd ${cmd} (H-PWRSEND, native)`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+          (this.pwr_sends ??= []).push([q, cmd, h8(site)]);
+          this.passthrough(r);
+          return;
+        }
         this.kernel.events.push(['send', `queue ${q} cmd ${cmd}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
         this.dropped_sends.push([q, cmd, h8(site)]);
         hle.finish(r, { d0: 0 });

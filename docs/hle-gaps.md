@@ -7620,6 +7620,25 @@ below, no code change).
   which accesses changed index with it on each body, and whether a channel now reaches a register page a lab stub
   denies (the accelerometer probe's stop at `0x98500028`, 4.7.3), is not read.
 
+#### 4.7.13 The menu entry's send to the power manager (E143, 2026-11-22; D unless tagged)
+
+- **The send:** `0x50045462` is `movhu (0x600431d8),d0; mov 10,d1; mov 0,a0; call 0x5002e39d`, a power-manager API
+  function: the synchronous send of cmd 10, param 0, to queue 10, the word `0x600431d8` (om1-menu-spec, S-SEND).
+  `0x5002e39d` posts `{reply queue, tid, cmd, param}` through OlyQeWr (`0x5002c151`) and reads its reply queue with
+  OlyQeRd (`0x5002c067`), timeout -1. Queue 10 is PWR_MAIN's (task 10, entry `0x50043cdb`; 4.7.4: it waits on flag 11
+  and dispatches its queue's messages through `0x50043f55`).
+- **Why it was dropped (X):** the menu lab and the nav lab do not start PWR_MAIN, so the send would wait for good;
+  S-SEND answered it with 0. In play sessions on E143, E146 and E147 H-PWRSTART has started PWR_MAIN since
+  2026-10-29, but menu.mjs's `_sync_send` still dropped the send there too.
+- **Built: H-PWRSEND.** Where PWR_MAIN has been started (the lab's `pwr_main_tid`, set by H-PWRSTART) and the send
+  comes from a lab task, the send at the S-SEND site goes to the firmware. X (E143, `session.mjs menu`): the GUI's task
+  posts it while PWR_MAIN waits (state 4), PWR_MAIN takes it, and the send returns on the same task with d0 0. The
+  menu opens to SS_MENU/ID_ST_MENU with the same frame (`c1bdbd50b81d56b4`) and the same lab time at the step's end
+  (3.704859140 s) as with the drop. S-SEND stays for the menu and nav labs, where PWR_MAIN does not run. The E144
+  family does not call the helper from the menu entry (`overrides-E144.mjs`, site null), so neither applies there.
+  E146 and E147 run PWR_MAIN but were not run with this change (?).
+- **Open:** what cmd 10 does in PWR_MAIN (its case in the event table that `0x50043f55` dispatches) is not read (?).
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

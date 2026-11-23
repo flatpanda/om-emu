@@ -139,6 +139,7 @@ export function startPowerManager(session, f) {
   if (lab.nk.state(tid) !== 0x4 || unanswered.length || errlog.length) {
     throw new PowerError(`H-PWRSTART: after the power manager's start: task ${tid} state 0x${lab.nk.state(tid).toString(16)}, frames ${JSON.stringify(frames)}, errlog ${JSON.stringify(errlog)}: not waiting with its requests answered`);
   }
+  lab.pwr_main_tid = tid;                                                         // H-PWRSEND (menu.mjs): its queue's sends go to it
   const later = (session.opts?.power_later ?? process.env.OM_POWER_LATER) === 'on' ? laterInits(session, tid) : null;
   return { tid, frames, later };
 }

@@ -725,7 +725,8 @@ Each item is what is left of a done milestone, with its blocker. The owner docum
 (Monitor Adjust, EVF Adjust) and `0x511bf765` (Bluetooth); class 0x8013 is not decoded. Reference inputs not read from
 code: the paint pass's FILL colours 127 / 255 / 31 (observed), the row state s (level 0 of `0x511bdb2c` not decoded;
 two Setup rows have s != 0 under the defaults, observed), the cursor-memory rule for values outside 1..rows. S-SEND
-drops the menu entry's synchronous send to queue 10 cmd 10 (`0x50045462`), whose receiver does not run; S-PROP answers
+drops the menu entry's synchronous send to queue 10 cmd 10 (`0x50045462`) in the menu and nav labs, where its receiver
+PWR_MAIN does not run; in play on E143 it goes to PWR_MAIN natively (H-PWRSEND, hle-gaps 4.7.13); S-PROP answers
 the GUI's reads of the output device. DrawText's step-7 alignment is checked against the firmware only for right
 alignment. The navigation rules are observed (X), not decoded: the 0x9031 / 0x9032 handlers, the tab actuator
 `0x511bde6b`, the page and tab edges. The camera path above sendEvent (the reader of queue 6, long-press and repeat

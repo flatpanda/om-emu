@@ -557,6 +557,7 @@ export class Player {
     // the power manager natively, its IO expanders' stand-in where the body has them, and the power-off at the lever's
     // off (power.mjs)
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
+    if (this.session?.lab?.pwr_sends?.length) used.push('H-PWRSEND');                      // the menu entry's queue 10 send to the power manager (menu.mjs)
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.usb_used) used.push('S-USBCABLE');                                   // a usb input ran

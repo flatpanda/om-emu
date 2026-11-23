@@ -1500,6 +1500,39 @@ E143's block 0100.
   `0x606f1434`, filled at run time); the caller of `0x5039aa5b` and the sender of its 15 / 16; then a session that issues
   15 and a test per command.
 
+#### 4.1.15 The 0x5002e56e requests and TAKE_FUNC 81 (2026-11-22; D unless tagged, addresses E143's)
+
+4.1.11 left three direct posts S-MODPOST does not take: the two requests through `0x5002e56e` (to ADJ_EXEC and
+BC_EXEC, which wait on the caller's reply queue) and `0x503a091b`'s TAKE_FUNC 81. This round reads who makes the two
+requests; neither runs in a workload of the lab, so S-MODPOST gains no entry and no test (no code change).
+
+- **The helper.** `0x5002e56e` allocates two buffers of 16 and 12 bytes through `0x500030e0` (`0x5002e575`,
+  `0x5002e57f`), calls `0x5002cdb7` with a0 = `0x60087756` (`0x5002e59a`) and stores its d1 and a0 arguments at
+  +8 and +12 of the first (`0x5002e59f`, `0x5002e5a2`) before the post (the rest as 4.1.11 reads it). A byte scan of
+  the run-time image for `call` (dd, d32) to it finds 14 sites: `0x502ce889`, twelve in `0x510212db..0x51036550` and
+  `0x5180e1ae`; 4.1.11's two are those whose queue is one of S-MODACK's.
+- **ADJ_EXEC's request** (`0x5180e1ae` in `0x5180e13d`). Static callers (the firmware map's,
+  `emu/out/fwmap/E143`): `0x5180e13d` is called from three sites in `0x51882d7b` (`0x51882dd0`, `0x51882e51`,
+  `0x51882ede`; the scan's dd calls), which lies in the map's CAPI range `0x5187d62f..0x51883e5b` (the camera API
+  for PC-driven adjustment: OpenSession, Set/GetCalibData; `emu/fwmap/E143.labels.json` gap@0x5180cafc), through
+  `0x51882f16` and `0x5187db65`, which the factory adjustment's handler table calls (`0x5180f4ff..0x51810d0e`, the
+  map's ptr-data entries, 60 and more). None of them was entered in the map's coverage workload (X, the map's
+  `entered`, run 2026-10-23). The request is the factory/service adjustment's, from a PC session.
+- **BC_EXEC's request** (`0x51036550` in `0x51036510`). Called from `0x51035462`, `0x51035dd4` and `0x51035e1e`
+  (cd, d16), in the task entry `0x5103518a` directly and through `0x5103565f`; the map labels `0x5103518a` FIRMUP_SRV,
+  the firmware update's server task (gap@0x51031b6e, part `0x51034a0c..0x510376f1`: FIRMUP_CLI, FIRMUP_SRV,
+  FIRMUP_LED). Not entered in the coverage workload (X). The request is the firmware update's.
+- **Result.** Both requests come only from tasks the lab does not run in any session (the factory adjustment's PC
+  API and the firmware update's server, I for "any": the map's coverage and the probe of 4.1.11, whose camapp 1, 2
+  and 3 workloads saw neither post, X). Starting them natively would mean emulating a firmware update or a tethered
+  adjustment session, outside the lab's scope; standing in for their replies would answer a request no session
+  makes. They stay as 4.1.11 records them: a post to the kernel's queue, recorded with its sender and task, which the
+  blocked-send guard names. S-MODPOST's list and the takeRequests rule are unchanged; E146 and E147 were not read
+  for these senders.
+- **Open.** `0x503a091b`'s TAKE_FUNC 81: what sets its word 1 was not read this round (4.1.11's "what the stack
+  held" stands); whether ADJ_EXEC's and BC_EXEC's receivers would reply (their tasks' handlers not read); the other
+  twelve `0x5002e56e` sites' queues (not one of S-MODACK's, 4.1.11).
+
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
 - **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..

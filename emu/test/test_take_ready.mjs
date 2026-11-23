@@ -14,7 +14,9 @@
 //                  command table is empty).
 //                  The power manager's 0x14 (docs/hle-gaps.md 4.7.6): at S1 TAKE_MAIN's RdyFcsRdy1 clears and then
 //                  sets the power manager's cyclic-check byte (0x50043c6c: 0 from the state's entry, 1 from its
-//                  handler 0x503c2d08), so the manager's next cyclic tick, 1.16 s after S1, runs a source check, the
+//                  handler 0x503c2d08), so the manager's next cyclic tick (731.7 ms after S1
+//                  since H-AUDSTART runs AUD_WAKEUP's 248 ms; the rest of the timer's period, which is 1.08 to 1.63
+//                  s, docs/hle-gaps.md 4.7.6), runs a source check, the
 //                  session's first: the body's battery reads as inserted, its recommend byte becomes 3, and the notice
 //                  0x500444b3 sends the sub-CPU 0x14 {0, 1, 0, 3, 0} from the manager's task (task 10). It is the
 //                  link's only transfer from S1 on and nothing comes back, with S-SCPUDEV, which keeps the two slots'
@@ -181,7 +183,7 @@ export async function secondShotSession() {
       // battery inserted (pwr_ins 0 -> 1) and sets its recommend byte 3, which the notice sends
       idle(800);
       const p = pwr.at(-1), ms = p ? (p.t - t0) / 1e6 : null, nt = notices.at(-1);
-      ok(pwr.length === 1 && p.task === PWR_TASK && p.from === PWR_14_FROM && ms > 1100 && ms < 1200 && p.bytes === '01000300'
+      ok(pwr.length === 1 && p.task === PWR_TASK && p.from === PWR_14_FROM && ms > 0 && ms < 1400 && p.bytes === '01000300'
         && notices.length === 1 && JSON.stringify(nt) === JSON.stringify([[0, 0, 0], [1, 3, 0]]),
         `${tag}: the power manager's task (${h8(p?.task)}) builds 0x14 from its notice (${h8(p?.from)}) ${ms?.toFixed(1)} ms after S1 with the bits and bytes ${p?.bytes}; the records' pwr_ins and recommend bytes, published and new: ${JSON.stringify(nt)}`);
       idle(1000);

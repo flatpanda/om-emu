@@ -1094,7 +1094,8 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
     takes the write, and the stop is gone.
 - **Tests (X).** secondShotSession's two sessions:
   - with S-SCPUDEV: the first S1's record (focusSession's S1_EXP) and the 794 build in the event task, the release's
-    stop and phase 111, phase 111's table, the stop at `0x14` (the power manager's task, 1.1 to 1.2 s after S1);
+    stop and phase 111, phase 111's table, the stop at `0x14` (the power manager's task, within 1.4 s of S1: 1.16 s until 2026-11-22, 731.7 ms since
+    AUD_WAKEUP runs on CPU 2 at the bring-up, 4.6.7, which moves the timer's phase at S1);
   - with the sub-CPU's firmware: the link's one transfer, the state 1.8 s after the release, the second S1 and its
     release (each in phase 111's default case), and MENU.
   - 2026-11-11 (4.7.6): both sessions run both parts (24 of 24), with the `0x14`'s cause and the bytes each sub-CPU

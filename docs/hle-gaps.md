@@ -8896,6 +8896,48 @@ body is named.
   the argument 2 on the open and function 37 on the close (`0x502f6ba0`, `0x502f6cf2`; the TV's sound, I). The lab
   opened NTSC for the EVF until 2026-10-30 (`docs/model-survey.md` finding 35); no video output is opened now.
 
+#### 4.9.1 S-OUTDEV on E146 and E147: the plug asks for no output (2026-11-22; addresses each body's)
+
+Status: not stood in. With `--hdmi on` E146's and E147's application never sends TRA 588 at the plug, so S-OUTDEV (gated
+to E143) has nothing to take; lifting its gate alone changes nothing. The stop is one boot-time word the GUI's connect
+check reads, and past it a second stop in the HDMI open's display run. Found with exec probes and write watchpoints on a
+session with `--hdmi on` (X unless tagged).
+
+- **Where E146 leaves E143's path (X):** both bodies' UI_IN post the same connect report to queue 6 (`[0xa0000,
+  0x02020501, 0, 1]`) and both applications send DISPLAY cmd 18. On E143 the GUI then generates its internal input 131
+  with parameter 5 (written at `0x510505d6`, `mov 131,d0`, by `0x5105053c(7)` from `0x510643c1`, the handler of GUI
+  events `0x1000060` / `0x1000064` / `0x100006e` in the table at `0x512c7138..`; E146's table `0x512e1cc4..`, handler
+  `0x510723d0`), which the input table `0x614b5a14` (identical on E146 at run time `0x614d50b4`) maps to CA event
+  `0x9601`; CA_MAIN's state machine (`0x510bb95b`) dispatches it to slot 12 of the vtable at run time `0x615631a0`
+  (`0x512053fe`), which calls ConnectChangePlay's switch (`0x510c412a`, event 5) and doHdmiConnectChange `0x510c4672`,
+  which builds TRA 588. On E146 CA_MAIN receives only `0xf000` and no `0x9601`, and neither `0x510d1190` nor
+  `0x510d173b` (E146's ConnectChangePlay and doHdmiConnectChange) runs; E147 likewise sends no TRA 588.
+- **The gate (D, X):** the caller of the input-131 handler (E143 `0x51080e83..0x51080f65`, E146
+  `0x5109166e..0x51091750`) first asks the camera API's vt+56 (query 65803) and on 1 sets state 21 and returns. E143's
+  query (`0x50abdbb5`) answers 1 when the GUI check `0x50abaab7` returns 0; E146's (`0x50ac7b59`) does the same with
+  `0x50ac4a38` and also answers 1 when `0x503c53db(15294)` returns 1 (0 in the lab, X). The check: connected when
+  UI_IN's switch `0x0501` reads 0, unless switch `0x0400` reads 0 and the word E143 `(0x6035e9a0)` (getter `0x50ab4e0f`)
+  is 0 (E146: and the word `(0x60360754)`, getter `0x50b8758b`, is 0 too). In the lab `0x0501` reads 0 and `0x0400`
+  reads 0 on both bodies after the plug (X), so the answer is the word's: E143's is 1, E146's `(0x6035d66c)` (getter
+  `0x50abedca`) is 0, and E146's query answers 1 (X).
+- **The word (D, X):** it is set once at the boot, by E143 `0x50b7a492..0x50b7a4b2` (E146 `0x50b8732a..0x50b8734a`, E147
+  `0x50b9280b` the setter's call): when switch `0x0400` reads 0 and `0x5040dad7()` (E146 `0x50409695`, E147
+  `0x5041779c`) returns 1, the setter `0x50ab4e06` (E146 `0x50abedc1`) writes 1 (X: E143's write at boot, a watchpoint).
+  E143's `0x5040dad7` returns 1 when `0x5102b555()` is not 1. E146's and E147's add a read of data object 2164 (`0x874`)
+  through `0x503eb4a0` (E147 `0x503f91d9`), the settings read `0x500423e1` (E143's `0x500417da`), and return 0 when its
+  result is above `0xfe000000`. In the lab the read answers `0xfffffffe` on both bodies (X), so the word stays 0. What
+  object 2164 holds, and why the lab's store answers -2 for it (it is not among the reads E143's bring-up makes), is ?.
+- **Past the gate (X, an experiment, not kept):** with E146's word written 1 before the plug and S-OUTDEV's gate lifted,
+  E146 follows E143: TRA 588 from `0x50ac70e9`, S-OUTDEV's event 224 `{8, 0, 0}` to CapIod, CapIod's open and DISPLAY
+  cmd 45. S-DISPQ's run of cmd 45 then stops: "all tasks blocked (lab task 163 state WAI)" inside the display run
+  (`src/lab/display.mjs` task_message), with the opened word `0x0d000005`. Which wait E146's HDMI open makes there (its
+  HDMI task of its own, above, or another reply than E143's AUD_EXEC answer) is not read yet.
+- **Next:** what data object 2164 is and what the camera's store answers for it (then a stand-in for its read, or the
+  word, registered as S-/A- with its evidence); then E146's HDMI open in the display run; then lift S-OUTDEV's gate by a
+  facts rule for the bodies whose open runs. No E143 address is new (the HLS addresses S-OUTDEV uses are all placed on
+  E146 and E147 by the port already: CapIod's singleton E146 `0x50bc2c21`, the event constructor `0x50bca68b`, the
+  property setter `0x503c5362`; E147 `0x50bceae3`, `0x50bd805e`, `0x503cf304`).
+
 ### 4.10 USB, PTP and PictBridge
 
 - **Tasks (D):** PC_EVENT 0x5d, PC_HOSTCOM 0x5e, PC_PCMRECLINK 0x5f, PC_PTP 0x60, PC_UAM 0x61, PC_USB 0x62 (queue 0x3c),

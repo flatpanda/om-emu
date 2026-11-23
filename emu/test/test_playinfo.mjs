@@ -49,9 +49,11 @@ const BUILTIN_FOCAL_MM = { E145: 4.5, E129: 4.5, E132: 4.5 };
 // a start that waits at a prompt S1 does not leave: the keys that answer it (bin/modelcheck.mjs START_PROMPT: E132's
 // date and time setting has no Cancel, UP and OK five times set the clock; E145's and E129's S1 leaves theirs)
 const START_KEYS = { E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'] };
-// the bodies whose OK in playback opens nothing (X, 2026-11-10: the state and the frame stay; why is not read, ?),
-// held strictly: a body that opens the wizard fails here until it is taken out
-const OK_OPENS_NOTHING = new Set(['E147', 'E144', 'E139', 'E134', 'E148']);
+// the bodies whose OK in playback opens nothing, held strictly: a body that opens the wizard fails here until it is
+// taken out. E147, E144, E139, E134 and E148 were (X, 2026-11-10) until the idle image released every type-2 UI_IN key
+// (play.mjs TYPE2_KEYS, 2026-11-22): each held one pressed from the start (E147's 0x120b), and with it held again OK
+// opens nothing (X, E147 and E144). None is left
+const OK_OPENS_NOTHING = new Set([]);
 const WIZARD = 'SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY', SINGLE = 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE';
 export async function playInfoSession() {
   const bad = [];

@@ -1111,7 +1111,9 @@ copy in place, is not read; stock firmware runs nothing and reads nothing there 
 6: `0x60045e9c`) in the same patch to load more; the lab reads the ends from the patched image. The flash view
 (`0x50000000 +` offset) keeps every patched byte. Each session also sets the section loader's copied mask, one bit per
 section (S-SECLOADED, `emu/FIDELITY-NOTES.md` 7.17), as the loader would after its copies: patched code that tests it
-(caduceus-om3's half-press gate) needs no poke. Neither models the boot's order: every section is in place from the
+(caduceus-om3's half-press gate; caduceus-ep7's SD loader on E142) needs no poke. That mask is set on E125, E130, E133,
+E137, E140 and E142 too, whose loader the lab reads but whose reset head copies it does not, so the loaded-ranges mode
+stays off there. Neither models the boot's order: every section is in place from the
 reset (7.18).
 
 `--sec-ready` (on `play.mjs`, `nav.mjs` and `session.mjs`, with `--patch` or `--main`, on E143, E146 and E147; off by

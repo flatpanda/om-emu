@@ -856,10 +856,13 @@ export class MenuLab extends T.TextDisplayLab {
   // are CPU 1's and do not run. So the bits are those of the sections in order up to the first whose constructors the
   // lab has not run (all of them ok): 0x7f where run_static_ctors ran, 0x1f where it did not; section 8's bit and
   // those after it stay clear (their steps follow section 8's on the camera). Elsewhere the stage step is another form
-  // (E129's, docs/model-survey.md), read for stage 1 alone: bit 0
+  // (E129's, docs/model-survey.md), read for stage 1 alone: bit 0. So too on the flash-copy family's loader (fact
+  // sections.head null: E125, E130, E133, E137, E140, E142): there the boot calls the per-section step from other
+  // places (stage 1's from the boot task, the others' from module code; E142's addresses in src/fw/facts.mjs
+  // sectionLoader, D) and the lab reads neither their order nor their constructor blocks
   stage_bits() {
     const f = sectionsFact();
-    if (f === null) return 1;
+    if (f === null || f.head === null) return 1;
     const tables = fact('ctors', CTORS_E143), ran = new Set([tables[0][0], ...this.ctor_tables_ran()]);
     let bits = 0;
     for (const s of bootLoads(this.env.rom, IMAGE_BASE, f).sections) {
@@ -875,16 +878,19 @@ export class MenuLab extends T.TextDisplayLab {
   }
   // S-SECLOADED: the boot's sections copied, one bit per section in the section loader's copied mask (fact
   // 'sections.copied', src/fw/facts.mjs sectionLoader), as load_section sets bit n - 1 after section n's copy on CPU 2
-  // (USTART_L2), which the lab does not run (docs/hle-gaps.md 4.6.3): the lab's image is in place from the machine's
-  // creation, every section of it (S-STALERAM leaves out only what lies past a section's end). The count is the image's
-  // own, the cases of its end switch (patched firmware's as it is). No instruction of the stock builds reads the word (X:
-  // E143, E146, E147), so their runs do not change; code a patch adds may (caduceus-om3's half-press gate tests it for
-  // every section, their editor.s pr_gate). Before the store's start, beside S-BOOTSTAGE, which sets the stages' ready
+  // (USTART_L2; on the flash-copy family the boot task's calls, src/fw/facts.mjs sectionLoader), which the lab does
+  // not run (docs/hle-gaps.md 4.6.3): the lab's image is in place from the machine's creation, every section of it
+  // (S-STALERAM leaves out only what lies past a section's end). The count is the image's own, the cases of its end
+  // switch (patched firmware's as it is: 10 on E143, E146, E147 and E137, 9 on E125, E130, E133, E140 and E142). On
+  // E143, E146 and E147 no stock instruction reads the word (X); on the flash-copy family the per-section step waits
+  // for its bit (D), a step the lab does not run either. Code a patch adds may read it (caduceus-om3's half-press
+  // gate tests it for every section, their editor.s pr_gate; caduceus-ep7's SD loader tests E142's nine bits before
+  // its stores, X: test/fieldfail-cases-ep7-e139.mjs ep7-test7a-section3-store). Before the store's start, beside S-BOOTSTAGE, which sets the stages' ready
   // word for the sections whose per-section step the lab performs (stage_bits). no_secloaded (set
   // in lab_created): the stand-in left out, a negative control
   sections_loaded() {
     const f = sectionsFact();
-    if (f === null || this.no_secloaded) return;     // a build without the loader the rule reads (the E144 and E118 families)
+    if (f === null || this.no_secloaded) return;     // a build without the loader the rule reads (E144, E139, E118 ...)
     const count = sectionEnds(this.env.rom, IMAGE_BASE, f.switch, 'S-SECLOADED').length, word = this.sim.u32(f.copied);
     if (word !== 0) throw new MenuError(`S-SECLOADED: the copied mask ${h8(f.copied)} holds ${h8(word)} before the store's start`);
     this.sim.write(f.copied, pack('<I', (2 ** count - 1) >>> 0));

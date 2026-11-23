@@ -154,11 +154,12 @@ export const CASES = [
       camera_fixed: 'test 7b step A: loader v3 and a half-press with no EP7MOD, no issues; step B loaded BUNDLES.BIN',
     },
     // RAM is RAM in the lab: a store into a loaded section succeeds, as in their emulator; --strict reports it
-    // (image-store), but the lab never reaches it: the loader stores only once E142's stages' ready word
-    // 0xa272e420 has bits 0 to 8 set ((word & 0x1ff) == 0x1ff at 0x605b742b), and the lab sets no stage bit on
-    // E142 (the word reads 0 after the half press, X 2026-11-23; S-BOOTSTAGE runs on E143, E146 and E147 alone and
-    // readies no stage past 7, emu/FIDELITY-NOTES.md 7.19)
-    needs: ['edits-json', 'strict-image-write', 'e142-stage-bits'],
+    // (image-store). The loader stores only once E142's word 0xa272e420 has bits 0 to 8 set ((word & 0x1ff) ==
+    // 0x1ff at 0x605b742b): that word is the section loader's copied mask (load_section 0x500257c7 ORs bit n - 1
+    // in after section n's copy, nine sections; the stages' ready word is 0xa272e41c), which S-SECLOADED sets
+    // since 2026-11-23 (src/fw/facts.mjs sectionLoader's flash-copy form; before, the word read 0 after the half
+    // press and the store was never reached, X)
+    needs: ['edits-json', 'strict-image-write'],
   },
   {
     id: 'ep7-grain-s1-misaligned',
@@ -301,10 +302,9 @@ const PROBES = {
   'key:shortcut': () => /row\('shortcut'/.test(labSources()),
   // no probe can show these yet: fidelity steps, named when they land
   'e139-still-chain': () => named('e139-still-chain'),
-  'e142-stage-bits': () => named('e142-stage-bits'),
 };
 export const CAPABILITIES = ['edits-json', 'mods-json', 'section-ready', 'strict-misaligned', 'strict-image-write',
-  'strict-flash-init', 'crash', 'key:shortcut', 'e139-still-chain', 'e142-stage-bits'];
+  'strict-flash-init', 'crash', 'key:shortcut', 'e139-still-chain'];
 
 export function capabilityPresent(name) {
   if (Object.hasOwn(PROBES, name)) return PROBES[name]();

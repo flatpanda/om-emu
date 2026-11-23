@@ -46,8 +46,8 @@ export const thirdpartyRoot = (env = process.env) => env.OM_THIRDPARTY || path.j
 const FETCH = 'node emu/test/test_fieldfail.mjs --fetch';
 
 // ---- the E-P7 and E-M1 III cases (test/fieldfail-cases-ep7-e139.mjs) in this runner's shape ----------------------
-// That file describes a build as {project, tag, commit, src, asset, sha256, files, select?, unpublished?} and names two
-// lab features of its own (key:shortcut, e139-still-chain, e142-stage-bits) and the detector 'crash' (the lab-error detector here: a
+// That file describes a build as {project, tag, commit, src, asset, sha256, files, select?, unpublished?} and names
+// lab features of its own (key:shortcut, e139-still-chain) and the detector 'crash' (the lab-error detector here: a
 // CPU trap, pc 0 included, stops the session). A case whose loader or lab feature is missing does not run its builds:
 // the loader would refuse the file and a pending token (shortcut) would be refused, so the run would say nothing about
 // the build. Its also_fixed build is pinned there (test_fieldfail_cases.mjs) and not run here.
@@ -56,7 +56,6 @@ export const CAPABILITIES = {
   ...FRAME_CAPABILITIES,
   'key:shortcut': { kind: 'lab', what: "the E-P7 Shortcut button as a session input on E142 (no om-emu input names it yet)", probe: () => ep7CapabilityPresent('key:shortcut') },
   'e139-still-chain': { kind: 'lab', what: "E139's still image chain built at S2 (S-JPEGENC stands in for the image library's run, FIDELITY-NOTES 7.9)", probe: () => ep7CapabilityPresent('e139-still-chain') },
-  'e142-stage-bits': { kind: 'lab', what: "E142's stages' ready word 0xa272e420 set as the camera's boot sets it (the lab sets no stage bit on E142; FIDELITY-NOTES 7.19)", probe: () => ep7CapabilityPresent('e142-stage-bits') },
 };
 export const RELEASE_URL = {
   ...FRAME_RELEASE_URL,

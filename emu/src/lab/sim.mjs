@@ -43,15 +43,15 @@ const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff
 // The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
 export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
 // The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
-// env.patch, the overlay summary --patch and --main both give, on a body whose section loader the rule reads, else
-// off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
+// env.patch, the overlay summary --patch and --main both give, on a body whose section loader and reset head copies
+// the rule reads (E143, E146, E147), else off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
 // in use, a patched end word's value included). 'on' on a body without the rule throws.
 export function loadedRanges(env) {
   const mode = env.loaded ?? 'auto';
   if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);
-  const f = sectionsFact();
-  if (mode === 'off' || (mode === 'auto' && (!env.patch || f === null))) return null;
-  if (f === null) throw new ValueError('--loaded on: this build holds no section loader the rule reads (src/fw/facts.mjs sectionLoader), so what its boot loads is not known');
+  const f = sectionsFact(), known = f !== null && f.head !== null;
+  if (mode === 'off' || (mode === 'auto' && (!env.patch || !known))) return null;
+  if (!known) throw new ValueError(`--loaded on: ${f === null ? 'this build holds no section loader the rule reads' : 'the reset head copies of this build (the flash-copy family\'s) are not read'} (src/fw/facts.mjs sectionLoader), so what its boot loads is not known`);
   return bootLoads(env.rom, IMAGE_BASE, f);
 }
 
@@ -61,7 +61,7 @@ export function loadedRanges(env) {
 export function secReadyWatch(env) {
   if (!env.patchRanges) throw new ValueError('--sec-ready: no patch overlay (--patch or --main) to watch');
   const f = sectionsFact(), stage = f === null ? null : fact('boot', BOOT_E143)?.stage ?? null;
-  if (f === null || stage === null) throw new ValueError('--sec-ready: this build holds no section loader and stage word the lab reads (src/fw/facts.mjs sectionLoader, bootState): E143, E146 and E147');
+  if (f === null || f.head === null || stage === null) throw new ValueError('--sec-ready: this build holds no section loader and stage word the lab reads (src/fw/facts.mjs sectionLoader, bootState): E143, E146 and E147');
   return new SecReadyAudit(secLayout(env.rom, IMAGE_BASE, f, stage), env.patchRanges);
 }
 

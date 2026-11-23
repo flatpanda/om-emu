@@ -2884,20 +2884,36 @@ export function bootState(img) {
 //   instruction that names the word (E143 0xa32df1f8, E146 0xa32df2d0, E147 0xa32de590; X: a byte scan of each block
 //   for the word and its other view). The per-section init ORs the same bits into the stages' ready word (fact
 //   boot.stage, S-BOOTSTAGE), which has readers.
+// The E-family bodies whose reset head copies with the flash-copy routine (src/fw/board.mjs reset_head 'flash-copy')
+// hold the same loader in another register allocation, `mov d0,(4,sp); mov d0,d3; add -1,d3; call END,[],0; mov d0,d2;
+// mov d3,d0; extbu d0; mul 12,d0; mov d0,a3; add TABLE,a3` and the same mask store (E142 0x500257c7, its END
+// 0x50025766 with 9 cases, TABLE 0x60027068, COPIED 0xa272e420, the stages' ready word 0xa272e41c just before it;
+// the boot task calls it for sections 1, 7, 2, 3, 4, 5, 6, 8, 9 in that order, 0x50024f0d..0x500251b0; the
+// per-section step 0x5002584c(n) waits for bit n - 1 of COPIED (0x50025854), runs the section's work and ORs bit n - 1
+// into the stages' ready word (0x50025921), called for stage 1 from the boot task at 0x50025287 and for the others from
+// module code, 0x50170df8..0x50171bae; COPIED is named by those two functions alone, X: a byte scan; D). Their END lacks
+// the leading `clr d1` on E130 and E133 (0x50022879, 0x500229bf: a case out of range returns d0 as it came, D), the
+// switch's only other form. X, a byte scan of the 18 expanded images: E125, E130, E133, E137, E140 and E142 hold this
+// form, E143, E146 and E147 the first, the 9 others neither. Their reset head's copies are not headCopies' (it reads
+// the E143 family's head, which runs from the flash view), so head is null there: what the boot loads (bootLoads,
+// the loaded-ranges mode, --sec-ready) is not read for them; S-SECLOADED, which needs only the mask and the count, is.
 // Returns {loader, switch (disassembly notation), table, copied, ends: [the run-time address of each case's immediate,
-// section 1 first], head: [the call sites of the reset head's copies, headCopies]}, or null where the build holds no
-// such loader (X: E143, E146 and E147 hold one, the 15 other expanded images none); throws for two, or for a switch or
-// case of another form.
+// section 1 first], head: [the call sites of the reset head's copies, headCopies] or null}, or null where the build
+// holds no such loader; throws for two, or for a switch or case of another form.
 export const SECTIONS_E143 = { loader: 0x50024E6B, switch: 0x50024E02, table: 0x60029B1C, copied: 0xA32DF1F8,
   ends: [0x60045E3A, 0x60045E42, 0x60045E7A, 0x60045E4A, 0x60045E6A, 0x60045E52, 0x60045E5A, 0x60045E72, 0x60045E62, 0x60045E83],
   head: [0x50000155, 0x50000178, 0x5000019B, 0x500001BA, 0x500001DC] };
 const SECTION_LOAD = [0xf1, 0xe3, 0x8f, 0xff, 0xe3, 0xcd, null, null, 0x00, 0x00, 0x82, 0x8c, 0x14, 0xf9, 0x14, 0x0c, 0xf1, 0xe2, 0xfc, 0xd2];
+const SECTION_LOAD_FC = [0x42, 0x04, 0x83, 0x2b, 0xff, 0xcd, null, null, 0x00, 0x00, 0x82, 0x8c, 0x14, 0xf9, 0x14, 0x0c, 0xf1, 0xe3, 0xfc, 0xd3];
 const SECTION_MASK = [0x17, 0x80, 0x01, 0xf2, 0x9c, 0xfc, 0xa5, null, null, null, null, 0xf2, 0x14, 0xfc, 0x81];
 export const SECTION_SWITCH = [0x04, 0xa0, 0x01, 0xc0, null, 0xa0, null, 0xc1, null, 0x28, 0xff, 0x54, 0xfc, 0xdc, null, null, null, null, 0xf3, 0x80, 0xf0, 0xf4];
+const SECTION_SWITCH_BARE = SECTION_SWITCH.slice(1);    // the same without the leading clr d1 (E130, E133)
 export const SECTION_ROW = 12;
 const SECTION_SPAN = 0x80;     // load_section's mask store after its head (E143 0x50024e6b -> 0x50024ec9, D)
 export function sectionLoader(img) {
-  const at = oneAt(img, SECTION_LOAD, 'sectionLoader', 'section loads');
+  const a = oneAt(img, SECTION_LOAD, 'sectionLoader', 'section loads'), b = oneAt(img, SECTION_LOAD_FC, 'sectionLoader', 'section loads (the flash-copy family\'s form)');
+  if (a !== null && b !== null) throw new Error(`sectionLoader: section loads of both forms, at ${h8(0x50000000 + a)} and ${h8(0x50000000 + b)}`);
+  const at = a ?? b;
   if (at === null) return null;
   const { base } = imageBase(img);
   let mask = null;
@@ -2905,14 +2921,14 @@ export function sectionLoader(img) {
   if (mask === null) throw new Error(`sectionLoader: no 'mov (W),d1; or d1,d0; mov d0,(W)' within 0x${SECTION_SPAN.toString(16)} bytes of load_section ${h8(0x50000000 + at)}`);
   const sw = callAt(img, at + 5).to;
   const ends = sectionEnds(img, base, 0x50000000 + sw, 'sectionLoader');
-  const head = headCopies(img).copies.map((c) => c.at);
+  const head = a !== null ? headCopies(img).copies.map((c) => c.at) : null;
   return { loader: 0x50000000 + at, switch: 0x50000000 + sw, table: u32(img, at + 20), copied: mask, ends, head };
 }
 // The run-time addresses of the end switch's case immediates (sectionLoader) at sw (disassembly notation), read from img
 // (run-time base `base`); also src/fw/sections.mjs's check of an image in use. Throws for another form.
 export function sectionEnds(img, base, sw, rule) {
-  const o = sw - 0x50000000;
-  if (!bytesAt(img, o, SECTION_SWITCH)) throw new Error(`${rule}: the section end switch at ${h8(sw)} is not 'clr d1; cmp 1,d0; blt; cmp N,d0; bgt; add -1,d0; asl2 d0; mov JT,a0; mov (d0,a0),a0; jmp (a0)'`);
+  const s = sw - 0x50000000, bare = bytesAt(img, s, SECTION_SWITCH_BARE), o = bare ? s - 1 : s;   // o: the offsets below as with clr d1
+  if (!bare && !bytesAt(img, s, SECTION_SWITCH)) throw new Error(`${rule}: the section end switch at ${h8(sw)} is not '[clr d1;] cmp 1,d0; blt; cmp N,d0; bgt; add -1,d0; asl2 d0; mov JT,a0; mov (d0,a0),a0; jmp (a0)'`);
   const count = img[o + 6], jt = u32(img, o + 14) - base, ends = [];
   for (let n = 1; n <= count; n++) {
     const c = u32(img, jt + 4 * (n - 1)) - base;

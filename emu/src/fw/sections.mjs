@@ -26,9 +26,10 @@ export const POISON = 0xA5;
 // at and word the store's instruction and the word it stores to). copy: the head copy whose end bounds the piece
 // from below, or null. The image's head below the first copy's start is loaded: the reset jump enters it and every
 // call before the first copy goes there, so a boot stage before the main block's put it there (I), whose extent the
-// lab does not read. Throws where img no longer has the fact's forms: the switch, its count, the case immediates at
+// lab does not read. Throws for a build whose head copies the fact does not read (head null), or where img no longer has the fact's forms: the switch, its count, the case immediates at
 // the fact's words, the head's copies at the fact's sites; or a section not copied in place, or sections out of order.
 export function bootLoads(img, base, f) {
+  if (f.head === null) throw new Error(`bootLoads: the build's reset head copies are not read (fact sections.head null: the flash-copy family's loader, src/fw/facts.mjs sectionLoader), so what its boot loads is not known`);
   const words = sectionEnds(img, base, f.switch, 'bootLoads');
   if (words.length !== f.ends.length || words.some((w, i) => w !== f.ends[i])) {
     throw new Error(`bootLoads: the end switch ${h8(f.switch)} gives the end words ${words.map(h8).join(' ')}, the build's are ${f.ends.map(h8).join(' ')}`);

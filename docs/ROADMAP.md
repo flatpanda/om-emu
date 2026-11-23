@@ -733,7 +733,8 @@ timing), the physical rotation of the dials (the board byte `0x97f00254` selects
 the OM-1 is, is not known), sub-screens that list media and the Card Formatting actions, My Menu's page count and
 internal page, the 18 key-selected settings (settings spec section 2), the SCPU's replies beyond the five commands S-SCPUDEV answers, the flash
 controller `0x98d01800` (settings do not persist without S-NVRAM), the settings module init chain `0x503dae30` (only
-the property store's init runs, H-STOREINIT; a mode change works since, settings spec §2.2), the reference's
+the property store's init runs, H-STOREINIT; a mode change works since, settings spec §2.2; the whole chain runs
+natively behind OM_EMU_SETTINGS_CHAIN=1 since 2026-11-22, hle-gaps 4.6.8), the reference's
 mode-dependent defaults (`0x605e9198`), and the store-init order (menu spec §12-§13, settings spec §4).
 
 **Live view (M7).** CTRL3 bit 6 (A15): the live-view setup ORs it in (`0x501e04b7`) and the only read found is a debug

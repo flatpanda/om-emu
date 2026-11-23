@@ -6427,6 +6427,42 @@ behind `s.cpu2`, and the CPU 0 seam of S-WM8946 only had its four handlers resha
   is reached through a table): 1-2 h. (3) The `0x5005f48d(14, n)` calls in the list run natively on core 2 without
   a park (X); what they select is ?.
 
+#### 4.6.8 The settings init chain run whole (2026-11-22; D unless tagged, addresses E143's)
+
+The boot calls the settings init chain `0x503dae30` once, at `0x501e9060`, between the registry bootstrap and the
+settings-DB init (`0x501e907b`, through `0x501eac35`). The chain is a flat sequence of calls, each made while the
+previous returned 0 (`mov d0,d2; exthu; cmp 0,d0; bne`), the first fourteen conditional:
+
+| # | call site | callee |
+|---|---|---|
+| 1 | `0x503dae30` | `0x503eb7f4` |
+| 2 | `0x503dae3d` | `0x50424ab5` |
+| 3 | `0x503dae4b` | `0x504221ba` |
+| 4 | `0x503dae59` | `0x5041f937` |
+| 5 | `0x503dae67` | `0x503edeea`, `clr d0; retf` (the LowAPI property unit's gap: returns 0, does nothing) |
+| 6 | `0x503dae75` | `0x503ee2d6`, the property store's own init (H-STOREINIT; the docs' "fifth" counts real inits) |
+| 7 | `0x503dae83` | `0x503f0304` |
+| 8 | `0x503dae91` | `0x5040e420` |
+| 9 | `0x503dae9f` | `0x5042539d` |
+| 10 | `0x503daead` | `0x503ea27e` |
+| 11 | `0x503daebb` | `0x504219fa` |
+| 12 | `0x503daec9` | `0x503de4fb` |
+| 13 | `0x503daed5` | `0x503ed252` |
+| 14 | `0x503daee3` | `0x503f55ca` |
+
+then three unconditional calls, `0x503e8e8f`, `0x50421080` with d0 0 and `0x503ed455`, and `ret` with the last
+conditional's result. What each step writes is not read here.
+
+Run whole in H-STOREINIT's place (the lab's store init, `OM_EMU_SETTINGS_CHAIN=1`, E143 only; src/lab/menu.mjs
+SETTINGS_CHAIN), the chain returns 0, with no print and no errlog, so all fourteen conditional steps ran and returned
+0; the mode store's three object words come out as the narrow call leaves them (`0x62920f88`, `0x62948e88`,
+`0x62946cf0`) (X). No step needs a device the lab lacks. A `bin/session.mjs` start (`wait:100`) reaches the same
+screen with the same frames and lab time as with the narrow call, and test_nvram's lab part (10/10) and
+test_setnames (27/27) pass with the chain native (X). Not yet compared: the settings each step writes against the
+narrow path, the store-init order (menu spec section 12-13, settings spec section 4) and a mode change (settings spec
+section 2.2). The flag stays off by default until those are read; the golden runs were not re-recorded with it.
+E146 and E147 are not covered (the flag is ignored off E143; a facts rule for the chain's entry is not written).
+
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
 - **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads the data queue PER_SCPU_RECEIVE id 2

@@ -58,7 +58,8 @@
 // E143 and E147 on a job the test writes, with their read sets (test_stages.mjs, A-STAGEJOB), every caduceus-om3
 // release against its pins when
 // OM_CADUCEUS names a checkout
-// (test_caduceus.mjs), a tap on the touch mode icon on E143, E146, E147, ten bodies of the E144
+// (test_caduceus.mjs), the field-failure corpus: builds that failed on a camera caught and their fixes passing, with
+// a synthetic self-control on E143 (test_fieldfail.mjs), a tap on the touch mode icon on E143, E146, E147, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -1057,6 +1058,29 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`caduceus-om3 releases: pin units ${cu.checks - cu.bad.length}/${cu.checks}; E147 ${lines[0]}${rc === 0 ? '' : ' FAILED'}`);
   [...cu.bad, ...lines.slice(1).map((l) => l.trim())].forEach((x) => console.log('  ', x));
   bad += cu.bad.length + (rc === 0 ? 0 : 1);
+}
+// the field-failure corpus (test_fieldfail.mjs): patched builds that failed on a camera and their fixed builds, the
+// bad one caught and the fixed one passing the same scenario, each build in a process of its own on its case's body;
+// the self-control (a synthetic hook to an unmapped address on E143) always runs, a third-party build missing under
+// $OM_THIRDPARTY is a skip, a case whose capability does not exist yet an xfail
+{
+  const { fieldfailUnits, fieldfailTableUnits } = await import('../test/test_fieldfail.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const fu = fieldfailUnits(), ft = await fieldfailTableUnits();
+  const r = spawnSync(process.execPath, [new URL('../test/test_fieldfail.mjs', import.meta.url).pathname, '--session'], { encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n');
+  console.log(`field-failure corpus: units ${fu.checks - fu.bad.length}/${fu.checks}, table ${ft.checks - ft.bad.length}/${ft.checks}; ${(lines[0] ?? '').replace(/^field-failure corpus: /, '')}${r.status === 0 ? '' : ' FAILED'}`);
+  [...fu.bad, ...ft.bad, ...lines.slice(1).map((l) => l.trim())].forEach((x) => console.log('  ', x));
+  bad += fu.bad.length + ft.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the E-P7 and E-M1 III cases' shape and their pins against the files present (test_fieldfail_cases.mjs, firmware-free)
+{
+  const { spawnSync } = await import('node:child_process');
+  const r = spawnSync(process.execPath, [new URL('../test/test_fieldfail_cases.mjs', import.meta.url).pathname], { encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n');
+  console.log(`field-failure cases, E-P7 and E-M1 III: ${(lines.at(-1) ?? '').replace(/^test_fieldfail_cases: /, '')}${r.status === 0 ? '' : ' FAILED'}`);
+  if (r.status !== 0) lines.slice(0, -1).forEach((x) => console.log('  ', x.trim()));
+  bad += r.status === 0 ? 0 : 1;
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

@@ -2087,6 +2087,729 @@
     "the second session on a blank card: the films from the camera's memory",
     "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
    ]
+  },
+  "v0.30.4-alpha": {
+   "files": {
+    "v0.30.4-alpha/patch.json": "8af09ad9a2b9276db1eb357fc70592f277f862876fadb518ea2af473da40574b",
+    "v0.30.4-alpha/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.30.3/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 190,
+    "bytes": 404172,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "894926d59df354edb34c6c0d041cbdd5d5aa2d2b2896ef9607d34902eca992c3",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.30.4-alpha/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.30.3/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "the fast film switch reboot fix (#72: the COLOR-to-film record written once when the list is left, not at every step), the wheel's page labels (#64, #70) and looks kept out of video (#68, #73); none reached by the flow; early and curves as v0.30",
+    "the flow's CURVES.BIN is v0.30.3's: main's releases/ folder of this pre-release has none (its GitHub release asset is the same 432 bytes)",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40-alpha": {
+   "files": {
+    "v0.40-alpha/patch.json": "eb1b244179d426bce4abf7329624344771ea2375c3a8f1a3fa7ef72f97981da5",
+    "v0.40-alpha/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.30.3/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 305,
+    "bytes": 427348,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "faa1b97bbd1262e301c04d635bb9368cda42fb9e1cbee8b7b7b4d8b783e5efdf",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40-alpha/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.30.3/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "crop modes (Image Aspect 5:4, XPan, 21:9), a white Border row, their own film grain with Grain Size, start-up safety checks and Picture Mode's 30 s timeout (#75, #76); none set here, so the S2 picture is a plain FILM 2 shot",
+    "a new ported address on patched bytes in the audit: 0x50040163 (E143 0x5003f5dd, the settings store's save, src/lab/menu.mjs S-NVRAM), whose first 8 bytes become a jump to their code (likely their start-up checks or the #72 write rule; not read); the flow's other observations are v0.30.4-alpha's",
+    "the flow's CURVES.BIN is v0.30.3's: main's releases/ folder of this pre-release has none (its GitHub release asset is the same 432 bytes)",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40-beta": {
+   "files": {
+    "v0.40-beta/patch.json": "1fcd4a656fb6d3926b799b6be181059a475131e1d698a29fb6ca72ba809a08a7",
+    "v0.40-beta/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.30.3/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 442187,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "c60dfbd7507b0bb238abd2298679cb99153ca87cb6c7c8520674130a96ebfc01",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40-beta/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.30.3/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "crops kept at switch-on (#83), frame lines on the crop, looks in live view per dial click, black borders, 14 screen-info rows; none set here",
+    "ported 0x50040163 as v0.40-alpha",
+    "the flow's CURVES.BIN is v0.30.3's: main's releases/ folder of this pre-release has none (its GitHub release asset is the same 432 bytes)",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40-beta2": {
+   "files": {
+    "v0.40-beta2/patch.json": "aa1b8c287b8c7abcd53faa78a179421870e1d0628ec9cf64c64d52c654f98e1c",
+    "v0.40-beta2/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.30.3/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 442444,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "2145b9b5975dfa484df8dc9bae5fd4b28e524a90a7f94629e017ca2ebb1e0d72",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40-beta2/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.30.3/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "three more screen-info rows and the Firmware Version screen's 'Caduceus : 0.40-b2' line; none read here",
+    "ported 0x50040163 as v0.40-alpha",
+    "the flow's CURVES.BIN is v0.30.3's: main's releases/ folder of this pre-release has none (its GitHub release asset is the same 432 bytes)",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40-beta3": {
+   "files": {
+    "v0.40-beta3/patch.json": "eb2e73638d6751c85507bfcec6c3f99d7810a6ae187a926bec9c8981826f3358",
+    "v0.40-beta3/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.30.3/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 445440,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "0dfde83f08fae78755db74bedc1f2785d2b920bf051fb65fb96b6c5e31570917",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40-beta3/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.30.3/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "the debug log saved in the background (#85), Halation's shorter fade paused at the half press, a new LOOKS.BIN in custom modes (#86); none reached by the flow",
+    "ported 0x50040163 as v0.40-alpha",
+    "the flow's CURVES.BIN is v0.30.3's: main's releases/ folder of this pre-release has none (its GitHub release asset is the same 432 bytes)",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40": {
+   "files": {
+    "v0.40/patch.json": "eb38c70dbdb8b35a033bc31edec20c321bd15aabe25f60d9dff76c6b88ea2dcb",
+    "v0.40/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.40/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 445441,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "c046aaa50ea491997d41be59d87c5adfddc226b3fc27eec2c27d10abc153cff9",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.40/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "v0.40-beta3's firmware under its release name (their NOTES; 445441 changed bytes against v0.40-beta3's 445440): the observations are v0.40-beta3's",
+    "ported 0x50040163 as v0.40-alpha",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40.1": {
+   "files": {
+    "v0.40.1/patch.json": "33e1ceced5febf0360c604c3521340a34f727763f1378d22ebeb6ef92730cdd0",
+    "v0.40.1/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.40.1/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 446991,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "02304a514b1c493227a6e921d437eb01a3a68dc60b92ba8fa0e320da2659749c",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40.1/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.40.1/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "round film grain, a film's WB Compensation set as the camera's own (#88); not set here",
+    "ported 0x50040163 as v0.40-alpha",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
+  },
+  "v0.40.2": {
+   "files": {
+    "v0.40.2/patch.json": "7b27b9d7f2a3486210f175fa0449fd7079fe956463031ee538955869a99804b5",
+    "v0.40.2/LOOKS.BIN": "ee3f1bdef6083ffcfbf88e1c9617adbea10af0594d03424214baf5ed1cd70365",
+    "v0.40.2/CURVES.BIN": "4c009f9c0e2f62f00bf5eb994b13c031ce34d3f2f2f7526d5d563ba8ac352291"
+   },
+   "reader": {
+    "format": "om3-patch-2",
+    "runs": 317,
+    "bytes": 447415,
+    "main_sha256_before": "5e8d376e9111a44ac0352f26030d7c1b17026d42c45f3600cfa02a0e8c5b7d59",
+    "main_sha256_after": "21bf775ce95ca4848a4917bd65d40d5e69a10307c2a5f83f420048c5d6cee56e",
+    "not_applied": [
+     "frames",
+     "card_files"
+    ]
+   },
+   "flow": {
+    "card": {
+     "OM3MOD/LOOKS.BIN": "v0.40.2/LOOKS.BIN",
+     "OM3MOD/CURVES.BIN": "v0.40.2/CURVES.BIN"
+    },
+    "films": true,
+    "restart_card": "blank",
+    "nocard": true,
+    "early": true,
+    "curves": true
+   },
+   "expect": {
+    "open": "ok",
+    "mask": "ff030000",
+    "state": {
+     "before_s1": "0000",
+     "after_s1": "set"
+    },
+    "curves": "4f4d334b0100b001",
+    "picture_mode": "SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART",
+    "films": [
+     "Portra 400",
+     "Portra 160",
+     "Natura 1600"
+    ],
+    "exif": {
+     "description": "FILM 2 Portra 160",
+     "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+    },
+    "title": "Portra 160",
+    "card": [
+     "CURVES.BIN",
+     "LOOKS.BIN"
+    ],
+    "restart": {
+     "card": "blank",
+     "state_before_s1": "set",
+     "state_after_s1": "set",
+     "exif": {
+      "description": "FILM 2 Portra 160",
+      "photo_code": "Caduceus FILM 2 Portra 160 om3.1."
+     },
+     "title": "Portra 160"
+    },
+    "nocard": {
+     "word": "01100000",
+     "state_after_s1": "set",
+     "title": "Portra 160",
+     "start": {
+      "word": "01100000",
+      "state_after_s1": "set",
+      "title": "Portra 160"
+     }
+    },
+    "audit": {
+     "hooks": [],
+     "ported": [
+      "0x50040163",
+      "0x510d4686",
+      "0x60045e9c"
+     ],
+     "unloaded": 0,
+     "tasks": []
+    },
+    "pokes": []
+   },
+   "notes": [
+    "smoother colour grain made on every row; not set here",
+    "ported 0x50040163 as v0.40-alpha",
+    "the second session on a blank card: the films from the camera's memory",
+    "no card: as v0.29.1 (#38), S-MEDIA and S-CARD leave the SD medium word NOT_PRESENT (0x1001) both times and the films load from the camera's memory; no poke"
+   ]
   }
  }
 }

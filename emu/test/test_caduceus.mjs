@@ -1,8 +1,8 @@
 // A local regression run of every published caduceus-om3 release (androidfanman/caduceus-om3: film-look patches for
 // the OM-3, E147; analysis/caduceus-om3/README.md 4.2 and section 7's intro): an om-emu change that breaks a
 // camera-tested downstream build is seen here before it is published. Gated on OM_CADUCEUS, a caduceus-om3 checkout
-// (its releases/ folder is read, nothing else; nothing is fetched): without it the run prints one SKIPPED line and
-// passes; a checkout with none of the pinned release folders fails (a wrong checkout or a changed layout). It drives
+// (its releases/ folder is read, nothing else; nothing is fetched; a folder of their release assets as releases/<tag>/
+// does as well): without it the run prints one SKIPPED line and passes; a checkout with none of the pinned release folders fails (a wrong checkout or a changed layout). It drives
 // the patch reader (src/fw/patch.mjs), the scripted session (host/session.mjs openSession) and bin/card.mjs, and reads
 // the port map (src/fw/model.mjs A, fact) for the string getter, the SD medium word and section 6's end, and the stock
 // block (checks/lib/env.mjs) for the reader and the broken-sec6 control.

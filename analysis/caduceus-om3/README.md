@@ -22,8 +22,9 @@ base `ae63e25`, took up section 7's follow-ups against the checkout at `0b1d5cb`
 listed in 4.1, and where it changed a result the text says so. A third round on 2026-11-14, on base `a68dca3` and the
 same checkout, took up the second round's follow-ups in the same way, and a fourth later that day, on base `b36e3e5`,
 took up the third's. A fifth on 2026-11-17, on base `19befb74`, read upstream's eight releases since (v0.29.2 to
-v0.30.3, checkout `78a809e`), pinned them and judged what in them is useful here (section 8). No excerpt of
-Caduceus' code, no byte of its patch and no picture it draws is committed.
+v0.30.3, checkout `78a809e`), pinned them and judged what in them is useful here (section 8). A sixth on 2026-11-22,
+on base `6b111c6b`, pinned the eight after that (v0.30.4-alpha to v0.40.2) from their release assets (section 9). No
+excerpt of Caduceus' code, no byte of its patch and no picture it draws is committed.
 
 **Licence.** The repository is Apache-2.0 (`LICENSE`) with a `NOTICE` that says the release patch files hold only the
 bytes the project writes, that its tour screenshots were drawn by om-emu running its firmware, and that its developer
@@ -89,6 +90,10 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
    firmware's own setting names in container block 2 (X on E143, E146 and E147), the mode codes and the still / movie
    switch's byte (X), the stage list's colour-matrix call and a shot's job types (D), and three camera-vs-lab
    differences around the mode change, unexplained. One correction (2.7's family 898).
+8. **Since (2026-11-22, section 9).** Eight more, v0.30.4-alpha to v0.40.2 (crop modes, borders, their own grain,
+   screen-info rows), all pass v0.30.3's flow as pinned; the one new observation is the audit naming the settings
+   store's save, which their patch now enters. Two lab limits their `research/TESTING.md` still states (`fopen`
+   truncation, no still / movie switch in `bin/session.mjs`) no longer hold.
 
 ## 1. What it is, and how it is built and delivered
 
@@ -1235,3 +1240,55 @@ and 52 to 54 s each from v0.29-beta on (the no-card part), the section-6 control
 The flow's two new observations (`early`, `curves`) are taken only where a pin's flow asks for them, so the 19 older
 pins stand as they were. To pin the next release: `--pin vX --flow` with v0.30.3's flow (its row in
 `emu/test/fixtures/caduceus-releases.json`).
+
+## 9. Upstream since `78a809e`: v0.30.4-alpha to v0.40.2 (2026-11-22)
+
+How it was read: no checkout. The eight releases' assets (`patch.json`, `LOOKS.BIN`, `CURVES.BIN`) were fetched with
+`gh release download` into `~/.om-emu/thirdparty/caduceus-om3/<tag>/`, outside the tree, each checked against the
+sha256 GitHub lists for the asset, and run with `OM_CADUCEUS` pointing at a folder whose `releases/<tag>` link to
+them (the layout `test_caduceus.mjs` reads). The same files in upstream's `releases/` folders on main at `f3b84dc`
+(2026-11-22) have the same sha256, except that the five pre-release folders (v0.30.4-alpha, v0.40-alpha, -beta,
+-beta2, -beta3) hold no `CURVES.BIN`, while their release assets do, byte for byte v0.30.3's. Their pins therefore put
+v0.30.3's `CURVES.BIN` on the card, so a checkout and the asset folder give the same run. Their release notes (the
+GitHub release text, the same as the folder's `NOTES.md`) were read as data. Nothing of theirs is committed.
+
+| Release | What (their notes) | Runs / bytes changed |
+|---|---|---|
+| v0.30.4-alpha | the fast film switch reboot fixed (#72: which film each COLOR holds written once on leaving the list, not at every step), the colour wheel's page labels (#64, #70), looks kept out of video and S&Q (#68, #73) | 190 / 404,172 |
+| v0.40-alpha | crop modes (Image Aspect 5:4, XPan 65:24, 21:9), a white Border row, their own film grain with a Grain Size row, start-up safety checks, Picture Mode open 30 s (#75, #76) | 305 / 427,348 |
+| v0.40-beta | crops kept at switch-on (#83), frame lines at the crop, looks in live view per dial click, black borders, 14 screen-info rows | 317 / 442,187 |
+| v0.40-beta2 | three more screen-info rows; the Firmware Version screen's Caduceus line | 317 / 442,444 |
+| v0.40-beta3 | the debug log saved in the background (#85), Halation's shorter fade paused at the half press, a new `LOOKS.BIN` in custom modes (#86) | 317 / 445,440 |
+| v0.40 | v0.40-beta3's firmware under its release name | 317 / 445,441 |
+| v0.40.1 | round film grain; a film's WB Compensation set as the camera's own (#88) | 317 / 446,991 |
+| v0.40.2 | colour grain made on every row, less red-green, faster | 317 / 447,415 |
+
+**In the lab (X, base `6b111c6b`).** Each was pinned with `--pin` and v0.30.3's flow, and every one passes it as
+v0.30.3 does: the open under the loaded-ranges mode with no unloaded patched range, the copied mask `0x3ff`, the films
+loaded before any half press (`early`) and at the first S1, `OM3K` version 1 length 432 kept in store M (`curves`),
+FILM 1, 2 and 20 named `Portra 400`, `Portra 160` and `Natura 1600`, `FILM 2 Portra 160` and the photo code prefix
+in S2's picture, the film kept over a power cycle on a blank card and with no card, no poke. One observation changes,
+from v0.40-alpha on: the audit's `ported` gains `0x50040163` (E143 `0x5003f5dd`, the settings store's save,
+`src/lab/menu.mjs` S-NVRAM), whose first 8 bytes their patch turns into a jump to their own code. Which of their
+features that hook serves is not read here. 53 to 65 s each, three at once. So nothing breaks in this range: the flow
+sees no regression in their builds and hits no lab limit.
+
+What the flow cannot show for these releases: every feature this range adds (no flow sets an Image Aspect, a Border,
+a grain level, a screen-info row or a WB Compensation, or opens the Firmware Version page), and the two camera faults
+it fixes: #72's reboot (not reproduced by the lab, 8.2) and #85's wait behind the card (the lab has no card timing,
+4.4). The v0.40.3-beta pre-releases (one of them, beta2, boot-looped on the camera and was withdrawn) have no folder
+on main at `f3b84dc` and are not pinned.
+
+**Their `research/TESTING.md` at `f3b84dc`, against om-emu today.** Two of its statements about the lab are out of
+date. They are noted here and not sent upstream:
+
+- "The camera's `fopen` with `"w"` does not truncate a file. The emulator's stand-in card does." (its card file
+  system limit): not so since 8.2. The lab runs the firmware's own file system on the card (S-SDCARD), and a longer
+  `CADLOG.TXT` keeps its old tail as on their camera (X, 2026-11-17).
+- Their boots run through their own `session_ed1.mjs` "because it can set the photo/video switch", and moving them to
+  `session.mjs` waits "once it can set the photo/video switch". `bin/session.mjs` has had the switch since 2026-11-14
+  (`f054851b`; their pin `0819080` already has it in `bin/session.mjs` and `src/lab/play.mjs`): `switch:still_movie=K` moves it to position K (0..2) during a run, and
+  the position is carried over the power lever's off (S-NVRAM). `test_smswitch.mjs` checks both (E147, 14 of 14, X
+  on this base).
+
+To pin the next release: `--pin vX --flow` with v0.40.2's flow (its row in `emu/test/fixtures/caduceus-releases.json`).

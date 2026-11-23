@@ -182,9 +182,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   natively, and `DisplayLab.compose('hdmi')` composes channel 0 (its window; the GUI draws nothing there yet). The
   unplug (A-HDMI-1) runs natively down to the disconnect report; nothing switches back. The `fw_0501` switch is
   refused: the firmware drives it (`docs/hle-gaps.md` 4.9).
-- On E143 and E146 the accelerometer is stood in at its sample cache (`src/lab/acc.mjs`): the ACC module init and
-  PER_SLOPE's init run natively at the bring-up (H-ACCINIT, H-SLOPEINIT), the sensor's register file answers the
-  probe (S-ACCREG), and before each of ACC_MAIN's 80 ms copies the lab stores one sample where the sampler's
+- On E143, E146 and E147 the accelerometer is stood in at its sample cache (`src/lab/acc.mjs`): the ACC module init
+  and PER_SLOPE's init run natively at the bring-up (H-ACCINIT, H-SLOPEINIT), the sensor's register file answers the
+  probe (S-ACCREG), and before each of ACC_MAIN's copies (every 80 ms; 30 ms on E147) the lab stores one sample where the sampler's
   completion would (S-ACCSAMPLE): a level camera by default, tilted by the input `{"type": "tilt", "roll": 5,
   "pitch": 0}` (degrees, within 45; A-ACC-1..3). ACC_MAIN, PER_SLOPE, the shooting screen's level gauge and Setup's
   Level Adjust run natively; with the lab's blank factory data Adjust writes the user table but leaves the gauge as it

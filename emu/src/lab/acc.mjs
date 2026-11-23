@@ -2,9 +2,9 @@
 // runs natively and what the lab stands in for.
 //
 // Natively: the ACC module init (H-ACCINIT runs it in the boot's place, its device part stepped over), ACC_MAIN (task
-// 121: the probe once, then every 80 ms the cache copy and the correction), PER_SLOPE (task 78: while the GUI has
-// started it, every 20 ms the remap, the conversion to mg, the asin table and the stability test, its results for the
-// gauge's getter and its event 0x4125000 to the application) and every reader: the GUI's gauge and Level Adjust's
+// 121: the probe once, then every 80 ms the cache copy and the correction; on E147 every 30 ms, cycle_ms), PER_SLOPE
+// (task 78: while the GUI has started it, every 20 ms the remap, the conversion to mg, the asin table and the stability
+// test, its results for the gauge's getter and its event 0x4125000 to the application) and every reader: the GUI's gauge and Level Adjust's
 // sampling loop. Stood in: the sensor's register file at the register API (S-ACCREG: the probe's WHO_AM_I read and its
 // two set-up writes), and the sensor with its data-ready pin, the sampler task ACC_SENS_MAIN and its transfer
 // (S-ACCSAMPLE: before each of ACC_MAIN's cache copies, one new sample as the read's completion stores it, the packed
@@ -130,7 +130,8 @@ export class Accelerometer {
     return tids[0];
   }
   // After the bring-up's settle: the probe's accesses as the firmware made them (D: open, the WHO_AM_I read, the two
-  // set-up writes, close), its success flag set, and ACC_MAIN in its 80 ms wait; a reason, or null
+  // set-up writes, close), its success flag set (on E147 also ACC_MAIN's enable, D), and ACC_MAIN in its cycle's
+  // wait; a reason, or null
   probe_problem() {
     const f = this.f, want = [['open', ...f.dev], ['read', ...f.who_am_i], ...f.setup.map(([k, v]) => ['write', k, v]), ['close', f.dev[0]]];
     if (JSON.stringify(this.reg_log) !== JSON.stringify(want)) return `S-ACCREG: the probe's accesses ${JSON.stringify(this.reg_log)}, not ${JSON.stringify(want)}`;

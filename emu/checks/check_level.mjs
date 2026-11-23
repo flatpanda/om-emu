@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // The accelerometer, the level gauge and Level Adjust in a play session (src/lab/acc.mjs, src/fw/models.mjs acc;
-// docs/hle-gaps.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 also gives the fact):
+// docs/hle-gaps.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 and E147 also give the fact):
 //   L1  the probe ran natively through S-ACCREG: open (6, 107), the WHO_AM_I read answered with the value the probe
 //       wants, the two set-up writes, close; the probe's success halfword is 1; ACC_MAIN waits in its cycle; the
 //       stand-ins are listed
 //   L2  samples reach the cache: over 1 s of lab time (from 500 ms after the start) the counter moves once per ACC_MAIN
-//       cycle (11 to 13: A-ACC-2's 80 ms, some cycles stretched), the raw cache (the firmware's raw accessor) is the
-//       level sample, the firmware's pose-0 reference (0, -16384, 0), and the corrected cache equals it (blank factory
-//       data: the correction's gate is closed, D)
+//       cycle (11 to 13: A-ACC-2's 80 ms, some cycles stretched; 28 to 34 at E147's 30 ms), the raw cache (the
+//       firmware's raw accessor) is the level sample, the firmware's pose-0 reference (0, -16384, 0), and the
+//       corrected cache equals it (blank factory data: the correction's gate is closed, D)
 //   L3  the gauge follows a tilt: the gauge's getter (natively) reads the horizon within 0.2 degree of the roll and
 //       the vertical within 0.2 degree of pitch / 3, both valid, body orientation 0, for five tilts; and the TFT
 //       composite of the shooting screen's gauge (INFO) is green on the arc and the bar when level and loses the
@@ -46,10 +46,14 @@ import { show } from '../src/util/show.mjs';
 // the readers the check calls natively (D): the raw and the corrected cache's accessors ({x, y, z} to a0, the counter
 // in d0); the data-object read 0x500417da (E143) and the user pose kinds x, y, z, temperature (0x4eba.. , index =
 // pose) that Level Adjust's Adjust writes
-const READERS = { E143: { raw: 0x50049771, corrected: 0x50049795 }, E146: { raw: 0x5004A462, corrected: 0x5004A486 } };
+const READERS = { E143: { raw: 0x50049771, corrected: 0x50049795 }, E146: { raw: 0x5004A462, corrected: 0x5004A486 },
+  E147: { raw: 0x50049F09, corrected: 0x50049F2D } };
 const STORE_READ = A(0x500417DA), USER_POSE = [0x4EBA, 0x4ECA, 0x4EDA, 0x4EEA];
 // the gauge on the TFT's shooting screen (900 x 600, INFO's first page, X): the horizon's arc and the vertical's bar
 const ARC = [370, 395, 530, 452], BAR = [583, 228, 622, 370];
+// L2's counter moves in 1 s by ACC_MAIN's period: 80 ms 11 to 13 (below); E147's 30 ms (D) at most 34, and 28 with up
+// to three cycles stretched as on E143 (X: 31 on E147 with the native lens)
+const COUNTS = { 80: [11, 13], 30: [28, 34] };
 const TILTS = [[5, 0], [-3, 0], [0, 6], [2, -9], [-4.5, 7.5]];
 // R2's boxes (X, E143's TFT): the gauge for portrait with its arc at the left and its bar at the bottom (EXIF 8), and
 // the other way round's bar at the top (EXIF 6)
@@ -132,7 +136,8 @@ function l2(mutant = null) {
     const [, c0] = cache(lab, 'raw');
     s.wait(1000);
     const [raw, c1] = cache(lab, 'raw'), [corrected, c2] = cache(lab, 'corrected');
-    g.true('the counter moves once per ACC_MAIN cycle over 1 s', c1 - c0 >= 11 && c1 - c0 <= 13, `${c0} -> ${c1}`);
+    const [lo, hi] = COUNTS[MODEL_INFO.acc.cycle_ms ?? 80];
+    g.true(`the counter moves once per ACC_MAIN cycle over 1 s (${lo} to ${hi})`, c1 - c0 >= lo && c1 - c0 <= hi, `${c0} -> ${c1}`);
     g.eq('the raw cache is the level sample', raw, [0, -16384, 0]);
     g.eq('the corrected cache equals the raw one (blank factory data)', [corrected, c2], [raw, c1]);
     g.eq('the level sample is the pose-0 reference', s.acc.level, [0, -16384, 0]);

@@ -28,8 +28,8 @@
 // boot's stage bits S-BOOTSTAGE sets and the boot job they follow on E143, E146 and E147 (test_bootstage.mjs), the hidden
 // service screens with MENU held at power-on on E143 (test_hidemode.mjs), the HDMI
 // port and a plug in play on E143,
-// E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
-// on) on E143 and E146 (test_acc.mjs), the card and the
+// E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and E147 and its PER_ROTATE groups
+// (--rotate on) on E143, E146 and E147 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129, E132, E145 and the E118
 // family (S2's file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
 // firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), a power-on with no card and the media status
@@ -500,14 +500,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and its PER_ROTATE groups R1 and
-// R2 (--rotate on, with their mutant on E143) on E143 and E146, each in a process of its own (E143's default runs are
-// checks/runs.json's; the model is fixed when the lab is imported)
+// the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and E147 and its PER_ROTATE
+// groups R1 and R2 (--rotate on, with their mutant on E143) on E143, E146 and E147, each in a process of its own
+// (E143's default runs are checks/runs.json's; the model is fixed when the lab is imported)
 {
   const { accUnits } = await import('../test/test_acc.mjs');
   const { spawnSync } = await import('node:child_process');
   const au = accUnits();
-  const runs = [['E146', []], ['E143', ['--only', 'R1,R2']], ['E143', ['--only', 'R1,R2', '--mutants']], ['E146', ['--only', 'R1,R2']]].map(([m, args]) => {
+  const runs = [['E146', []], ['E143', ['--only', 'R1,R2']], ['E143', ['--only', 'R1,R2', '--mutants']], ['E146', ['--only', 'R1,R2']],
+    ['E147', []], ['E147', ['--only', 'R1,R2']]].map(([m, args]) => {
     const r = spawnSync(process.execPath, [new URL('../checks/check_level.mjs', import.meta.url).pathname, ...args], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [`${m}${args.length ? ' ' + args.join(' ') : ''}`, r];
   });

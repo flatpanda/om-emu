@@ -65,13 +65,13 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // register API, and dev [channel, device], what the probe opens; who_am_i [register, value], the probe's read and the
 // value it wants; setup, the probe's register writes [register, value]; copy and correct, the cache copy and the
 // correction ACC_MAIN calls each cycle; words [accelerometer x/y/z, temperature], the halfwords the sample read's
-// completion packs, and counter, the sample counter it increments; refs, the six pose references the init computes
-// (pose 0 is the level camera); axes, the axis order and polarity the remap reads; slope {init, main, get}, PER_SLOPE's
-// init, its task entry (task 78) and the gauge's getter; rotate {init, main, get, pose, index, publish, event},
-// PER_ROTATE for --rotate on (H-ROTINIT): its init (the boot calls it after PER_SLOPE's), its task entry (task 59), the
-// orientation getter (the EXIF code of the reported index), the orientation word its readers take (0..5) and the
-// reported index (0..4), the event publish it calls on a change and that event. A body without it keeps the
-// accelerometer and PER_SLOPE off
+// completion packs, and counter, the sample counter it increments; cycle_ms, ACC_MAIN's period (80 when not given);
+// refs, the six pose references the init computes (pose 0 is the level camera); axes, the axis order and polarity the
+// remap reads; slope {init, main, get}, PER_SLOPE's init, its task entry (task 78) and the gauge's getter; rotate
+// {init, main, get, pose, index, publish, event}, PER_ROTATE for --rotate on (H-ROTINIT): its init (the boot calls it
+// after PER_SLOPE's), its task entry (task 59), the orientation getter (the EXIF code of the reported index), the
+// orientation word its readers take (0..5) and the reported index (0..4), the event publish it calls on a change and
+// that event. A body without it keeps the accelerometer and PER_SLOPE off
 // (the gauge reads the BSS)
 //
 // `sio_devices`: the devices on PER_SIO's channels the lab has, [{channel, device}] (src/lab/sio.mjs S-SIOIIC and
@@ -751,9 +751,33 @@ export const MODELS = {
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },
-    // no acc: E147's accelerometer code is not E143's (D): its probe 0x50049771 wants WHO_AM_I 0x70, and its ACC_MAIN
-    // 0x50049640 copies every 30 ms only while 0x6298d7b0 is 1 (set by 0x50049616, cleared by 0x50049621); its sensor,
-    // its scale and what sets the enable are not read
+    // E146's layout with E147's own probe and cadence (D; docs/hle-gaps.md 4.7.3, 2026-11-22): the init 0x50049416
+    // clears the enable halfword 0x6298d7b0, calls the device part at 0x5004941d, stores the counter 0x603579d4 and
+    // the run-time 0x6006a9c1 (= the copy 0x500499a1) at 0x6298d750 / 0x6298d754, the references 0x5004947d write
+    // 0x603579b0.., and it starts ACC_MAIN 0x50049640 (task id halfword 0x60042dc0). ACC_MAIN's first call 0x5004962b
+    // runs the probe 0x50049771 (open (6, 107) 0x5004e19f, read 0x0f 0x5004e385 wanting 0x70, write 0x5004e39b 0x10 =
+    // 3 and 0x0d = 1, close 0x5004e37a, the pin enable 0x50052e65(129)) and on its 0 sets 0x6298d7b0 = 1, the probe's
+    // success flag and ACC_MAIN's enable at once (E143's 0x62963fb8 and its setter 0x50048ead); else ACC_MAIN
+    // returns. Then, while the halfword is 1, the copy through 0x6298d754 (calls), the correction 0x50049b74 and
+    // 0x5002c6e5(30): every 30 ms (cycle_ms; E143's 80). The completion 0x500498aa packs the temperature 0x6298d7d6,
+    // three more halfwords 0x6298d7d8..dc (no reader here) and the accelerometer 0x6298d7ce..d2, which the copy reads,
+    // and increments 0x603579d4 (0x50049955..5e); the remap
+    // 0x5005cb7c reads the axis table 0x60357e74 (1, -2, 3 in the image); PER_SLOPE's init 0x5005c730 starts task
+    // 0x5005c79b (id 0x60042d6c); the gauge's getter 0x5005c57f; PER_ROTATE's init 0x50056cf8, task 0x50056dea,
+    // getter 0x50056dc1 (the halfwords 0x60357e68), orientation 0xa32c5690 (0x50056de1), reported index 0xa32c568c,
+    // and on a change the publish 0x500250d2 with event 0x4020310 (0x50057089..a0)
+    acc: {
+      init: 0x50049416, device: 0x5004941D, ptrs: [0x6298D750, 0x6298D754], main: 0x50049640, probed: 0x6298D7B0,
+      reg: { open: 0x5004E19F, read: 0x5004E385, write: 0x5004E39B, close: 0x5004E37A },
+      dev: [6, 107], who_am_i: [0x0F, 0x70], setup: [[0x10, 0x03], [0x0D, 0x01]], cycle_ms: 30,
+      copy: 0x500499A1, correct: 0x50049B74, words: [0x6298D7CE, 0x6298D7D6], counter: 0x603579D4,
+      refs: 0x603579B0, axes: 0x60357E74,
+      slope: { init: 0x5005C730, main: 0x5005C79B, get: 0x5005C57F },
+      rotate: { init: 0x50056CF8, main: 0x50056DEA, get: 0x50056DC1, pose: 0xA32C5690, index: 0xA32C568C, publish: 0x500250D2, event: 0x04020310 },
+    },
+    // pool 2's get 0x50003136 and release 0x50003140 (mov 2,d0 into the heap's get 0x50003186 / release
+    // 0x50003450), block 16512 (the table 0x60029914's word 2) (D)
+    heap_pool: { get: 0x50003136, put: 0x50003140, bytes: 16512 },
     extra_tasks: [
       0x501E3ECA,   // started by the display task init (0x501cfd03, E143 0x501c2f13 starts no task), X
     ],

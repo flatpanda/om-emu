@@ -6646,7 +6646,7 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   from `0x5004ac90..0x5004aed4` ("Stop Acc Main Task"). Its copy `0x500499a1` (into `0x6298d758..5c` / `0x6298d764`)
   returns 0 also at its fifth miss, where E143's returns 0x8001, so ACC_MAIN's own count of failed copies and its
   errlog `0x46000202` are not reached (I). So E147 would need its WHO_AM_I and rate write in S-ACCREG and a 30 ms
-  cadence in S-ACCSAMPLE (A-ACC-2's one sample per cycle); not built.
+  cadence in S-ACCSAMPLE (A-ACC-2's one sample per cycle); built 2026-11-22 (4.7.7).
 - **PER_ROTATE** (task 59, entry `0x5005a17e`, read 2026-11-08; its name "PER_ROTATE_TSK" and its debug command
   `0x5005a462`: init, start, end, get). The init `0x5005a08c` (the boot's call at `0x501e9c2b`, right after PER_SLOPE's
   init at `0x501e9c17`) stores data object `0x1f82[0]` (`0x500417da(8066)`) at `(0xa32c64f0)`, the state `(0x62965124)`
@@ -7059,6 +7059,52 @@ on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/
   read counts as an inserted battery. (3) Who sets `recommend` to 1 and 2 (the battery check's handlers
   `0x5004261a..0x500428b5`). (4) The sub-CPU's messages 20, 27 and 28, the reader of a slot's byte 1 and its flags
   +0x20 and +0x21. (5) PER_MINTIMER's unit. (6) Phase 106.
+
+#### 4.7.7 E147's accelerometer natively (2026-11-22; D unless tagged, addresses E147's)
+
+4.7.3's E147 survey left two things to read: the probe's register accesses and the writer of ACC_MAIN's enable
+halfword `0x6298d7b0`. Both read from the disassembly; the rest of the survey's addresses were rechecked by their
+instructions (`src/fw/models.mjs` E147 `acc`).
+
+- **The enable is the probe's success.** The init `0x50049416` first clears `0x6298d7b0`, then calls the device part
+  at `0x5004941d`, stores the counter `0x603579d4` and the run-time copy `0x6006a9c1` (= `0x500499a1`) at
+  `0x6298d750` / `0x6298d754`, runs the references `0x5004947d` (into `0x603579b0..`) and starts ACC_MAIN `0x50049640`
+  (the task id halfword `0x60042dc0`, `0x5002c546`). ACC_MAIN's first call `0x5004962b` runs the probe through
+  `0x50049768` and, when it returns 0, stores 1 at `0x6298d7b0` (`0x50049635..37`); a failed probe makes ACC_MAIN
+  return. So the halfword is E143's success flag `0x62963fb8` (set by `0x50048ead`) moved to E146's address and also
+  read as the enable. The image stores to it at four places only (its absolute operand's bytes): the init's clear
+  `0x50049417`, the probe's success `0x50049637`, and the set and clear `0x50049616` / `0x50049621` of the debug
+  commands (4.7.3). The loop (`0x50049658..0x500496fc`): with the halfword 1, the copy
+  through `0x6298d754` (`calls`), on 0 the correction `0x50049b74` and `0x5002c6e5(30)`; on a miss the miss count, a
+  30 ms delay and the copy again; with the halfword not 1, `0x5002c6e5(50)`.
+- **The probe** `0x50049771`: open `0x5004e19f(6, 107)`, read `0x5004e385` of register 0x0f, one byte, wanting 0x70
+  (`0x5004978b`; else errlog `0x46000201`, close, 2), write `0x5004e39b` register 0x10 = 3 and 0x0d = 1 (one byte
+  each), close `0x5004e37a(6)`, the pin enable `0x50052e65(129)`, return 0. The register API takes E143's arguments
+  (d0 the channel, d1 the register, a0 the buffer or value, a1 the count), so S-ACCREG answers it unchanged with the
+  model's values (`who_am_i` [0x0f, 0x70], `setup` [[0x10, 3], [0x0d, 1]]).
+- **The rest as E146.** The completion `0x500498aa` packs the temperature `0x6298d7d6`, three halfwords
+  `0x6298d7d8..dc` and the accelerometer `0x6298d7ce..d2` and increments `0x603579d4` (`0x50049955..5e`); the copy
+  `0x500499a1` compares the counter with `(0x603579e4)` and copies `0x6298d7ce..d2` into the raw cache
+  `0x6298d758..5c`; the raw and corrected accessors are `0x50049f09` and `0x50049f2d`; the remap `0x5005cb7c` reads
+  `(0x60357e74)` = 1, -2, 3 (image data); PER_SLOPE's init `0x5005c730` starts task `0x5005c79b` (id `0x60042d6c`);
+  PER_ROTATE's getter `0x50056dc1` reads `(0xa32c568c)` through the halfwords `0x60357e68`, its orientation is
+  `(0xa32c5690)` (`0x50056de1`) and its task publishes event `0x4020310` through `0x500250d2` on a change of the
+  index (`0x50057089..a0`). Pool 2's get and release are `0x50003136` / `0x50003140` (`mov 2,d0` into
+  `0x50003186` / `0x50003450`), its block 16512 (the table `0x60029914`, word 2), so S-HEAP serves Level Adjust's
+  block as on E143.
+- **Built** (`src/fw/models.mjs` E147 `acc` with `cycle_ms` 30 and `heap_pool`): H-ACCINIT, S-ACCREG, S-ACCSAMPLE,
+  H-SLOPEINIT and, with `--rotate on`, H-ROTINIT run on E147 as on E143 and E146 (`src/lab/acc.mjs` unchanged but for
+  its notes). The probe's pin enable runs on E143's board stub as there (X: the session goes on). A-ACC-2 there: one
+  sample per 30 ms cycle, about twice the 15 Hz the rate write 3 gives on the LSM6DSV's map (I); on the camera, by
+  that rate, every other copy would miss and retry 30 ms later.
+- **Checked** (X, `emu/checks/check_level.mjs` with `OM_EMU_MODEL=E147`, its readers `0x50049f09` / `0x50049f2d`):
+  L1 the probe's accesses (read 0x0f -> 0x70, writes 0x10 = 3, 0x0d = 1), `0x6298d7b0` = 1, ACC_MAIN in its wait;
+  L2 31 counter moves in 1 s (the check's range by period: 28 to 34 at 30 ms, E143's 11 to 13 at 80 ms), the raw
+  cache the level sample (0, -16384, 0) and the corrected cache equal to it; L3 the getter within 0.2 degree for the
+  five tilts and the gauge's arc and bar on the TFT as on E143 (the same boxes); L4 Adjust at roll 2, pitch -3 back on
+  the shooting screen within 2 s, the store's user pose 0 = (-571, -16352, 857, 250); R1 and R2 (`--rotate on`) as on
+  E143; `--mutants`: acc-still fails L2 and L4, tilt-ignored L3 and L4. `bin/test.mjs` runs E147's default groups
+  and R1, R2.
 
 ### 4.8 Card, file system and playback
 

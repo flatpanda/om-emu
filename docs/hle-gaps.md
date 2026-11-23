@@ -6225,6 +6225,60 @@ S2, UP for PAGE 1 and RIGHT for PAGE 2) are the GUI state SS_MENU_MAIN/ID_ST_HID
   counts, as S-SHUTTERSND sounds at every release (I). The driver's init, its pool and the sequences stay out of the
   lab (section 7.2).
 
+#### 4.6.7 AUD_WAKEUP natively on CPU 2 (2026-11-22; D unless tagged, addresses E143's)
+
+Behind `--cpu2 native` (E143, off by default; `emu/src/lab/audiohw.mjs`, `emu/src/lab/wm8946.mjs`,
+`emu/src/lab/cpu2.mjs`, `emu/test/test_cpu2.mjs` cpu2Session): AUD_MAIN's start of AUD_WAKEUP `0x2017` now goes to
+CPU 2 the way AUD_LEVEL_MONITOR's has since 4.6.1, and its sound-IC power-on list runs there against S-WM8946, so
+S-AUDCPU2 answers nothing in those sessions and is no longer in use (X). Round 1's open item 2 and round 2's item 3
+are done. A default session takes none of this path (no second core): golden is unchanged (I: every change is
+behind `s.cpu2`, and the CPU 0 seam of S-WM8946 only had its four handlers reshaped to share code with core 2's).
+
+- **AUD_WAKEUP's code.** Entry `0x50a62d5a` (CPU 2 task `0x2017`, its id word `0x60043614`): `0x50a62e27`, which
+  calls `0x50a641be` (the first time, `(0xa33dd37d)` = 0: `0x50064010(31, 3)`, `0x50061c3a(109, 1, 1)`,
+  `0x50a64199`, then the list `0x50a629f7`; the count `0xa33dd37d` incremented) and `0x50a62e05` (a log line under
+  mask 0x1000 and `0x50a636ae`); then `0x50035afd(0, 0x60a83d95, 0)` at `0x50a62d6b`, the call of `0x50a62d75`
+  (set_flg 0xf9 through `0x50a6435b`) on CPU 0, and the task's return.
+- **The list executor's channel loop** (`0x50a6304c..0x50a63110`): PER_SIO's open of channel 14 with the callback
+  run-time `0x60a84194` (a busy answer, 1, sleeps 16 ms and retries, `0x50a63062`), then a wait on flag
+  `(0x60043664)` pattern 7 with a timeout of 3000 (`0x50a6307d`) per entry; the entries are 6 bytes at `0xa33dac90`,
+  {u16 kind, u32 big-endian value}: kind 0 a register write (`0x50a631ee`), kind 1 `0x50a635e9` (GPIO 139 through
+  `0x50a62d89`), `0x5005f48d(14, 0)`, the close and a sleep of the value in ms (`0x50a6361d`, `0x50a644fd`), then a
+  new open. The flag's id word holds `0x2013`, a CPU 2 flag (X), so the wait is local to CPU 2; exec_data's flag
+  `(0x60042f76)` holds 3, CPU 0's (X), unused on this path.
+- **The seam on core 2 (S-WM8946, A-WM8946-1).** S-WM8946 was CPU 0's hooks on PER_SIO's channel API
+  (`0x5005f0f7` open, `0x5005f4ae` configure, `0x5005f587` transfer, `0x5005f25f` close). Core 2 now stops at the
+  same four entries (`Cpu2.add_stops`): channel 14 is served with the same channel state and chip as CPU 0's calls,
+  every other channel's call runs natively. PER_SIO is one state for every core (its open keeps the opener's core,
+  `0x5005f1ff`, and its close calls a queued opener's callback there or posts it to that core, `0x5005f396..
+  0x5005f3ab`), so one model for both is the firmware's own shape. The open's callback runs on core 2 through a
+  trampoline of its own (`Cpu2.finish_after`, `0xa2100640`), because the callback's configure and transfer finish
+  through core 2's return trampoline `0xa2100600`. A transfer's end is delivered as CPU 0's are, at CPU 0's next
+  idle point in CPU 0's interrupt context (A-WM8946-1, I); the transmit callback sets the waiter's flag through
+  `0x50a6435b` (iset_flg `0x5002bd77` in interrupt context, else set_flg `0x5002bd01`), and the set of CPU 2's
+  `0x2013` from CPU 0 reaches core 2 natively (X: every wait ends well inside its timeout). Which core PER_SIO's end
+  interrupt reaches on the camera is ?.
+- **The run (X).** AUD_WAKEUP's first cross-core call is a cpu_conn kind 8 on CPU 0's object 2 (return
+  `0x5002d313`), its last a kind 7 on the same object (return `0x5002d2d7`), both served by CPU 0's CPUCONN; between
+  them the list makes 7 opens and closes of channel 14 and 1,356 transfers, every one a 4-byte register write (no
+  read): 1,348 registers, among them the volume registers 0x0a = 192, 0x0b = 448 and 0x28 = 377. Its six kind 1
+  waits sleep 50, 1, 1, 10, 100 and 80 ms (return `0x50a63110`), and the reply `0x50035afd(0, 0x50a62d75, 0)` (in
+  the disassembly notation) is posted from task `0x2017` 247.8 ms of lab time after the start; CPU 0 takes it at
+  its IRQ 324, flag 0xf9 is set, and AUD_MAIN goes on to its stage wait, its driver init, AUD_LEVEL_MONITOR's
+  start on CPU 2 and its queue wait.
+- **H-AUDSTART's lab time.** S-AUDCPU2 posted the reply at once; natively AUD_MAIN waits those 248 ms, and the
+  bring-up's settle does not move lab time, so H-AUDSTART now runs lab time a ms at a time (`elapse_until`, as an
+  idle slice runs it; at most 1 s) until AUD_MAIN and AUD_COPY_DATA wait and both CPU 2 starts are made (X: 248 ms).
+  Every later lab time of a `--cpu2 native` session moves by that much; test_cpu2's panel frame and reply bytes
+  still equal the default session's (X).
+- **Controls.** `cpu2-no-audwakeup` keeps AUD_WAKEUP's start stood in: S-AUDCPU2 posts the reply, core 2 makes no
+  codec call and S-AUDCPU2 is listed in use again (X, test_cpu2.mjs). `cpu2-no-audmon` is unchanged.
+- **Open (I; Claude wall-clock).** (1) The register values against the camera: only a capture of the codec bus would
+  check the 1,348 writes the lab now keeps. (2) PER_SIO's interrupt core (A-WM8946-1): find where PER_SIO attaches its end
+  interrupt (no direct `0x50053f76` call with a handler in `0x5005c000..0x50060000` was found by a byte scan, so it
+  is reached through a table): 1-2 h. (3) The `0x5005f48d(14, n)` calls in the list run natively on core 2 without
+  a park (X); what they select is ?.
+
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
 - **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads the data queue PER_SCPU_RECEIVE id 2

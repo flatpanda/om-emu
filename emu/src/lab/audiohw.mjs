@@ -27,6 +27,13 @@
 // (set_flg 0xf9) on ring [0][2] with bank-0's bit, as S-CPU2 posts CPU 2's reply. CPU 0 then takes IRQ 324 natively
 // and the drain sets flag 0xf9, which AUD_MAIN waits for. The power-on list does not run (its codec writes are CPU
 // 2's). Any other OlyTaStCpu call runs natively; a second start of the same id is an error.
+// With --cpu2 native (src/lab/cpu2.mjs; docs/hle-gaps.md 4.6.7) neither start is stood in: both go to CPU 2's CPUCONN
+// (cpu_conn kind 9) and its proxy starts the task there. AUD_WAKEUP's power-on list then runs on core 2, its
+// PER_SIO calls of channel 14 served by S-WM8946 at core 2's stops (wm8946.mjs serve_cpu2), and its list's waits
+// (kind 1 entries: 0x50a630de..0x50a6310b close the channel and sleep the entry's ms, 0x50a644fd) take lab time, so
+// H-AUDSTART runs lab time a ms at a time until AUD_MAIN, woken by AUD_WAKEUP's own 0x50035afd(0, 0x60a83d95, 0),
+// has made its later starts and waits on its queue. The mutants cpu2-no-audmon and cpu2-no-audwakeup keep the one
+// start stood in (test_cpu2.mjs's controls).
 //
 // H-AUDTIME (time_steps below): while the port plays, the lab's one-jump time moves go from clock event to clock event
 // and deliver IRQ 43 at each slot's end. The debug API's advance and run-to-frame ring the VSC's doorbell directly
@@ -51,7 +58,7 @@ import { bootFacts } from './menu.mjs';
 export class AudioHwError extends FirmwareError {}
 
 export const NATIVE_SOURCE = 'native';
-const CPU2 = 2, TIME_STEPS_MAX = 100000;
+const CPU2 = 2, TIME_STEPS_MAX = 100000, WAKEUP_MS = 1000;
 const h8 = (v) => '0x' + fx(v >>> 0, 8);
 
 export class AudioHw {
@@ -88,6 +95,7 @@ export class AudioHw {
     if (!(b & bit)) throw new AudioHwError(`H-AUDSTART: the stage word ${h8(word)} lacks stage ${f.stage}'s bit, which AUD_MAIN waits for (S-BOOTSTAGE sets it once the lab has run the section's constructors)`);
     this.codec = new CodecLink(lab);                // S-WM8946
     this.codec.bring_up();
+    if (this.s.cpu2) this.codec.serve_cpu2(this.s.cpu2);   // --cpu2 native: core 2's calls of channel 14 too
     lab.hook(f.task_start_cpu, (h, r) => this._start_cpu(h, r), 'S-AUDCPU2');
     this.time_steps();
     lab.lt.allow.add(f.main);
@@ -95,8 +103,23 @@ export class AudioHw {
     const [rc] = lab.nk.svc('act_tsk', { d0: main });
     if (rc !== K.E_OK) throw new AudioHwError(`H-AUDSTART: act_tsk(${main}) = ${rc}`);
     this.s.settle('H-AUDSTART');
-    const waiting = [main, this.starts[0][0]].filter((t) => (lab.nk.state(t) & 0xF) !== 4);
-    const missing = [...this.cpu2_ids.keys()].filter((id) => !this.cpu2.has(id));
+    let waiting = [main, this.starts[0][0]].filter((t) => (lab.nk.state(t) & 0xF) !== 4);
+    let missing = [...this.cpu2_ids.keys()].filter((id) => !this.cpu2.has(id));
+    // --cpu2 native: AUD_WAKEUP's power-on list sleeps between its writes on core 2 (its executor's waits, D below),
+    // so AUD_MAIN's wait for flag 0xf9 lasts that lab time: lab time runs a ms at a time, as an idle slice runs it,
+    // until AUD_MAIN has made its later starts and waits on its queue (at most WAKEUP_MS)
+    const wakeup = this.cpu2.get(this.id(f.cpu2[0][0]));
+    if (wakeup?.native) {
+      const t0 = lab.lab_time();
+      for (let ms = 0; (waiting.length || missing.length) && ms < WAKEUP_MS; ms++) {
+        lab.lt.elapse_until(lab.lab_time() + 1000000, () => lab.lab_time(), (t) => lab.run_to_event(t), 200000);
+        waiting = [main, this.starts[0][0]].filter((t) => (lab.nk.state(t) & 0xF) !== 4);
+        missing = [...this.cpu2_ids.keys()].filter((id) => !this.cpu2.has(id));
+      }
+      const reply = this.s.cpu2.posts.find((p) => p.path === 'sys_callrequest' && p.task === `0x${this.id(f.cpu2[0][0]).toString(16)}` && p.fn === h8(f.reply));
+      wakeup.ended = { lab_ns: lab.lab_time() - t0, reply: reply ? { fn: reply.fn, target: reply.target, lab_ns: reply.lab_ns - t0 } : null };
+      this.log.push(['S-AUDCPU2', `AUD_WAKEUP natively on CPU 2: AUD_MAIN went on after ${(lab.lab_time() - t0) / 1e6} ms of lab time; its reply ${reply ? `${reply.fn} at +${(reply.lab_ns - t0) / 1e6} ms` : 'not posted'}`]);
+    }
     if (waiting.length || missing.length) {
       throw new AudioHwError(`H-AUDSTART: after AUD_MAIN's start: tasks ${show(waiting)} not waiting, CPU 2 starts ${show(missing.map((x) => '0x' + x.toString(16)))} not made; tasks ${show(lab.task_states())}`);
     }
@@ -142,9 +165,10 @@ export class AudioHw {
     if (cur !== lab.nk.tcb(this.main_tid)) throw new AudioHwError(`S-AUDCPU2: the start of 0x${id.toString(16)} (${name}) from ${where(r.mdr)} outside AUD_MAIN's task`);
     if (this.cpu2.has(id)) throw new AudioHwError(`S-AUDCPU2: a second start of 0x${id.toString(16)} (${name})`);
     const rec = { name, lab_ns: lab.lab_time(), reply: null };
-    // --cpu2 native (cpu2.mjs): AUD_LEVEL_MONITOR's start goes natively to CPU 2 (cpu_conn kind 9, its CPUCONN);
-    // the mutant cpu2-no-audmon keeps it stood in (test_cpu2.mjs's control: the GUI's post then goes unanswered)
-    if (this.s.cpu2 && id === this.id(this.f.cpu2[1][0]) && this.s.opts.mutant !== 'cpu2-no-audmon') {
+    // --cpu2 native (cpu2.mjs): AUD_LEVEL_MONITOR's and AUD_WAKEUP's starts go natively to CPU 2 (cpu_conn kind 9,
+    // its CPUCONN); the mutants cpu2-no-audmon and cpu2-no-audwakeup keep one stood in (test_cpu2.mjs's controls)
+    if (this.s.cpu2 && id === this.id(this.f.cpu2[1][0]) && this.s.opts.mutant !== 'cpu2-no-audmon'
+      || this.s.cpu2 && id === this.id(this.f.cpu2[0][0]) && this.s.opts.mutant !== 'cpu2-no-audwakeup') {
       rec.native = true;
       this.cpu2.set(id, rec);
       this.log.push(['S-AUDCPU2', `${name} 0x${id.toString(16)}: started natively on CPU 2 (--cpu2 native)`]);
@@ -193,8 +217,11 @@ export class AudioHw {
     return blocks.length;
   }
   take_log() { return this.log.splice(0); }
+  // S-AUDCPU2 answered a start (with --cpu2 native neither: both run on core 2)
+  stood_in() { return [...this.cpu2.values()].some((r) => !r.native); }
   status() {
-    return { main_tid: this.main_tid, codec: this.codec?.status() ?? null, cpu2: Object.fromEntries([...this.cpu2].map(([id, r]) => ['0x' + id.toString(16), r.name])), port: this.port.status(),
+    return { main_tid: this.main_tid, codec: this.codec?.status() ?? null, cpu2: Object.fromEntries([...this.cpu2].map(([id, r]) => ['0x' + id.toString(16), r.name])),
+      ...(this.s.cpu2 && { cpu2_native: Object.fromEntries([...this.cpu2].map(([id, r]) => ['0x' + id.toString(16), r.native ? (r.ended ?? true) : false])) }), port: this.port.status(),
       sink: { blocks: this.blocks, events: this.events, frames: this.frames, unplayed: this.unplayed }, time_steps: this.steps };
   }
 }

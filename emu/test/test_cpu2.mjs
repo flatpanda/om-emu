@@ -6,7 +6,9 @@
 //                proxy) created and its init task's starts made, USTART_L2 returning at its entry (H-CPU2LOADER) with
 //                no cross-core call, its first device accesses as recorded; WB_MOV, MVR_MAIN, SDET and OSD_DRAW_CPU2
 //                started through OlyTaSt from CPU 0 (H-CPU2TASKS) and waiting at their own waits with no device
-//                access; AUD_LEVEL_MONITOR started on it through CPUCONN's proxy at AUD_MAIN's start, and the Super
+//                access; AUD_WAKEUP and AUD_LEVEL_MONITOR started on it through CPUCONN's proxy at AUD_MAIN's start,
+//                AUD_WAKEUP's power-on list written to S-WM8946 from core 2 and its reply posted by it, with no
+//                S-AUDCPU2 (the control cpu2-no-audwakeup: the stand-in answers again), and the Super
 //                Control Panel's posts answered by it with the frame and the reply bytes of the default session's
 //                S-CPU2; the control cpu2-no-audmon (that task stood in) leaves the GUI waiting, which the step's check
 //                reports; the halt word set, core 2 halts itself every pass of its idle loop, and the loop serves the
@@ -77,7 +79,11 @@ const BOOT_LOG = ['start CPU 0: CPUCONN_CPU0 153, CPUCALL_CPU0 154', 'skip H-CPU
 // on 0x2013 (0x51015f4f)
 const TASKS = [['WB_MOV', 0x200F, 0x5046AAE2], ['MVR_MAIN', 0x2002, 0x5045FD4C], ['SDET', 0x2010, 0x5050CD22], ['OSD_DRAW_CPU2', 0x2015, 0x51015F56]];
 const PROXY = 'CPUCONN proxy (CPU 0)';
-const STARTS = ['BOOT_CPU2', 'CPUCONN2', 'CPUCALL2', 'CONTEST_CPU2', 'USTART_L2', ...TASKS.flatMap(([n]) => [PROXY, n]), PROXY, 'AUD_LEVEL_MONITOR'];
+const STARTS = ['BOOT_CPU2', 'CPUCONN2', 'CPUCALL2', 'CONTEST_CPU2', 'USTART_L2', ...TASKS.flatMap(([n]) => [PROXY, n]), PROXY, 'AUD_WAKEUP', PROXY, 'AUD_LEVEL_MONITOR'];
+// AUD_WAKEUP on core 2 (docs/hle-gaps.md 4.6.7, X): its power-on list's PER_SIO calls of channel 14 served by
+// S-WM8946 at core 2's stops (open, configure, transfer, close: 7 opens and closes, 1356 register writes), its reply
+// 0x50035afd(0, 0x60a83d95, 0) (the call of 0x50a62d75) posted from its own task, 248 ms of lab time after its start
+const WAKEUP_CALLS = { open: 7, configure: 1356, transfer: 1356, close: 7, transfers: 1356 }, WAKEUP_MS = 248;
 // a CPU 2 task waits with the return address ret on its stack (the first 64 words above its TCB's saved sp)
 function waitsAt(lab, k2, id, ret) {
   const sp = lab.sim.u32(k2.tcb(id) + 24) >>> 0, at = (ret + 0x10021020) >>> 0;
@@ -137,6 +143,15 @@ export async function cpu2Session() {
       ok(JSON.stringify(dev) === JSON.stringify(DEVICES), `native: core 2's first device accesses ${JSON.stringify(c2.devices.slice(0, 6))}`);
       // H-CPUCONN0: CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 wait; H-CPU2LOADER: USTART_L2 made no cross-core call and
       // is dormant again; H-CPU2TASKS: the four tasks wait where their code waits, with no device access of their own
+      // AUD_WAKEUP natively on core 2: no S-AUDCPU2, its list's writes to the sound IC, its own reply
+      const au = s.audio_hw.status(), wk = au.cpu2_native?.['0x2017'], used = pl.stand_ins_in_use();
+      const wkReply = c2.posts.filter((p) => p.path === 'sys_callrequest' && p.task === '0x2017').map((p) => [p.target, p.fn]);
+      ok(au.cpu2_native?.['0x200e'] === true && wk?.lab_ns === WAKEUP_MS * 1e6 && wk.reply?.fn === '0x50a62d75'
+        && JSON.stringify(wkReply) === JSON.stringify([[0, '0x50a62d75']]) && (lab.nk.state(au.main_tid) & 0xF) === 4,
+        `native: AUD_WAKEUP on core 2 posts its own reply and AUD_MAIN goes on (${JSON.stringify(au.cpu2_native)}, posts ${JSON.stringify(wkReply)})`);
+      ok(JSON.stringify(au.codec.cpu2) === JSON.stringify(WAKEUP_CALLS) && au.codec.writes === WAKEUP_CALLS.transfers && au.codec.open === false
+        && !used.includes('S-AUDCPU2') && used.includes('A-WM8946-1'),
+        `native: AUD_WAKEUP's power-on list written to S-WM8946 from core 2 (${JSON.stringify(au.codec)}), S-AUDCPU2 not in use (${used.filter((x) => /AUD|WM89/.test(x))})`);
       const link = [0x99, 0x9A].map((t) => lab.nk.state(t) & 0xF);
       ok(link.join() === '4,4' && st.tasks.map(([, n]) => n).join() === TASKS.map(([n]) => n).join(),
         `native: CPU 0's CPUCONN_CPU0 / CPUCALL_CPU0 wait (${link}), the CPU 2 tasks started ${JSON.stringify(st.tasks)}`);
@@ -182,6 +197,18 @@ export async function cpu2Session() {
     let err = null;
     try { pl.open_session(); scp(pl.session); } catch (e) { err = e.message; }
     ok(err !== null && /the GUI waits for CPU 2's reply/.test(err), `control cpu2-no-audmon: the GUI's wait is reported (${err?.slice(0, 300)})`);
+    pl.close_session();
+  }
+  {
+    // the control cpu2-no-audwakeup: AUD_WAKEUP's start stood in, so S-AUDCPU2 posts the reply and core 2 writes
+    // nothing to the sound IC
+    const pl = new Player({ ...args, cpu2: 'native', x_mutant: 'cpu2-no-audwakeup' }, env);
+    try {
+      pl.open_session();
+      const au = pl.session.audio_hw.status(), used = pl.stand_ins_in_use();
+      ok(au.cpu2_native['0x2017'] === false && au.codec.cpu2.transfers === 0 && used.includes('S-AUDCPU2') && !pl.session.cpu2.posts.some((p) => p.task === '0x2017'),
+        `control cpu2-no-audwakeup: S-AUDCPU2 answers AUD_WAKEUP (${JSON.stringify(au.cpu2_native)}, core 2's codec calls ${JSON.stringify(au.codec.cpu2)})`);
+    } catch (e) { bad.push(`control cpu2-no-audwakeup: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }
   return { checks, bad };

@@ -140,7 +140,7 @@ export function startPowerManager(session, f) {
     throw new PowerError(`H-PWRSTART: after the power manager's start: task ${tid} state 0x${lab.nk.state(tid).toString(16)}, frames ${JSON.stringify(frames)}, errlog ${JSON.stringify(errlog)}: not waiting with its requests answered`);
   }
   lab.pwr_main_tid = tid;                                                         // H-PWRSEND (menu.mjs): its queue's sends go to it
-  const later = (session.opts?.power_later ?? process.env.OM_POWER_LATER) === 'on' ? laterInits(session, tid) : null;
+  const later = (session.opts?.power_later ?? globalThis.process?.env?.OM_POWER_LATER) === 'on' ? laterInits(session, tid) : null;
   return { tid, frames, later };
 }
 
@@ -164,7 +164,7 @@ function laterInits(session, tid) {
     out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog: lab.kernel.errors.slice(e0).map(([c, , , w]) => `${h8(c)} from ${w}`), state: lab.nk.state(tid), error });
     if (error) break;
   }
-  if (process.env.OM_POWER_LATER_LOG) console.error('H-PWRLATER', JSON.stringify(out));
+  if (globalThis.process?.env?.OM_POWER_LATER_LOG) console.error('H-PWRLATER', JSON.stringify(out));
   return out;
 }
 

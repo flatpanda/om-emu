@@ -1081,6 +1081,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // area), and on E146 and E147 in their own processes
 {
   const { resnandUnits, resnandSession } = await import('../test/test_resnand.mjs');
+  const { spawnSync } = await import('node:child_process');
   const ru = await resnandUnits(), rs = await resnandSession();
   const others = ['E146', 'E147'].map((m) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_resnand.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });

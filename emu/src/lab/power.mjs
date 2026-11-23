@@ -139,7 +139,32 @@ export function startPowerManager(session, f) {
   if (lab.nk.state(tid) !== 0x4 || unanswered.length || errlog.length) {
     throw new PowerError(`H-PWRSTART: after the power manager's start: task ${tid} state 0x${lab.nk.state(tid).toString(16)}, frames ${JSON.stringify(frames)}, errlog ${JSON.stringify(errlog)}: not waiting with its requests answered`);
   }
-  return { tid, frames };
+  const later = (session.opts?.power_later ?? process.env.OM_POWER_LATER) === 'on' ? laterInits(session, tid) : null;
+  return { tid, frames, later };
+}
+
+// H-PWRLATER (opt-in, power_later 'on'; docs/hle-gaps.md 4.7.6 and its entry of 2026-11-22): the boot's two later
+// inits of the power manager, E143's 0x50044ed7 (called from 0x50024d43: the source check {0x10, 2} through the
+// task's handler, then UI_IN's and the timer API's calls) and 0x50044f7d (from 0x501e9943: {0x10, 2} again, event 9
+// posted to queue 10, then the setters of C 0x50043c6c(1) and A 0x50043c63(1)), on the lab task after H-PWRSTART.
+// E143 only: the addresses are E143's, read from its image, not yet in src/fw/facts.mjs
+export const LATER_INITS_E143 = [0x50044ED7, 0x50044F7D];
+function laterInits(session, tid) {
+  const lab = session.lab, dev = lab.scpu_dev;
+  if (MODEL !== 'E143') throw new PowerError(`H-PWRLATER: the later inits' addresses are E143's, not ${MODEL}'s`);
+  const out = [];
+  for (const init of LATER_INITS_E143) {
+    const f0 = dev.frames.length, e0 = lab.kernel.errors.length;
+    let error = null;
+    try {
+      lab.step(`H-PWRLATER the power manager's later init ${h8(init)}`, () => lab.call(init, null, null, null, 2000000));
+      session.settle('H-PWRLATER');
+    } catch (e) { error = e.message.split('\n')[0]; }
+    out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog: lab.kernel.errors.slice(e0).map(([c, , , w]) => `${h8(c)} from ${w}`), state: lab.nk.state(tid), error });
+    if (error) break;
+  }
+  if (process.env.OM_POWER_LATER_LOG) console.error('H-PWRLATER', JSON.stringify(out));
+  return out;
 }
 
 // H-POWER after the lever's off: S-SHUTDOWN to the power-off's last write

@@ -7397,6 +7397,30 @@ run (X: `test/test_nav.mjs` on the five, time mode, TFT).
   (outside time mode the GUI's sleep is refused); what the lab-stub USB block reads on the camera, and so which power
   source the start finds there (?).
 
+#### 4.7.10 The power manager's later inits at the bring-up, a first run (2026-11-22; D unless tagged, addresses E143's)
+
+Opt-in H-PWRLATER (`emu/src/lab/power.mjs` laterInits, `power_later` 'on' or `OM_POWER_LATER=on`; off by default, so
+no default session changes) calls 4.7.6 Open (1)'s two inits on the lab task after H-PWRSTART, E143 only (the
+addresses `LATER_INITS_E143`, not yet in `src/fw/facts.mjs`).
+
+- **What they do (D, read from E143's image).** `0x50044ed7` clears two locals (`0x3ffe19f6`, 12 and 24 bytes), runs
+  `{0x10, 2}` through the task's handler `0x5004408f` (`0x50044f00`), calls `0x5014c420(0x2006, 3, 0x6065f3dc)`,
+  branches on `0x5000297f(8)` (`0x50044f19..23`) to `0x5014d537(0x2003, 0 or 1)`, and ends with the timer API's
+  `0x500519ce(8, 5)`, `0x50051a29(8, &locals)` and `0x50051a7d(8)`. `0x50044f7d` runs `{0x10, 2}` the same way
+  (`0x50044f95`), posts the 16-byte message with event 9 to queue 10 (`0x5002c151` with the queue word
+  `0x600431d8` and -1, `0x50044faf..bb`), calls `0x5002cdb7(0x61125841)` and sets C and A (`0x50043c6c(1)`,
+  `0x50043c63(1)`, `0x50044fcf..d8`).
+- **X (one run, E143, default session with the opt-in).** `0x50044ed7` sends no frame and does not return: the lab
+  stops it with "all tasks blocked (lab task 160 state WAI) and no interrupt made one ready"; PWR_MAIN (task 10)
+  stays waiting. The bring-up then goes on with the abandoned call and stops later at H-TPINIT's touch task start
+  (a trap at `0x52e624d0`), which is that abandonment's consequence, not a finding of its own (I).
+- **Where it waits (?).** Not read in the time this run had: which of the calls above blocks (the handler's
+  `{0x10, 2}` source check (4.7.6's ticks run `{0x10, 1}` on PWR_MAIN's own task, not on the lab task), or UI_IN's `0x5014c420` /
+  `0x5014d537`, or the timer API) is the next step. `0x50044f7d` and S-SCPUDEV's `0x11` were not reached; no
+  stand-in for `0x11` is built.
+- **Open.** The wait in `0x50044ed7` read to its cause; then `0x50044f7d`, the `0x14` at the start and the battery
+  check's `0x11` requests (4.7.6 Open (1), (3)).
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

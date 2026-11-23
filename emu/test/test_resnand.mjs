@@ -12,10 +12,12 @@
 //                   writes and erases kept inside the guard window and refused past it, reads past the window or the
 //                   image served erased up to the RAM log and passed down from there, an access across the area's
 //                   bounds refused, a container read served, anything else passed down)
-//   resnandSession  (firmware: E143) play sessions with env.nand (the provisioned extract): H-RESINIT's table pointers
-//                   and the resource API's answers natively (res_size(0, 0) = 0xe2800, res_size(3, 0) = 0x2800,
-//                   res_size(0x8000, 0) = 0x167fc00, res_version 0x01000000; the erased sound area's res_size(2, 0) =
-//                   0xffffffff, version 0xffff0000, USTART_L's sound 0 load taking its error path once, its one
+//   resnandSession  (firmware: E143, E146, E147) play sessions with env.nand (the provisioned extract): the loader's
+//                   tables as src/fw/facts.mjs resTables reads them (E143's the constants resnand.mjs keeps),
+//                   H-RESINIT's table pointers and the resource API's answers natively (E143: res_size(0, 0) =
+//                   0xe2800, res_size(3, 0) = 0x2800, res_size(0x8000, 0) = 0x167fc00, res_version 0x01000000; E146's
+//                   and E147's in BODY); the lens data lookup's record of type 0x8002 read, not 0 bytes at 0; the
+//                   erased sound area's res_size(2, 0) = 0xffffffff, version 0xffff0000, USTART_L's sound 0 load taking its error path once, its one
 //                   0x1f000003 log, and a later load answered from the descriptor it left without a log); the
 //                   provisioned extract the one labNand makes from the .BIN, and the whole container giving the same
 //                   session; with a lab-made sound area (env.soundArea) res_size(2, i), USTART_L's sound 0 load at
@@ -190,6 +192,16 @@ function resnandLayer(ok) {
   ok(sim.read(0xA0000000, 16).every((b) => b === 0x5a) && JSON.stringify(log.slice(n0)) === JSON.stringify([['finish', 0], ['prev'], ['prev']]), `S-RESNAND: a container read served, a read outside it and a write passed down: ${JSON.stringify(log.slice(n0))}`);
 }
 
+// per body: res_version (E143 0x501a971e; E146's 0x501ae4e3 and E147's 0x501b64d7 the same instructions, D), the
+// type-2 write (E143 0x501a98c8; E146 0x501ae68d, E147 0x501b6681, the same entry, D); what the tables answer for
+// res_size(0, 0), (0, 37), (3, 0), (0x8000, 0), (0x8002, 0) and res_version(0, 1, 3, 0x8000) (X: the heads' versions,
+// E147's images block's 0x1000), and the lens data lookup's read of S-LENSMCU's lens record [NAND address, bytes] (X:
+// the same record on the three)
+const BODY = {
+  E143: { version: 0x501A971E, write: 0x501A98C8, sizes: [0xE2800, 0x1D7400, 0x2800, 0x167FC00, 0x800], versions: [0x01000000, 0x01000000, 0x01000000, 0x01000000], lens: [0x4709DE00, 13824] },
+  E146: { version: 0x501AE4E3, write: 0x501AE68D, sizes: [0xE7000, 0x1DD600, 0x2800, 0x167FC00, 0x800], versions: [0x01000000, 0x01000000, 0x01000000, 0x01000000], lens: [0x4709DE00, 13824] },
+  E147: { version: 0x501B64D7, write: 0x501B6681, sizes: [0x11AE00, 0x193A00, 0x2800, 0x167FC00, 0x800], versions: [0x01000000, 0x01000000, 0x10000000, 0x01000000], lens: [0x4709DE00, 13824] },
+};
 export async function resnandSession() {
   const bad = [];
   let checks = 0;
@@ -198,9 +210,10 @@ export async function resnandSession() {
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { MODEL_INFO } = await import('../src/fw/model.mjs');
-  const { TABLES, SUB_TABLES, SOUND_DESCRIPTOR, SOUND_LAST } = await import('../src/lab/resnand.mjs');
-  if (!MODEL_INFO.res_nand) return { checks: 1, bad: ['the session tests run on E143 (MODELS res_nand)'] };
-  const info = MODEL_INFO.res_nand;
+  const { TABLES, SUB_TABLES, SUB_COUNT, SOUND_DESCRIPTOR, SOUND_LAST, layoutTables } = await import('../src/lab/resnand.mjs');
+  const { MODEL } = await import('../src/fw/model.mjs');
+  if (!MODEL_INFO.res_nand || !BODY[MODEL]) return { checks: 1, bad: [`the session tests run on a body with MODELS res_nand and a BODY row (${Object.keys(BODY)})`] };
+  const info = MODEL_INFO.res_nand, body = BODY[MODEL];
   // --audio off: the sound area erased or the test's image (S-SOUNDRES's lab-made one, with the audio hardware, is
   // test_audio.mjs afBeepSession's)
   const open = (extra) => {
@@ -211,32 +224,39 @@ export async function resnandSession() {
   };
   const api = (lab) => ({
     size: (t, i) => lab.call(info.size, { d0: t, d1: i }, null, null, 20000).d0 >>> 0,
-    version: (t) => lab.call(0x501A971E, { d0: t }, null, null, 2000).d0 >>> 0,
+    version: (t) => lab.call(body.version, { d0: t }, null, null, 2000).d0 >>> 0,
     read: (t, i, n) => { const st = new Uint8Array(4); new DataView(st.buffer).setUint32(0, n, true); lab.call(info.read, { d0: t, d1: i, a0: info.slot, a1: 0 }, st, null, 2000000); return [lab.sim.u32(SOUND_DESCRIPTOR), lab.sim.u32(SOUND_DESCRIPTOR + 4)]; },
   });
-  const tables = (lab) => [...Object.values(TABLES).flat(), ...Array.from({ length: 12 }, (_, i) => SUB_TABLES[1] + 4 * i)].map((a) => lab.sim.u32(a));
   // the NAND extract provisioning keeps in unpacked/<code>
   let pl = open({ nand: loadNand() });
   let s = pl.session, lab = s.lab;
+  const L = layoutTables(s.resnand.layout), TAB = L.tables;
+  const tables = (lab) => [...Object.values(TAB).flat(), ...Array.from({ length: L.count }, (_, i) => L.sub[1] + 4 * i)].map((a) => lab.sim.u32(a));
+  // the rule's tables: E143's the constants (D); E146's and E147's eleven sub-indexes (D, their loaders)
+  ok(MODEL === 'E143' ? JSON.stringify([TAB, L.sub, L.count]) === JSON.stringify([TABLES, SUB_TABLES, SUB_COUNT]) : L.count === 11,
+    `resTables at the loader ${h8(info.loader)}: ${JSON.stringify(TAB)}, sub-tables ${h8(L.sub[1])} x ${L.count}`);
   const used = pl.stand_ins_in_use(), bring = s.steps.find((x) => x.resnand)?.resnand;
   ok(used.includes('H-RESINIT') && used.includes('S-RESNAND'), `the stand-ins in use name H-RESINIT and S-RESNAND: ${used.filter((x) => /RES/.test(x))}`);
-  // the pointers the loader set (X, round 1: 0xa32db180 = 0xa3220830 ...)
-  ok(lab.sim.u32(0xA32DB17C) === 0xA3220810 && lab.sim.u32(0xA32DB180) === 0xA3220830 && lab.sim.u32(0xA32DB19C) === 0xA3220C40 && lab.sim.u32(0xA32DB1BC) === 0xA3223C50 && lab.sim.u32(0xA32DB32C) === 0xA32299C0,
+  // the pointers the loader set: each table 32 bytes past its buffer (D); E143's (X, round 1: 0xa32db180 = 0xa3220830
+  // ...)
+  ok(Object.values(TAB).every(([b, t]) => lab.sim.u32(b) !== 0 && lab.sim.u32(t) === lab.sim.u32(b) + 32) &&
+    (MODEL !== 'E143' || (lab.sim.u32(0xA32DB17C) === 0xA3220810 && lab.sim.u32(0xA32DB180) === 0xA3220830 && lab.sim.u32(0xA32DB19C) === 0xA3220C40 && lab.sim.u32(0xA32DB1BC) === 0xA3223C50 && lab.sim.u32(0xA32DB32C) === 0xA32299C0)),
     `H-RESINIT's tables: ${JSON.stringify(bring?.tables)}`);
-  const reads = (bring?.log ?? []).filter(([k]) => k === 'nand' || k === 'sound');
-  ok(reads.length >= 16 && reads[0][1].startsWith('read 1024 bytes at 0x4e420000') && reads.some(([, t]) => t.startsWith('read 2048 bytes at 0x41ec0000')) && reads.some(([, t]) => t.startsWith('read 1024 bytes at 0x458c0000')),
-    `the loader's reads, the sound index first: ${reads.length} (${reads.slice(0, 3).map(([, t]) => t.split(' from')[0])})`);
+  const reads = (bring?.log ?? []).filter(([k]) => k === 'nand' || k === 'sound'), nLoader = 4 + L.count;
+  ok(reads.length >= nLoader && reads[0][1].startsWith(`read 1024 bytes at ${h8(info.sound.load)}`) && reads[0][0] === 'sound' && reads.slice(1, nLoader).every(([k]) => k === 'nand') &&
+    reads.some(([, t]) => t.startsWith('read 2048 bytes at 0x41ec0000')) && reads.some(([, t]) => t.startsWith('read 1024 bytes at 0x458c0000')),
+    `the loader's ${nLoader} reads served, the sound index first, the rest from the extract: ${reads.length} (${reads.slice(0, 3).map(([, t]) => t.split(' from')[0])})`);
   const A = api(lab);
   const sz = [[0, 0], [0, 37], [3, 0], [0x8000, 0], [0x8002, 0], [2, 0]].map(([t, i]) => A.size(t, i));
-  ok(same(sz, [0xE2800, 0x1D7400, 0x2800, 0x167FC00, 0x800, 0xFFFFFFFF]), `res_size(0, 0), (0, 37), (3, 0), (0x8000, 0), (0x8002, 0), (2, 0): ${sz.map(h8)}`);
+  ok(same(sz, [...body.sizes, 0xFFFFFFFF]), `res_size(0, 0), (0, 37), (3, 0), (0x8000, 0), (0x8002, 0), (2, 0): ${sz.map(h8)}`);
   const vs = [0, 1, 3, 0x8000, 2].map((t) => A.version(t));
-  ok(same(vs, [0x01000000, 0x01000000, 0x01000000, 0x01000000, 0xFFFF0000]), `res_version(0, 1, 3, 0x8000, 2): ${vs.map(h8)}`);
+  ok(same(vs, [...body.versions, 0xFFFF0000]), `res_version(0, 1, 3, 0x8000, 2): ${vs.map(h8)}`);
   const soundStep = lab.steps.find((x) => /H-RESINIT sound 0/.test(x.name ?? ''));
   ok(JSON.stringify(bring?.sound0) === JSON.stringify([h8(0), h8(0)]) && lab.kernel.errors.filter(([c]) => c === 0x1F000003).length === 1 && JSON.stringify(soundStep?.errlog?.map(([c]) => c)) === JSON.stringify([h8(0x1F000003)]),
     `the erased area: USTART_L's sound 0 load takes its error path, descriptor ${JSON.stringify(bring?.sound0)}, its step's log ${JSON.stringify(soundStep?.errlog ?? null)}`);
-  ok(lab.sim.u32(SOUND_LAST) === lab.sim.u32(TABLES[2][1]), `the erased area: res_read's last entry ${h8(lab.sim.u32(SOUND_LAST))} is the table's entry 0, as the firmware leaves it`);
-  const lensRead = reads.find(([, t]) => / at 0x4709de00 /.test(t));
-  ok(!!lensRead && (s.steps.find((x) => x.lens)?.lens?.log ?? []).every(([k, t]) => k !== 'nand' || !/read 0 bytes/.test(t)), `the lens data lookup reads its record (type 0x8002) instead of 0 bytes: ${lensRead?.[1]}`);
+  ok(lab.sim.u32(SOUND_LAST) === lab.sim.u32(TAB[2][1]), `the erased area: res_read's last entry ${h8(lab.sim.u32(SOUND_LAST))} is the table's entry 0, as the firmware leaves it`);
+  const lensRead = reads.find(([, t]) => t.startsWith(`read ${body.lens[1]} bytes at ${h8(body.lens[0])} `));
+  ok(!!lensRead && (s.steps.find((x) => x.lens)?.lens?.log ?? []).every(([k, t]) => k !== 'nand' || !/read 0 bytes/.test(t)), `the lens data lookup reads its record (type 0x8002) instead of 0 bytes: ${lensRead?.[1] ?? reads.slice(nLoader).map(([, t]) => t).join('; ')}`);
   const t0 = tables(lab);
   // a later sound 0 load into the slot (the UI_OUT handler's) answers the descriptor the bring-up's left, without a
   // read or a log (0x501a9333..47)
@@ -266,7 +286,8 @@ export async function resnandSession() {
     }
   }
   // a lab-made sound area
-  const w0 = tone(2000, 100), w1 = tone(1000, 300), img = N.soundArea([{ id: 0, wav: w0 }, { id: 1, wav: w1 }]), p = N.parseSoundArea(img);
+  const LOAD = { load: info.sound.load };
+  const w0 = tone(2000, 100), w1 = tone(1000, 300), img = N.soundArea([{ id: 0, wav: w0 }, { id: 1, wav: w1 }], LOAD), p = N.parseSoundArea(img, info.sound.load);
   pl = open({ nand: loadNand(), soundArea: img });
   s = pl.session; lab = s.lab;
   const B = api(lab), st = s.steps.find((x) => x.resnand)?.resnand;
@@ -282,7 +303,7 @@ export async function resnandSession() {
   const w0b = tone(3000, 100), src = info.slot + 0x100000, rn = s.resnand, k0 = [rn.writes, rn.erases];
   lab.sim.write(src, w0b);
   const e1 = lab.kernel.errors.length;
-  lab.call(0x501A98C8, { d0: 2, d1: 0, a0: src, a1: w0b.length }, null, null, 2000000);
+  lab.call(body.write, { d0: 2, d1: 0, a0: src, a1: w0b.length }, null, null, 2000000);
   ok(w0b.length === w0.length && rn.writes - k0[0] === 2 && rn.erases - k0[1] === 1 && lab.sim.u32(SOUND_LAST) === 0 && lab.kernel.errors.length === e1,
     `res_write(2, 0): ${rn.writes - k0[0]} writes, ${rn.erases - k0[1]} erases, last entry ${h8(lab.sim.u32(SOUND_LAST))}, logs ${lab.kernel.errors.slice(e1).map(([c]) => h8(c))}`);
   const d2 = B.read(2, 0, p.sounds[0].size + 1024);
@@ -292,7 +313,7 @@ export async function resnandSession() {
   // 1024 bytes, past the image's end, which S-RESNAND serves erased; read into UI_OUT's buffer for sounds above 512 KiB
   // (0xb5a0b780, 0x5014f7e0, D): at 0xa4000000 a sound of more than 0x3d000 bytes would run into the GUI's icons record
   // at 0xa403d000 (X: a 2 s tone as sound 0 stopped the application's start)
-  const wl = tone(1000, 2000), big = N.soundArea([{ id: 0, wav: w0 }, { id: 1, wav: wl }]), pb = N.parseSoundArea(big), BIG_AT = 0xB5A0B780;
+  const wl = tone(1000, 2000), big = N.soundArea([{ id: 0, wav: w0 }, { id: 1, wav: wl }], LOAD), pb = N.parseSoundArea(big, info.sound.load), BIG_AT = 0xB5A0B780;
   pl = open({ nand: loadNand(), soundArea: big });
   lab = pl.session.lab;
   const n1 = pb.sounds[1].size + 1024, st1 = new Uint8Array(4);

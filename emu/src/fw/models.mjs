@@ -514,6 +514,19 @@ export const MODELS = {
     // chain, power-on and detect paths and frame table compared with E143's instruction for instruction), the addresses
     // read by src/fw/facts.mjs lensDriver; its start sends E143's 15 frames (X)
     lens_native: true,
+    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5, D unless
+    // tagged): USTART_L's loader 0x501ada65 (its call 0x500242b5, before the lens data cache load 0x500242eb), res_size
+    // 0x501ae532 and res_read 0x501adfe4 (USTART_L's sound 0 at 0x500243ef / 0x50024407, into 0xa4000000), the NAND
+    // erase operation 0x10300 (the type-2 write path's, 0x501ae83b); the sound area: load, the loader's first read
+    // (0x501ada85: 0x4e3e0000, E143's 0x4e420000; the loader's tables and its eleven sub-indexes, src/fw/facts.mjs
+    // resTables); guard, the flash access guard 0x50000735's window for it (0x4e3e0000..0x4e420000, the window below
+    // E143's); end, the guard's next window, the RAM log at 0x4e820000 as E143's (the area's real extent is I);
+    // extract_sha256: src/fw/nand.mjs nandExtract over this .BIN (561 spans, 3,702,566 bytes, X)
+    res_nand: {
+      loader: 0x501ADA65, size: 0x501AE532, read: 0x501ADFE4, slot: 0xA4000000, erase: 0x10300,
+      sound: { load: 0x4E3E0000, guard: [0x4E3E0000, 0x4E420000], end: 0x4E820000 },
+      extract_sha256: '5bde705136ba26e45a71f63611a17cf5511d908e83f52cb9b3be7d8ea2a70a92',
+    },
     // the SCPU's block at file offset 0x0e520000, byte-identical to E143's (docs/om1-scpu-spec.md section 2; D: the same
     // sha256), so E143's pins and gate
     scpu_lle: {
@@ -635,6 +648,19 @@ export const MODELS = {
     // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3; X: the same
     // compares and frames); LLPSW is bit 6 of group 1 byte 0 in its UI_IN tables (E143's bit 4 of byte 1)
     lens_native: true,
+    // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5, D unless
+    // tagged): USTART_L's loader 0x501b5a59 (its call 0x50024234, before the lens data cache load 0x5002426a), res_size
+    // 0x501b6526 and res_read 0x501b5fd8 (USTART_L's sound 0 at 0x5002436e / 0x50024386, into 0xa4000000), the NAND
+    // erase operation 0x10300 (the type-2 write path's, 0x501b682f); the sound area: load, the loader's first read
+    // (0x501b5a79: 0x4e3e0000, as E146's; its tables and eleven sub-indexes, src/fw/facts.mjs resTables); guard, the
+    // flash access guard 0x50000724's window for it (0x4e3e0000..0x4e420000); end, the RAM log at 0x4e820000 as E143's
+    // (the area's real extent is I); extract_sha256: src/fw/nand.mjs nandExtract over this .BIN (559 spans, 3,522,305
+    // bytes, X)
+    res_nand: {
+      loader: 0x501B5A59, size: 0x501B6526, read: 0x501B5FD8, slot: 0xA4000000, erase: 0x10300,
+      sound: { load: 0x4E3E0000, guard: [0x4E3E0000, 0x4E420000], end: 0x4E820000 },
+      extract_sha256: '7add9e8cefe5bef85d6248d0d22e00f1c8a6e086879c8737de03d131139f642e',
+    },
     // property 4513 (the output device) reads the play path makes from one more site than E143's GUI (X)
     prop_sites: [0x503DAF24],
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an

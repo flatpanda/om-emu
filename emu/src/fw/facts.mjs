@@ -282,6 +282,51 @@ export function vectorPage(img) {
   throw new Error('vectorPage: no run of the seven IVAR stores and the store to (0x801c)');
 }
 
+// The resource API's tables as USTART_L's loader reads them from the NAND (src/lab/resnand.mjs H-RESINIT, S-RESNAND;
+// docs/hle-gaps.md 4.5), read from the loader's own bytes at `loader` (disassembly notation; MODELS res_nand.loader).
+// The loader (E143 0x501a8ca0, E146 0x501ada65, E147 0x501b5a59, D) clears three words, the second res_read's type-2
+// last entry (`clr d0; mov d0,(abs32) x3`), then reads four indexes in this order, each `mov <size>,d0; call alloc;
+// mov <nand>,a0; mov d0,a1; mov <len>,d0; mov 1,d1; call read; mov a0,(<buffer>); mov a0,d0; add 32,d0;
+// mov d0,(<table>)` (fc dc .. f1 e1 2c .. 85 01 cd .. fc 80 .. f1 d0 28 20 fc 81 ..): the sound index (type 2), the
+// images block's (type 3), the large-data block's (type 0x8000) and the resource block's (types 0 and 1); between the
+// third and the fourth, the loop over the large-data index's sub-indexes: `mov (<0x8000 table>),a0` .. `mov
+// <sizes>,a0; mov (d0,a0),d3` (the read lengths, words) .. `mov <buffers>,a1; mov a0,(d0,a1)` .. `mov <tables>,a0;
+// mov d0,(d1,a0)` .. `cmp <count>,d0; blt` (E143: 12 sub-indexes, sizes at 0x602a49f4; E146 and E147: 11, at
+// 0x602b9f58 and 0x602cb264; D). Returns {last, read, sound, images, large, resource: {nand, len, buffer, table, at},
+// sub: {count, sizes, buffers, tables, at}} (at: disassembly addresses). Throws unless the span holds exactly that.
+export const RES_TABLES_SPAN = 0x180, RES_SUB_SPAN = 0x60;   // E143: the last table store 0x149 bytes past the entry, the count 0x4a past the sizes
+export function resTables(img, loader) {
+  const at = (loader - 0x50000000) >>> 0, end = Math.min(at + RES_TABLES_SPAN, img.length - 40);
+  if (!bytesAt(img, at, [0x00, 0xfc, 0x81]) || !bytesAt(img, at + 7, [0xfc, 0x81]) || !bytesAt(img, at + 13, [0xfc, 0x81])) {
+    throw new Error(`resTables: ${h8(loader)} does not begin with 'clr d0; mov d0,(abs32)' three times`);
+  }
+  const reads = [], subs = [];
+  let read = null;
+  for (let o = at; o < end; o++) {
+    if (bytesAt(img, o, [0xfc, 0xdc]) && bytesAt(img, o + 6, [0xf1, 0xe1, 0x2c]) && bytesAt(img, o + 11, [0x85, 0x01, 0xcd]) &&
+        bytesAt(img, o + 18, [0xfc, 0x80]) && bytesAt(img, o + 24, [0xf1, 0xd0, 0x28, 0x20, 0xfc, 0x81])) {
+      const fn = (0x50000000 + o + 13 + ((img[o + 14] | img[o + 15] << 8) << 16 >> 16)) >>> 0;
+      if (read !== null && fn !== read) throw new Error(`resTables: the index reads at ${h8(loader)} call ${h8(read)} and ${h8(fn)}, want one function`);
+      read = fn;
+      reads.push({ nand: u32(img, o + 2), len: img[o + 9] | img[o + 10] << 8, buffer: u32(img, o + 20), table: u32(img, o + 30), at: 0x50000000 + o });
+    }
+    if (bytesAt(img, o, [0xfc, 0xdc]) && bytesAt(img, o + 6, [0xf3, 0x30])) {
+      const s = { sizes: u32(img, o + 2), at: 0x50000000 + o };
+      for (let q = o; q < Math.min(o + RES_SUB_SPAN, end); q++) {
+        if (bytesAt(img, q, [0xfc, 0xdd]) && bytesAt(img, q + 6, [0xf3, 0xc1])) s.buffers = u32(img, q + 2);
+        if (bytesAt(img, q, [0xfc, 0xdc]) && bytesAt(img, q + 6, [0xf3, 0x44])) s.tables = u32(img, q + 2);
+        if (img[q] === 0xa0 && img[q + 2] === 0xc0 && s.count === undefined && s.tables !== undefined) s.count = img[q + 1];
+      }
+      subs.push(s);
+    }
+  }
+  const [sound, images, large, resource] = reads, sub = subs[0];
+  if (reads.length !== 4 || subs.length !== 1 || sub.buffers === undefined || sub.tables === undefined || sub.count === undefined || !(large.at < sub.at && sub.at < resource.at)) {
+    throw new Error(`resTables: at ${h8(loader)}: ${reads.length} index reads (want 4) and ${subs.length} sub-index loops (want 1, with its buffers, tables and count, between the third read and the fourth)`);
+  }
+  return { last: u32(img, at + 9), read, sound, images, large, resource, sub };
+}
+
 // The resource loader's slots: where it copies a language's font and string records and the two image records
 // (src/lab/resources.mjs FONT_SLOT, STRING_SLOT, BLOB_LOADS) and the slots' size limits. The loader reads the
 // block's 32-byte head and index as INDEX_READ bytes from the block's load address, `mov <load>,a0; ..; mov

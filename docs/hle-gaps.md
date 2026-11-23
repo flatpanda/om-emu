@@ -5448,7 +5448,7 @@ tool (`bin/session.mjs`) and fixed on 2026-11-14.
   the rows' instruction counts moved; the device summaries differ in two more VSC doorbell commands (the harness's
   steps) and, after S1 with S-AFLOCK, 6 to 10 fewer OSD engine commands (which drawing is not traced). Open: the OM-1's
   own sound area (its entries, which ids are which sounds, their format, its extent; a NAND read from a camera would
-  settle it); E146 and E147 (their sound index at `0x4e3e0000`, X) are not given `res_nand` yet.
+  settle it). E146 and E147 load the tables natively too since 2026-11-22 (4.5.1).
 - **The AV back end (D):** AVFW / AVPI plug-ins: the firmware's own MP4 / MOV muxer and demuxer, H.264 / HEVC encode
   and decode drivers, rate control, audio codecs, a TS multiplexer (12.4k, use ?), the StlCA_IF still codec (format ?).
 - **Seams:** S3 + S4 + S5 + S6 + S7 recommended, S1 (today's callbacks) kept until S2 (the HLS observers'
@@ -5462,6 +5462,43 @@ tool (`bin/session.mjs`) and fixed on 2026-11-14.
   and WB_MOV queues and on the mvr IF helpers; whether they wake TAKE_MOV is ?. Next, the registration through which
   CapMov_MovieRecorderSLR gets its Notify* observers (the CmpMov_Notify* observer classes of 4.1.3); then check in a
   camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
+
+#### 4.5.1 The resource tables on E146 and E147 (2026-11-22; D unless tagged)
+
+E146 and E147 run H-RESINIT and S-RESNAND as E143 does, given `res_nand` in MODELS. Their loaders, `0x501ada65` (E146,
+called at `0x500242b5`) and `0x501b5a59` (E147, called at `0x50024234`), are E143's `0x501a8ca0` in shape, and the lab
+reads each body's tables from the loader's own bytes (`emu/src/fw/facts.mjs` resTables, which throws where the shape
+differs; E143's result is the constants `resnand.mjs` keeps):
+
+| | E143 | E146 | E147 |
+| --- | --- | --- | --- |
+| sound index (type 2) | `0x4e420000` | `0x4e3e0000` | `0x4e3e0000` |
+| images block (type 3) | `0x4e1e0000` | `0x4e1a0000` | `0x4e1a0000` |
+| large data (`0x8000`), resource block (0, 1) | `0x458c0000`, `0x41ec0000` | the same | the same |
+| sub-indexes, their sizes | 12, `0x602a49f4` | 11, `0x602b9f58` | 11, `0x602cb264` |
+| table pointers (sound, resource, sub-tables) | `0xa32db180`, `0xa32db32c`, `0xa32db1f4` | `0xa32db180`, `0xa32db310`, `0xa32db1f0` | `0xa32da42c`, `0xa32da5bc`, `0xa32da49c` |
+| res_read's last entry, descriptor | `0xa32db184`, `0xa32db188` | the same | `0xa32da430`, `0xa32da434` |
+| flash access guard's window for the sound area | `0x50000735`: `0x4e420000..0x4e460000` | `0x50000735`: `0x4e3e0000..0x4e420000` | `0x50000724`: `0x4e3e0000..0x4e420000` |
+
+One sub-index fewer: the byte map (E146 `0x602b9f47`, E147 `0x602cb253`) has no slot for type `0x800a`, which
+E143's `0x602a49e3` maps to 7. The other sites have E143's bytes at their places: res_size `0x501ae532` /
+`0x501b6526`, res_read `0x501adfe4` / `0x501b5fd8` (its last-entry and descriptor stores and its `0x1f000003`),
+USTART_L's sound 0 load into `0xa4000000` (`0x500243ef` / `0x50024407`, `0x5002436e` / `0x50024386`), res_version
+`0x501ae4e3` / `0x501b64d7`, the type-2 write `0x501ae68d` / `0x501b6681` with its erase `0x10300` (`0x501ae83b` /
+`0x501b682f`), and the guard's next window, the RAM log at `0x4e820000`, which is still taken as the end of the area
+(I). No container block covers the sound area on either body: their images block ends at `0x4e3a0000` (X).
+
+Provisioning writes each body's NAND extract to `unpacked/<code>/` as it does for E143: 561 spans, 3,702,566 bytes on
+E146, and 559 spans, 3,522,305 bytes on E147 (X, pinned by `extract_sha256`). Results from `emu/test/test_resnand.mjs
+--session` (X) on each body: 15 loader reads, the sound index served from the area and the rest from the extract. E146
+answers res_size(0, 0) = `0xe7000`, (0, 37) = `0x1dd600`; E147 answers `0x11ae00` and `0x193a00`. On both, (3, 0) =
+`0x2800`, (`0x8000`, 0) = `0x167fc00` and (`0x8002`, 0) = `0x800`. res_version is `0x01000000`, except res_version(3)
+on E147, which is `0x10000000` because its images block's head carries version `0x1000`. With the sound area erased,
+res_size(2, 0) = `0xffffffff`, USTART_L's sound 0 load logs its one `0x1f000003` and leaves `{0, 0}`. A lab-made area is
+loaded at `0xa4000000`, and the firmware's own type-2 write is read back. The lens data lookup now reads S-LENSMCU's
+lens record, the same 13824 bytes at `0x4709de00` as on E143, where it used to read 0 bytes at 0 and log the lens as not
+found. What that changes further along these bodies' sessions has not been compared yet (golden and modelcheck are the
+unified run's). Open: the extent of the sound area and its factory contents, as on E143.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 

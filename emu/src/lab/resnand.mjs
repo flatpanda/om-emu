@@ -1,7 +1,7 @@
-// The resource tables, natively (docs/hle-gaps.md 4.5 "The resource tables"; MODELS res_nand: E143): the firmware's
-// resource API (res_size 0x501a976d, res_version 0x501a971e, res_read 0x501a921f) looks a resource up in tables that
-// USTART_L's loader 0x501a8ca0 (its call at 0x500241d8) reads from the NAND: the sound index (type 2, RES_MODE_SOUND)
-// at 0x4e420000, the images block's (type 3) at 0x4e1e0000, the large-data block's (type 0x8000) at 0x458c0000 and
+// The resource tables, natively (docs/hle-gaps.md 4.5 "The resource tables"; MODELS res_nand: E143, E146, E147): the
+// firmware's resource API (res_size 0x501a976d, res_version 0x501a971e, res_read 0x501a921f) looks a resource up in
+// tables that USTART_L's loader 0x501a8ca0 (its call at 0x500241d8) reads from the NAND: the sound index (type 2,
+// RES_MODE_SOUND) at 0x4e420000, the images block's (type 3) at 0x4e1e0000, the large-data block's (type 0x8000) at 0x458c0000 and
 // twelve sub-indexes it names (types 0x8001..0x800f through the byte map 0x602a49e3), and the resource block's (types
 // 0 and 1) at 0x41ec0000, each table 32 bytes past its buffer, past the block's head (D, 0x501a8ca0..0x501a8de9). What
 // the lab does in the boot's place:
@@ -32,8 +32,13 @@
 // The loader's reads (X, E143): 16, all served from the container but the sound index; the tables then answer
 // res_size(0, 0) = 0xe2800, res_size(3, 0) = 0x2800, res_size(0x8000, 0) = 0x167fc00, res_version = 0x01000000 (the
 // heads' version 0x0100), and with the area erased res_size(2, 0) = 0xffffffff (test/test_resnand.mjs).
-import { fact } from '../fw/model.mjs';
-import { STORAGE_E143 } from '../fw/facts.mjs';
+// E146 and E147 (D, their loaders 0x501ada65 and 0x501b5a59, read by src/fw/facts.mjs resTables): the same reads but
+// for the sound index at 0x4e3e0000 (the flash access guard's window 0x4e3e0000..0x4e420000), the images block's at
+// 0x4e1a0000 and eleven sub-indexes (their byte map has no 0x800a); E147's table pointers elsewhere. X (2026-11-22):
+// 15 reads; E146 res_size(0, 0) = 0xe7000, E147 0x11ae00; res_version(3) on E147 0x10000000 (its images head's
+// version 0x1000); the lens data lookup reads the same 13824-byte record at 0x4709de00.
+import { fact, A } from '../fw/model.mjs';
+import { STORAGE_E143, resTables } from '../fw/facts.mjs';
 import { withBody, NandError } from '../fw/nand.mjs';
 import { loadAddress } from './resources.mjs';
 import { runtime, where, FirmwareError } from './hle.mjs';
@@ -41,12 +46,22 @@ import { runtime, where, FirmwareError } from './hle.mjs';
 export class ResNandError extends FirmwareError {}
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
-// the table pointers the loader sets (D, 0x501a8cd2..0x501a8de3): [buffer, table] per type, and the twelve sub-tables
+// E143's table pointers the loader sets (D, 0x501a8cd2..0x501a8de3): [buffer, table] per type, and the twelve
+// sub-tables. The lab reads each body's from its loader (src/fw/facts.mjs resTables: E146's and E147's have eleven
+// sub-indexes, E146's resource table at 0xa32db30c and its sub-tables at 0xa32db1f0, E147's all elsewhere; D); these
+// are E143's, which the tests compare the rule with
 export const TABLES = { 2: [0xA32DB17C, 0xA32DB180], 3: [0xA32DB198, 0xA32DB19C], 0x8000: [0xA32DB1B8, 0xA32DB1BC], 0: [0xA32DB328, 0xA32DB32C] };
 export const SUB_TABLES = [0xA32DB1C4, 0xA32DB1F4], SUB_COUNT = 12;
 // res_read's type-2 descriptor {pointer, size} (0x501a93ab, 0x501a9381), its last entry (0x501a934e) and the log of
-// its error path (0x501a942a) (D)
-export const SOUND_DESCRIPTOR = 0xA32DB188, SOUND_LAST = 0xA32DB184, SOUND_ERASED_LOG = 0x1F000003;
+// its error path (0x501a942a) (D; E146's at the same addresses, E147's 0xa32da434 and 0xa32da430, D: its 0x501b6164,
+// 0x501b6107)
+export const SOUND_DESCRIPTOR = A(0xA32DB188), SOUND_LAST = A(0xA32DB184), SOUND_ERASED_LOG = 0x1F000003;
+// the tables of a resTables layout as TABLES and SUB_TABLES give E143's: {tables: {[type]: [buffer, table]}, sub:
+// [buffers, tables], count}
+export function layoutTables(t) {
+  return { tables: { 2: [t.sound.buffer, t.sound.table], 3: [t.images.buffer, t.images.table], 0x8000: [t.large.buffer, t.large.table], 0: [t.resource.buffer, t.resource.table] },
+    sub: [t.sub.buffers, t.sub.tables], count: t.sub.count };
+}
 
 export class ResNand {
   // session: the PlaySession; info: MODELS res_nand; nand: env.nand ({areas, read(addr, n)}); image: env.soundArea or
@@ -74,9 +89,18 @@ export class ResNand {
     this.log = [];
     this.tables = null;
     this.sound0 = null;
+    this.layout = null;     // the loader's (src/fw/facts.mjs resTables), read at bring_up
   }
   bring_up() {
     const s = this.s, lab = s.lab, { access } = this.f;
+    // the loader's tables and reads, from its own bytes (src/fw/facts.mjs resTables; it throws where the loader's
+    // shape differs): its first read is the sound area's index (E143 0x4e420000, E146 and E147 0x4e3e0000, D), and its
+    // first store clears res_read's last entry
+    const info = this.info;
+    this.layout = resTables(lab.image, info.loader);
+    ({ tables: this.tableAt, sub: this.subAt, count: this.subCount } = layoutTables(this.layout));
+    if (this.layout.sound.nand !== info.sound.load) throw new ResNandError(`H-RESINIT: the loader ${h8(info.loader)} reads the sound index at ${h8(this.layout.sound.nand)}, MODELS res_nand.sound.load is ${h8(info.sound.load)}`);
+    if (this.layout.last !== SOUND_LAST) throw new ResNandError(`H-RESINIT: the loader ${h8(info.loader)} clears ${h8(this.layout.last)} first, res_read's last entry is ${h8(SOUND_LAST)}`);
     const layer = (prev) => (h, r) => this._nand(h, r, prev);
     if (lab.hooks.has(runtime(access))) lab.wrap(access, layer, 'S-FSNAND, S-RESNAND');
     else lab.hook(access, layer((h, r) => { throw new ResNandError(`S-RESNAND: NAND access 0x${(r.d1 >>> 0).toString(16)} of ${r.d0 >>> 0} bytes at ${h8(r.a1)} from ${where(r.mdr)}: no layer below serves it`); }), 'S-RESNAND');
@@ -98,22 +122,22 @@ export class ResNand {
     }, [], this.image ? [] : [SOUND_ERASED_LOG]);
     this.sound0 = [sim.u32(SOUND_DESCRIPTOR), sim.u32(SOUND_DESCRIPTOR + 4)];
     const want = this.image ? [slot, n] : [0, 0];
-    if (this.sound0[0] !== want[0] || this.sound0[1] !== want[1] || sim.u32(SOUND_LAST) !== sim.u32(TABLES[2][1])) {
-      throw new ResNandError(`H-RESINIT: sound 0's descriptor {${this.sound0.map(h8)}} (size argument ${h8(n)}), want {${want.map(h8)}}; last entry ${h8(sim.u32(SOUND_LAST))}, want the table's ${h8(sim.u32(TABLES[2][1]))}`);
+    if (this.sound0[0] !== want[0] || this.sound0[1] !== want[1] || sim.u32(SOUND_LAST) !== sim.u32(this.tableAt[2][1])) {
+      throw new ResNandError(`H-RESINIT: sound 0's descriptor {${this.sound0.map(h8)}} (size argument ${h8(n)}), want {${want.map(h8)}}; last entry ${h8(sim.u32(SOUND_LAST))}, want the table's ${h8(sim.u32(this.tableAt[2][1]))}`);
     }
   }
   // the buffers the loader's reads answered, by name (each table 32 bytes past its buffer)
   buffers() {
     const sim = this.s.lab.sim, out = [];
-    for (const [t, [buffer]] of Object.entries(TABLES)) out.push([`type ${Number(t) >= 0x8000 ? '0x' + Number(t).toString(16) : t}`, sim.u32(buffer)]);
-    for (let i = 0; i < SUB_COUNT; i++) out.push([`sub ${i}`, sim.u32(SUB_TABLES[0] + 4 * i)]);
+    for (const [t, [buffer]] of Object.entries(this.tableAt)) out.push([`type ${Number(t) >= 0x8000 ? '0x' + Number(t).toString(16) : t}`, sim.u32(buffer)]);
+    for (let i = 0; i < this.subCount; i++) out.push([`sub ${i}`, sim.u32(this.subAt[0] + 4 * i)]);
     return out;
   }
   // the table pointers by name: [type]: the table (buffer + 32), sub<i>: sub-table i
   pointers() {
     const sim = this.s.lab.sim, out = {};
-    for (const [t, [, table]] of Object.entries(TABLES)) out[`type ${Number(t) >= 0x8000 ? '0x' + Number(t).toString(16) : t}`] = sim.u32(table);
-    for (let i = 0; i < SUB_COUNT; i++) out[`sub ${i}`] = sim.u32(SUB_TABLES[1] + 4 * i);
+    for (const [t, [, table]] of Object.entries(this.tableAt)) out[`type ${Number(t) >= 0x8000 ? '0x' + Number(t).toString(16) : t}`] = sim.u32(table);
+    for (let i = 0; i < this.subCount; i++) out[`sub ${i}`] = sim.u32(this.subAt[1] + 4 * i);
     return out;
   }
   // S-RESNAND (over S-FSNAND, under S-LENSNAND)

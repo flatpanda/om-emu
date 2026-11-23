@@ -1179,7 +1179,7 @@ export function factsTests() {
   // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card) and
   // where the AF beep asks it for its sound (E143),
   // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
-  // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143), and rec_native, given
+  // at 0x4e3e0000, D: their loaders) and are given where they were checked (E143, E146, E147), and rec_native, given
   // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue, recFileInline: fact
   // rec_file) and its S2 was seen to record so: E142's REC_FILE runs natively by recFileQueue, E130's and E133's,
   // which port through it, by recFileInline, E145's by recFileQueue's inlined form and E129's and E132's, which port

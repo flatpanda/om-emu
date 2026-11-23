@@ -137,11 +137,11 @@ export class NativeLens {
   _nand(h, r, prev) {
     const [base, size] = this.f.cache_area, flash = r.a1 >>> 0, n = r.d0 >>> 0, op = r.d1 >>> 0;
     const lab = this.s.lab;
-    // a read of no bytes reads nothing: without H-RESINIT (a host without env.nand, a body without MODELS res_nand:
-    // E146, E147) the resource loader 0x501a8ca0 does not run and its tables stay 0, so the lens data lookup
-    // 0x502ae5d9, whose types 0x8002..0x8005 res_read serves at 0x501a9633 (the sub-tables (0xa32db1f4 + 4k)), reads 0
+    // a read of no bytes reads nothing: without H-RESINIT (a host without env.nand, a body without MODELS res_nand;
+    // E143, E146 and E147 give it) the resource loader 0x501a8ca0 does not run and its tables stay 0, so the lens data
+    // lookup 0x502ae5d9, whose types 0x8002..0x8005 res_read serves at 0x501a9633 (the sub-tables (0xa32db1f4 + 4k)), reads 0
     // bytes at 0 and logs the lens as not found (X); with H-RESINIT it reads the lens's record from the large-data
-    // block (src/lab/resnand.mjs, X: 13824 bytes at 0x4709de00 for S-LENSMCU's lens)
+    // block (src/lab/resnand.mjs, X: 13824 bytes at 0x4709de00 for S-LENSMCU's lens, on E146 and E147 too)
     if (n === 0 && op === this.nand_read) { this.log.push(['nand', `read 0 bytes at ${h8(flash)} from ${where(r.mdr)}`]); return h.finish(r, { d0: 0 }); }
     if (flash < base || flash + n > base + size) return prev(h, r);
     if (op !== this.nand_read) throw new NativeLensError(`S-LENSNAND: NAND access 0x${op.toString(16)} of ${n} bytes at flash ${h8(flash)} from ${where(r.mdr)}: only reads are modelled`);

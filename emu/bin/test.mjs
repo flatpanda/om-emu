@@ -987,13 +987,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the resource tables from the NAND (H-RESINIT, S-RESNAND): the NAND view, the extract and the sound area's builder,
 // then the tables and the resource API's answers in play on E143 (the .BIN, the browser's extract, a lab-made sound
-// area)
+// area), and on E146 and E147 in their own processes
 {
   const { resnandUnits, resnandSession } = await import('../test/test_resnand.mjs');
   const ru = await resnandUnits(), rs = await resnandSession();
-  console.log(`the resource tables' NAND: units ${ru.checks - ru.bad.length}/${ru.checks}; in play ${rs.checks - rs.bad.length}/${rs.checks}`);
-  [...ru.bad, ...rs.bad].forEach((x) => console.log('  ', x));
-  bad += ru.bad.length + rs.bad.length;
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_resnand.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`the resource tables' NAND: units ${ru.checks - ru.bad.length}/${ru.checks}; in play (E143) ${rs.checks - rs.bad.length}/${rs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...ru.bad, ...rs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += ru.bad.length + rs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // PER_SIO's served IIC transfers and the TG-5's charger, without firmware (the TG-5s' sessions are bin/modelcheck.mjs's)
 {

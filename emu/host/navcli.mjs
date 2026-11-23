@@ -23,6 +23,7 @@ import { show } from '../src/util/show.mjs';
 import { decimalInt } from '../src/util/parse.mjs';
 import { installChildTrace } from '../checks/lib/childtrace.mjs';
 import { provision } from './firmware.mjs';
+import { STAND_INS } from '../src/lab/playui.mjs';
 
 export const PROG = 'nav.mjs';
 const OUT = path.join(REPO, 'emu/out/nav', MODEL);
@@ -37,6 +38,7 @@ const M8_TEXTS = {
   "H-CONNECT": "M8, evf_layout only: sendEvent(0x83, 7) in POWER_ON, then settle: GUI message 0x9601, lOutput 7, the INTERNAL_EVF row of the sender 0x5105053c (its EVF row is lOutput 3); which row the camera takes is not traced",
   "H-RESEND": "M8 (the SWITCH token): 0x503e52c7(kind 1 TFT / 32 EVF, {1, 1, 1}) natively, the request openDevice 0x50d83338 makes after its open (0x50d8350d..0x50d83535); openDevice's caller is not traced",
   "H-UPDATE": "M8 (the SWITCH token): the GUI's re-display wrapper 0x510bd84b (gpiUpdateDisplay(1)) from the lab task after the switch; which code updates the display after a switch on the camera is not traced",
+  "S-MODACK": "(a body whose src/fw/models.mjs modack_queues names module queues: E132) a synchronous send to one of those queues, whose tasks do not run in the lab, returns E_OK with nothing written back, as a play session's S-MODACK answers it (src/lab/menu.mjs _sync_send; E132's menu open asks CATEGORY_MAIN)",
 };
 export const ACTIONS = [
   { name: 'script', positional: true },
@@ -159,10 +161,16 @@ function run(a) {
       const hits = lab.stub_hits.entries().filter(([[ph]]) => ['store', 'persist', 'menu', 'bring-up'].includes(ph)).sort((x, y) => cmpTuple(x[0], y[0]));
       doc.stand_ins = {};
       for (const [[, n, w], v] of hits) doc.stand_ins[`${n} (${w})`] = v;
+      // the bring-up's body steps (src/lab/menu.mjs power_start and gui_sleep, src/lab/nav.mjs gui_connect; their
+      // texts the play session's, src/lab/playui.mjs STAND_INS) and S-MODACK's synchronous sends where they ran
+      const ps = lab.power_started;
+      const body = [...(ps?.dpc ? ['H-DPCINIT', 'A-DPC-1'] : []), ...(ps?.sio ? ['H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...ps.sio.labels] : []),
+        ...(ps ? ['H-PWRTASK'] : []), ...(lab.gui_sleep_ms ? ['H-GUISLEEP'] : []), ...(nav.gui_connected ? ['H-GUICONNECT'] : []),
+        ...(lab.modack_sends.length ? ['S-MODACK'] : [])];
       const used = [...(a.time ? ['H-BOOTTIME', 'H-DEFER', 'ELAPSE'] : ['H-TIMER']), ...(a.store_first ? ['store-first'] : []),
-        ...(a.evf_layout ? ['S-TAKEOVER', 'H-CONNECT'] : []), ...(tokens.some((t) => t.startsWith('SWITCH')) ? ['H-RESEND', 'H-UPDATE'] : [])];
+        ...(a.evf_layout ? ['S-TAKEOVER', 'H-CONNECT'] : []), ...(tokens.some((t) => t.startsWith('SWITCH')) ? ['H-RESEND', 'H-UPDATE'] : []), ...body];
       doc.m8_inputs = {};
-      for (const k of used) doc.m8_inputs[k] = M8_TEXTS[k];
+      for (const k of used) doc.m8_inputs[k] = M8_TEXTS[k] ?? STAND_INS[k];
       doc.h_timer = lab.timer_log;
       if (a.time) {
         const timer = {};

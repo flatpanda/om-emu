@@ -3314,6 +3314,31 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    start mounted from port 1 and S2 on the save slot's card on E139 and E125; E134's second card stops at a
    synchronous send to queue 221 from the access lamp's callback (open).
 
+162. **`bin/nav.mjs` on E145, E129, E132, E118 and E120** (2026-11-22, `src/lab/menu.mjs` power_start and gui_sleep,
+   `src/lab/nav.mjs` gui_connect, `src/lab/bodystart.mjs`; hle-gaps.md 4.7.9). Answers finding 160's open items for
+   these five. X (`test/test_nav.mjs`, time mode, TFT): the bring-up ends at POWER_ON, OPEN reaches SS_MENU (`0x1102`),
+   DOWN keeps it and draws, MENU, MENU close to `0x0104` on all five; their frame stays the start's, as on the seven
+   SYNC_HELD bodies (the GUI's updates wait for the application's image sync).
+   - *E145, E129, E132: state 0.* The GUI's set-up enters POWER_ON, whose entry reads the power source through a
+     measurement that sleeps (E145 `0x50d9347a` -> `0x5003ffef`, D); the caller word holding the state is stored after
+     the entry returns (E145 `0x50c380a2`, D), and nav's settle returned with the GUI task asleep (X). H-GUISLEEP runs
+     lab time while it sleeps (E145 100 ms, E129 and E132 1600 ms, X). On the TG-5s the read goes on to set the
+     internal charger up (PER_SIO's channel 9, E129 `0x500520f2`, and a 3000 ms completion wait, D), which needs play's
+     H-DPCINIT, S-SIOIIC (S-CHARGER) and H-PWRTASK: each one's absence kept the GUI out of POWER_ON (X, E129). Nav now
+     runs play's own steps (`src/lab/bodystart.mjs`, play's bring-up calls the same functions) before the GUI's
+     creation on every body with the power task (E144, E148, E137, E142, E140 and the three), in time mode only (the
+     power task sleeps after its start, X; outside time mode the five others open the menu as before, X). The two USB
+     charger detection prints ("USBTOP_MAC_IF:", "BC:SDP", from the lab-stub USB block) are accepted after it, as a
+     play session's start prints them (X, E129).
+   - *E132's OPEN* asks CATEGORY_MAIN (queue `0xe6`, a synchronous send from `0x5029ca1c`, D), whose task does not run;
+     nav answers E_OK as play's S-MODACK does for the body's modack_queues.
+   - *E118, E120: POWER_ON after OPEN.* Their GUI task drops every message until `0x9601` (E118 `0x50b93340`, E120
+     `0x509140a9`, D; no other image has the compare before its take, X), which the application's start sends in play
+     (`{0x9601, 0xfffe, 0, 2}`, X on E118). H-GUICONNECT posts it once after the bring-up (lOutput 2 on the TFT, 7 on
+     the EVF). Controls (X): without H-GUISLEEP the three end at state 0, without the power module's start E129 and
+     E132 do, and without H-GUICONNECT OPEN leaves E118 and E120 at POWER_ON.
+   Open: nav's release of the display sync on these and the seven other bodies; E145, E129 and E132 need `--time`.
+
 
 
 ## Per-body status

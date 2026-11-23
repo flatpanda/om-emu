@@ -7162,6 +7162,56 @@ E145, E132 and E133. As `analysis/oly-fw-analysis/README.md` 8.4 had it.
   in the sessions recorded before this fix was not looked at (?). (3) What SETVAL edits after the picture-function
   release on E122 (8.4's setting 931 after a main-dial step) is not checked here.
 
+#### 4.7.9 The power module before the lab's own GUI, and the GUI's connect gate (nav, 2026-11-22; D unless tagged)
+
+`bin/nav.mjs` creates the GUI from the lab task (the lab's own creation; a play session's application creates it,
+H-GUIBYAPP). Its bring-up stopped on E145, E129 and E132 at GUI state 0, and E118's and E120's GUI kept POWER_ON after
+OPEN (ROADMAP "The menus of the other bodies"; `docs/model-survey.md` finding 162). Both are read to their causes and
+run (X: `test/test_nav.mjs` on the five, time mode, TFT).
+
+- **State 0 is POWER_ON's entry asleep.** The GUI's set-up initialises its caller object with state `0x0102` and
+  calls the state's entry (E145 `0x50c49dc7`, `calls (a3)` at `0x50c49e2c`); the caller word GUICALLER is stored after
+  that call returns (E145 `0x50c380a2` `mov a2,(0x61a3ed84)`), so `state()` read 0 while the entry ran. POWER_ON's
+  entry (E145 `0x50d9347a`, E129 `0x50d4effa`) reads the power source: `0x50deebcf` -> the source query through API
+  `0x10a0d` (`0x506f04fd`) -> `0x506a8bb6` -> `0x502ce4c1` -> the measurement `0x5003ffef` on API `0xa0004` under the
+  power module's semaphore (id word `0x600412e8`), which sleeps between its register writes (X: the GUI task in the
+  kernel's timeout queue after the creator's settle, whose log ended "timed [155]"). Nav's settle in time mode returns
+  then; the lab took the state before the entry was done. **H-GUISLEEP** (`src/lab/menu.mjs` gui_sleep) runs lab
+  time in 100 ms slices while the GUI task is in a timed wait, at most 2000 ms (X: E145 100 ms, E129 and E132 1600
+  ms, the others none).
+- **The TG-5s' charger set-up.** On E129 and E132 the source read goes on to the USB charger detection (E129
+  `0x50003132`: the USB block's status `0x98f20038`, a lab-stub page, bit 16 clear: "USBTOP_MAC_IF:" and "BC:SDP"
+  printed, source `0x400`) and sets the internal charger up for it (`0x5003f94d` -> `0x5003face`): PER_SIO's channel
+  open of channel 9 with the callback `0x5003fdd6` (`0x500520f2`, E132's `0x500520ce` in 4.7.5) and a 3000 ms wait on
+  the completion flag (`0x604212aa`, `0x5003fc32`). That needs play's power steps, which nav did not run: without
+  H-PWRTASK the session stopped at the sub-CPU command `0x20041001` (X); without S-SIOIIC, or without H-DPCINIT (no
+  transfer reached S-SIOIIC, X), the flag's wait ran past H-GUISLEEP's bound. **power_start** runs play's own steps
+  before the GUI's creation (`src/lab/bodystart.mjs` dpcInit, sioStart, powerTaskStart, which play's bring-up now
+  calls too), in play's order, on every body with the power task (fact `power.task`: E144, E148, E137, E142, E140,
+  E145, E129, E132), in time mode only: the power task sleeps after its start (X: E145, E144, E137), which a settle
+  outside time mode refuses, and without time mode E144, E148, E137, E142 and E140 open the menu as before (X). The
+  bring-up accepts the two prints of the USB detection after it (`POWER_START_PRINTS`; a play session's start prints
+  the same, X on E129).
+- **E132's menu open asks CATEGORY_MAIN.** Its OPEN makes the synchronous send `0x50299470` to queue `0xe6` (the word
+  `0x60421552`; from `0x5029ca1c`), CATEGORY_MAIN's (`src/fw/models.mjs` E132 modack_queues), whose task
+  (`0x50bc88b1`, task 148) stays dormant in the lab and in play (X). A play session's S-MODACK answers it E_OK; nav's
+  `_sync_send` now does the same for a body's modack_queues (S-MODACK in nav's report), nothing written back (I).
+- **E118's and E120's connect gate.** Their GUI task, before its message loop, receives in a loop of its own and drops
+  every message but `0x9601` (E118 `0x50b93333..0x50b9334a`, `cmp 38401,d0; bne`; E120 `0x509140a9`; the gate
+  `src/fw/facts.mjs` guiTake's comment names): OPEN's `0x9624` was taken and dropped there (X: the GUI task's PCs at
+  OPEN, never past `0x50b9334a`). No other body has such a compare before its take (X, a byte scan of the 19 images:
+  E143's line, E144 and E139 have the form after the take, in the loop's own dispatch). In a play session the
+  application's start sends it, `{0x9601, 0xfffe, 0, 2}` (X, E118: lOutput 2, the TFT). **H-GUICONNECT**
+  (`src/lab/nav.mjs` gui_connect) reads the gate by its bytes before the GUI's take and posts the message once after
+  the bring-up at the build's index of it (E118 129), lOutput 2 on the TFT (7 on the EVF, H-CONNECT's); the GUI runs
+  its connect (`0x50b8c4d7`) and stays at POWER_ON, and OPEN then reaches SS_MENU (X: the gate's message as play's).
+- **The frames.** On all five the GUI's updates are display requests that wait for the application's image sync
+  (type 3 from E145 `0x506d4d35`, E129 `0x506a59ce`, E132 `0x506a5fde`, E118 `0x502a9201`; E120's record form from
+  `0x5067b99e`; X), so their frame stays the start's, as on the seven bodies `test_nav` already lists (SYNC_HELD).
+- **Open.** Nav's display sync release on these bodies (S-DISPSYNC in play); E145, E129 and E132 need `--time`
+  (outside time mode the GUI's sleep is refused); what the lab-stub USB block reads on the camera, and so which power
+  source the start finds there (?).
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

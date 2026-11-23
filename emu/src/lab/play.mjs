@@ -17,10 +17,10 @@ import { SdCard, cardSectors } from './sdcard.mjs';
 import { NativeLens } from './lens.mjs';
 import { ResNand } from './resnand.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
-import { SioBus } from './sio.mjs';
+import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143, MODE_DIAL_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, MODE_DIAL_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
 import * as K from './kernel.mjs';
@@ -1381,47 +1381,18 @@ export class PlaySession extends N.NavSession {
     if (back !== state) throw new PlayError(`H-STARTKEY: camera state 0x${site.kind.toString(16)} reads ${back} after its write of ${state}`);
     this.start_key = { code: site.code, kind: site.kind, state };
   }
-  // H-DPCINIT: the deferred calls' init (fact 'dpc.init', src/fw/facts.mjs deferredCalls), which the boot head runs
-  // before the kernel and the lab does not, natively at the bring-up on a board with the deferred-call triggers
-  // (src/dev/dpc.mjs, board dpc): the call rings cleared, the six trigger words written 0, their IRQs attached (the
-  // first two on every core, disabled until a post enables them). A post then raises its IRQ, and the handler runs the
-  // call at the MN's next idle point (A-DPC-1). With the native lens the lens's bring-up runs it (src/lab/lens.mjs). On
-  // the E144 family's board the triggers were lab-stub words before, which kept a post's 1 and raised nothing: E132's
-  // start posts the send of its first serial request so (X; docs/model-survey.md)
+  // H-DPCINIT (src/lab/bodystart.mjs dpcInit), at the bring-up on a board with the deferred-call triggers; with the
+  // native lens the lens's bring-up runs it (src/lab/lens.mjs)
   dpc_bring_up() {
-    const lab = this.lab, dev = lab.sim.m.devices.dpc, writes = dev.writes, init = fact('dpc', DPC_E143).init;
-    if (writes) throw new PlayError(`H-DPCINIT: ${writes} trigger writes before the deferred calls' init (words ${show([...dev.words])}): a post before the bring-up`);
-    refuseUnmapped(init, 'H-DPCINIT');
-    lab.call(init, null, null, null, 200000);
-    const missing = dev.cfg.irqs.filter((n) => !lab.sim.u32(IRQ.HANDLER_TABLE + 4 * n));
-    if (dev.writes - writes !== dev.cfg.irqs.length || dev.words.some((w) => w) || missing.length) {
-      throw new PlayError(`H-DPCINIT: after ${h8(init)}: ${dev.writes - writes} trigger writes, words ${show([...dev.words])}, IRQs without a handler ${show(missing)}`);
-    }
-    this.dpc_init = true;
+    this.dpc_init = dpcInit(this.lab, PlayError);
   }
-  // S-SIOIIC: PER_SIO's serial controller for the channels the body's devices sit on (src/lab/sio.mjs, src/fw/models.mjs
-  // sio_devices: the TG-5's internal charger on channel 9), served at its driver's transfer starts before the power
-  // task's start configures the charger's channel
+  // S-SIOIIC (src/lab/bodystart.mjs sioStart), before the power task's start configures the charger's channel
   sio_bring_up() {
-    this.sio = new SioBus(this.lab);
-    this.sio.bring_up();
+    this.sio = sioStart(this.lab);
   }
-  // H-PWRTASK: the power task (fact 'power.task', src/fw/facts.mjs powerTask), which the boot starts and the lab, ending
-  // the init task, did not: started natively at the bring-up with act_tsk and settled. Its entry runs the power
-  // module's init, the internal charger's with it (the charger's IIC channel configuration and its completion flag,
-  // which the charger's requests use), and waits on its queue (X: E132). E132's camera application start makes the
-  // charger's requests, whose transfer computed its channel's clock divisor from the unset configuration and divided
-  // by zero before (X; docs/model-survey.md)
+  // H-PWRTASK (src/lab/bodystart.mjs powerTaskStart), at the bring-up on a body with the power task
   power_task_bring_up() {
-    const lab = this.lab, entry = fact('power.task', null);
-    const ids = [...lab.nk.tasks()].filter(([, [e]]) => e === entry).map(([t]) => t);
-    if (ids.length !== 1 || lab.nk.state(ids[0]) !== 0x10) throw new PlayError(`H-PWRTASK: static tasks with entry ${h8(entry)}: ${show(ids)}, not one dormant`);
-    lab.lt.allow.add(entry);
-    const [rc] = lab.nk.svc('act_tsk', { d0: ids[0] });
-    if (rc !== K.E_OK) throw new PlayError(`H-PWRTASK: act_tsk(${ids[0]}) = ${rc}`);
-    this.settle('H-PWRTASK');
-    if (lab.nk.state(ids[0]) !== 4) throw new PlayError(`H-PWRTASK: the power task ${ids[0]} is ${show(lab.task_states())} after its start, not waiting`);
-    this.power_tid = ids[0];
+    this.power_tid = powerTaskStart(this.lab, (label) => this.settle(label), PlayError);
   }
   // H-UIOUTSTART: UI_OUT, the module of the camera's lamps (MODELS ui_out: E134, E143), which the boot starts (its
   // init, then act_tsk of its static task) and the lab, ending the init task, did not: its init natively at the

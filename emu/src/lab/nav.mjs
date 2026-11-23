@@ -44,6 +44,24 @@ export const REDISPLAY = A(0x510BD84B), HELP_FLAG = 2421;
 
 const h4 = (v) => '0x' + fx(v >>> 0, 4);
 const h8 = (v) => '0x' + fx(v >>> 0, 8);
+// H-GUICONNECT (NavSession gui_connect): the TFT's lOutput in the connect message (the application's start's, X on
+// E118), and the span before the GUI task's take its gate is read in (E118's gate 0x39 bytes before the take
+// 0x50b93379, E120's 0x509140a9 before 0x509140e2, D)
+export const CONNECT_TFT = 2, CONNECT_GATE_SPAN = 0x60;
+const GATE = [0xfa, 0xb4, 0x8c, 0x01, 0xfc, 0xc8], GATE_TAIL = [0x00, 0x00, 0xc9];
+// The message the GUI task's gate waits for: `mov (396,sp),d0; cmp imm32,d0; bne` (fa b4 8c 01, fc c8 imm32, c9)
+// within CONNECT_GATE_SPAN bytes before the take (src/lab/menu.mjs DISPATCH, fact 'menu.take'); null where there is
+// none, or where the take is the lab's own (E143)
+export function connect_gate(image) {
+  if (ON_LAB_MODEL) return null;
+  const take = MM.DISPATCH - 0x50000000, at = (o, bytes) => bytes.every((b, k) => image[o + k] === b);
+  const found = [];
+  for (let o = Math.max(0, take - CONNECT_GATE_SPAN); o < take; o++) {
+    if (at(o, GATE) && at(o + 8, GATE_TAIL)) found.push(image[o + 6] | image[o + 7] << 8);
+  }
+  if (found.length > 1) throw new NavError(`H-GUICONNECT: ${found.length} gates before the GUI's take ${h8(MM.DISPATCH)}`);
+  return found.length ? found[0] : null;
+}
 const own = (table, key) => (Object.hasOwn(table, key) ? table[key] : undefined);   // table[key] for an own key, else undefined
 // an integer literal x of token t (decimal, 0x, 0o, 0b)
 function integer(t, x) {
@@ -204,6 +222,7 @@ export class NavSession {
     this.img = new M.Image(env.rom);
     this.lab = null;
     this.clock_inputs = [];
+    this.gui_connected = null;          // H-GUICONNECT (gui_connect)
   }
   get lab_class() { return this.constructor.lab_class; }
   enter() {
@@ -223,6 +242,7 @@ export class NavSession {
       this.lab.bring_up(this.device);
       const [rc] = this.lab.nk.svc('chg_pri', { d0: 0, d1: NAV_PRI });
       if (rc !== K.E_OK) throw new NavError(`chg_pri(TSK_SELF, ${NAV_PRI}) = ${rc}`);
+      if (!this.lab.gui_by_app && !this.evf_layout) this.gui_connect();     // H-GUICONNECT (H-CONNECT's own on the EVF layout)
       this.lab.phase = 'nav';
       this.lab.menu_first = this.lab.exec_history.length;
       this.lab.menu_draw_first = this.lab.draw_log.length;
@@ -233,6 +253,31 @@ export class NavSession {
       throw e;
     }
     return this;
+  }
+  // H-GUICONNECT: on a build whose GUI task, before its message loop, waits in a loop of its own for the output's
+  // connect message and drops every other (E118 0x50b93333..0x50b9334a: `mov (396,sp),d0; cmp 38401,d0; bne` back to
+  // its receive; E120 0x509140a9; src/fw/facts.mjs guiTake's comment, D), the session posts that message once after
+  // the bring-up, at the build's index of it, with the device's lOutput, and settles: the GUI takes it, runs its
+  // connect (E118 0x50b8c4d7) and enters its loop, in POWER_ON. In a play session the application sends it at its
+  // start (X, E118: the GUI's gate passed with {0x9601, 0xfffe, 0, 2}, lOutput 2 on the TFT), which nav does not run;
+  // without it every key, OPEN included, was dropped at the gate and the GUI stayed at POWER_ON (X, E118 and E120,
+  // docs/model-survey.md finding 162). lOutput: the TFT's 2, as the application's start; the EVF's 7, H-CONNECT's
+  // (src/lab/menu.mjs CONNECT_LOUTPUT). The gate is read at its bytes before the take (MM.DISPATCH, within
+  // CONNECT_GATE_SPAN bytes): a build without it (E143 and the 16 other bodies, X) runs none. gui_connected: null, or
+  // {index, message, loutput}
+  gui_connect() {
+    this.gui_connected = null;
+    const gate = connect_gate(this.lab.image);
+    if (gate === null) return;
+    let index = 1;
+    for (; index <= 334 && this.message(index) !== gate; index++);
+    if (index > 334) throw new NavError(`H-GUICONNECT: no sendEvent index for the GUI's gate message 0x${fx(gate, 4)} in the build's event map`);
+    const loutput = this.device === 'evf' ? MM.CONNECT_LOUTPUT : CONNECT_TFT;
+    this.begin('H-GUICONNECT');
+    this.post(index, loutput);
+    this.settle('H-GUICONNECT');
+    if (this.lab.state() !== MM.STATE_POWER_ON) throw new NavError(`H-GUICONNECT: GUI state ${this.lab.state_name(this.lab.state())} after the connect message, not POWER_ON`);
+    this.gui_connected = { index, message: h4(gate), loutput };
   }
   // The lab, created and not yet brought up: the machine is at its reset (a subclass sets its lab choices here)
   lab_created(lab) {}

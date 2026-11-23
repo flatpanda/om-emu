@@ -24,6 +24,7 @@ import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
 import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds } from '../fw/facts.mjs';
 import { bootLoads } from '../fw/sections.mjs';
+import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -58,6 +59,11 @@ export const SETUP_TAB = 7;
 export const PROP_GUI_SITES = [A(0x503EFF61)];
 export const DROPPED_SENDS = [[A(0x600431D8), 10, A(0x50045474)]];
 export const LAB_PRI = 60, GUI_START_MS = 2000, GUI_START_SLICE_MS = 100;
+// the kernel prints a bring-up may make after the power module's start (power_start): the USB charger detection's
+// result, which the GUI's read of the power source makes (E129 0x50003132: "USBTOP_MAC_IF:" with the USB block's word
+// 0x98f20038 at 0x500031d5, then "BC:SDP" at 0x500031f7 for its bit 16 clear, D); the block is a lab-stub page
+// (src/fw/board.mjs FAMILIES.E144 stub_pages), and a play session's start prints the same two (X, E129)
+export const POWER_START_PRINTS = [['printf_d', 'USBTOP_MAC_IF:'], ['puts2', 'BC:SDP\n']];
 export const EV_WRAPPERS = new Set(['OlyEvSt', 'iOlyEvSt', 'OlyEvWt', 'OlyEvCl', 'OlyEvDl']);
 // the boot's state the lab's start leaves unset (src/fw/facts.mjs bootState): UI_IN's boot key (S-BOOTKEY,
 // src/lab/play.mjs) and the stages' ready word (S-BOOTSTAGE); read where used
@@ -248,6 +254,9 @@ export class MenuLab extends T.TextDisplayLab {
     this.native_calls = [];
     this.ctor_results = [];
     this.dropped_sends = [];
+    this.modack_sends = [];             // S-MODACK's synchronous sends to a body's modack_queues (_sync_send)
+    this.power_started = null;          // power_start
+    this.gui_sleep_ms = 0;              // H-GUISLEEP (gui_sleep)
     this.gui_props = new Tally();
     this.value_sites = new Map();
     this.phase = 'init';
@@ -488,11 +497,13 @@ export class MenuLab extends T.TextDisplayLab {
       this.init_loaded = []; this.bringup_prints = []; this.init_prints_seen = [];
       return [];
     }
+    this.power_start();                              // H-DPCINIT, S-SIOIIC, H-PWRTASK where the body has the power task
     const out = this.alloc(new Uint8Array(16), 4);
     const prints0 = this.kernel.events.filter((e) => e[0] === 'print').length;
     this.call(GUI_CREATOR, { a0: out }, null, null, 200000);
     this.creator_out = [this.sim.u32(out), this.sim.u32(out + 4)];
     this.bringup_settle = this.settle('GUI bring-up');
+    this.gui_sleep();                                // H-GUISLEEP
     this.harvest();
     this.harvest_gui_records();
     const bitmaps = R.layout(this.block).images[1];
@@ -511,10 +522,10 @@ export class MenuLab extends T.TextDisplayLab {
     // The empty task is the display task init's task whose entry returns at once (E143's EMPTY_TASK, `retf [],0`, D):
     // the one bare-return entry started, wherever it lies (E134's, where the port places E143's at another
     // bare return, X); none where the build has no such task (the E118 family: E143's unplaced, no bare return started,
-    // X)
+    // X). The power task is the lab's where power_start started it (H-PWRTASK)
     const started = this.lt.started.slice(1).map(K.disasm_of);
     const bare = started.includes(EMPTY_TASK) ? [EMPTY_TASK] : this.lt.started.slice(1).filter((e) => this.lt._bare_return(e)).map(K.disasm_of);
-    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
+    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : []), ...(this.power_started ? [fact('power.task')] : [])];
     const sortNum = (xs) => [...xs].sort((a, b) => a - b);
     const own = started.filter((t) => wantStarted.includes(t)), more = started.filter((t) => !wantStarted.includes(t));
     if (JSON.stringify(sortNum(own)) !== JSON.stringify(sortNum(wantStarted)) || new Set(more).size !== more.length) problems.push(`tasks started: ${show(started.map(hex))}${own.length < wantStarted.length ? `, not ${show(wantStarted.filter((t) => !own.includes(t)).map(hex))}` : ''}`);
@@ -526,7 +537,8 @@ export class MenuLab extends T.TextDisplayLab {
     if (this.state() !== STATE_POWER_ON) problems.push(`GUI state ${this.state_name(this.state())}, not 0x0102 POWER_ON`);
     const prints = this.kernel.events.filter((e) => e[0] === 'print').slice(prints0);
     this.bringup_prints = prints.map((e) => [e[1], e[2]]);
-    if (this.bringup_prints.length) problems.push(`kernel prints: ${show(this.bringup_prints.slice(0, 4))}`);
+    const unexpected = this.bringup_prints.filter(([fn, text]) => !(this.power_started && POWER_START_PRINTS.some(([f, t]) => f === fn && t === text)));
+    if (unexpected.length) problems.push(`kernel prints: ${show(unexpected.slice(0, 4))}`);
     const bad = this.ctor_results.filter((c) => c.status !== 'ok');
     if (bad.length) problems.push(`${bad.length} static constructors failed: ${show(bad.slice(0, 2))}`);
     this.check_engine(this.init_log, 'bring-up');
@@ -558,6 +570,45 @@ export class MenuLab extends T.TextDisplayLab {
   gui_await() {
     const created = () => [...this.nk.tasks()].some(([, [e]]) => e === GUI_TASK);
     for (let ms = 0; !created() && ms < GUI_START_MS; ms += GUI_START_SLICE_MS) this.elapse(GUI_START_SLICE_MS, 'H-GUIBYAPP start');
+  }
+  // The power module's start before the lab's own creation of the GUI, on a body with the power task (fact
+  // 'power.task': E144, E148, E137, E142, E140, E145, E129, E132), with play's steps (src/lab/bodystart.mjs) in play's
+  // order: H-DPCINIT on a board with the deferred-call triggers, S-SIOIIC where the body has PER_SIO devices (the
+  // TG-5's charger, S-CHARGER), H-PWRTASK. The GUI's POWER_ON entry reads the power source (H-GUISLEEP below); on the
+  // TG-5s that read sets up the internal charger for the source found: a request to the charger's channel (E129
+  // 0x5003face -> 0x500520f2 with 9 and the callback 0x5003fdd6) whose completion the GUI then waits for on a flag
+  // (0x604212aa, 3000 ms, 0x5003fc32, D). Without one of the three the GUI did not reach POWER_ON (X, E129: without
+  // H-PWRTASK the session stopped at a sub-CPU command, 0x20041001, the lab does not answer; without S-SIOIIC, or
+  // without H-DPCINIT (no transfer reached S-SIOIIC), the flag's wait ran past GUI_START_MS). E145 reaches POWER_ON
+  // without them (X) and takes them as play does. In time mode only: the power task then sleeps in lab time (E145,
+  // E144, E137, X), which a settle outside time mode refuses; outside it the lab starts none, as before (E144, E148,
+  // E137, E142 and E140 open the menu so, X; E145, E129 and E132 need time mode). power_started: null, or what ran
+  // ({dpc, sio: the SioBus or null, tid: the power task})
+  power_start() {
+    this.power_started = null;
+    if (!this.time_mode || fact('power.task', null) == null) return;             // (null or undefined: no power task)
+    const dpc = this.sim.m.devices.dpc ? dpcInit(this, MenuError) : false;
+    const sio = MODEL_INFO.sio_devices ? sioStart(this) : null;
+    const tid = powerTaskStart(this, (label) => this.settle(label), MenuError);
+    this.power_started = { dpc, sio, tid };
+  }
+  // H-GUISLEEP (time mode, the lab's own creation of the GUI): the creator's settle can end with the GUI task asleep in
+  // lab time before its message loop (the settle's "timed" entry). On E145, E129 and E132 the GUI's set-up enters
+  // POWER_ON, whose entry reads the power source through the measurement on API 0xa0004 (E145: POWER_ON's entry
+  // 0x50d9347a -> 0x50deebcf -> the source query 0x506f04fd -> 0x506a8bb6 -> 0x502ce4c1 -> 0x5003ffef, X), which
+  // sleeps between its register writes (S-LABSLEEP's measurement); the caller word GUICALLER is stored only after that
+  // entry returns (E145 0x50c380a2), so the state read 0 (docs/model-survey.md finding 162). Lab time runs in
+  // GUI_START_SLICE_MS slices while the GUI task is in a timed wait, at most GUI_START_MS, as H-GUIBYAPP's gui_await
+  // does for the application's creation (X: E145 100 ms, E129 and E132 1600 ms); a creation that settles with the GUI
+  // task waiting untimed (E143 and the 15 other bodies, X) runs none. gui_sleep_ms: the lab time it ran
+  gui_sleep() {
+    this.gui_sleep_ms = 0;
+    if (!this.time_mode) return;
+    const asleep = () => this.nk.timed_waiters().some((t) => this.nk.entry(t) === GUI_TASK);
+    while (asleep() && this.gui_sleep_ms < GUI_START_MS) {
+      this.elapse(GUI_START_SLICE_MS, 'H-GUISLEEP');
+      this.gui_sleep_ms += GUI_START_SLICE_MS;
+    }
   }
   // H-GUIBYAPP: after the application's start has created the GUI (its own call of the creator, 0x510609ce ->
   // GUI_CREATOR, from CA_MAIN's code): its records, its GUI task and timer task, one of each.
@@ -1097,6 +1148,16 @@ export class MenuLab extends T.TextDisplayLab {
         hle.finish(r, { d0: 0 });
         return;
       }
+    }
+    // S-MODACK's synchronous sends (src/lab/camapp.mjs, the play session's), for the module queues a body's
+    // src/fw/models.mjs modack_queues names, whose tasks do not run in the lab: E_OK, nothing written back (I). E132's
+    // menu open asks CATEGORY_MAIN (0xe6) through 0x50299470 (from 0x5029ca1c, the queue word 0x60421552, D), which
+    // a play session's S-MODACK answers so (X: its menu opens)
+    if ((MODEL_INFO.modack_queues ?? []).some(([id]) => id === q)) {
+      this.kernel.events.push(['send', `queue ${q} cmd ${cmd}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+      this.modack_sends.push([q, cmd, h8(site)]);
+      hle.finish(r, { d0: 0 });
+      return;
     }
     throw new MenuError(`synchronous send to queue ${q} cmd ${cmd} (param 0x${r.a0.toString(16)}) from ${where(r.mdr)}: not a DISPLAY message and not an S-SEND drop; its receiver does not run in the lab`);
   }

@@ -4989,6 +4989,42 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 - **Open.** What `0x50518f3b` and `0x50520916` do (the RAW NR step itself), `0x508779f7`, the meanings of the shot
   kinds, the writers of +7483, E147's copy, and running REC_RAWNR natively in the S2 session.
 
+#### 4.3.16 camapp 3: who can call shutDown (2026-11-22; D unless tagged, addresses E143's)
+
+4.3.6 and 4.3.10 left the camera's route from the lever's off to CameraCommon::shutDown open under camapp 3. This
+round is static only (no session run, the user's instruction for the round): a scan of E143's main block for every
+direct call (`call` d16/d32, `calls` d16/d32, relative targets) of the power-off chain and for every data word that
+holds one of its run-time addresses (image base `0x60021020`). Nothing in the lab is changed; S-SHUTDOWN stays the
+only way in under both camapps, and 4.3.6's PowerError at TRA 586 is unchanged. The light check (a camapp 3 lever's
+off ending at H-POWER's last write) is not met.
+
+- **The chain's callers (D, the scan).** shutDown (`0x50afd2d7`) has no direct caller; its one data word is the
+  CameraCommon vtable's slot 2 (run-time `0x60e02eac`, code notation `0x50de1e8c`, vtable `0x60e02ea4`). Its inner
+  call `0x50abe7e0` has one caller, shutDown's `0x50afd31f`. startShutDown (`0x50af654b`) has two, `0x50abe7e0` and
+  the factory reset's `0x50af96d2` (4.7.4). api_system's power-off `0x5041fa85` has one, startShutDown's
+  `0x50af6e19`. `0x50044ca8` has 4.7.4's callers: `0x5041fad9`, the firmware update's `0x51034f23` and three in
+  code still not read, `0x5180799a`, `0x519d0348` and `0x519d9be9`. So, short of those three and the factory reset,
+  every native power-off goes through slot 2 of the object the getter `0x50afccd5` returns.
+- **The getter's callers (D).** 938 direct calls: the shell and HFW range `0x50afae61..0x50b38fe9` and the
+  application `0x5108bf9d..0x51287c34`; none in the HLS range (`0x50b39000..0x51034f23`), so neither
+  CmpCCom_CameraCommonComponent (`0x50d034a8..0x50d05ef3`) nor CmpSdw_ShutdownComponent (vtable `0x60eee834`) calls
+  it directly. 4.7.4's "the camera-common component would call shutDown" is therefore not supported by a direct
+  call (it is I at most, through a stored object). In the disassembly of both ranges (objdump, `tools/mn10300dis.sh`'s
+  binary), a load of the object's slot 2 (`mov (8,aN),aM`) within eight lines after a getter call occurs once: the
+  shell's "sdk api shutdown mode reason" at `0x50b05169`/`0x50b05176` (4.7.4). No application site loads slot 2
+  right after the getter. The scan does not see a caller that keeps the object and calls slot 2 later, nor a
+  wrapper that returns it (one candidate: `0x5108bf9d`, a getter call followed by `ret [a2],12`, its callers not
+  read).
+- **What this leaves (D, I).** The HLS (sequence parts, CmpSdw) does not reach shutDown itself; under camapp 3 the
+  route is either the application through a stored CameraCommon object or a wrapper, or one of the three unread
+  callers of `0x50044ca8` (I: the application's power-off, by the code's address range). 4.3.6's TRA 586 is the HLS
+  side of startShutDown (sent after shutDown is already called), so it is not the gate that keeps the lever's off
+  from calling shutDown; the gate is upstream, in whatever the application does with `0x0202000c` (4.3.10: the
+  sequence parts take the code and, in standby, do nothing).
+- **Next.** Read `0x5108bf9d`'s function and its callers; read `0x5180799a`, `0x519d0348`, `0x519d9be9`; then run a
+  camapp 3 lever's off with a trace on the getter's application callers and those three, to see which one runs
+  (if any) after `0x0202000c`.
+
 ### 4.4 AF, lens and body IS
 
 - **Tasks (D):** CPU 0: LENS_MAIN 0x5c `0x502a5e37` (queue LENS_EXEC 0x2e, target 18), LENS_COMMAND 0x5b `0x50115a08`

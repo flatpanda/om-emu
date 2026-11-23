@@ -14,7 +14,8 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
-// frames), S-MODPOST (test_modpost.mjs), a still under camapp 3 on E143, E146 and E147 (test_c3take.mjs), the TAKE
+// frames), S-MODPOST (test_modpost.mjs), a still under camapp 3 on E143, E146 and E147 (test_c3take.mjs), the play
+// module native under camapp 3 on E143, E146 and E147 (test_playmod.mjs), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
 // core (test_cpu2.mjs), the VSC's histogram unit in play under camapp 3 (test_hist.mjs), the firmware's start
 // tasks' conditions and the start probe's records on E143 (test_ustart.mjs), the lab's audio output and the
@@ -253,6 +254,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`camapp 3 with the play module native: ${pn.checks - pn.bad.length}/${pn.checks}; its view decode: ${pd.checks - pd.bad.length}/${pd.checks}`);
   [...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
   bad += pn.bad.length + pd.bad.length;
+}
+// the play module native per body (test_playmod.mjs, docs/hle-gaps.md 4.8.18): E143's view decoded after one shot;
+// E146 and E147, each in a process of its own, to the decode's go, refused at the play buffer outside om1.bus
+{
+  const { playBodySession } = await import('../test/test_playmod.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const pb = await playBodySession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_playmod.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   '))];
+  });
+  console.log(`the play module native per body: E143 ${pb.checks - pb.bad.length}/${pb.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...pb.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += pb.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // control camapp 3 against the golden sessions (test_c3power.mjs, docs/hle-gaps.md 4.3.6, 4.3.10): where the power-off
 // stops and why, the lever's off in the components, the display switch as the firmware's own output change, the

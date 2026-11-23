@@ -6182,6 +6182,101 @@ export function objectNameId(img, name) {
   return hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
 }
 
+// The play module's start (fact 'play.tasks', src/lab/playmod.mjs H-PLAYSTART; docs/hle-gaps.md 4.8.11, 4.8.18):
+// USTART5 starts its six tasks one after the other, each as `movhu (W),d0; exth d0; call OlyTaSt` (fc ac W, 18, a
+// 7-byte call) and then logs it by name, `mov <name>,a0` (fc dc) 14 bytes after the movhu, the names the six
+// NUL-terminated strings of PLAY_TASK_NAMES (E143 0x501e9f10..0x501e9fab, the names from 0x602c55b8; E146
+// 0x501f0514.., E147 0x501f82e4.., each start PLAY_START_STEP bytes after the one before, D). Returns [[W, name]] in
+// that order (W the task's id word, run-time), or undefined where no name's string is loaded so; throws where a name
+// has not one such load, the starts are not consecutive or call two functions.
+export const PLAY_TASK_NAMES = ['PLAY_MAIN', 'PLAY_LOAD', 'PLAY_IMAGE', 'PLAY_SOUND', 'PLAY_DECODE', 'PLAY_LOADDRAW'];
+export const PLAY_TASKS_E143 = [[0x60042D58, 'PLAY_MAIN'], [0x60042D56, 'PLAY_LOAD'], [0x60042D54, 'PLAY_IMAGE'], [0x60042D5A, 'PLAY_SOUND'],
+  [0x60042E12, 'PLAY_DECODE'], [0x60042E14, 'PLAY_LOADDRAW']];
+const PLAY_START = [0xfc, 0xac, null, null, null, null, 0x18, 0xdd], PLAY_START_NAME = 14, PLAY_START_STEP = 0x1b;
+export function playTasks(img) {
+  const rule = 'playTasks', { base } = imageBase(img);
+  const starts = PLAY_TASK_NAMES.map((name) => {
+    const loads = findString(img, name, { nul: true }).flatMap((o) => loadsOf(img, base + o)).filter((p) => img[p + 1] === 0xdc && bytesAt(img, p - PLAY_START_NAME, PLAY_START));
+    if (loads.length > 1) throw new Error(`${rule}: ${name} logged after ${loads.length} task starts (${loads.map((p) => h8(0x50000000 + p - PLAY_START_NAME)).join(', ')}), want one`);
+    return loads.length ? loads[0] - PLAY_START_NAME : null;
+  });
+  if (starts.every((p) => p === null)) return undefined;
+  const missing = PLAY_TASK_NAMES.filter((n, k) => starts[k] === null);
+  if (missing.length) throw new Error(`${rule}: no task start logged as ${missing.join(', ')}`);
+  const apart = starts.findIndex((p, k) => k > 0 && p !== starts[k - 1] + PLAY_START_STEP);
+  if (apart > 0) throw new Error(`${rule}: ${PLAY_TASK_NAMES[apart]}'s start ${h8(0x50000000 + starts[apart])} is not ${PLAY_START_STEP} bytes after ${PLAY_TASK_NAMES[apart - 1]}'s`);
+  const callees = new Set(starts.map((p) => callAt(img, p + 7).to));
+  if (callees.size !== 1) throw new Error(`${rule}: the starts call ${[...callees].map((o) => h8(0x50000000 + o)).join(', ')}, want one function`);
+  return starts.map((p, k) => [u32(img, p + 2), PLAY_TASK_NAMES[k]]);
+}
+// The play module's view decode at the image library (fact 'play.decode', src/lab/playmod.mjs S-IMGPIPE, S-PLAYDEC;
+// docs/hle-gaps.md 4.8.11, 4.8.13, 4.8.18), from the library's issue (the place of E143's 0x5048f331). D unless
+// tagged, from E143's code and E146's and E147's:
+// - issue_from: the issue's two calls, both the play module's (E143 0x518b446f, 0x518b478b; E146 0x518c2dce,
+//   0x518c3180; E147 0x518cacb3, 0x518cb065), their return addresses in their order;
+// - wait, wait_from: after each the first call whose a0 is set by the same instruction as the issue's, the one byte
+//   `mov a3,a0` (9c) on E143, `mov <block>,a0` (fc dc) on E146 and E147, where the calls between are the play
+//   module's traces (E146 0x51a240a4 with `mov <line>,a0`); the same function after both (E143 0x5048f6e4, E146
+//   0x50481d2a, E147 0x50490620), its returns in the same order;
+// - request: the request's fields, from the builder before the second call: the source format's store, the u16
+//   `movhu d0,(F,An)` (f8 70..73) right after `mov 7170,d0` (2c 02 1c; E143 0x518b4606, F 8; E146 0x518c2fd8, F 16:
+//   the source address is 64-bit there, the fields after it 8 bytes on), the padded width, the width and height and
+//   the size the library scales from stored at F + 2 .. F + 10 after it; the work buffer, `mov (8,a0),d0; mov d0,(An)`
+//   (f8 00 08 6x), An set by `mov W,a2` (9a W) or `add W,a2` (22 W) before it (E143 28, E146 36), and its bytes the
+//   `mov d0,(K,a2)` (f8 12 K) right before the 7170 load at W + K (E143 36, E146 48); src at +0;
+// - dest: the destination's fields, the u16 store right after `mov 3074,d0` (2c 02 0c): its format at G (E143 8,
+//   E146 16), the pitch and the size at G + 2 .. G + 6, its address at +0.
+// Returns PLAY_DECODE_E143's shape; throws where the issue has not two callers or a part is not found.
+export const PLAY_DECODE_E143 = {
+  issue: 0x5048F331, issue_from: [0x518B4476, 0x518B4792], wait: 0x5048F6E4, wait_from: [0x518B4484, 0x518B47A0],
+  request: { src: 0, format: 8, width: 12, height: 14, area_width: 16, area_height: 18, work: 28, bytes: 36 },
+  dest: { addr: 0, format: 8, pitch: 10, width: 12, height: 14 },
+};
+export const PLAY_ISSUE_E143 = PLAY_DECODE_E143.issue;
+const PLAY_WAIT_SPAN = 0x40, PLAY_FIELDS_SPAN = 0x40;
+export function playDecode(img, issue) {
+  const rule = 'playDecode', D = (o) => h8(0x50000000 + o);
+  const calls = callsTo(img, issue - 0x50000000);
+  if (calls.length !== 2) throw new Error(`${rule}: ${calls.length} calls of the image library's issue ${h8(issue)}, want two`);
+  // the instruction that sets a0 right before a call: `mov imm32,a0` (fc dc) or `mov Am,a0` (9x, one byte)
+  const setA0 = (c) => (img[c - 6] === 0xfc && img[c - 5] === 0xdc ? img.subarray(c - 6, c) : (img[c - 1] & 0xf3) === 0x90 && (img[c - 1] >> 2 & 3) !== 0 ? img.subarray(c - 1, c) : null);
+  const waits = calls.map((c) => {
+    const a0 = setA0(c);
+    if (a0 === null) throw new Error(`${rule}: the issue's call ${D(c)} sets a0 in no form the rule reads`);
+    const next = callsWhere(img, () => true).find((x) => x.at > c && x.at < c + PLAY_WAIT_SPAN && setA0(x.at)?.length === a0.length && bytesAt(img, x.at - a0.length, [...a0]));
+    if (!next) throw new Error(`${rule}: no call within 0x${PLAY_WAIT_SPAN.toString(16)} bytes after the issue's ${D(c)} takes its a0`);
+    return next;
+  });
+  if (waits[0].to !== waits[1].to || waits[0].to === issue - 0x50000000) throw new Error(`${rule}: the calls after the issue's go to ${waits.map((w) => D(w.to)).join(', ')}, want one function besides the issue`);
+  // the request's builder: between the two calls
+  const [c1, c2] = calls, from = c1 + 7;
+  const f7170 = oneAt(img, [0x2c, 0x02, 0x1c], rule, 'loads of 7170', from, c2);
+  const f3074 = oneAt(img, [0x2c, 0x02, 0x0c], rule, 'loads of 3074', from, c2);
+  if (f7170 === null || f3074 === null) throw new Error(`${rule}: no ${f7170 === null ? 'source format 7170' : 'destination format 3074'} between the issue's calls ${D(c1)} and ${D(c2)}`);
+  const stores = (p) => { const out = []; for (let q = p; q < p + PLAY_FIELDS_SPAN; q++) if (img[q] === 0xf8 && (img[q + 1] & 0xfc) === 0x70) out.push([q, img[q + 2]]); return out; };
+  const firstStore = (p, what) => {
+    const s = stores(p)[0];
+    if (!s || s[0] > p + 8) throw new Error(`${rule}: no u16 store of the ${what} right after its load ${D(p)}`);
+    return s[1];
+  };
+  const F = firstStore(f7170 + 3, 'source format'), G = firstStore(f3074 + 3, 'destination format');
+  const has = (p, offs, what) => { const got = stores(p).map(([, o]) => o); const lost = offs.filter((o) => !got.includes(o)); if (lost.length) throw new Error(`${rule}: no u16 store of the ${what} at ${lost.join(', ')} after ${D(p)}`); };
+  has(f7170, [F + 2, F + 4, F + 6, F + 8, F + 10], 'source\'s sizes');
+  has(f3074, [G + 2, G + 4, G + 6], 'destination\'s pitch and size');
+  const K = [5, 3].map((k) => f7170 - k).find((q) => bytesAt(img, q, [0xf8, 0x12]) && (q + 3 === f7170 || bytesAt(img, q + 3, [0x5e, 0x08])));
+  if (K === undefined) throw new Error(`${rule}: no \`mov d0,(K,a2)\` of the work buffer's bytes right before ${D(f7170)}`);
+  const ws = oneAt(img, [0xf8, 0x00, 0x08, 0x62], rule, 'work buffer stores', from, f7170);
+  let W = null;
+  for (let q = ws - 2; ws !== null && q >= ws - 0x10 && W === null; q--) if ((img[q] === 0x9a || img[q] === 0x22) && wholeTo(img, q, ws)) W = img[q + 1];
+  if (W === null) throw new Error(`${rule}: no \`mov W,a2\` or \`add W,a2\` before the work buffer's store ${ws === null ? '(none)' : D(ws)}`);
+  const ret = (c) => 0x50000000 + c.at + c.len;
+  return {
+    issue, issue_from: calls.map((c) => 0x50000000 + c + 7), wait: 0x50000000 + waits[0].to, wait_from: waits.map(ret),
+    request: { src: 0, format: F, width: F + 4, height: F + 6, area_width: F + 8, area_height: F + 10, work: W, bytes: W + img[K + 2] },
+    dest: { addr: 0, format: G, pitch: G + 2, width: G + 4, height: G + 6 },
+  };
+}
+
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
@@ -6301,6 +6396,10 @@ export function readPlacedFacts({ img, at }) {
   if (recF !== undefined) facts.take_shot = takeShot(img);
   // TAKE's own fills of a still's shot as H-TAKEFILLS runs them, on the same bodies
   if (recF !== undefined) facts.take_fills = takeFills(img, at, recF.exif);
+  // the play module's start and its view decode at the image library, on the same bodies
+  const playIssue = recF !== undefined ? at(PLAY_ISSUE_E143) : null, playStarts = recF !== undefined ? playTasks(img) : undefined;
+  if (playStarts !== undefined) facts.play.tasks = playStarts;
+  if (playIssue !== null) facts.play.decode = playDecode(img, playIssue);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;

@@ -8386,7 +8386,8 @@ there (it stays on the other bodies).
   histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed); the album / index
   build behind the component's index and right / left (read 2026-11-11, 4.8.13: the album is the short-movie album
   manager's, and the index is the DCF database's). On the other bodies the
-  module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93;
+  module stays stood in (finding 92's addresses; on E146 and E147 it runs behind the opt-in since 2026-11-22 as far
+  as the view decode's go, 4.8.18), and the E118 family's files lack the firmware's Exif (finding 93;
   they carry it since findings 102 to 104, and its native load would read it, finding 106).
 
 #### 4.8.12 The second card slot (2026-11-11; D unless tagged, addresses E143's)
@@ -9070,6 +9071,72 @@ port 1, S2 on the card the save settings name. Until now their one card answered
 - **Open.** E134's second card (queue 221); RecordMediaMode on the three packets; the second slot's run-time change
   and its media flags (S-CARD's flags need the HLS control's `ctrl`, which the rule's bodies do not have); the
   record controller of these bodies (S-CARD's rule is E143's here, I); E125's name table.
+
+#### 4.8.18 The play module on E146 and E147 (2026-11-22; D unless tagged, each body's addresses)
+
+- **Why.** 4.8.11 and 4.8.13 ran the play module's tasks, its load and parse and the view's decode on E143 alone
+  behind the Player's `camapp_play_native`; the module's addresses were E143's by hand. E146 and E147 run camapp 3
+  since 4.1.13. This round reads the module's start and decode on them by rule and lifts the E143 gate
+  (`emu/src/lab/playmod.mjs` PLAY_NATIVE: where the rules read both). `emu/test/test_playmod.mjs` pins what follows
+  (E143 7 of 7, E146 4 of 4, E147 4 of 4; X).
+- **The start, by rule (playTasks, fact `play.tasks`).** USTART5 starts the six tasks one after the other, each
+  `movhu (W),d0; exth d0; call OlyTaSt` and then `mov <name>,a0` for its log, 14 bytes after the movhu, the names the
+  strings `PLAY_MAIN` .. `PLAY_LOADDRAW` (E143 `0x501e9f10..0x501e9fab`, names from `0x602c55b8`). Each start sits
+  `0x1b` bytes after the one before. E146's starts are at `0x501f0514..`, with the words `0x60042d80`, `0x60042d7e`,
+  `0x60042d7c`, `0x60042d82`, `0x60042e3a` and `0x60042e3c`. E147's are at `0x501f82e4..`, with `0x60042d00`,
+  `0x60042cfe`, `0x60042cfc`, `0x60042d02`, `0x60042dba` and `0x60042dbc`. The port's map already placed these
+  words the same way. Under the opt-in H-PLAYSTART starts the six on both bodies, and each then waits on its queue
+  (X).
+- **The decode's calls, by rule (playDecode, fact `play.decode`).** The image library's issue is the port's place of
+  E143's `0x5048f331` (E146 `0x50481950`, E147 `0x50490246`). It has two callers on each body, both in the play
+  module: E146 `0x518c2dce` and `0x518c3180`, E147 `0x518cacb3` and `0x518cb065`. The map left the wait
+  (`0x5048f6e4`) and the four return addresses unplaced. On E146 and E147 the play module logs a trace between the
+  issue and the wait (`0x51a240a4` / `0x51a2ec6a`, with `mov <line>,a0`). The issue's block is a fixed one,
+  `mov 0x62d3b914,a0` on E146, where E143 loads it with `mov a3,a0`. So the rule takes as the wait the first call
+  after each issue whose a0 is set by the same instruction: E146 `0x50481d2a`, E147 `0x50490620`. Each is paired
+  with E143's `0x5048f6e4` at -3 in the port's reverse map (`emu/bin/xwhere.mjs`, X). The block's layout is E143's
+  (E146 `0x62d3b914..0x62d3b92c` against E143's `0x62ce0684..0x62ce069c`).
+- **The request's layout differs.** E146's and E147's builder (before the second call) writes the source's address
+  as 64 bits (`mov d0,(a0); mov d1,(4,a0)` with d1 0), and every field after it sits 8 bytes on. The source format
+  is at +16 (E143 +8; `mov 7170,d0; movhu d0,(16,a2)`, E146 `0x518c2fd8`), the padded width, the size and the size
+  the library scales from at +18..+26, and the work buffer at +36 (`add 36,a2`, E146 `0x518c2f2e`; E143 +28). Its
+  bytes are at +48 (E143 +36). The destination's format is at +16 (`mov 3074,d0; movhu d0,(16,a3)`, E146
+  `0x518c3023`; E143 +8), with the pitch and size at +18..+22. The rule reads each offset from those stores. On E143
+  it gives back the values playmod.mjs had by hand.
+- **The data, through the port.** The DHT segment (`0x60626338`: E146 `0x6060ed90`, E147 `0x6062a5e0`) and the
+  prefilter's thresholds and rows (`0x60690b78` / `0x606c5a84`: E146 `0x60677548` / `0x606ac708`, E147
+  `0x606971a8` / `0x606cc998`) are E143's byte for byte (420 bytes, 80 bytes, X). Each body's row picker loads them
+  at the same places (E146 `0x504d5a66`, `0x504d5a76`; E143 `0x504e23a8`, `0x504e23b8`).
+- **What runs on E146 and E147 (X).** One shot (S-RELSEQ's picture on the card, 76,937 bytes), then PLAY. The
+  module loads and parses the file far enough to ask for the view (the GUI reaches SS_PLAY_SINGLE /
+  ID_ST_DRAWING; the header getter's code is not observed on these bodies). PLAY_LOADDRAW reads it again, and PLAY_DECODE asks for one view decode from the second call site. The recorded request has
+  E143's values: 7170, 1620 x 1080 to the bank `0x98d4d800` in 3074, 900 x 600 at a pitch of 5568. The library's
+  own scale ratios at its prefilter's call (the port's place of `0x504782ac`) are the lab's, 1844 and 1844, so
+  there is no pre-reduction. The library's kind 10 then writes the pipeline block's words. Every check S-IMGPIPE
+  makes before it reads the stream passes: the go, the codec's start, the unit masks, the program's words and their
+  values, the work buffer off the lab's memory. So E146's and E147's driver programs the block as E143's does for
+  this decode.
+- **The stop (X): the play buffer.** The request's source, the file from SOI, is `0xbc857f00` on both bodies (E143
+  `0xaefce700`). The lab's om1.bus backs the DRAM at `0xa0000000..0xb8000000` (384 MiB, `emu/src/fw/board.mjs`
+  dram_size) and the two live-view ranges (`docs/om1-vsc-spec.md` A16). `0xbc857f00` lies in none of them: it is in
+  the CPU window `0xb8000000..`, whose segment 0x17 shows bus `0xb8000000..`, unbacked. The play module's second
+  read lands there through S-SDCARD's `sim.write` of the card's data (`emu/src/lab/storage.mjs`), a debugger write,
+  which the window skips on an unbacked range. A CPU read of it fails (E14). S-IMGPIPE then refuses the go at
+  `+0xf4` ("the stream's address is not on the bus's memory", from `0x50473b75` on E146 and `0x504823f8` on E147).
+  The session stops in ID_ST_DRAWING. The work buffer is unbacked on all three bodies too (`0xd2b44480` on E146 and
+  E147, `0xcfbd5400` on E143), as 4.8.13 has it for E143. The firmware hands out DMA buffers above the lab's 384 MiB
+  on these bodies; whether the camera's DRAM extends there or another bus range backs it is ?. The bank table
+  (`0x602c2d61`) differs as well: its fourth bank is `0xed9bee00` on E146 against E143's `0xee087500`, below the
+  lab's second live-view range. Which allocator hands out `0xbc857f00` is not read (?): it is not the memory
+  manager's handle-to-address `0x50534dd1` (its port, X: no return in `0xb8000000..0xc0000000` over the session).
+- **Seen on the way (X).** On E143 under the opt-in, MENU 2 s after the start stopped at a pipeline block write the
+  model does not know (`0x9c200168` = 1, from `0x50481c23`). The same pass without the opt-in does not stop
+  (test_c3take.mjs). What the library runs there is not read (?). test_playmod.mjs takes its shot without the menu's
+  pass.
+- **Open.** A backed range for the play buffer on E146 and E147: the allocator of `0xbc857f00` and its extent, or
+  the bodies' bus DRAM above 384 MiB. With it, the decode would run on S-IMGPIPE as on E143, and the test's E143
+  checks (the bank against expectedView, IMG1 drawn one pixel per pixel) are written for that. E146's live-view bank
+  0x75 at `0xed9bee00`. E143's MENU stop under the opt-in.
 
 ### 4.9 HDMI and DisplayPort
 

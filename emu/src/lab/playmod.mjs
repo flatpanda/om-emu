@@ -1,8 +1,9 @@
-// The play module natively under control camapp 3 (docs/hle-gaps.md 4.8.11, 4.8.13; E143 only, the Player's
-// camapp_play_native, off by default): segment 9's PLAY tasks take the HLS play components' requests on PLAY_EXEC
-// themselves, load the picture's file from the card, parse its Exif and JPEG headers and ask the image library for
-// the view's decode, which runs natively on the pipeline block's model (src/dev/imgpipe.mjs). Addresses are E143's (D
-// unless tagged).
+// The play module natively under control camapp 3 (docs/hle-gaps.md 4.8.11, 4.8.13, 4.8.18; E143, E146 and E147, the
+// Player's camapp_play_native, off by default): segment 9's PLAY tasks take the HLS play components' requests on
+// PLAY_EXEC themselves, load the picture's file from the card, parse its Exif and JPEG headers and ask the image
+// library for the view's decode, which runs natively on the pipeline block's model (src/dev/imgpipe.mjs). Addresses
+// are E143's (D unless tagged); on E146 and E147 the tasks' id words and the decode's calls and request layout are the
+// rules' (src/fw/facts.mjs playTasks, playDecode: fact 'play.tasks', 'play.decode'), the data the port's (A()).
 //
 //   H-PLAYSTART  the play module's six tasks started with act_tsk in USTART5's order (task 39, 0x501e9e94: after its
 //                waits for the stages 8, 9 and 10, 0x501e9ec0..0x501e9ef2, and its calls 0x518f724a and 0x50155412,
@@ -51,41 +52,47 @@
 //                output is not read
 import { FirmwareError, where, disasm } from './hle.mjs';
 import { dhtTables } from './jpeg.mjs';
-import { ON_LAB_MODEL } from '../fw/model.mjs';
+import { A, fact, ON_LAB_MODEL, MODEL } from '../fw/model.mjs';
+import { PLAY_TASKS_E143, PLAY_DECODE_E143, valueAt } from '../fw/facts.mjs';
+import { FACTS } from '../fw/ports.mjs';
 
 export class PlayModError extends FirmwareError {}
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // E143's play module (D):
-//   tasks   USTART5's starts in order: [the id word, the name its log gives] (0x501e9f10..0x501e9fab)
+//   tasks   USTART5's starts in order: [the id word, the name its log gives] (0x501e9f10..0x501e9fab; src/fw/facts.mjs
+//           PLAY_TASKS_E143, playTasks)
 //   dht     the header maker's Huffman tables (op 0's copy at 0x50428f7f): their address and length
 //   prefilter  the image library's rows by scale ratio (0x504e23a5): the thresholds (halfwords, run-time 0x60690b78),
 //           the rows' pointers (run-time 0x606c5a84) and their number; a row's first halfword is its pre-reduction
+//           (the port's places on E146 and E147: their code loads both at the same places, E146 0x504d5a66 /
+//           0x504d5a76, and the 420 DHT bytes and the 40 thresholds are E143's byte for byte, X)
 //   issue   the image library's issue and wait the play module's decode calls, each with the return addresses of its
-//           two call sites (0x518b446f / 0x518b478b, 0x518b447d / 0x518b4799)
+//           two call sites (0x518b446f / 0x518b478b, 0x518b447d / 0x518b4799; src/fw/facts.mjs PLAY_DECODE_E143,
+//           playDecode)
 //   request the request's fields the lab records at the issue: the source's address, format and size, the size the
 //           library's packing scales from (+16 / +18, 0x50477e57), the work buffer and its bytes, the destination's
-//           address, format, pitch and size (above)
-export const PLAY_MODULE_E143 = {
-  tasks: [[0x60042D58, 'PLAY_MAIN'], [0x60042D56, 'PLAY_LOAD'], [0x60042D54, 'PLAY_IMAGE'], [0x60042D5A, 'PLAY_SOUND'],
-    [0x60042E12, 'PLAY_DECODE'], [0x60042E14, 'PLAY_LOADDRAW']],
-  dht: { at: 0x60626338, bytes: 420 },
-  prefilter: { thresholds: 0x60690B78, rows: 0x606C5A84, n: 40 },
-  issue: { fn: 0x5048F331, from: [0x518B4476, 0x518B4792] },
-  wait: { fn: 0x5048F6E4, from: [0x518B4484, 0x518B47A0] },
-  request: { src: 0, format: 8, width: 12, height: 14, area_width: 16, area_height: 18, work: 28, bytes: 36 },
-  dest: { addr: 0, format: 8, pitch: 10, width: 12, height: 14 },
-};
+//           address, format, pitch and size (above; on E146 and E147 the source's address is 64-bit and the fields
+//           after it 8 bytes on, playDecode)
+const playModule = (tasks, d) => ({
+  tasks,
+  dht: { at: A(0x60626338), bytes: 420 },
+  prefilter: { thresholds: A(0x60690B78), rows: A(0x606C5A84), n: 40 },
+  issue: { fn: d.issue, from: d.issue_from },
+  wait: { fn: d.wait, from: d.wait_from },
+  request: d.request, dest: d.dest,
+});
 const WAI = 4;
-// the play module runs natively on E143 only (its addresses are not read on another body)
-export const PLAY_NATIVE = ON_LAB_MODEL;
+// the play module runs natively where the rules read its start and its decode: E143, E146 and E147 (src/fw/facts.mjs
+// readPlacedFacts, on the bodies whose REC is recFile's version)
+export const PLAY_NATIVE = ON_LAB_MODEL || (valueAt(FACTS[MODEL], 'play.tasks') !== undefined && valueAt(FACTS[MODEL], 'play.decode') !== undefined);
 
 export class PlayModule {
   // session: the play session; camapp: its camera application (src/lab/camapp.mjs), under control camapp 3
   constructor(session, camapp) {
-    if (!PLAY_NATIVE) throw new PlayModError('the play module natively (camapp_play_native) is E143\'s only');
+    if (!PLAY_NATIVE) throw new PlayModError(`the play module natively (camapp_play_native): ${MODEL}'s rules read no play.tasks or play.decode (src/fw/facts.mjs playTasks, playDecode)`);
     this.s = session; this.lab = session.lab; this.ca = camapp;
-    this.P = PLAY_MODULE_E143;
+    this.P = playModule(fact('play.tasks', PLAY_TASKS_E143), fact('play.decode', PLAY_DECODE_E143));
     this.unit = this.lab.sim.m.devices.imgpipe ?? null;      // S-IMGPIPE (src/dev/imgpipe.mjs)
     if (!this.unit) throw new PlayModError('the play module natively: the board has no pipeline block (src/fw/board.mjs imgpipe)');
     this.tids = [];                // H-PLAYSTART: [tid, name] as started

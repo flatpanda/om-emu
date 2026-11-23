@@ -21,7 +21,8 @@
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
 //               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the built-in lens's focal length getter against
 //               BUILTIN_FOCAL_FOUND, the lens driver against LENS_DRIVER_FOUND and
-//               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the IIC driver's wait
+//               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the play module's start
+//               and view decode against PLAY_FOUND, the IIC driver's wait
 //               against IIC_FOUND, the
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
@@ -541,6 +542,24 @@ const REC_FILE_FOUND = {
     record: { open: 0x504D842F, reserve: 0x504D85BC, alloc: 0x5052E7CE, write: 0x504D864C, post: 0x504D866B, wait: 0x504D8758, entry: 0x504D87A4, register: 0x504D88D9,
       file_queue: 0x60041030, reply_queue: 0x60041096 },
   },
+};
+// The play module's start and view decode (play.tasks, play.decode; src/fw/facts.mjs playTasks, playDecode), where
+// recFile reads REC_FILE's parts: E143's as src/lab/playmod.mjs gave them by hand before the rules (D), E146's and
+// E147's as read in their code (D, 2026-11-22: USTART5's starts E146 0x501f0514.. / E147 0x501f82e4.., each
+// `movhu (W),d0; exth d0; call OlyTaSt` and the log of the task's name; the issue's calls E146 0x518c2dce / 0x518c3180,
+// E147 0x518cacb3 / 0x518cb065, the wait after each with the block's `mov 0x62d3b914,a0` (E146) between the play
+// module's traces; the request builder's stores E146 0x518c2f2e (`add 36,a2`), 0x518c2fd3, 0x518c2fdb, 0x518c3026:
+// a 64-bit source address and the fields after it 8 bytes on), none on the other 15 bodies
+const PLAY_FOUND = {
+  E143: { tasks: [[0x60042D58, 'PLAY_MAIN'], [0x60042D56, 'PLAY_LOAD'], [0x60042D54, 'PLAY_IMAGE'], [0x60042D5A, 'PLAY_SOUND'], [0x60042E12, 'PLAY_DECODE'], [0x60042E14, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x5048F331, issue_from: [0x518B4476, 0x518B4792], wait: 0x5048F6E4, wait_from: [0x518B4484, 0x518B47A0],
+      request: { src: 0, format: 8, width: 12, height: 14, area_width: 16, area_height: 18, work: 28, bytes: 36 }, dest: { addr: 0, format: 8, pitch: 10, width: 12, height: 14 } } },
+  E146: { tasks: [[0x60042D80, 'PLAY_MAIN'], [0x60042D7E, 'PLAY_LOAD'], [0x60042D7C, 'PLAY_IMAGE'], [0x60042D82, 'PLAY_SOUND'], [0x60042E3A, 'PLAY_DECODE'], [0x60042E3C, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x50481950, issue_from: [0x518C2DD5, 0x518C3187], wait: 0x50481D2A, wait_from: [0x518C2E0A, 0x518C31BC],
+      request: { src: 0, format: 16, width: 20, height: 22, area_width: 24, area_height: 26, work: 36, bytes: 48 }, dest: { addr: 0, format: 16, pitch: 18, width: 20, height: 22 } } },
+  E147: { tasks: [[0x60042D00, 'PLAY_MAIN'], [0x60042CFE, 'PLAY_LOAD'], [0x60042CFC, 'PLAY_IMAGE'], [0x60042D02, 'PLAY_SOUND'], [0x60042DBA, 'PLAY_DECODE'], [0x60042DBC, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x50490246, issue_from: [0x518CACBA, 0x518CB06C], wait: 0x50490620, wait_from: [0x518CACEF, 0x518CB0A1],
+      request: { src: 0, format: 16, width: 20, height: 22, area_width: 24, area_height: 26, work: 36, bytes: 48 }, dest: { addr: 0, format: 16, pitch: 18, width: 20, height: 22 } } },
 };
 // REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as
 // src/lab/rec.mjs gave them by hand before the rule (REC_IMAGE_E143, D), E146's and E147's as read in their code (D,
@@ -1313,6 +1332,7 @@ export function factsTests() {
     if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_file, REC_FILE_FOUND[code]), `${code}: rec_file ${hx(placed?.rec_file ?? placed)}, found ${hx(REC_FILE_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_image, REC_IMAGE_FOUND[code]), `${code}: rec_image ${hx(placed?.rec_image ?? placed)}, found ${hx(REC_IMAGE_FOUND[code] ?? 'none')}`);
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.play?.tasks, PLAY_FOUND[code]?.tasks) && same(placed?.play?.decode, PLAY_FOUND[code]?.decode), `${code}: play.tasks and play.decode ${hx(placed?.play ? { tasks: placed.play.tasks, decode: placed.play.decode } : placed)}, found ${hx(PLAY_FOUND[code] ?? 'none')}`);
     // recImage refuses a form it does not know rather than reading it: E143's image with REC_IMAGE's queue read made
     // `mov (Q),d2` (0x50541c4e: fc ae -> fc a2) and with the shared init's bind to entry 6 (0x5054dcca: mov 7,d0 -> 6)
     if (code === 'E143' && placed?.rec_file) {

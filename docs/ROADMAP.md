@@ -373,7 +373,9 @@ the survey table.
   the struct (E143 `0mm`, E144 `0000.00.00 55:00:00`; now `25mm`, `1620x1080`, `2022.01.01 00:00:00`, X).
   `test_playinfo` covers the 19 bodies. Open: the picture's Exif and the play module's load of it (the native path;
   findings 90 to 92, 2026-11-10: the component method, play API, header read and parse it stands for run on no body;
-  on E143 under camapp 3 the play module's load and parse run behind an opt-in, hle-gaps.md 4.8.11),
+  on E143 under camapp 3 the play module's load and parse run behind an opt-in, hle-gaps.md 4.8.11; on E146 and
+  E147 too since 2026-11-22, by rule, as far as the view decode's go, which stops at the play buffer `0xbc857f00`
+  outside the lab's bus memory, hle-gaps.md 4.8.18),
   and E143's INFO composite, refused for its highlight and shadow registers (`0x48c..0x4cc`, `0x5d0..0x5dc`,
   never-written class). The built-in lenses' focal length since 2026-11-16 (survey finding 158): the getter the EXIF
   set stores FocalLength from (rule builtinFocal, fact `lens.focal`) runs natively at a capture, 4.5 mm on E145, E129

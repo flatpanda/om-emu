@@ -635,7 +635,8 @@ default).
   answers 85.4 ms after the request, X). Command 4 (token 8) is answered at once in the
   state command 1 leaves (`0x62a29ad4` = 1, `0x501b7872`; only state 2 processes it, `0x501b6e6c`). Whether the camera's
   controller ends the transfer with nothing on the shoe is ? (I: it does, 4.12.1: mode 0 sends on its own bit timing).
-- **Open.** TAKE_EXPOSE's other commands (`0x200` from 13 under its mode bits, 14's `0x201` and 1, the movie's
+- **Open.** TAKE_EXPOSE's other commands (`0x200` from 13 under its mode bits, 14's `0x201` and 1, their gate read in
+  4.1.14; the movie's
   `0xc00` / `0xc01`) and what they ask of EXP (`0x505536be` runs in TAKE_EXPOSE's task); TAKE_POWER_MANAGER needs the
   sequence parts' start-up call (`0x50c9d590`, its trigger not read) and then CPU 1; the strobe needed PER_SIO's
   controller on E143 (the end of channel 11's transfer), modelled since 4.12.1. Of plan item 5 in 4.1.4, the first step
@@ -1470,6 +1471,34 @@ E146 7 of 7, E147 9 of 9; X) pins what follows.
   (the scout's probe: `.hook_shutter` 4, `.hook_fx` 1, `.hook_ex` 1, the others 0).
 - **Open.** TAKE's capture (4.1.12) on all three; E122's other position switch; what tells the
   switch's positions 0 and 1 apart; whether the camera's start sets 44 from the switch, which the lab's does not.
+
+#### 4.1.14 TAKE_EXPOSE's commands `0x200` / `0x201`: the gate read (2026-11-22; D unless tagged, addresses E143's)
+
+4.1.6's Open item asked for TAKE_EXPOSE's other commands natively. This round read who sends them and stopped there:
+nothing was run and no test was added (the round's time box ended at the read). Read with `tools/mn10300dis.sh` over
+E143's block 0100.
+
+- **Command 13 (`0x506d7f03`).** Its context word is the u32 at the handler's a1. If bit `0x2` is already set it returns
+  0 and asks nothing; otherwise it sets `0x2` (`0x506d7f10`), sends TAKE_EXPOSE (queue id from the u16 at `0x6004327a`)
+  command 0 through `0x506d9854` when bit `0x20` is clear or both of `0xa0` are set (`0x506d7f15..0x506d7f2d`), and, if
+  that status is 0, command `0x200` only when bit `0x4` is set (`0x506d7f38..0x506d7f4c`).
+- **Command 14 (`0x5039a9fe`).** Only while bit `0x2` is set: it clears it (`0x5039aa0e`), sends `0x201` when bit `0x4`
+  is set (`0x5039aa16..0x5039aa29`), then, on status 0, command 1 under the same `0x20` / `0xa0` condition as 13's
+  command 0 (`0x5039aa36..0x5039aa50`).
+- **Bit `0x4` is switched by `0x5039aa5b`**, the function right after 14's, which switches on the word at a0's +8 and
+  works on the context word at a1: 15 sets bit `0x4` (if clear) and sends `0x200` if bit `0x2` (exposure on) is set
+  (`0x5039aa70..0x5039aa87`); 16 clears it and sends `0x201` under the same condition (`0x5039aa8d..0x5039aaaa`); 17
+  sends `0x202` when both bits of `0x6` are set (`0x5039aab0..0x5039aabe`); any other value returns `0x4b01`. So
+  `0x200` / `0x201` switch on and off a TAKE_EXPOSE state that `0x5039aa5b`'s cases 15 / 16 own, and 13 / 14 only replay
+  it across exposure on / off. Whether 15..17 are TAKE_FUNC command numbers (as 4.1.1's handlers take the request in
+  a0) and who sends them is not read.
+- **Why the lab never sees them (X, 4.1.4, 4.1.6).** Under camapp 1 and 2 the start's command 13 sends only command 0
+  (`emu/test/test_take.mjs` START), so bit `0x4` is clear there. 4.1.6 found from the static callees that `0x200`..`0x202`
+  reach none of the AE launchers, so run they would not call EXP's `0x505536be` either (their case bodies not yet
+  disassembled).
+- **Open.** TAKE_EXPOSE's case bodies for `0x200`, `0x201`, `0x202` and 1 (from the hashed table at run-time
+  `0x606f1434`, filled at run time); the caller of `0x5039aa5b` and the sender of its 15 / 16; then a session that issues
+  15 and a test per command.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

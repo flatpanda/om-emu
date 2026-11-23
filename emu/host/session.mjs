@@ -20,7 +20,7 @@
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
 //   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
-//   and --device), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
+//   and --device), rotate 'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
 //   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
@@ -103,7 +103,7 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // play's tokens that are harness inputs, not the camera's (the summary lists them): a GUI event posted, a setting
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
-const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'setting', 'exif', 'expect', 'trace', 'break', 'resume'];
+const RESERVED = ['wait', 'hold', 'tilt', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'setting', 'exif', 'expect', 'trace', 'break', 'resume'];
 // a setting as a token gives it: an id (decimal or 0x) or a name of the firmware's own (MODE_MOVIE), resolved per body
 // by openSession (src/fw/setnames.mjs; the names read from the user's firmware, host/setnames.mjs)
 const SETTING = '(?:\\d+|0x[0-9a-fA-F]+|[A-Z][A-Z0-9_]*)';
@@ -141,6 +141,13 @@ export function parseToken(t) {
   if ((m = new RegExp(`^hold:(${ID})(?::(\\d+))?$`).exec(t))) return step('hold', { id: m[1], ms: m[2] === undefined ? HOLD_MS : Number(m[2]) });
   if ((m = new RegExp(`^switch:(${ID})(?:=(\\d+)|([+-]\\d+))$`).exec(t))) return step('switch', { id: m[1], ...(m[2] !== undefined ? { value: Number(m[2]) } : { by: Number(m[3]) }) });
   if (t === 'power:off') return step('power');
+  // tilt:roll=R[,pitch=P]: the play input tilt (degrees; a field left out is 0), which waits its own lab time
+  if ((m = /^tilt:((?:roll|pitch)=-?\d+(?:\.\d+)?(?:,(?:roll|pitch)=-?\d+(?:\.\d+)?)?)$/.exec(t))) {
+    const v = Object.fromEntries(m[1].split(',').map((kv) => kv.split('=')).map(([k, x]) => [k, Number(x)]));
+    if (m[1].split(',').length !== Object.keys(v).length) throw new TokenError(`${t}: roll= or pitch= given twice`);
+    return step('tilt', { roll: v.roll ?? 0, pitch: v.pitch ?? 0 });
+  }
+  if (/^tilt(?::|$)/.test(t)) throw new TokenError(`${t}: tilt:roll=R[,pitch=P] (degrees)`);
   if ((m = /^restart(?::card=(.+))?$/.exec(t))) return step('restart', { card: m[1] ?? null });
   if ((m = /^shot:(.+\.png)$/i.exec(t))) return step('shot', { file: m[1] });
   if ((m = /^read:([^:]+):([^:]+)$/.exec(t))) {
@@ -261,6 +268,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'token': return [{ type: 'token', token: st.token }];
     case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, ...wait(settle)];
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
+    case 'tilt': return [{ type: 'tilt', roll: st.roll, pitch: st.pitch }];
     case 'card': return [{ type: 'card', action: st.action, ...(st.slot !== 1 ? { slot: st.slot } : {}) }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
     case 'setting': return [{ type: 'debug', op: 'setting', setting: st.id ?? st.setting }];
@@ -409,9 +417,10 @@ export async function openSession(o = {}) {
   const puts = pairs(o.cardPut, '--card-put'), gets = pairs(o.cardGet, '--card-get');
   // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
   // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
-  const a15Arg = o.a15 ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
+  const a15Arg = o.a15 ?? 'auto', rotateArg = o.rotate ?? 'off', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
   if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
   if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
+  if (!['off', 'on'].includes(rotateArg)) throw new TokenError(`--rotate ${rotateArg}: off or on`);
   if (!['tft', 'evf'].includes(deviceArg)) throw new TokenError(`--device ${deviceArg}: tft or evf`);
   if (deviceArg === 'evf' && !BY_ID.has('eye')) throw new TokenError(`--device evf: ${MODEL} has no eye sensor in the lab (no EVF to start on)`);
   if (o.main && o.patch?.length) throw new TokenError('--main and --patch exclude each other (--main is the whole change to the main code block)');
@@ -465,7 +474,7 @@ export async function openSession(o = {}) {
   if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
-  const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: 'off',
+  const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
     take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),

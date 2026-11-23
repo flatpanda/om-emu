@@ -29,7 +29,8 @@
 // service screens with MENU held at power-on on E143 (test_hidemode.mjs), the HDMI
 // port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and E147 and its PER_ROTATE groups
-// (--rotate on) on E143, E146 and E147 (test_acc.mjs), the card and the
+// (--rotate on) on E143, E146 and E147 (test_acc.mjs), the picture's orientation tag with --rotate on E143 and E146
+// (test_orient.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129, E132, E145 and the E118
 // family (S2's file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
 // firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), a power-on with no card and the media status
@@ -515,6 +516,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`accelerometer: sample units ${au.checks - au.bad.length}/${au.checks}; check_level ${runs.map(([n, r]) => `${n} ${r.status === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...au.bad, ...runs.flatMap(([n, r]) => (r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `${n}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += au.bad.length + runs.filter(([, r]) => r.status !== 0).length;
+}
+// the picture's orientation tag (test_orient.mjs): the tilt token, the sites on E143, E146 and E147 by their bytes,
+// then S2 in portrait with --rotate on and the control without it on E143 here, E146 in a process of its own
+{
+  const { orientUnits, orientSites, orientSession } = await import('../test/test_orient.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const ou = await orientUnits(), oi = await orientSites(), os = await orientSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_orient.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`the orientation tag: units ${ou.checks - ou.bad.length}/${ou.checks}; sites ${oi.checks - oi.bad.length}/${oi.checks}; E143 ${os.checks - os.bad.length}/${os.checks}; E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...ou.bad, ...oi.bad, ...os.bad, ...(r.status === 0 ? [] : lines.map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += ou.bad.length + oi.bad.length + os.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the card and the file system (storage.mjs): the card model and the FAT and exFAT readers without firmware, then play
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB

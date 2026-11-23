@@ -461,7 +461,8 @@ unknown):**
    record, from TAKE_MAIN's take request.) A few hours after 1
    if takepic's own neighbours answer like the start's; otherwise unknown.
 3. **The orientation tag** (PER_ROTATE's getter at takepic `0x503bcd51` writing record `+0x950c`) comes with 2: the
-   getter is native with `--rotate on`; nothing extra once takepic runs (I).
+   getter is native with `--rotate on`; nothing extra once takepic runs (I; X 2026-11-22, 4.7.3: Orientation 8 and 6
+   in portrait).
 4. **S-TAKEFRAME / S-TAKEMDET:** the through start (command 25, which needs TRA 991 at the component first) or one of
    the commands 26, 59, 74, 75, 80, 90 (above). Read their senders first (2-4 h); running them is then the probe's
    work plus the camera driver's request 5 (S-TAKECAM) and what else they ask (?).
@@ -6693,6 +6694,26 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   top, EXIF 3 as level (pixels); PER_SLOPE's getter then reads the roll from upright as its horizon (roll 95: 4.9
   degrees). The rest of the shooting screen does not turn. The picture's orientation is not reached: at a release in
   portrait no caller of the getter but the GUI's ran (TAKE answered by S-MODACK), and S-RECFILE's JPEG has no EXIF.
+  (Since 2026-11-22 it is: takepic runs under H-TAKEFILLS, below.)
+- **The picture's orientation tag (2026-11-22; X unless tagged).** Reached since takepic runs natively
+  (H-TAKEFILLS, 4.3.13): with `--rotate on` a portrait shot carries the firmware's Exif Orientation, with no lab code
+  of its own. The path (D, E143): takepic `0x503bcd51` calls the getter `0x5005a155` at `0x503bd0ee` and stores its
+  code with `movhu d0,(38156,a0)` at `0x503bd0f7` into the shot's record (+38156 = `+0x950c`, d2 the record), after
+  TAKE's own template copy `0x504298f9` cleared it (its store at `0x50429905`, X). TAKE's third fill's EXIF set
+  (`0x5042992d` -> body `0x5042b50d`) reads the field at `0x5042c428..0x5042c43c`: 6, 3 and 8 are kept, anything
+  else is written as 1, into the Exif block's +18 (`0x5042c44a`), which the header maker writes as IFD0's
+  Orientation; right after it a halfword of 115 at the block's +38012 (StlTake's fill copies setting 49169 there,
+  4.3.13; 3 in the lab) forces 1 (`0x5042c44c..0x5042c456`; what 115 is not read). A watchpoint on the field over S2
+  (E143, roll 52) shows exactly those four accesses: the clear, takepic's 8, the EXIF set's two reads. Without
+  `--rotate on` PER_ROTATE's init has not run, its reported index is 0 and the getter answers 11 (ROTATE_DISABLE),
+  which the EXIF set turns into 1. Files (`bin/session.mjs --rotate on ... tilt:roll=R ... s2`, `exif:`): roll 52
+  Orientation 8, roll -52 6, roll 180 3 on E143 and E146; without `--rotate` 1. E146's sites: the getter call
+  `0x503bda48`, the field +37808, the read `0x504283b3`; E147's: the getter `0x50056dc1` called at `0x503c7cd8`,
+  +37808, the read `0x504366b9` (the same bytes, D), where PER_ROTATE is not run in the lab (its file keeps 1).
+  `bin/session.mjs` gained `--rotate off|on` and the `tilt:roll=R[,pitch=P]` token for this.
+- **Checked** (`emu/test/test_orient.mjs`, E143 and E146 in `bin/test.mjs`): the three bodies' sites by their bytes;
+  S2 at roll 52 and -52 with `--rotate on`: takepic's store carries 8 / 6, the EXIF set's keeping branch runs, the
+  file's Orientation is 8 / 6; the control without `--rotate`: the store carries 11, the other branch, Orientation 1.
 - **Checked** (`emu/checks/check_level.mjs --only R1,R2`, E143 and E146 in `bin/test.mjs`): R1 the transitions above
   with their events and the getter's body, refusals without `--rotate on` (50 degrees) and with it (181); R2 the
   gauge's portrait layouts by pixels. Negative control `--mutants --only R1,R2`: no-rotinit (the range without
@@ -6712,9 +6733,9 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   time and dropped by the read (I: ST's latched data-ready), and ACC_SENS_MAIN (task 132) allowed; the H-SIOMAP
   change of every E143 channel's index (the link's channel 2 among them) is untested.
 - **Not modelled:** PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin and ACC_SENS_MAIN, factory
-  calibration data (store F) and the temperature compensation (calibration type 255 on the templates); the
-  picture's orientation tag (TAKE and REC_FILE do not run); PER_ROTATE's start and end from the HLS (`0x50abb6d8`,
-  not reached).
+  calibration data (store F) and the temperature compensation (calibration type 255 on the templates);
+  PER_ROTATE's start and end from the HLS (`0x50abb6d8`, not reached). (The picture's orientation tag runs natively
+  since takepic does, 2026-11-22, above.)
 
 #### 4.7.4 The power manager and the power-off, natively (E143, E146, E147, 2026-10-29; D unless tagged)
 

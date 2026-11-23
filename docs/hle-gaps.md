@@ -3058,7 +3058,7 @@ traRoutingSession, below).
   when due. The Player's slices of at most 50 ms (`emu/src/lab/player.mjs` SLICE_NS) bring it within one slice. In the
   replica END_RECVIEW then comes at 13255.7 ms and the frame composed at 14132.3 ms holds 20 values. Every ported body
   passes so (Tests). The lab's own delivery is unchanged: open.
-- **Open.** REC_RAWNR (what `0x5052acc1` decides, the RAW NR step); REC_MAIN's and REC_PREPRO's own work, as on E143;
+- **Open.** REC_RAWNR's RAW NR step (`0x5052acc1`'s decision is read in 4.3.15); REC_MAIN's and REC_PREPRO's own work, as on E143;
   which call starts REC_IMAGE (I); the GUI task's work in the slice; the E144 family, whose REC_FILE no rule reads;
   the camera's timed events posted only at an idle slice's end, which modelcheck now idles around (above).
 
@@ -4926,6 +4926,35 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   `0xa0000000..0xbdffc400` for bank 0's three first blocks on E143, which moves the board fact for every body
   (`bin/port.mjs`); then S-RAWFRAME is on by default and, for the white-balance step (4.3.13 item 6), the thumbnail
   (bank 1, inside the lab's DRAM) is the next buffer to fill.
+
+#### 4.3.15 REC_RAWNR's decision `0x5052acc1` (E146; 2026-11-22; D unless tagged, E146's addresses)
+
+- **Why.** 4.3.5 left open what `0x5052acc1` decides in REC_RAWNR (task 32) before it runs `0x50518f3b` and
+  `0x50520916`. The task does not exist on E143 (4.3.5: neither the name nor the queue in its image), so the reading
+  is E146's; E147's copy is not read.
+- **What it reads.** Its one argument is REC's packet (a0). It asserts the packet and its pExifParam (+20, the shot's
+  record) are not 0 (`0x51a05155` with lines 2285 and 2286), then starts at 1 and clears to 0 when any of these holds:
+  - the record's byte +7483 is 1 (`0x5052acfc`);
+  - the packet's Mode (+186) is none of 4097, 4108, 4099, 4100, 4115, 4109 (`0x5052ad08`..`0x5052ad2e`);
+  - `0x5052a12c(packet)` gives 1 and Mode is none of 4099, 4100, 4115 (`0x5052ad30`..`0x5052ad4e`);
+  - the record's byte +38216 is 23 (`0x5052ad51`).
+- **`0x5052a12c`.** For Mode 4108 it gives 1 when +38216 is 20; for 4099, 4100 and 4115 when the record's word +6140
+  is 8. Otherwise it returns `0x5052a1e8(packet)`, which gives 1 when `0x5052a1fe` gives 1 or 3. `0x5052a1fe`: for
+  Mode 4097 with +38216 22 it calls `0x508779f7(&w)` and, when that gives 0, returns 1 for w 0 and 2 otherwise (not
+  read further); for 4099, 4100 and 4115 it returns 3 when +6140 is 11; else 0. REC_IMAGE's Mode 4097 call of
+  `0x5052a1e8` (4.3.5) is this same function.
+- **So for a normal still (Mode 4097)** the decision is 1 unless +7483 is 1, +38216 is 23, or +38216 is 22 with
+  `0x508779f7` giving 0 and w 0. It reads no exposure time: the inputs are the record's +7483, +38216 and (other
+  modes) +6140, and the packet's Mode.
+- **The writers.** +38216 is a shot-kind byte that TAKE's code at `0x503bcf71`..`0x503bd0d1` sets from the shooting
+  settings: 1, 11, 13 or 15, 14, 16, 19, 20, 21, 22, 23 on its branches (the six stores and the shared one at
+  `0x503bd0d1`); what each kind means is ?. +7483 is stored at `0x5051f04e`, `0x5052384f`, `0x505287c8`,
+  `0x5052b5ed` and `0x5087a0c3` (not read). Both found by a scan for `movbu` stores at those offsets in E146's main
+  block (X: 6 and 5 sites).
+- **The lab.** S-RECREQ still posts in REC_RAWNR's place on E146 and E147 (4.3.5), so the decision does not run and
+  no test asserts it; S-EXIFPRM's template leaves both bytes 0, which would give 1 (the RAW NR branch) if it ran.
+- **Open.** What `0x50518f3b` and `0x50520916` do (the RAW NR step itself), `0x508779f7`, the meanings of the shot
+  kinds, the writers of +7483, E147's copy, and running REC_RAWNR natively in the S2 session.
 
 ### 4.4 AF, lens and body IS
 

@@ -8200,7 +8200,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
 - **E146.** The rule reads the same forms in its image (the detect `0x508ca01d`, its helper `0x508ca655`, the same
   shadow words, the port index +12, the record controller's 1129 and 1130 at `0x50c81e24`); its sessions pass
   (below). The other bodies with two slots (E139, E134, E125: `card.detect` drives 2) have no helper of this form;
-  their one card answers every port as before (open).
+  their one card answers every port as before (open; since 2026-11-22 modelled, their detect UI_IN's level alone, 4.8.17).
 - **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots; E143 28 of 28, E146 22 of 22; registered in
   `bin/test.mjs`). One card: detect 0 and 1, the second drive's status 1 and media status 1, no command on port 1,
   flags (1, 0), mount states 8 and 8, switch levels 0 and 1; the first slot's card refused for the second; with the
@@ -8231,7 +8231,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   and the auto switch; the movie slot
   1131 beyond the row; the playback slot (1404, `startSlotSwitch`); the manager's own requests in S-CARD's and
   S-MEDIA's place for the first slot (`0x31`, `0x35`); `0x72`; the write-protect pins; the expander's chip and
-  UI_IN's group 1 producer; the removal of the save slot's card under camapp 3; E139, E134 and E125; the browser
+  UI_IN's group 1 producer; the removal of the save slot's card under camapp 3; E139, E134 and E125 (4.8.17); the browser
   player's page (the input works through the API; no control for the second slot yet).
 
 #### 4.8.13 The play module's decode and the album (2026-11-11; D unless tagged, addresses E143's)
@@ -8670,6 +8670,62 @@ Independent stops the session (below).
   `rating_erase`, so S-MDACTRL refuses the command with its number, and test_eraseall holds that refusal there.
 - **Open.** The copy all (2); command 6 on E146 and E147 (the DRAM's size there, then the pool's place); Reset
   Ratings, whose command is not read; the component's error kinds.
+
+#### 4.8.17 The second card slot on E139, E134 and E125 (2026-11-22; D unless tagged)
+
+The other bodies with two slots (`card.detect` drives 2, 4.8.12) now have the lab's two slots too
+(`src/fw/models.mjs` `card_fs.second_slot`): the second empty unless the host gives a card, a second card mounted from
+port 1, S2 on the card the save settings name. Until now their one card answered both ports and the rule read no
+`card.slots` there (4.8.12, "E146").
+
+- **The detect is UI_IN's level alone.** E139's SD detect (`0x5066466d`) has E143's form (`mov d0,d2; mov
+  0x1301,d0; movhu d0,(4,sp); ..; call H`), but its helper H (`0x50664a3d`) is `clr d0; retf`, so the path E143
+  never takes is always taken: port 0 answers 0 where UI_IN's level of `0x1506` is 0 (`mov 0x1506,d0` at
+  `0x5066468c`), port 1 where that of `0x1518` is (`0x5066469c`), else the word's `0x1301`; the level getter is
+  `0x5011091b`, the media fact's `switch_level`. E134 (`0x50678449`) and E125 (`0x50622561`) have a detect of their
+  own, the drive status's call (E134 from `0x5067098e`, E125 from `0x5061cb31`): `cmp 2,d0; beq` (port 2: 0), then
+  port 0 `mov 0x1506,d0; call L`, port 1 `mov 0x1518,d0; call L`, 0 where the level is 0 and `0x1301` otherwise.
+  So on these bodies the card switch in UI_IN's image is the slot's detect, and no expander pin is involved: the
+  lab writes no pin (`card.slots` `detect.pins` null) and the switch's level in S-KEYBITS' image, which the session
+  already sets for an empty second slot (4.8.12), is what the firmware reads. Several single-slot bodies hold the
+  same two forms (E144, E148, E142, E140 E139's; E137, E129, E132 E134's, X: the rule's scan with the drive count
+  forced to 2), so the rule reads `card.slots` only where `card.detect` counts two drives.
+- **The save settings.** None of the three has a record controller of E143's form (`0x50c73f16`; X: no hit of its
+  byte form, nor of its tail `mov 1,a3 .. mov 2,a3`, on the three; E139's functions that read 1129 and 1130 beside
+  each other, `0x509ac8d4`, `0x509acb20`, `0x509acd3e`, `0x509aced3`, are the remaining count and the media status
+  per slot, not a card choice). The rule takes the save mode and slot from the remaining-shots query
+  (`card.shots_query`), which loads three settings in E143's order: mode, auto switch, slot (E143 `0x50419164`:
+  1129, 1134, 1130, the controller's own; E139 `0x502f7ceb`: 1129, 1134, 1130; E134 `0x50313e2d`: 1130, 1135, 1131;
+  E125 `0x50307376`: 1137, 1142, 1138). The firmware's name table (`src/fw/setnames.mjs`) names E139's 1129 and 1130
+  and E134's 1130 and 1131 `MODE_PICTURE_RECORD_MEDIA` and `_SLOT` (X; E125's table is not read: its block holds no
+  table the reader finds). S-CARD's choice of card is then E143's controller's rule (I on these bodies): the save
+  slot for the modes 0 and 1; Dual Same and Dual Independent as on E143.
+- **RecordMediaMode.** The three bodies' REC packets (fact `rec_file`, `recFileQueue`) list Media and Media2 and no
+  RecordMediaMode, though their firmware holds the field's names (`usRecordMediaMode`, E139 at `0x50525489`, X). A
+  single-card S2 needs no mode, so this round leaves it: with the mode 1 (Auto Switch) or a double-slot mode the lab's
+  REC request stops as before (`src/lab/rec.mjs`). Open.
+- **Runtime changes of the second slot.** The HLS side's facts on these bodies (`mediaHls`) read the first slot's switch
+  and media kind alone (their mount kinds are `[4, 1, 32, 8]`, kind 8 read from kind 1's word, 4.8.3's rule), so a
+  card put into or taken out of the second slot while the camera runs is refused (`card_input`, with its reason); the
+  second card goes in at the start (`OM_EMU_CARD2`, or the Player's env `card2`). Open.
+- **Run (X, a scratch session per body with `card.slots` set from the rule in memory, `src/fw/ports.mjs` not yet
+  regenerated).** One card: the detect answers 0 and `0x1301`, drive 1's status is 1, port 1 gets no command; S2
+  with the save slot at 0 gives `C:\DCIM\100OLYMP\P1010001.JPG`, with it at 1 no file (the slot has no card). Two
+  cards (a blank one in slot 1, the first session's card in slot 2): both detects 0, both drive statuses `0x13780`,
+  the second card mounted by S-CARD's DCF numbering mount on its own port (64 commands on E139, 65 on E125), its
+  database counting its picture (next file 2); S2 at slot 2 writes `D:\DCIM\100OLYMP\P1010002.JPG`, at slot 1
+  `C:\...\P1010001.JPG`; read back with `refs/volume.mjs`, the second card holds files 1 and 2 and the first file 1
+  only. E139 and E125 pass all of it.
+- **E134 with a second card stops (X).** E134's one-card run passes as above. With a second card the DCF numbering
+  mount of drive 1 reaches a synchronous send to queue 221 (`0x50033a17` from `0x5065860d`, the access lamp's
+  callback `0x5065858e` with state 2, which the file layer's `0x50659134` passes through `0x506589a8`); the lamp's
+  own module is UI_OUT, whose queue is `0x600416bc`, and queue 221's receiver (the send at `0x502aaeb2` and the
+  posts at `0x502aab0d`, `0x502aab52` use it too) does not run in the lab, so the bring-up stops there. The first
+  slot's insertion does not send it (state 2 is not passed then; the lamp sends synchronously for state 2 or where
+  `0xa2911190` is 0, `0x506585c0..0x50658611`). Which module reads queue 221 is not read (?). Open.
+- **Open.** E134's second card (queue 221); RecordMediaMode on the three packets; the second slot's run-time change
+  and its media flags (S-CARD's flags need the HLS control's `ctrl`, which the rule's bodies do not have); the
+  record controller of these bodies (S-CARD's rule is E143's here, I); E125's name table.
 
 ### 4.9 HDMI and DisplayPort
 

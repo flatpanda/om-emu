@@ -1985,6 +1985,9 @@ export class PlaySession extends N.NavSession {
     if (size !== null && !(action === 'insert' && card === null)) throw new ValueError(`card ${action}${at}: a size is a new card's, for an insert into the empty second slot`);
     if ((action === 'remove') !== !!card?.present) throw new ValueError(`card ${action}${at}: the card is ${card?.present ? 'in' : 'out of'} the slot already`);
     if (media.busy()) throw new ValueError(`card ${action}${at}: the media layer is busy (a format or a card change runs)`);
+    // (E139, E134 and E125: the HLS side's facts read the first slot's switch and media kind alone, src/fw/facts.mjs
+    // mediaHls, so the second slot's change at run time is not modelled there; docs/hle-gaps.md 4.8.17)
+    if (!media.f.slots[drive]) throw new ValueError(`card ${action}${at}: ${MODEL}'s HLS media side has no second slot's switch and media kind read (src/fw/facts.mjs mediaHls): the second card goes in at the start only (OM_EMU_CARD2)`);
     const sw = media.f.slots[drive].switch, tag = `card ${action}${drive ? ' 2' : ''}`, lab = this.lab;
     if (card === null) {                                                           // a new card for the second slot
       card = new SdCard(size === null ? {} : { sectors: cardSectors(size) });

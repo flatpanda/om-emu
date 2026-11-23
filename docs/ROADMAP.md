@@ -323,7 +323,10 @@ the survey table.
   whose six names the firmware draws, Dual Same's S2 on both cards through REC_FILE's own double-slot record (the
   same bytes under one DCF number, read back on each), and Auto Switch with the first card full (the application
   moves the save slot, S2 on the second card); open: Dual Independent, which stops (the second slot's own image
-  settings in TAKE's shot record), and E139, E134 and E125, the other two-slot bodies);
+  settings in TAKE's shot record); E139, E134 and E125, the other two-slot bodies, since 2026-11-22, hle-gaps.md
+  4.8.17: their detect UI_IN's level alone, the second slot empty by default, a second card at the start mounted
+  from its own port and S2 on the save slot's card on E139 and E125; open there: E134's second card, which stops at
+  a synchronous send to queue 221, the run-time change of the second slot, RecordMediaMode);
   the media control's other commands (erase all, copy, unlock; the erase all done 2026-11-16, hle-gaps.md 4.8.15:
   the playback menu's Erase All sends command 3, S-MDACTRL calls the picture file API's erase all natively and FILECLBK
   runs the DCF edit's ALL_DELETE, a locked picture kept, the card read back, on E143, E146, E147 and E148; since

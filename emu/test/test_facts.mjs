@@ -830,9 +830,15 @@ const DETECT_FOUND = {
 // the SD driver's detect 0x508b0221 with its helper 0x508b0859, the GIO codes 0x0200000f / 0x02000010 through the
 // class-2 reader 0x50052e28 to the IO expander's input shadow 0xa32c5310, the command layer's port index +12, the
 // record controller's settings 1129 and 1130 at 0x50c73f16), E146's by the same reading of its code (D: 0x508ca01d,
-// 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others)
+// 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others). The
+// other two-slot bodies' UI_IN-level detects as read by hand (docs/hle-gaps.md 4.8.17, D: E139's detect 0x5066466d
+// with the helper 0x50664a3d `clr d0; retf`, E134's 0x50678449 and E125's 0x50622561 of their own, each asking for
+// 0x1506 and 0x1518; the port index +12 at their command layers) with the save settings their remaining-shots
+// queries load (D: E139 0x502f7d26 / 0x502f7d6c, E134 0x50313e68 / 0x50313eae, E125 0x503073b1 / 0x503073f7)
 const SLOTS_E143_FAMILY = (fn) => ({ port: 12, detect: { fn, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] }, record: { mode: 1129, slot: 1130 } });
-const SLOTS_FOUND = { E143: SLOTS_E143_FAMILY(0x508B0221), E146: SLOTS_E143_FAMILY(0x508CA01D) };
+const SLOTS_LEVEL = (fn, mode, slot) => ({ port: 12, detect: { fn, switches: [0x1506, 0x1518], pins: null }, record: { mode, slot } });
+const SLOTS_FOUND = { E143: SLOTS_E143_FAMILY(0x508B0221), E146: SLOTS_E143_FAMILY(0x508CA01D), E139: SLOTS_LEVEL(0x5066466D, 1129, 1130),
+  E134: SLOTS_LEVEL(0x50678449, 1130, 1131), E125: SLOTS_LEVEL(0x50622561, 1137, 1138) };
 // The card's file system seams (storage; src/fw/facts.mjs fileSystem): E143's as src/fw/models.mjs gave them by hand
 // before the rule (D, its storage entry; the tasks then by their entries 0x50894e37 and 0x5087cda8, whose starts read
 // the id words), and of a body of each lineage the bring-up, FILECLBK's entry and busy word, the NAND access and the
@@ -1480,7 +1486,7 @@ export function factsTests() {
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
     // the card slots' detect states (cardDetect)
     ok(same([got.card?.detect?.table, got.card?.detect?.drives], DETECT_FOUND[code]), `${code}: card detect ${hx(got.card?.detect)}, found ${hx(DETECT_FOUND[code])}`);
-    // the second card slot (cardSlots): E143's and E146's, none elsewhere
+    // the second card slot (cardSlots): E143's, E146's, E139's, E134's and E125's, none elsewhere
     ok(same(got.card?.slots ?? null, SLOTS_FOUND[code] ?? null), `${code}: the second card slot ${hx(got.card?.slots ?? null)}, found ${hx(SLOTS_FOUND[code] ?? null)}`);
     // the card's file system seams (fileSystem): the fields found by reading each body's code
     const sf = STORAGE_FOUND[code];

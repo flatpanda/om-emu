@@ -30,8 +30,9 @@
 //               its data and its status written into the command (at its fields, storage.command_fields: the E118
 //               family's lie 4 to 12 bytes lower than E143's) and its completion called at once, as the layer itself
 //               does for a busy port; sd_mount's card init, the transfers and the format run natively above it.
-//               On a body with the second slot's facts (src/fw/models.mjs card_fs.second_slot: E143, E146; fact
-//               'card.slots', src/fw/facts.mjs cardSlots, docs/hle-gaps.md 4.8.12) the lab has two card slots, and
+//               On a body with the second slot's facts (src/fw/models.mjs card_fs.second_slot: E143, E146, E139,
+//               E134, E125; fact 'card.slots', src/fw/facts.mjs cardSlots, docs/hle-gaps.md 4.8.12) the lab has two
+//               card slots, and
 //               each command goes to the card of its port (the command's port index, storage.slots.port): the first
 //               slot's card to port 0, the second slot's to port 1, an empty slot answering nothing. The second slot
 //               is empty unless the host gives a second card (env.card2, node's OM_EMU_CARD2 / OM_EMU_CARD2_SIZE) or
@@ -40,8 +41,10 @@
 //               expander's input shadow, which the expander's task would fill from the chip and S-IOEXP's does not
 //               (src/lab/power.mjs), so the lab writes the pin's bit there, 0 with a card in the slot and 1 without
 //               (D: the detect answers "no card" for a pin that does not read 0); and its card switch, the same pin
-//               as UI_IN names it (I), is at the no-card level in S-KEYBITS' image (src/lab/play.mjs). On the other
-//               bodies the one card answers every port and no pin is written, as before
+//               as UI_IN names it (I), is at the no-card level in S-KEYBITS' image (src/lab/play.mjs). On E139, E134
+//               and E125 (since 2026-11-22, docs/hle-gaps.md 4.8.17) the detect reads that UI_IN level alone (D), so
+//               the switch in S-KEYBITS' image is the slot's detect and no pin is written. On the other bodies the
+//               one card answers every port and no pin is written, as before
 //   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
 //               family's flash, the E118 family's two file-layer records in flash) behind its access
 //               (storage.nand.access): it reads erased (0xff) on a camera that
@@ -116,9 +119,10 @@ export function storageFacts() {
 }
 // The second card slot where the MODELS entry gives it (card_fs.second_slot): the rule's facts (src/fw/facts.mjs
 // cardSlots, fact 'card.slots'; a body whose forms the rule does not read has none, and fact() throws here)
+// (pins null: a body whose detect reads UI_IN's level alone, E139, E134 and E125, docs/hle-gaps.md 4.8.17)
 function slotFacts() {
   const f = fact('card.slots', CARD_SLOTS_E143);
-  if (f.detect.pins.length !== SLOTS || f.detect.switches.length !== SLOTS) throw new StorageError(`${MODEL}: src/fw/facts.mjs cardSlots read ${f.detect.pins.length} card-detect pins, want ${SLOTS}`);
+  if ((f.detect.pins !== null && f.detect.pins.length !== SLOTS) || f.detect.switches.length !== SLOTS) throw new StorageError(`${MODEL}: src/fw/facts.mjs cardSlots read ${f.detect.pins?.length} card-detect pins and ${f.detect.switches.length} switches, want ${SLOTS}`);
   return f;
 }
 // The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family and the E144 family but E148):
@@ -293,9 +297,12 @@ export class Storage {
   }
   // S-SDCARD's card-detect pins: each slot's bit of the body IO expander's input shadow (f.slots.detect.pins), 0 with a
   // card in the slot. The words are the expander driver's, which does not run in the lab (S-IOEXP): a bit that no
-  // longer holds what the lab wrote was written by the firmware, and the session stops
+  // longer holds what the lab wrote was written by the firmware, and the session stops. A body whose detect reads
+  // UI_IN's level alone (pins null: E139, E134, E125) has no pin: its detect follows the card switches' levels in
+  // S-KEYBITS' image, which the session sets (play.mjs card_switch)
   detect_pins() {
     const sim = this.lab.sim, pins = this.f.slots.detect.pins;
+    if (pins === null) return;
     if (this.pins) pins.forEach(([word, bit], i) => {
       if (((sim.u32(word) >>> bit) & 1) !== this.pins[i]) throw new StorageError(`S-SDCARD: slot ${i + 1}'s card-detect pin (${h8(word)} bit ${bit}) no longer reads ${this.pins[i]}: the firmware wrote the IO expander's input shadow`);
     });

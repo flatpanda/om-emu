@@ -2566,8 +2566,23 @@ export function cardDetect(img) {
 // - record: the settings the HLS record controller picks a still's card by (CmpSts_RecordController 0x50c73f16:
 //   `mov a0,(8,sp); mov MODE,d0; call G; mov d0,d3; mov SLOT,d0; call G; movhu d0,(12,sp)`): mode 1129 (0 and 1:
 //   the card of slot, 1 + its value; 2 to 5: both cards where both are usable) and slot 1130
-// Returns undefined where the image has no helper of H's form (a body whose detect is not read here); throws where
-// it has one and a later form differs.
+// The other bodies with two slots (card.detect drives 2: E139, E134, E125; docs/hle-gaps.md 4.8.17) detect by UI_IN's
+// level alone, in one of two forms (D):
+// - E139: the detect of E143's form (0x5066466d) whose helper is `clr d0; retf` (0x50664a3d), so the UI_IN path is
+//   always taken: port 0 answers 0 where the level of 0x1506 (+0x1f) is 0, port 1 where that of 0x1518 (+0x2f) is,
+//   else the word's 0x1301 (the level getter 0x5011091b, the media fact's switch_level)
+// - E134 and E125: a detect of its own (E134 0x50678449, E125 0x50622561; the drive status's call), `exthu d0; cmp
+//   2,d0; beq; cmp 0,d0; beq; cmp 1,d0; beq; bra; mov 0x1506,d0; call L; cmp 0,d0; bne; bra; mov 0x1518,d0; call L;
+//   cmp 0,d0; bne; clr d0; bra; mov 0x1301,d0; ret`: 0 for port 2 and for a slot whose level is 0, else 0x1301
+// pins is then null (no expander pin: the level is UI_IN's image's, S-KEYBITS). Their record controller has no
+// counterpart of E143's form (X: the scan finds none on the three); record is then the settings the remaining-shots
+// query (fact card.shots_query) reads, in E143's query's order: the save mode, the auto switch, the save slot (E143
+// 0x50419164: 1129, 1134, 1130, the controller's own; E139 1129, 1134, 1130; E134 1130, 1135, 1131; E125 1137, 1142,
+// 1138; the firmware's own name table, src/fw/setnames.mjs, names E139's and E134's MODE_PICTURE_RECORD_MEDIA and
+// _SLOT so, X; E125's table is not read). Single-slot bodies hold the same detect forms (E144, E148, E142, E140 E139's;
+// E137, E129, E132 E134's, X): drives below 2 give none.
+// Returns undefined where the card driver's detect table has fewer than two drives, or the image has no helper of
+// H's form and no UI_IN form; throws where it has one and a later form differs.
 export const CARD_SLOTS_E143 = { port: 12, detect: { fn: 0x508B0221, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] },
   record: { mode: 1129, slot: 1130 } };
 const N4 = [null, null, null, null];
@@ -2581,12 +2596,19 @@ const SLOT_PIN_READ = [0xf8, 0xfe, 0xfc, 0x1c, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x
 const SLOT_SHADOW = [0x14, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x00, 0xf8, 0xc1, 0x03, 0xf2, 0xa6, 0xf2, 0x02], SLOT_SHADOW_SPAN = 0x50;
 const SLOT_PORT = [0x93, 0xbf, 0x00, 0xc9, 0x05, 0xdf, 0xf0, 0x14, 0x8a, null, 0xf1, 0x5e, 0xf1, 0xe8, 0xf0, 0x60];
 const SLOT_RECORD = [0x43, 0x08, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0x83, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0xf8, 0x93, 0x0c];
-export function cardSlots(img, command) {
+// E139's helper (`clr d0; retf`), E134's and E125's detect (the switch codes at +0x10 and +0x20, L's calls after them)
+const SLOT_HELPER_NONE = [0x00, 0xde, 0x00, 0x00];
+const SLOT_LEVEL = [0x1c, 0xa0, 0x02, 0xc8, null, 0xa0, 0x00, 0xc8, 0x08, 0xa0, 0x01, 0xc8, 0x14, 0xca, null, 0x2c, null, null, 0xdd, ...N4,
+  0xf0, 0x18, 0xa0, 0x00, 0xc9, null, 0xca, null, 0x2c, null, null, 0xdd, ...N4, 0xf0, 0x18, 0xa0, 0x00, 0xc9, null, 0x00, 0xca,
+  null, 0x2c, 0x01, 0x13];
+const SLOT_SHOTS_SPAN = 0x100, SLOT_SHOTS_IDS = 3;
+export function cardSlots(img, command, { drives = 2, shots = null } = {}) {
   const rule = 'cardSlots', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), word = (a) => u32(img, a - base);
   const scan = (form) => { const at = []; for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form)) at.push(o); return at; };
+  if (drives < 2) return undefined;
   // the helpers of H's form (E143 has two: the write-protect read 0x508b01f7's, 0x508b0824, reads pins 21 and 22 so)
   const helpers = new Set(scan(SLOT_HELPER));
-  if (!helpers.size) return undefined;
+  if (!helpers.size) return levelSlots(img, command, shots);
   const fns = scan(SLOT_DETECT).filter((o) => helpers.has(callAt(img, o + SLOT_DETECT.length)?.to));
   if (fns.length !== 1) throw new Error(`${rule}: ${fns.length} functions of the detect's form call a helper (${[...helpers].map(D).join(', ')}), want one`);
   const F = fns[0], H = callAt(img, F + SLOT_DETECT.length).to, gio = [u32(img, H + 14), u32(img, H + 22)], R = callAt(img, H + 26).to;
@@ -2617,6 +2639,34 @@ export function cardSlots(img, command) {
   if (rec.length !== 1) throw new Error(`${rule}: ${rec.length} functions of the record controller's card choice's form, want one`);
   const id = (o) => img[o] | img[o + 1] << 8;
   return { port: img[C + 9], detect: { fn: 0x50000000 + F, switches, pins }, record: { mode: id(rec[0] + 3), slot: id(rec[0] + 14) } };
+}
+// cardSlots' UI_IN forms (E139, E134, E125): the detect, the port index, and record by the remaining-shots query's
+// settings (shots: fact card.shots_query, disassembly notation). Returns undefined where neither form is held
+function levelSlots(img, command, shots) {
+  const rule = 'cardSlots', D = (o) => h8(0x50000000 + o), id = (o) => img[o] | img[o + 1] << 8;
+  const scan = (form) => { const at = []; for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form)) at.push(o); return at; };
+  // E139's: the detect of E143's form with the helper that answers 0; E134's and E125's own
+  const a = scan(SLOT_DETECT).filter((o) => { const c = callAt(img, o + SLOT_DETECT.length); return c && bytesAt(img, c.to, SLOT_HELPER_NONE); });
+  const b = scan(SLOT_LEVEL);
+  if (!a.length && !b.length) return undefined;
+  if (a.length + b.length !== 1) throw new Error(`${rule}: ${a.length} detects of E143's form with a helper that answers 0 and ${b.length} UI_IN-level detects, want one`);
+  const F = a.length ? a[0] : b[0], at = a.length ? [0x1f, 0x2f] : [0x0f, 0x1f];
+  const switches = at.map((k) => (img[F + k] === 0x2c ? id(F + k + 1) : null));
+  const levels = at.map((k) => callAt(img, F + k + 3)?.to);
+  if (switches.includes(null) || levels[0] === undefined || levels[0] !== levels[1]) throw new Error(`${rule}: the detect ${D(F)} does not ask one level getter for two switch codes at +0x${at[0].toString(16)} and +0x${at[1].toString(16)}`);
+  const C = command - 0x50000000;
+  if (!bytesAt(img, C, SLOT_PORT)) throw new Error(`${rule}: the SD command layer ${h8(command)} does not index its ports by a field of the command`);
+  // the settings the remaining-shots query loads, `mov ID,d0; call G` with one G, in first-load order
+  if (shots === null) throw new Error(`${rule}: the UI_IN-level detect ${D(F)} needs the remaining-shots query for the save settings`);
+  const ids = [], getters = new Set();
+  for (let p = shots - 0x50000000, end = p + SLOT_SHOTS_SPAN; p < end && ids.length < SLOT_SHOTS_IDS; p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1])) {
+    const c = img[p] === 0x2c ? callAt(img, p + 3) : null;
+    if (!c) continue;
+    getters.add(c.to);
+    if (!ids.includes(id(p + 1))) ids.push(id(p + 1));
+  }
+  if (ids.length !== SLOT_SHOTS_IDS || getters.size !== 1) throw new Error(`${rule}: the remaining-shots query ${h8(shots)} loads ${ids.length} settings through ${getters.size} getters within 0x${SLOT_SHOTS_SPAN.toString(16)} bytes, want ${SLOT_SHOTS_IDS} through one`);
+  return { port: img[C + 9], detect: { fn: 0x50000000 + F, switches, pins: null }, record: { mode: ids[0], slot: ids[2] } };
 }
 
 // The movie record time's division by the movie info's frame rate (fact 'card.movie_rate', src/lab/camapp.mjs
@@ -6280,8 +6330,8 @@ export function readFacts({ img, family, resLoad }) {
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
-  // the second card slot (cardSlots), on a body whose detect helper has E143's form
-  const slots = storage !== undefined ? cardSlots(img, storage.command) : undefined;
+  // the second card slot (cardSlots), on a body whose card driver has two drives (E143's detect form, or UI_IN's)
+  const slots = storage !== undefined ? cardSlots(img, storage.command, { drives: facts.card.detect.drives, shots: facts.card.shots_query }) : undefined;
   if (slots !== undefined) facts.card.slots = slots;
   const media = mediaHls(img, storage);
   if (media !== undefined) facts.media = media;

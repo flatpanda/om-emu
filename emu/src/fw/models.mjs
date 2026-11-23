@@ -858,7 +858,8 @@ export const MODELS = {
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
     // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    card_fs: { native: true, hls: 'rule' },
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkIII')
     rec_native: true,
@@ -920,7 +921,8 @@ export const MODELS = {
     // 0x506595b8), and with UI_OUT not run the 54th send blocked FILECLBK in S-RECFILE's first fopen (X: 53 sends, no
     // read in 10 s of lab time). E143's and E144's file layers make no such request (X). Its HLS media side by the
     // rule as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    card_fs: { native: true, hls: 'rule' },
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1X')
     rec_native: true,
@@ -1058,7 +1060,8 @@ export const MODELS = {
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
     // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
-    card_fs: { native: true, hls: 'rule' },
+    // second_slot: the second card slot, its detect UI_IN's level alone (docs/hle-gaps.md 4.8.17)
+    card_fs: { native: true, hls: 'rule', second_slot: true },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkII')
     rec_native: true,

@@ -3304,6 +3304,16 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    release in nav; E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
    of E145, E129 and E132; nav's menu fields (`var226`, E143's viewer record, observed on E143 only).
 
+161. **The second card slot on E139, E134 and E125: the detect is UI_IN's level** (2026-11-22, `src/fw/facts.mjs`
+   cardSlots, fact `card.slots`; `docs/hle-gaps.md` 4.8.17). E143's and E146's SD detect reads a pin of the body IO
+   expander; the other two-slot bodies read the card switch's UI_IN level alone (D): E139 through E143's detect form
+   with a helper that answers 0 (`0x5066466d`, `0x50664a3d`), E134 and E125 through a detect of their own
+   (`0x50678449`, `0x50622561`), each asking for `0x1506` (port 0) and `0x1518` (port 1). None has E143's record
+   controller form; the save mode and slot are the settings their remaining-shots query reads (E139 1129 / 1130, E134
+   1130 / 1131, E125 1137 / 1138, D). X (scratch sessions): the second slot empty by default, a second card at the
+   start mounted from port 1 and S2 on the save slot's card on E139 and E125; E134's second card stops at a
+   synchronous send to queue 221 from the access lamp's callback (open).
+
 
 
 ## Per-body status

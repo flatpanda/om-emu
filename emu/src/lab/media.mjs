@@ -395,7 +395,7 @@ export class HlsMedia {
     return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.erases && { erases: this.erases }), ...(this.unlocks && { unlocks: this.unlocks }), ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
       mount_state: this.mount_state(this.f.slots[SLOT].kind),
       // the second slot, once it holds a card (a session with the default empty slot keeps the document it had)
-      ...(this.storage.second?.card ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };
+      ...(this.storage.second?.card && this.f.slots[SECOND] ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };
   }
 }
 

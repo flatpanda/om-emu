@@ -47,7 +47,7 @@ const FETCH = 'node emu/test/test_fieldfail.mjs --fetch';
 
 // ---- the E-P7 and E-M1 III cases (test/fieldfail-cases-ep7-e139.mjs) in this runner's shape ----------------------
 // That file describes a build as {project, tag, commit, src, asset, sha256, files, select?, unpublished?} and names two
-// lab features of its own (key:shortcut, e139-still-chain) and the detector 'crash' (the lab-error detector here: a
+// lab features of its own (key:shortcut, e139-still-chain, e142-stage-bits) and the detector 'crash' (the lab-error detector here: a
 // CPU trap, pc 0 included, stops the session). A case whose loader or lab feature is missing does not run its builds:
 // the loader would refuse the file and a pending token (shortcut) would be refused, so the run would say nothing about
 // the build. Its also_fixed build is pinned there (test_fieldfail_cases.mjs) and not run here.
@@ -56,6 +56,7 @@ export const CAPABILITIES = {
   ...FRAME_CAPABILITIES,
   'key:shortcut': { kind: 'lab', what: "the E-P7 Shortcut button as a session input on E142 (no om-emu input names it yet)", probe: () => ep7CapabilityPresent('key:shortcut') },
   'e139-still-chain': { kind: 'lab', what: "E139's still image chain built at S2 (S-JPEGENC stands in for the image library's run, FIDELITY-NOTES 7.9)", probe: () => ep7CapabilityPresent('e139-still-chain') },
+  'e142-stage-bits': { kind: 'lab', what: "E142's stages' ready word 0xa272e420 set as the camera's boot sets it (the lab sets no stage bit on E142; FIDELITY-NOTES 7.19)", probe: () => ep7CapabilityPresent('e142-stage-bits') },
 };
 export const RELEASE_URL = {
   ...FRAME_RELEASE_URL,
@@ -96,21 +97,24 @@ export function classifyError(msg, token = '') {
   return 'error';
 }
 
-const KNOWN_SUMMARY = new Set(['summary', 'ok', 'model', 'osd_errors_policy', 'patch', 'patch_audit', 'stand_ins', 'pokes', 'harness_inputs', 'calls', 'card', 'card_file', 'nvram', 'errors', 'steps', 'failed', 'traces', 'ended_at_stop']);
-const KNOWN_AUDIT = new Set(['hooks', 'ported', 'unloaded', 'tasks']);
+const KNOWN_SUMMARY = new Set(['summary', 'ok', 'model', 'osd_errors_policy', 'patch', 'patch_audit', 'stand_ins', 'pokes', 'harness_inputs', 'calls', 'card', 'card_file', 'nvram', 'errors', 'steps', 'failed', 'traces', 'ended_at_stop', 'strict']);
+const KNOWN_AUDIT = new Set(['hooks', 'ported', 'unloaded', 'tasks', 'sec_ready']);
 const nonEmpty = (v) => v !== null && v !== undefined && v !== false && v !== 0 && !(Array.isArray(v) && !v.length) && !(typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length);
-// A session's close summary and records -> the observation the detectors read (the child prints it)
+// A session's close summary and records -> the observation the detectors read (the child prints it). findings: the
+// opt-in reports' (the strict mode's strict.findings, --sec-ready's patch_audit.sec_ready.findings), one shape:
+// {class, site, disasm, addr?}
 export function observe(sum, records) {
   const steps = records.map((r) => ({ token: r.token, ok: r.ok, gui: r.gui ?? null, ...(r.ok ? {} : { error: String(r.error ?? '').slice(0, 2000), kind: classifyError(r.error, r.token) }) }));
   const a = sum.patch_audit;
   const extra = {};
   for (const [k, v] of Object.entries(sum)) if (!KNOWN_SUMMARY.has(k) && nonEmpty(v)) extra[k] = v;
   for (const [k, v] of Object.entries(a ?? {})) if (!KNOWN_AUDIT.has(k) && nonEmpty(v)) extra[`patch_audit.${k}`] = v;
+  const findings = [...(sum.strict?.findings ?? []), ...(a?.sec_ready?.findings ?? [])].map((f) => ({ class: f.class, site: f.site, disasm: f.disasm, ...(f.addr ? { addr: f.addr } : {}) }));
   return { ok: sum.ok, failed: sum.failed ? { step: sum.failed.step, token: sum.failed.token, kind: classifyError(sum.failed.message, sum.failed.token ?? ''), message: String(sum.failed.message).slice(0, 2000) } : null,
-    steps, audit: a ? { hooks: a.hooks?.length ?? null, unloaded: a.unloaded?.length ?? null } : null, extra, errors: sum.errors.map((e) => String(e).slice(0, 2000)) };
+    steps, audit: a ? { hooks: a.hooks?.length ?? null, unloaded: a.unloaded?.length ?? null } : null, findings, extra, errors: sum.errors.map((e) => String(e).slice(0, 2000)) };
 }
 // The detectors that fired on an observation: {name: what}. The present ones by the failed step's kind and the audit;
-// a parallel branch's by its `fired` pattern on the errors and on the summary's fields this tree does not know
+// a report's (classes) by a finding of one of its classes
 export function firedDetectors(obs, caps = CAPABILITIES) {
   const out = {};
   const f = obs.failed;
@@ -121,9 +125,9 @@ export function firedDetectors(obs, caps = CAPABILITIES) {
   else if (gui) out.hang = out['gui-not-reached'];
   if (obs.audit && (obs.audit.hooks > 0 || obs.audit.unloaded > 0)) out.audit = `patch audit: ${obs.audit.hooks ?? 0} hook(s) on patched bytes, ${obs.audit.unloaded ?? 0} unloaded run(s)`;
   for (const [name, c] of Object.entries(caps)) {
-    if (c.kind !== 'detector' || c.now || !c.fired) continue;
-    const hit = obs.errors.find((e) => c.fired.test(e)) ?? Object.entries(obs.extra ?? {}).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).find((t) => c.fired.test(t));
-    if (hit) out[name] = hit.slice(0, 200);
+    if (c.kind !== 'detector' || !c.classes) continue;
+    const hit = (obs.findings ?? []).filter((f) => c.classes.includes(f.class));
+    if (hit.length) out[name] = `${hit.length} finding(s): ${hit.slice(0, 3).map((f) => `${f.class} at ${f.disasm ?? f.site}${f.addr ? ` (${f.addr})` : ''}`).join(', ')}${hit.length > 3 ? ', ...' : ''}`;
   }
   return out;
 }
@@ -169,36 +173,26 @@ export function buildFiles(b, root, read) {
       if (sha(bytes) !== want) return { ok: false, why: `${path.join(dir, name)}: sha256 ${sha(bytes).slice(0, 16)}... is not its pin ${want.slice(0, 16)}... (${FETCH} replaces it)` };
     }
     const cardPut = (b.card_put ?? []).map((s) => { const at = s.indexOf('='); return `${s.slice(0, at)}=${path.join(dir, s.slice(at + 1))}`; });
-    return { ok: true, local: { patch: [path.join(dir, b.patch)], ...(cardPut.length ? { cardPut } : {}) } };
+    return { ok: true, local: { patch: [path.join(dir, b.patch) + (b.select ? `#${b.select.join(',')}` : '')], ...(cardPut.length ? { cardPut } : {}) } };
   }
   throw new Error(`build kind ${b.kind}`);
 }
 const readOrNull = (p) => { try { return fs.readFileSync(p); } catch { return null; } };
 
 // ---- the capabilities ---------------------------------------------------------------------------------------------
-const PROBE_MODULES = ['../src/lab/patchaudit.mjs', '../host/session.mjs', '../src/fw/patch.mjs', '../src/lab/strict.mjs', '../src/lab/sections.mjs', '../src/lab/secready.mjs', '../src/fw/edits.mjs', '../src/fw/mods.mjs'];
 // Whether a capability exists: {ok, why}. ctx: {importer(spec) -> module namespace or throws, readPatchText}
 export async function probeCapability(name, ctx, caps = CAPABILITIES) {
   const c = caps[name];
   if (!c) return { ok: false, why: `no capability ${name} in fieldfail-cases.mjs` };
   if (c.now) return { ok: true, why: 'present' };
   if (c.kind === 'lab') return typeof c.probe === 'function' && c.probe() ? { ok: true, why: 'present' } : { ok: false, why: c.what };
-  const mods = [];
-  for (const m of PROBE_MODULES) { try { mods.push([m, await ctx.importer(m)]); } catch { /* not in this tree */ } }
-  const has = (re, mode) => {
-    for (const [m, ns] of mods) {
-      for (const [k, v] of Object.entries(ns)) {
-        if (!re.test(k)) continue;
-        if (!mode) return `${m.replace('../', 'emu/')} exports ${k}`;
-        const text = k + ' ' + (v instanceof Set || v instanceof Map ? JSON.stringify([...v.keys()]) : typeof v === 'object' && v !== null ? JSON.stringify(Array.isArray(v) ? v : Object.keys(v)) : typeof v === 'string' ? v : '');
-        if (mode.test(text)) return `${m.replace('../', 'emu/')} exports ${k}`;
-      }
-    }
-    return null;
-  };
   if (c.kind === 'detector') {
-    const found = has(c.exports, c.mode);
-    return found ? { ok: true, why: found } : { ok: false, why: `not in this tree: ${c.what}` };
+    // a report's detector: its module's export lists every class it fires on
+    let ns = null;
+    try { ns = await ctx.importer(c.module); } catch { /* not in this tree */ }
+    const list = ns?.[c.export];
+    if (Array.isArray(list) && c.classes.every((k) => list.includes(k))) return { ok: true, why: `${c.module.replace('../', 'emu/')} ${c.export} names ${c.classes.join(', ')}` };
+    return { ok: false, why: `not in this tree: ${c.what}` };
   }
   if (c.kind === 'loader') {
     // the reader recognises the sample (parses it, or refuses it with a reason other than the one it gives any
@@ -246,7 +240,7 @@ export async function runBuild(c, which, tmp) {
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   const local = b.kind === 'synthetic' ? await syntheticPatch(b, out) : buildFiles(b, thirdpartyRoot(), readOrNull).local;
-  const s = await openSession({ model: c.body, ...c.session, ...local, out });
+  const s = await openSession({ model: c.body, ...c.session, ...(CAPABILITIES[c.detector]?.session ?? {}), ...local, out });
   if (s.first.ok) for (const t of c.scenario) { const r = s.step(t); if (!r.ok) break; }
   const sum = s.close();
   return { obs: observe(sum, s.records), seconds: (Date.now() - t0) / 1000 };
@@ -326,9 +320,15 @@ export function fieldfailUnits() {
   ok(Object.keys(gui).sort().join() === 'gui-not-reached,hang', `firedDetectors: a failed expect:gui is gui-not-reached and hang, not lab-error: ${JSON.stringify(gui)}`);
   ok(firedDetectors(obs({ audit: { hooks: 0, unloaded: 3 } })).audit, 'firedDetectors: unloaded runs in the audit');
   ok(Object.keys(firedDetectors(obs(failedAt('refused', 'not wired', 'front1')))).length === 0, 'firedDetectors: a refused input is no detector (the scenario is wrong, not the build)');
-  const sr = firedDetectors(obs({ extra: { 'patch_audit.section_ready': [{ pc: '0x6057fb1b', section: 6 }] } }));
-  ok(sr['section-ready'] && !sr['strict-misaligned'], `firedDetectors: a parallel detector's finding in a summary field: ${JSON.stringify(sr)}`);
-  ok(firedDetectors(obs({ errors: ['step 3 (s1): strict: misaligned 4-byte read at 0x62000001'] }))['strict-misaligned'], 'firedDetectors: a parallel detector by its error text');
+  // the opt-in reports' findings, through observe as a session's summary carries them
+  const sumOf = (o = {}) => ({ ok: true, failed: null, errors: [], patch_audit: { hooks: [], unloaded: [] }, ...o });
+  const o1 = observe(sumOf({ patch_audit: { hooks: [], unloaded: [], sec_ready: { static: { hooks: 1, crossings: 1, gated: 0 }, watched: true, findings: [{ class: 'ungated-branch', site: '0x6057fb1b', disasm: '0x5057fb1b', addr: '0x60f4ad2d', branch: 'jmp' }] } },
+    strict: { model: 'E142', findings: [{ class: 'init-read', site: '0x60210900', disasm: '0x501f08e0', addr: '0x6025aa98' }], allowed: [{ kind: 'image-store', at: 'any', addr: 'any', why: 'stock', n: 9 }], dropped: 0 } }), []);
+  const sr = firedDetectors(o1);
+  ok(Object.keys(o1.extra).length === 0 && o1.findings.length === 2 && sr['section-ready'] && sr['strict-flash-init'] && !sr['strict-misaligned'] && !sr['strict-image-write'] && /init-read at 0x501f08e0 \(0x6025aa98\)/.test(sr['strict-flash-init']),
+    `firedDetectors: a report's detector by its classes' findings, not by an allowed stock site: ${JSON.stringify(sr)}`);
+  const o2 = observe(sumOf({ strict: { model: 'E142', findings: [], allowed: [{ kind: 'image-store', at: 'any', addr: 'any', why: 'stock', n: 9 }], dropped: 0 } }), []);
+  ok(Object.keys(firedDetectors(o2)).length === 0, `firedDetectors: a report with no finding fires nothing: ${JSON.stringify(firedDetectors(o2))}`);
   // the rule
   const C = { id: 'x', detector: 'lab-error', needs: [] };
   const caps = { 'section-ready': { ok: false, why: 'not in this tree' }, have: { ok: true } };
@@ -381,10 +381,17 @@ export async function fieldfailTableUnits() {
   const t = tester(), { ok } = t;
   const fake = (mods, reader) => ({ importer: async (m) => { if (!mods[m]) throw new Error('ENOENT'); return mods[m]; }, readPatchText: reader ?? ((text) => { const d = JSON.parse(text); if (!Array.isArray(d)) throw new Error('probe.json: not a list of patches, nor an object whose patches is one'); return d; }) });
   ok((await probeCapability('section-ready', fake({}))).ok === false, 'probe: section-ready absent');
-  ok((await probeCapability('section-ready', fake({ '../src/lab/patchaudit.mjs': { sectionReadyAudit: () => {} } }))).ok, 'probe: section-ready by an export');
-  const strictMods = { '../host/session.mjs': { STRICT_MODES: ['misaligned', 'image-write'] } };
+  ok((await probeCapability('section-ready', fake({ '../src/lab/secready.mjs': { SEC_READY_CLASSES: ['ungated-branch', 'unready-run'] } }))).ok, 'probe: section-ready by its classes export');
+  ok(!(await probeCapability('section-ready', fake({ '../src/lab/secready.mjs': { SEC_READY_CLASSES: ['ungated-branch'] } }))).ok, 'probe: section-ready with a class missing');
+  const strictMods = { '../src/lab/strict.mjs': { STRICT_CLASSES: ['misaligned', 'image-store'] } };
   ok((await probeCapability('strict-misaligned', fake(strictMods))).ok && (await probeCapability('strict-image-write', fake(strictMods))).ok && !(await probeCapability('strict-flash-init', fake(strictMods))).ok,
-    'probe: strict modes by the names an export lists');
+    'probe: strict classes by the names its export lists');
+  // the real tree: every report detector and loader the patch-audit work built is present
+  const real = { importer: (m) => import(new URL(m, import.meta.url).href), readPatchText: (await import('../src/fw/patch.mjs')).readPatchText };
+  for (const n of ['section-ready', 'strict-misaligned', 'strict-image-write', 'strict-flash-init', 'edits-json', 'mods-json']) {
+    const p = await probeCapability(n, real);
+    ok(p.ok, `probe in this tree: ${n}: ${p.why}`);
+  }
   ok(!(await probeCapability('edits-json', fake({}))).ok, 'probe: a reader that refuses the sample as it refuses anything: no loader');
   const knows = (text) => { const d = JSON.parse(text); if (d.edits) throw new Error('probe.json: edit 0: expect 00 is not the stock byte'); throw new Error('probe.json: not a list of patches'); };
   ok((await probeCapability('edits-json', fake({}, knows))).ok, 'probe: a reader that refuses the sample for its content: the loader exists');

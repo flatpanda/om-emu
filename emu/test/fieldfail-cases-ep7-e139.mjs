@@ -153,8 +153,12 @@ export const CASES = [
         '(store moved to .bss 0x622cbcc2) passed, so the crash is attributed to that store (probe P1 was not flashed)',
       camera_fixed: 'test 7b step A: loader v3 and a half-press with no EP7MOD, no issues; step B loaded BUNDLES.BIN',
     },
-    // RAM is RAM in the lab: a store into a loaded section succeeds, as in their emulator
-    needs: ['edits-json', 'strict-image-write'],
+    // RAM is RAM in the lab: a store into a loaded section succeeds, as in their emulator; --strict reports it
+    // (image-store), but the lab never reaches it: the loader stores only once E142's stages' ready word
+    // 0xa272e420 has bits 0 to 8 set ((word & 0x1ff) == 0x1ff at 0x605b742b), and the lab sets no stage bit on
+    // E142 (the word reads 0 after the half press, X 2026-11-23; S-BOOTSTAGE runs on E143, E146 and E147 alone and
+    // readies no stage past 7, emu/FIDELITY-NOTES.md 7.19)
+    needs: ['edits-json', 'strict-image-write', 'e142-stage-bits'],
   },
   {
     id: 'ep7-grain-s1-misaligned',
@@ -258,9 +262,11 @@ export const CASES = [
 export default CASES;
 
 // ---- run-time capability check -----------------------------------------------------------------------------------
-// The detectors and loaders are built on other branches. A capability counts as present when a module of the lab
-// (emu/src, emu/host, emu/checks, emu/bin; not the tests) names it as a string literal, or when a dedicated probe below
-// finds it. 'crash' (a CPU fault, a trap or a reset stopping the session) is the lab's own.
+// A capability counts as present when a dedicated probe below finds it in the lab's sources (emu/src, emu/host,
+// emu/checks, emu/bin; not the tests), else when a lab module names it as a string literal. The detectors and loaders
+// are probed by what test_fieldfail.mjs's CAPABILITIES (fieldfail-cases.mjs) probe: a strict detector by its class in
+// src/lab/strict.mjs STRICT_CLASSES, section-ready by src/lab/secready.mjs SEC_READY_CLASSES, the loaders by
+// src/fw/patch.mjs's readers. 'crash' (a CPU fault, a trap or a reset stopping the session) is the lab's own.
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const LAB_DIRS = ['src', 'host', 'checks', 'bin'];
 let labText = null;
@@ -281,16 +287,24 @@ function labSources() {
   return labText;
 }
 const named = (name) => new RegExp(`['"\`]${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"\`]`).test(labSources());
+const listed = (list, name) => new RegExp(`export const ${list} = \\[[^\\]]*'${name}'`).test(labSources());
 
 const PROBES = {
   crash: () => true,
+  'edits-json': () => /function readEdits\(/.test(labSources()),
+  'mods-json': () => /function readMods\(/.test(labSources()),
+  'section-ready': () => listed('SEC_READY_CLASSES', 'ungated-branch') && listed('SEC_READY_CLASSES', 'unready-run'),
+  'strict-misaligned': () => listed('STRICT_CLASSES', 'misaligned'),
+  'strict-image-write': () => listed('STRICT_CLASSES', 'image-store'),
+  'strict-flash-init': () => listed('STRICT_CLASSES', 'init-read'),
   // an input row named shortcut in the play runtime's controls
   'key:shortcut': () => /row\('shortcut'/.test(labSources()),
-  // no probe can show this one yet: the still chain on E139 is a fidelity step, named when it lands
+  // no probe can show these yet: fidelity steps, named when they land
   'e139-still-chain': () => named('e139-still-chain'),
+  'e142-stage-bits': () => named('e142-stage-bits'),
 };
 export const CAPABILITIES = ['edits-json', 'mods-json', 'section-ready', 'strict-misaligned', 'strict-image-write',
-  'strict-flash-init', 'crash', 'key:shortcut', 'e139-still-chain'];
+  'strict-flash-init', 'crash', 'key:shortcut', 'e139-still-chain', 'e142-stage-bits'];
 
 export function capabilityPresent(name) {
   if (Object.hasOwn(PROBES, name)) return PROBES[name]();

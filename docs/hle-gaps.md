@@ -4382,7 +4382,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
 | take-picture request (api_rec command 11) | not sent: S-RELSEQ posts the callbacks; under camapp 3 sent and taken unanswered (4.1.12, 4.1.13) | S-RELSEQ, S-TAKERDY | `src/lab/camapp.mjs` |
 | TAKE_MAIN's still states, RdyFcsTake to StlEnd2 | not run as states (S-MODACK takes TAKE_EXEC); since 2026-11-16 their fills run as functions in the states' order up to takepic (H-TAKEFILLS, below) | S-MODACK (TAKE_EXEC), H-TAKEFILLS | `src/lab/camapp.mjs`, `src/lab/rec.mjs` take_fills() |
 | TAKE_EXPOSE's plan into the settings | native (S-EXPOSE's calculation) on the shooting GUI state `0x0108`, which E146's and E147's start reaches since 2026-11-14 (4.4.4; before, it ended at `0x102`, where S-EXPOSE does not plan, and the settings read 0 until S1 had left it); their plan for the default scene is Tv 1924, Av 1404 (X) | S-EXPOSE | `src/lab/camapp.mjs` expose() |
-| StlRdy1's exposure record and its fill | native fill on a record of the lab's (2026-11-14); since 2026-11-16 on a slot of TAKE's ring, freed after the shot; its request to the strobe sequence not run (1c) | H-TAKEFILLS | `src/lab/rec.mjs` take_fills() |
+| StlRdy1's exposure record and its fill | native fill on a record of the lab's (2026-11-14); since 2026-11-16 on a slot of TAKE's ring, freed after the shot; its request to the strobe sequence natively since 2026-11-22 (1c, below), after the strobe module's property table fill | H-TAKEFILLS, H-STBPROP | `src/lab/rec.mjs` take_fills() |
 | the shot-record fill | natively since 2026-11-16 (before: the template's copy, its six fields REC_IMAGE reads, 4.3.5, and the shutter range by S-EXIFPRM) | H-TAKEFILLS | same |
 | StlTake's capture fill, the key, the frame count, the fill after the key | natively since 2026-11-16 (before: S-EXIFPRM's clock read alone) | H-TAKEFILLS | same |
 | takepic, the lens fill, TAKE's third fill | natively since 2026-11-17, takepic's AF maker-note fill stood in (below; before: S-EXIFPRM's copy of the exposure record, crop areas and EXIF set, natively takepic stopping in that fill) | H-TAKEFILLS, S-AFMKNT | `src/lab/rec.mjs` take_fills() |
@@ -4729,10 +4729,53 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   on the probe's path, TAKE_FOCUS's release-take start there and the AF library's init (the AF data path, 4.4:
   weeks if FCS runs). (1c) the strobe sequence's init, so that
   StlRdy1's request is answered without a log: it gives Sv (ISO), +6720 and +38160; its mode word's writer first.
+  (1c) done 2026-11-22 (above): the mode word is the decision's own; the init that was missing is the strobe
+  module's property table fill (H-STBPROP), and the request runs natively on the three.
   (2) to (5) as above; the white-balance step (4) also needs the thumbnail's content, so a declared S-RAWFRAME
   comes before it, and the eight inputs no fill of TAKE's writes need their writers read.
-- **Open.** Where CapBuf_TakeBuff allocates and frees in the release sequence; the strobe sequence's mode word
-  `0x62a34c2c` and its init; who writes the white-balance step's +10542, +10546, +10548, +10552, +38210, +41001,
+- **(1c) Landed: StlRdy1's strobe request natively, H-STBPROP (2026-11-22; `src/lab/rec.mjs` take_fills(); fact
+  `take_fills` strobe, `src/fw/facts.mjs` takeFills; E143, E146, E147; D unless tagged, E143's addresses).**
+  - The mode word is the decision's own, not an init's. `0x62a34c2c` is the strobe sequence's state `0x62a308a8`
+    +17284 (no absolute store to it in the block; the state's base is loaded at `0x501bc977`, `0x501bcb4a`,
+    `0x501bd684`, `0x501bd82c`). The still decision `0x501bc976` hands the state to its first step `0x501bcf3e`, which
+    clears +17280, +17284 (`0x501bcf52..0x501bcf5b`) and +17288 and then sets +17284 to 1 or 2 by the flash path
+    (`0x501bd0fd`, `0x501bd10d`, `0x501bd142`, `0x501bd1a0`, `0x501bd1a5`; and to 1 where the module's property 112
+    has bit 2, `0x501bd1b6`); the decision reads it after that step (`0x501bc996`). The other stores at +17284 are
+    `0x501bd469` (a clear through a base kept at sp + 4, not read) and the pointers formed at `0x501bea9c` and `0x501bed22` (not read). So no init gives the
+    word; per request it is the decision's (X: 0 before and after the request in the default session, where the
+    answer is the request's own values, `0x501bd56f`, as the 2026-11-14 probe read).
+  - What logged. The two `0x24000615` of the 2026-11-14 probe are the module's property read `0x501c20e0` (from the
+    decision at `0x501bca10` with index 112, and from its first step at `0x501bd1a8`) through `0x501c21e9`: a row of
+    the table `0x60350410` (122 rows of 8 bytes {id, size, pointer}) whose pointer is 0 is fetched from the property
+    store (`0x500417b0`), cached and logged (`0x501c21fe..0x501c2224`). The table is filled by `0x501c20b0(d0)`, every
+    row's pointer through the same fetch (with d0 1 it also reads property 121 and calls `0x501b1fa3`), whose callers
+    are the strobe module's boot init `0x501c2238` (boot mark 1_H, the call at `0x501c225c` with d0 0) and
+    `0x501c22c4` (d0 1; not read). The boot init's other calls (`0x501b3a74`, `0x501af518`, `0x501b04cc`,
+    `0x501b385b`, `0x501b1f70`, `0x501c179e`, `0x501bb397`, `0x501bb403`, queue binds `0x5002bfe8`, `0x5002c2bf`) are
+    not landed: run whole in a probe it stops at `0x501b3ad9` writing the pin block `0x9b800000`, which the lab stub
+    refuses (X, fault 2).
+  - Landed. H-STBPROP: the table's fill `0x501c20b0(0)` natively once before the first strobe request; every row
+    then holds a pointer and no fill logs (X on the three). H-TAKEFILLS then runs StlRdy1's request
+    `0x503b8126(context, packet)` after the exposure fill and the packet word's keep, as StlRdy1's function's last call
+    `0x503b139d` makes it, and requires the decision's status (the context's +3140) to be 0. X on the three
+    (`emu/test/test_takefills.mjs`): no error log, status 0, Sv 1536 (setting 50522, the plan's) in the record's
+    +38174 (E146 and E147 +37826), the request's +204 1 into +6720 (setting 50481 handed back) and +38160 0 (the
+    module's word for no flash); the record against S-EXIFPRM's copies now differs in 119 halfwords on each body (110
+    before), the new ones +6720, +6722, +8650, +8654, +8658, +8662, +10548, +38162 and +38174 on E143 (E143 values
+    1, 294, 7, 7, 60, 60, 294, 1, 1536; +10548 one of the white-balance step's inputs no fill wrote before; which of
+    takepic's steps writes each besides Sv and +6720 is not read, ?). The file's ISO stays REC_IMAGE's 25 until the
+    integration pass reads Exif ISO through storageSession.
+  - The rule. takeFills' strobe part: the one `mov (P),a1; mov a3,a0; call REQ` in StlRdy1's code, REQ's opening with
+    the exposure request's offset (E143 +3144, E146 and E147 +3348), its build, the decision and the status store
+    (+3140; +3344), the decision's one call of the property read and the read's table and count, and the one fill of
+    that table (E146 `0x503b87fa`, `0x501c1778`, table `0x60350580`, fill `0x501c6eb6`; E147 `0x503c2a88`,
+    `0x501c975c`, `0x6035a038`, `0x501ceea0`; each fill called with d0 0 from its boot init, E146 `0x501c7062`, E147
+    `0x501cf04c`). `emu/test/test_facts.mjs` pins the three and refuses the request opening on another register, the
+    status kept as a byte and the fill on 123 rows. The FACTS rows of E146 and E147 gain the strobe part when
+    `bin/port.mjs all` runs (X here with the rule's values put into FACTS in memory).
+- **Open.** Where CapBuf_TakeBuff allocates and frees in the release sequence; what the strobe decision's flash
+  paths set the mode word to with a flash mode or a flash on the shoe (the empty shoe's 0 is X); the strobe module's
+  boot init past its property fill (the pin block); who writes the white-balance step's +10542, +10546, +10548, +10552, +38210, +41001,
   +7626 and +6140; which operand the auto white balance's multiply refuses; the buffers' geometry (MM's kinds); the
   readout's event and unit; TAKE_EXPOSE's `0x600`; E146's and E147's exposure request (read on E143 alone; their Rdy
   builder, copy, Standby and StlTake fills are the rule's since 2026-11-16, takepic, the lens fill and the third

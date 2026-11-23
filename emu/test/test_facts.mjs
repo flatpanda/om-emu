@@ -620,17 +620,24 @@ const TAKE_SHOT_FOUND = {
 // byte at the context's +3324 and calling the AF maker-note fill E146 0x509c965d from 0x503bd848 / E147 0x509ce3c7
 // from 0x503c7ad8, whose first call E146 0x508e26c6 / E147 0x508e6d7c stores the areas at +40312 and +40320 /
 // +40576 and +40584; the lens fill E146 0x503bda91 / E147 0x503c7d21, from E146 0x503b72c5 / E147 0x503c1555; the
-// third fill E146 0x503bdb54 / E147 0x503c7de4, from the function object's call E146 0x503b8532 / E147 0x503c27c2)
+// third fill E146 0x503bdb54 / E147 0x503c7de4, from the function object's call E146 0x503b8532 / E147 0x503c27c2;
+// 2026-11-22: StlRdy1's strobe request E146 0x503b87fa from 0x503b18b0 / E147 0x503c2a88 from 0x503bbb32, its
+// exposure request at the context's +3348 and the decision's status at +3344, the decision E146 0x501c1778 / E147
+// 0x501c975c, whose property read E146 0x501c6ee6 from 0x501c1812 / E147 0x501ceed0 from 0x501c97f6 indexes the table
+// E146 0x60350580 / E147 0x6035a038 of 122 rows, filled by E146 0x501c6eb6 / E147 0x501ceea0, which the strobe
+// module's boot init calls with d0 0 at E146 0x501c7062 / E147 0x501cf04c)
 const TAKE_FILLS_FOUND = {
   E143: TAKE_FILLS_E143,
   E146: { context: 0x62A77988, packet: 0x62A77980, mode: { build: 0x503C30D7, bytes: 0x62A7B964, copy: 0x503C4CDB, record: 0x62A7B97E, standby: 0x503B0E14 },
     ring: { get: 0x503BB6F1, free: 0x503BB75E }, record: { fn: 0x503BC37E, modes: [0x62A78840, 0x62A78894] },
     take: { capture: 0x503BD3D7, key: 0x503BB24E, count: 0x62A78664, after: 0x503BCE2B },
-    pic: { fn: 0x503BD6AB, mode: 3324, af: 0x509C965D, crop: [40312, 40320], lens: 0x503BDA91, third: 0x503BDB54 } },
+    pic: { fn: 0x503BD6AB, mode: 3324, af: 0x509C965D, crop: [40312, 40320], lens: 0x503BDA91, third: 0x503BDB54 },
+    strobe: { request: 0x503B87FA, at: 3348, status: 3344, decision: 0x501C1778, props: { fill: 0x501C6EB6, table: 0x60350580, count: 122 } } },
   E147: { context: 0x62A73DB0, packet: 0x62A73DA8, mode: { build: 0x503CCFEA, bytes: 0x62A76870, copy: 0x503CEBEE, record: 0x62A7688A, standby: 0x503BB07F },
     ring: { get: 0x503C597F, free: 0x503C59EC }, record: { fn: 0x503C660C, modes: [0x62A74C68, 0x62A74CBC] },
     take: { capture: 0x503C7667, key: 0x503C54DC, count: 0x62A74A8C, after: 0x503C70BB },
-    pic: { fn: 0x503C793B, mode: 3324, af: 0x509CE3C7, crop: [40576, 40584], lens: 0x503C7D21, third: 0x503C7DE4 } },
+    pic: { fn: 0x503C793B, mode: 3324, af: 0x509CE3C7, crop: [40576, 40584], lens: 0x503C7D21, third: 0x503C7DE4 },
+    strobe: { request: 0x503C2A88, at: 3348, status: 3344, decision: 0x501C975C, props: { fill: 0x501CEEA0, table: 0x6035A038, count: 122 } } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1383,6 +1390,13 @@ export function factsTests() {
       const lens = refused(0x503bd155, 0xf0, /does not read the settings 22257, 22289, 22305 in order/);
       const third = refused(0x503bd48f, 0xa0, /does not call the EXIF set 0x5042992d once/);
       ok(af === true && lens === true && third === true, `takeFills: takepic not calling the AF fill, the lens fill on another setting and the third fill past the EXIF set refused: ${af}, ${lens}, ${third}`);
+      // the strobe request opening with the packet in d2 (0x503b8127: mov a1,d3 -> mov a1,d2), the decision's status
+      // kept as a byte (0x503b8140: movhu d0,(d16,a2) 0x72 -> 0x52, movbu) and the property table's fill on 123
+      // rows (0x501c20c8: cmp 122,d2 -> cmp 123,d2)
+      const req = refused(0x503b8127, 0xd6, /does not open with its exposure request's setup/);
+      const kept = refused(0x503b8140, 0x52, /does not build, decide and keep the status/);
+      const props = refused(0x501c20c8, 0x7b, /no fill of the strobe module's property table 0x60350410 \(122 rows\)/);
+      ok(req === true && kept === true && props === true, `takeFills: the strobe request on another register, its status kept as a byte and the property fill on another count refused: ${req}, ${kept}, ${props}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)

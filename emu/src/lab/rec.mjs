@@ -95,9 +95,13 @@
 //               entry (0x503b09dd) with the copy and no packet, which copies them into the context and clears the
 //               frame count (its tail, which takes the packet into the still states, 0x503b0de6, is not run: I, the
 //               entry's own no-packet path); StlRdy1's exposure record from TAKE's ring (0x503baeb6; TAKE_MAIN's init
-//               of the slots' indices does not run, so each shot takes slot 0) filled (S-EXIFPRM's fill, its request
-//               to the strobe sequence 0x503b8126 not run: docs/hle-gaps.md 4.3.13 item 1c); the packet word
-//               (0x62a4a350) set to the packet, as Standby's tail keeps it; StlRdy2's shot-record fill (0x503bba51:
+//               of the slots' indices does not run, so each shot takes slot 0) filled (S-EXIFPRM's fill); the packet
+//               word (0x62a4a350) set to the packet, as Standby's tail keeps it; since 2026-11-22 StlRdy1's request to
+//               the strobe sequence (0x503b8126(context, packet), StlRdy1's function's last call at 0x503b139d: the
+//               exposure request at the context's +3144 built, the strobe sequence's still decision 0x501bc976 asked,
+//               its status kept at +3140, which must be 0, and its answer copied back: Sv into the context's +3346,
+//               which takepic copies into +38174; the request's +204 and the context's +3352, which takepic copies
+//               into +6720 and +38160; docs/hle-gaps.md 4.3.13 item 1c), after H-STBPROP; StlRdy2's shot-record fill (0x503bba51:
 //               the template's copy, the settings fields, the shutter range); StlTake's capture fill (0x503bcaa2: the
 //               camera's clock read into +37800 among its fields), the key (0x503baa2d), the frame count's step
 //               (0x503b23e3) and the fill after the key (0x503bc4fe); since 2026-11-17 then takepic (0x503bcd51, as
@@ -108,6 +112,14 @@
 //               calls' d0, another mode's shot id, is read only where the context's mode byte (+3122; E146 and E147
 //               +3324) is 4, which a single still's mode bytes do not give (refused). Each must log no error. The
 //               ring slot is freed after the EXIF set (0x503baf23, StlEnd's)
+//   H-STBPROP   (with H-TAKEFILLS, where the rule reads the strobe parts: fact 'take_fills' strobe.props) the strobe
+//               module's fill of its property table's pointers (0x501c20b0(0): the table 0x60350410, 122 rows {id,
+//               size, pointer}, each pointer fetched from the property store, 0x500417b0), the call the strobe
+//               module's boot init makes at 0x501c225c (boot mark 1_H, 0x501c2238, which the lab does not run; the
+//               rest of it writes the pin block 0x9b800000, which the lab stub refuses, X), natively once before the
+//               first strobe request. Without it the module's property read (0x501c20e0, the still decision's call
+//               at 0x501bca10) finds a row's pointer 0, fetches it and logs 0x24000615 (0x501c2209..0x501c2220; X,
+//               twice in the first request). docs/hle-gaps.md 4.3.13
 //   S-AFMKNT    (with H-TAKEFILLS) takepic's AF maker-note fill (0x509b08f0, one caller: takepic's 0x503bceee), the AF
 //               module's: its first call (0x508c9bfe) writes the record's crop areas +40858 and +40866 from the AF
 //               point (0x509b01ec, which reads TAKE_FOCUS's context, the pointer 0xa33d9560 that TAKE_FOCUS's
@@ -385,6 +397,7 @@ export class RecFile {
     this.precon_init = false;      // H-RECPRECON run (H-EXPINIT had not run IMG_PRECON's init)
     this.exif_sets = 0;            // the EXIF set's native runs (S-EXIFPRM, where the rule reads it)
     this.take_fill_runs = 0;       // H-TAKEFILLS' runs
+    this.stb_props = false;        // H-STBPROP run (the strobe module's property table filled)
     // TAKE's exposure for the shot's record (S-EXIFPRM, where the EXIF set runs natively: fact 'take_exposure',
     // src/fw/facts.mjs takeExposure)
     this.exposure = this.image && this.exif_set() ? fact('take_exposure', TAKE_EXPOSURE_E143) : null;
@@ -485,10 +498,10 @@ export class RecFile {
   // take-picture request's packet (a block of the lab's: +0 the shot's id, +8 the flags 0 of api_rec's takePicture
   // for a single still, +60 the exposure record, as TAKE_MAIN keeps them): RdyStart's builder of the mode bytes from
   // the packet, RdyFcsTake's copy of them, Standby's entry with them and no packet (its context part; the tail that
-  // takes the packet into the still states is not run); StlRdy1's exposure record taken from TAKE's ring and filled
-  // (its request to the strobe sequence not run, docs/hle-gaps.md 4.3.13 item 1c), the packet word set to the packet
-  // (Standby's tail's keep); StlRdy2's shot-record fill (the template's copy, the settings fields, the shutter range);
-  // StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
+  // takes the packet into the still states is not run); StlRdy1's exposure record taken from TAKE's ring and filled,
+  // the packet word set to the packet (Standby's tail's keep) and StlRdy1's request to the strobe sequence (after
+  // H-STBPROP, once; its status must be 0; docs/hle-gaps.md 4.3.13 item 1c); StlRdy2's shot-record fill (the
+  // template's copy, the settings fields, the shutter range); StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
   // frame count and its fill after the key; takepic with S-AFMKNT for its AF maker-note fill, the lens fill and the
   // third fill with the EXIF set (docs/hle-gaps.md 4.3.13). Each call must log nothing. Returns {record}, the exposure
   // record (freed into the ring by exif_param at its end, as StlEnd frees it)
@@ -512,6 +525,18 @@ export class RecFile {
     run("StlRdy1's exposure fill", T.record.fill, { a0: record, ...(T.record.flags !== null && { d0: T.record.flags }) });
     sim.write(pk + TAKE_PACKET_RECORD, pack('<I', record));
     sim.write(F.packet, pack('<I', pk));
+    // StlRdy1's request to the strobe sequence, as its function ends (d0 the context, a1 the packet word's packet),
+    // after H-STBPROP's fill of the strobe module's property table (once, as its boot init fills it)
+    const S = F.strobe;
+    if (!this.stb_props) {
+      run("H-STBPROP: the strobe module's property table fill", S.props.fill, { d0: 0 });
+      const empty = []; for (let k = 0; k < S.props.count; k++) if (!sim.u32(S.props.table + 8 * k + 4)) empty.push(k);
+      if (empty.length) throw new RecError(`H-STBPROP: the fill ${h8(S.props.fill)} left ${empty.length} rows of the table ${h8(S.props.table)} without a pointer (rows ${empty.slice(0, 8).join(', ')})`);
+      this.stb_props = true;
+    }
+    run("StlRdy1's request to the strobe sequence", S.request, { a0: F.context, a1: pk });
+    const sb = sim.read(F.context + S.status, 2), status = sb[0] | sb[1] << 8;
+    if (status !== 0) throw new RecError(`H-TAKEFILLS: the strobe sequence's decision ${h8(S.decision)} answered StlRdy1's request with the status ${status} (TAKE's context +${S.status})`);
     const [b1, b2] = F.record.modes;
     run("StlRdy2's shot-record fill", F.record.fn, { d0: shot.id, a0: u8(b1), d1: u8(b2) });
     run("StlTake's capture fill", F.take.capture, { d0: shot.id, a0: F.context });
@@ -862,7 +887,7 @@ export class RecFile {
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
 // H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'H-STBPROP', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

@@ -4308,14 +4308,27 @@ export function takeShot(img) {
 //   that order within TAKE_LENS_SPAN; and TAKE's third fill (third, 0x503bd1fa), the one call of a function object's
 //   `mov (4,a3),a2; mov (a2),d0; mov (8,a2),d1; mov d0,a0; mov (4,a2),a1; mov d1,d0; call T` (0x503b7e32), which
 //   calls the EXIF set (exif.set, recFile's) once within TAKE_PIC_SPAN (0x503bd48e)
+// - strobe {request, at, status, decision, props: {fill, table, count}} (2026-11-22, H-TAKEFILLS' strobe request and
+//   H-STBPROP): StlRdy1's request to the strobe sequence, the one call `mov (P),a1; mov a3,a0; call REQ` in StlRdy1's
+//   code (0x503b1396: 0x503b8126, StlRdy1's function's last call), REQ opening `mov a1,d3; mov a0,a2; mov AT,a3; add
+//   a0,a3; mov a3,a0; mov a2,a1; mov d3,d0; clr d1` (AT the exposure request's offset in TAKE's context, +3144; E146
+//   and E147 +3348, X), then its build call, `mov a3,a0`, the strobe sequence's still decision (DECISION,
+//   0x501bc976) and `movhu d0,(STATUS,a2)` (the decision's status, +3140; E146 and E147 +3344); the decision's one
+//   call of the strobe module's property read within TAKE_STB_SPAN (0x501bca10: 0x501c20e0, opening `cmp COUNT,d0;
+//   bge; mov d0,d1; asl 3,d1; mov d1,a0; add TABLE,a0`: TABLE 0x60350410, rows of 8 bytes {id, size, pointer},
+//   COUNT 122); and the module's fill of the table's pointers (fill, 0x501c20b0, the strobe module's boot init's call
+//   at 0x501c225c), the one function `mov d0,d3; clr d2; mov TABLE,a2; movhu (a2),d0; call; mov a0,(4,a2); inc d2;
+//   add 8,a2; cmp COUNT,d2`
 // Throws where a form is missing or found twice
 export const TAKE_FILLS_E143 = { context: 0x62A4A358, packet: 0x62A4A350,
   mode: { build: 0x503C28C7, bytes: 0x62A4CE68, copy: 0x503C4509, record: 0x62A4CE80, standby: 0x503B09DD },
   ring: { get: 0x503BAEB6, free: 0x503BAF23 }, record: { fn: 0x503BBA51, modes: [0x62A4B190, 0x62A4B1BC] },
   take: { capture: 0x503BCAA2, key: 0x503BAA2D, count: 0x62A4AF68, after: 0x503BC4FE },
-  pic: { fn: 0x503BCD51, mode: 3122, af: 0x509B08F0, crop: [40858, 40866], lens: 0x503BD137, third: 0x503BD1FA } };
+  pic: { fn: 0x503BCD51, mode: 3122, af: 0x509B08F0, crop: [40858, 40866], lens: 0x503BD137, third: 0x503BD1FA },
+  strobe: { request: 0x503B8126, at: 3144, status: 3140, decision: 0x501BC976, props: { fill: 0x501C20B0, table: 0x60350410, count: 122 } } };
 export const AF_MKNT_E143 = 0x509B08F0;
-const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20, TAKE_PIC_SPAN = 0x400, TAKE_LENS_SPAN = 0x60;
+const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20, TAKE_PIC_SPAN = 0x400, TAKE_LENS_SPAN = 0x60, TAKE_STB_SPAN = 0x100;
+const STB_REQUEST_FORM = [0xf1, 0xd7, 0x92, 0x27, null, null, 0xf1, 0x73, 0x9c, 0x99, 0x8c, 0x04];
 const TAKE_THIRD_CALL = [0xf8, 0x2b, 0x04, 0x72, 0xf8, 0x06, 0x08, 0xf1, 0xe0, 0xf8, 0x26, 0x04, 0x84];
 const TAKE_LENS_IDS = [22257, 22289, 22305];
 const STANDBY_FORM = [0xcf, 0xa0, 0xf8, 0xfe, 0xfc, 0xf1, 0xe5, 0xf0, 0x09, 0xf8, 0x25, 0x04];
@@ -4391,6 +4404,20 @@ export function takeFills(img, at, exif) {
   if (thirds.length !== 1) throw new Error(`${rule}: ${thirds.length} function-object calls of TAKE's third fill, want 1`);
   const third = callAt(img, thirds[0] + TAKE_THIRD_CALL.length).to;
   if (exif?.set === undefined || callsTo(third, third + TAKE_PIC_SPAN, exif.set - 0x50000000).length !== 1) throw new Error(`${rule}: TAKE's third fill ${D(third)} does not call the EXIF set ${exif?.set === undefined ? '(not read)' : h8(exif.set)} once`);
+  // StlRdy1's request to the strobe sequence, the decision's property read and the module's fill of its table
+  const rqs = all([0xfc, 0xa1, ...le32(packet), 0x9c], s1, s1 + TAKE_EXP_SPAN).filter((o) => img[o + 7] === 0xdd || img[o + 7] === 0xcd);
+  if (rqs.length !== 1) throw new Error(`${rule}: StlRdy1's code from ${D(s1)} makes ${rqs.length} calls \`mov (P),a1; mov a3,a0; call\`, want 1`);
+  const req = callAt(img, rqs[0] + 7).to;
+  if (!bytesAt(img, req, STB_REQUEST_FORM)) throw new Error(`${rule}: StlRdy1's strobe request ${D(req)} does not open with its exposure request's setup`);
+  const build = callAt(img, req + STB_REQUEST_FORM.length), dc = build && req + STB_REQUEST_FORM.length + build.len;
+  const decide = dc && img[dc] === 0x9c ? callAt(img, dc + 1) : null, kept = decide && dc + 1 + decide.len;
+  if (!decide || !bytesAt(img, kept, [0xfa, 0x72])) throw new Error(`${rule}: StlRdy1's strobe request ${D(req)} does not build, decide and keep the status`);
+  const PROP_READ = [0xa0, null, 0xc2, null, 0x81, 0xf8, 0xc1, 0x03, 0xf1, 0xe4, 0xfc, 0xd0];
+  const reads = []; for (let o = decide.to; o < decide.to + TAKE_STB_SPAN; o++) { const c = (img[o] === 0xdd || img[o] === 0xcd) && callAt(img, o); if (c && bytesAt(img, c.to, PROP_READ)) reads.push(c.to); }
+  if (new Set(reads).size !== 1) throw new Error(`${rule}: the strobe decision ${D(decide.to)} calls ${new Set(reads).size} property reads in its first 0x${TAKE_STB_SPAN.toString(16)} bytes, want 1`);
+  const ptab = u32(img, reads[0] + 12), count = img[reads[0] + 1];
+  const fill = oneAt(img, [0x83, 0x08, 0xfc, 0xde, ...le32(ptab), 0xf0, 0x62, 0xdd, null, null, null, null, null, null, 0xf8, 0x32, 0x04, 0x48, 0x22, 0x08, 0xaa, count], rule, 'fills of the strobe module\'s property table');
+  if (fill === null) throw new Error(`${rule}: no fill of the strobe module's property table ${h8(ptab)} (${count} rows)`);
   return {
     context, packet,
     mode: { build: 0x50000000 + callAt(img, bd[0] + 7).to, bytes, copy: 0x50000000 + cp, record: u32(img, cp + 8), standby: 0x50000000 + sb },
@@ -4398,6 +4425,8 @@ export function takeFills(img, at, exif) {
     record: { fn: 0x50000000 + callAt(img, rf + 21).to, modes: [u32(img, rf + 8), u32(img, rf + 17)] },
     take: { capture: 0x50000000 + capture, key: 0x50000000 + key, count: u32(img, cnt + 2), after: 0x50000000 + after },
     pic: { fn: 0x50000000 + pic, mode, af: 0x50000000 + afAt, crop, lens: 0x50000000 + lens, third: 0x50000000 + third },
+    strobe: { request: 0x50000000 + req, at: img[req + 4] | img[req + 5] << 8, status: img[kept + 2] | img[kept + 3] << 8, decision: 0x50000000 + decide.to,
+      props: { fill: 0x50000000 + fill, table: ptab, count } },
   };
 }
 

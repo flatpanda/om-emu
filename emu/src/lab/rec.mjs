@@ -175,7 +175,8 @@
 //               (?: docs/hle-gaps.md 4.3.13). So on E143 ExposureTime is the plan's
 //               shutter as the set gives it (1/250 s for S-SCENE's default scene, X); E146 and E147 start at a GUI
 //               state where S-EXPOSE does not plan, so a shot before S1 has left it finds the settings 0 (1 s), a
-//               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's), and FNumber
+//               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's; with H-TAKEFILLS's strobe
+//               request since 2026-11-22 the strobe decision's Sv, ISO 200, X), and FNumber
 //               0/10 (the lens flag +37982 bit 12 is takepic's lens step's, not run; 0x5042c460); focal length, the
 //               lens and the image size the template's.
 //               Where the rule reads no EXIF set (the E144 family, recFileInline's and the E118 family's versions) it

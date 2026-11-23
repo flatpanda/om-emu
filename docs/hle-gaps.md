@@ -9143,8 +9143,8 @@ Independent stops the session (below).
   packet the lab writes without `RecordMediaMode`, and their slot-detect helper is not of E143's form, so one card
   still answers every port there (open). Every other ported body's detect table has one drive (E147, E148, the E144
   and E118 families; `src/fw/ports.mjs` FACTS).
-- **Open.** Dual Independent (the second slot's image settings in the shot record, REC_MAIN's first-slot copy, the
-  second image's path); a full card under Standard and the two Dual modes (`0x5105ad55`; the record controller's
+- **Open.** Dual Independent with the slots' settings different (the second image's path; with them alike done
+  2026-11-22, 4.8.20); a full card under Standard and the two Dual modes (`0x5105ad55`; the record controller's
   choice of the one passing slot for the arrow up); the
   controller's test `0x50c73fd5` and the application's card check in the lab's release (S-CARD takes a mounted card
   as passing); RAW and RAW + JPEG on two cards (types 0 .. 8); the movie slot; E139, E134 and E125.
@@ -9435,6 +9435,33 @@ No stand-in changed: S-MDACTRL, S-MDAEND and S-MEDIA ran unchanged with the exFA
 - **Open:** E144 with an SDXC card (a real E144's movie mode at the factory, or the hardware's DIVU by 0; 4.8.7);
   the E118 family and the other E144-family bodies with an SDXC card on the HLS side are not run here (only E139
   and E148 of their lines); the 128 GiB card on the HLS side.
+
+#### 4.8.20 Dual Independent with the slots' settings alike (2026-11-22; D unless tagged, addresses E143's)
+
+(Numbered after the round of 2026-11-22's 4.8.16 to 4.8.18.) 4.8.14 left Dual Independent (1129 = 2, 3) as a stop
+because the second slot's image settings in the shot record were taken as unfilled. Since 2026-11-16 (H-TAKEFILLS)
+TAKE's shot-record fill `0x503bba51` runs natively, and its branch `0x503bbb6f..0x503bbc23` (21169, 1129's data
+object, 2 or 3) writes the second slot's +38000, +38016, +38020 and +37898 itself; the stop was stale on E143.
+
+- **The lab's part.** S-CARD (`emu/src/lab/camapp.mjs` record_cards) names the cards for 2 and 3 as for 4 and 5 (the
+  record controller's rule is the same for 2 to 5, 4.8.14): both mounted cards, Media 0, Media2 1, `RecordMediaMode`
+  1129; the arrow down (2) with one card stops as 4 does (the application's card check `0x5105c978` refuses 2 and 4
+  alike, 4.8.14). REC's record (`rec.mjs` record), before the packet, reads the shot record's first-slot image
+  settings (+37998, +38014, +38018, the halfwords REC_IMAGE's task copies to `0xa33232a2..a6` at `0x5053ddfa`) and the
+  second slot's (+38000, +38016, +38020), as REC_IMAGE's double-slot test `0x5053dd22` compares them. Alike, the
+  test fails, rec_jpeg_exec writes `BuffAddr1` alone, and REC_FILE's double-slot record writes the one image on both
+  cards (4.8.14's Dual Same path). Different, the session stops: REC_IMAGE's second image (`SlotNo` 1 into
+  `BuffAddrDoubleSlot`) is not read. The read needs H-TAKEFILLS' shot record and runs on E143 alone (the offsets
+  are E143's; E146's not read), else a stop.
+- **What it does (X, E143).** Two firmware-mounted cards, Dual Independent with the arrow up set through the
+  store: S2 records one picture on both cards, the same bytes under one DCF number, REC_FILE's double-slot record
+  once; the first- and second-slot settings read alike (the store's defaults).
+- **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots) on E143: 40 of 40, the Dual Independent case after
+  Dual Same up (only this case was run; E146 not run).
+- **Open.** The second image where the slots' settings differ (rec_jpeg_exec's `SlotNo` 1 path, who sets `SlotNo`,
+  and the second slot's own quality and size from 20785, 20801, 33105 and 33121, which the menu would set); REC_MAIN's
+  first-slot copy (`0x5053b832..0x5053b968`) still not run (S-RECREQ: the record's first-slot fields are what TAKE's
+  fill and the template leave); E146.
 
 ### 4.9 HDMI and DisplayPort
 

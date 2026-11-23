@@ -325,8 +325,8 @@ the survey table.
   on the card the save settings name; since 2026-11-16, 4.8.14, the save settings set from the camera's own menu,
   whose six names the firmware draws, Dual Same's S2 on both cards through REC_FILE's own double-slot record (the
   same bytes under one DCF number, read back on each), and Auto Switch with the first card full (the application
-  moves the save slot, S2 on the second card); open: Dual Independent, which stops (the second slot's own image
-  settings in TAKE's shot record); E139, E134 and E125, the other two-slot bodies, since 2026-11-22, hle-gaps.md
+  moves the save slot, S2 on the second card); open: Dual Independent with the two slots' settings different, which stops (REC_IMAGE's second image; with
+  them alike S2 on both cards since 2026-11-22, hle-gaps.md 4.8.20); E139, E134 and E125, the other two-slot bodies, since 2026-11-22, hle-gaps.md
   4.8.17: their detect UI_IN's level alone, the second slot empty by default, a second card at the start mounted
   from its own port and S2 on the save slot's card on E139 and E125; open there: E134's second card, which stops at
   a synchronous send to queue 221, the run-time change of the second slot, RecordMediaMode);

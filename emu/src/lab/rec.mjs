@@ -288,7 +288,7 @@
 import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
-import { MODEL_INFO, fact, A } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO, fact, A } from '../fw/model.mjs';
 import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143 } from '../fw/facts.mjs';
 import { geometry as rawGeometry, rawFrame } from './rawframe.mjs';
 
@@ -664,6 +664,18 @@ export class RecFile {
     // S-RAWFRAME: the shot's Bayer buffer filled with the lab's pattern, before S-EXIFPRM and REC_PREPRO's place
     const raw = shot && this.raw_geometry() ? rawFrame(lab, shot, this.raw) : null;
     const { x, clock, date, take, exposure } = this.exif_param(shot);
+    // Dual Independent (RecordMediaMode 2, 3): REC_IMAGE's double-slot test (0x5053dd22, D, docs/hle-gaps.md 4.8.14)
+    // makes a second image for the second slot where the shot record's second-slot image settings (+38000, +38016,
+    // +38020; TAKE's shot record fill writes them for 2 and 3, 0x503bbb6f..0x503bbc23) differ from the first slot's
+    // (+37998, +38014, +38018, which REC_IMAGE's task copies to REC's 0xa33232a2..a6 at 0x5053ddfa); with them alike
+    // it is one image recorded on both cards, as Dual Same. The second image's path is not read: that case stops
+    if ((mode === 2 || mode === 3) && media2 !== NO_MEDIA) {
+      if (!shot || !this.fills) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) on a body whose shot record TAKE's own fill does not write (H-TAKEFILLS, H-SHOTALLOC): the second slot's image settings are not made`);
+      if (MODEL !== 'E143') throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) on ${MODEL}: the shot record's second-slot image settings are read on E143 alone (docs/hle-gaps.md 4.8.20)`);
+      const h = (o) => { const b = sim.read(x + o, 2); return b[0] | b[1] << 8; }, one = [37998, 38014, 38018].map(h), two = [38000, 38016, 38020].map(h);
+      this.dual_settings = { one, two };
+      if (one.some((v, i) => v !== two[i])) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) with the second slot's image settings ${two.join(', ')} (the shot record's +38000, +38016, +38020) not the first slot's ${one.join(', ')} (+37998, +38014, +38018): REC_IMAGE makes a second image for the second slot (0x5053dd22, rec_jpeg_exec's SlotNo 1 into BuffAddrDoubleSlot), whose path is not read (docs/hle-gaps.md 4.8.20)`);
+    }
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', shot ? shot.id : SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);

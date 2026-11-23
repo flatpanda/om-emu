@@ -1533,13 +1533,20 @@ export async function storageSlots() {
     const t5 = choose(s, 5);
     ok(t5 === SAVE_NAMES[5] && s.lab.get(MODE) === 5, `the sixth (${t5}) sets ${MODE} = ${s.lab.get(MODE)} (want 5)`);
     two(5, 2);
+    // Dual Independent with the arrow up (docs/hle-gaps.md 4.8.20): TAKE's shot record fill writes the second slot's
+    // image settings natively; with the two slots' settings alike (the store's defaults) REC_IMAGE makes one image and
+    // REC_FILE's double-slot record writes it on both cards, as Dual Same
+    s.set(MODE, 3); idle(s, 300);
+    two(3, 4);
+    const ds = st.rec?.dual_settings ?? null;
+    ok(ds && ds.one.join() === ds.two.join(), `Dual Independent (${MODE} = 3): the shot record's first- and second-slot image settings ${J(ds)}, alike`);
     // the arrow up with the second card out: the record controller names the first card alone (Media 0, Media2 none)
     pl.run_input({ type: 'card', action: 'remove', slot: 2 });
     idle(s, 1000);
     const k1 = s.camapp.card_images(0);
     shoot(s);
-    const f = st.files[4], e = f && vol(cardB)?.find(file(f.number));
-    ok(st.files.length === 5 && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
+    const f = st.files[6], e = f && vol(cardB)?.find(file(f.number));
+    ok(st.files.length === 7 && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
       `Dual Same with the arrow up, the second card out: S2's picture ${f?.path} on the first card alone (${e?.size} bytes), its count ${s.camapp.card_images(0)}`);
     s.set(MODE, 4); idle(s, 300);
     let stop = null;

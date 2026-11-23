@@ -5611,6 +5611,27 @@ tool (`bin/session.mjs`) and fixed on 2026-11-14.
   and WB_MOV queues and on the mvr IF helpers; whether they wake TAKE_MOV is ?. Next, the registration through which
   CapMov_MovieRecorderSLR gets its Notify* observers (the CmpMov_Notify* observer classes of 4.1.3); then check in a
   camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
+- **The recorder's observer lists and REC under camapp 2 (2026-11-22; `emu/test/test_movobs.mjs`, E143):**
+  1. *Lists (D):* CapMov_MovieRecorderSLR's impl holds seven observer lists at +536, +540, +544, +548, +552, +556,
+     +560: getters `0x50bf1c36` / `0x50bf1c44` / ... / `0x50bf1c8a` (`mov (n,a0),a0`) and setters `0x50bf1c3d` / ... /
+     `0x50bf1c91` (`mov a1,(n,a0)`), all seven setters called from the constructor gap@0x50bf11d1 at `0x50bf1325`. The
+     facade gap@0x50bf2776 (impl pointer at +4) has seven add-observer methods `0x50bf27d4`, `0x50bf27ed`,
+     `0x50bf2806`, `0x50bf281f`, `0x50bf2838`, `0x50bf2851`, `0x50bf286a` (each: the getter, then `0x50d7f472` with
+     a1 = the observer) and the matching removes from `0x50bf2933` (the getter, then `0x50d7f666`); an eighth add,
+     `0x50bf2883`, takes its list from `0x50d81895`. Seven lists match the seven CmpMov_Notify*Observer classes
+     (BufferFull `0x50c66f58`, MovieStopped `0x50c66fc5`, RecReady `0x50c6702d`, RecordMediaBuf `0x50c670a5`,
+     RecordMediaFailBuf `0x50c67127`, StopRecordMoviePictureBuf `0x50c671a9`, StopRecordMoviePictureFailBuf
+     `0x50c6722b`, their notify methods with no direct caller), which list is which class is ? (I: by count only).
+     The facade's methods have no direct caller and their addresses appear in no E143 block as a word (the vtables
+     are not in the unpacked blocks as plain data), so the caller that attaches the CmpMov observers is not found
+     statically: ?.
+  2. *REC (X):* control camapp 2, mode dial at Movie, REC, 2.5 s, REC: the application records (S-RELSEQ's movie
+     callbacks, `recording_s` 2.5) and ends, and neither `0x503f1a00` nor `0x503f1af9` is reached; none of the seven
+     add-observer methods runs after the session's open. The watches start after `open_session` (the player has no
+     hook before the boot), so an add made during the components' boot is not seen, and the run has no positive
+     control on a watched address that is reached (I: the same `lab.observe` reports hits elsewhere in
+     test_camapp.mjs). So under camapp 2 nothing below CA_MAIN reaches api_movie on REC: the movie chain stops above
+     CapMov_MovieRecorderSLR, which S-RELSEQ stands in for.
 
 #### 4.5.1 The resource tables on E146 and E147 (2026-11-22; D unless tagged)
 

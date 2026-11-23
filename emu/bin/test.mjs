@@ -226,6 +226,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad, ...fr.bad].forEach((x) => console.log('  ', x));
   bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length + fr.bad.length;
 }
+// CapMov_MovieRecorderSLR's add-observer methods and api_movie's start / stop watched over a camapp 2 recording
+// (test_movobs.mjs, docs/hle-gaps.md 4.5; E143)
+{
+  const { movieObserverSession } = await import('../test/test_movobs.mjs');
+  const mo = await movieObserverSession();
+  console.log(`movie observers under camapp 2: ${mo.checks - mo.bad.length}/${mo.checks}`);
+  mo.bad.forEach((x) => console.log('  ', x));
+  bad += mo.bad.length;
+}
 // the Fn lever and the AF mode in the default session (test_fnlever.mjs, docs/hle-gaps.md 4.3.8; E143): the idle lever
 // at API_LEVER_SW_1, S-SEQSTANDBY at the standby gate, S1 with and without the half-press AF; the sequence parts' own
 // StartFocus by the focus mode under control camapp 3

@@ -272,8 +272,11 @@ export const FAMILIES = {
     // the encoder block 0x9bd00000, whose counter registers +0x00/+0x04 and +0x80/+0x84 E125's dial init clears for
     // each dial it sets up (0x500fedd1 -> 0x5010329c, the stores at 0x501032d8..0x501032f2; E139's encoder init
     // stores 0x9bd00000 at 0x50113c2b and E144's encoder position read reads +0x38/+0xb8, D), which E125's bring-up
-    // reaches (X) and the others' do not; a body that needs more gives its board.stub_pages with its evidence
-    stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000],
+    // reaches (X) and the others' do not; and two serial channels' blocks, 0x98200000 and 0x98600000, which the
+    // channels reach once PER_SIO's channel map is set at the play bring-up (H-SIOMAP, src/lab/play.mjs
+    // sio_map_bring_up): E144's camera application start reads 0x98200014 and E145's writes 0x98600028, each a denied
+    // access first (X, 2026-11-22); a body that needs more gives its board.stub_pages with its evidence
+    stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x98200000, 0x98600000],
     stub_presets: [],
     // the display waits' stand-ins (see FAMILIES.E143): E134's TFT open blocked natively in both (X)
     display_wait_stand_ins: true,

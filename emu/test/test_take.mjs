@@ -46,6 +46,8 @@ export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> repl
 export const START_LAB = [...START, ...C22];
 const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
   'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS', 'H-CAMINIT'];
+// H-SIOMAP runs at every play bring-up since 2026-11-22 (src/lab/play.mjs sio_map_bring_up), the probe or not
+const PROBE_SHARED = new Set(['H-SIOMAP']);
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
 // round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte
@@ -105,7 +107,7 @@ export async function takeSession() {
     try {
       pl.open_session();
       const s = pl.session, acks = s.steps.flatMap((st) => st.camapp ?? []).filter(([k, d]) => k === 'ack' && /^queue 94 /.test(d));
-      ok(s.camapp.take === null && !('take' in pl.opts()) && !pl.stand_ins_in_use().some((x) => PROBE_STAND_INS.includes(x)) && acks.length === 1,
+      ok(s.camapp.take === null && !('take' in pl.opts()) && !pl.stand_ins_in_use().some((x) => PROBE_STAND_INS.includes(x) && !PROBE_SHARED.has(x)) && acks.length === 1,
         `default: no probe (camapp.take ${s.camapp.take}, options ${JSON.stringify(pl.opts())}), S-MODACK answers TAKE_FUNC's command 0 (${acks.length} acks)`);
     } catch (e) { bad.push(`default: ${e.message.slice(0, 600)}`); }
     pl.close_session();

@@ -289,7 +289,7 @@ the survey table.
   TG-5s' date and time setting at the start, the TG-5s' canvas scaled to their wider TFT and their short menu tabs,
   which the walker now reads, and E133's format ending before the card input was tried). Left (findings 154 and
   157): the second slot (on E143 and E146 since 2026-11-11, hle-gaps.md 4.8.12), the media control's other
-  commands (the playback menu's Erase All on E143, E146, E147 and E148 since 2026-11-16, hle-gaps.md 4.8.15), and the HLS side with an SDXC card on these bodies; E133's, E129's and E132's cards are native since
+  commands (the playback menu's Erase All on E143, E146, E147 and E148 since 2026-11-16, hle-gaps.md 4.8.15), and the HLS side with an SDXC card on these bodies (on E146, E147, E148 and E139 since 2026-11-22, hle-gaps.md 4.8.19; E144 stops at its start's divide, 4.8.7); E133's, E129's and E132's cards are native since
   their starts run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and

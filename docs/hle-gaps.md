@@ -9168,6 +9168,32 @@ port 1, S2 on the card the save settings name. Until now their one card answered
   checks (the bank against expectedView, IMG1 drawn one pixel per pixel) are written for that. E146's live-view bank
   0x75 at `0xed9bee00`. E143's MENU stop under the opt-in.
 
+#### 4.8.19 The HLS side with an SDXC card on the other bodies (2026-11-22; X unless tagged)
+
+The checks of the 8 GiB card's HLS run (`emu/test/test_storage.mjs` hlsFormat and hlsOutIn: Card Formatting from the
+menu, or Format from Card Setup on the bodies whose application runs the media control process, then the card out and
+in) on a blank 64 GiB SDXC card the insertion formats exFAT, by `emu/test/test_sdxchls.mjs` (in `emu/bin/test.mjs`).
+No stand-in changed: S-MDACTRL, S-MDAEND and S-MEDIA ran unchanged with the exFAT card.
+
+| Body | Checks | The menu's format | Out and in |
+|---|---|---|---|
+| E146 | 21 of 21 | exFAT `OM SYSTEM` again within 1,929 ms, the insertion's layout (MBR at 32768, 128 KiB clusters, 523,008 of them, root at cluster 4) | mounted 872.4 ms after the insertion, 6,456 shots before and after |
+| E147 | 21 of 21 | the same, within 1,929 ms | the same, 872.4 ms, 6,456 shots |
+| E148 | 21 of 21 | the same, within 1,929 ms | 890.8 ms, 6,620 shots before and after |
+| E139 | 21 of 21 | Format from Card Setup: exFAT with no label, the same layout, within 2,530 ms of Yes | mount error 0 after 800 ms |
+| E144 | - | stops at the camera application's start | stops at the same place |
+
+- **E144 stops where 4.8.7 left it:** S-MODACK's reply ends in Fault 6 at `0x5032574f` (E144's), the movie-parameter
+  function's divide by the 4K 60p rate query's size 0 on an exFAT drive (4.8.7, D there). The stop comes before any
+  HLS step, at the camera application's start with the blank store's movie mode, so it is not the HLS side's. The
+  manual leaves DIVU by 0's quotient undefined and the quotient decides the movie time's compare (4.8.7), so there
+  is no defined answer to give at that seam and E144 stays out of the test's list (as in modelcheck's SDXC_XFAIL).
+  The rest of the E144 family (E148 above) and E139, which test the rate query's answer before the divide (4.8.7),
+  run on.
+- **Open:** E144 with an SDXC card (a real E144's movie mode at the factory, or the hardware's DIVU by 0; 4.8.7);
+  the E118 family and the other E144-family bodies with an SDXC card on the HLS side are not run here (only E139
+  and E148 of their lines); the 128 GiB card on the HLS side.
+
 ### 4.9 HDMI and DisplayPort
 
 Status (2026-10-23): the plug of a cable runs natively down to the transmitter and the hot-plug pin, with the play

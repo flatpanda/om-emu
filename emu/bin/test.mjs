@@ -602,6 +602,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...cu.bad, ...cc.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += cu.bad.length + cc.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// the HLS media side with a 64 GiB SDXC card (test_sdxchls.mjs; docs/hle-gaps.md 4.8.19): E146, E147, E148 and E139
+// in processes of their own (E143's is storageSdxc's above; E144 stops at its start's divide, 4.8.7)
+{
+  const { spawnSync } = await import('node:child_process');
+  const runs = ['E146', 'E147', 'E148', 'E139'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_sdxchls.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') && !l.startsWith('   note:'))];
+  });
+  console.log(`the HLS side with an SDXC card: ${runs.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  runs.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`))).forEach((x) => console.log('  ', x));
+  bad += runs.filter(([, rc]) => rc !== 0).length;
+}
 // a power-on with the first card slot empty and the media status around a removal (test_nocard.mjs): its units, E143
 // here, E147 in a process of its own
 {

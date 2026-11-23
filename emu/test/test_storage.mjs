@@ -964,7 +964,7 @@ async function walkToFormat(s, press) {
   walk.to(FORMAT_GOALS);
   return walk.log;
 }
-async function hlsFormat(card, tag, ok, bad, notes) {
+export async function hlsFormat(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsFormatFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -1032,7 +1032,7 @@ async function hlsFormat(card, tag, ok, bad, notes) {
 // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card again
 // (without a format: the volume it had, read back the same) and the counts come back; then S2's picture lands on the
 // card
-async function hlsOutIn(card, tag, ok, bad, notes) {
+export async function hlsOutIn(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsOutInFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');

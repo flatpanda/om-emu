@@ -7127,6 +7127,41 @@ instructions (`src/fw/models.mjs` E147 `acc`).
   E143; `--mutants`: acc-still fails L2 and L4, tilt-ignored L3 and L4. `bin/test.mjs` runs E147's default groups
   and R1, R2.
 
+#### 4.7.8 The idle key image's type-2 keys and the PEN-F's picture-function inputs (2026-11-22; D unless tagged)
+
+S-KEYBITS' idle image (`emu/src/lab/play.mjs` `idle_images`) gave the released level (bit != polarity) only to the
+UI_IN entries a control row names (`UIIN_ENTRIES`); a type-2 entry no row names kept bit 0, the pressed level at
+polarity 0, and was held from the session's start (`emu/FIDELITY-NOTES.md` 7.7). X, by `uiin_layout` and the old
+`idle_images` over each body's main block: E122 `0x122b`, `0x122c`; E147 `0x120b`; E144, E137 and E148 `0x120b`,
+`0x1224`; E142, E130 and E140 `0x1208`, `0x1224`; E125 `0x1224`, `0x120b` (group 4); E118 and E120 `0x1224`; E139
+`0x120b` twice and a second `0x0004` (group 4 byte 4 bit 1; the table's first `0x0004` is the OK row's); E134 nine
+(`0x120b`, `0x123a`, `0x1224`, `0x1239`, `0x123b`, `0x123c`, `0x1238`, `0x1232`, `0x1233`); none on E143, E146, E129,
+E145, E132 and E133. As `analysis/oly-fw-analysis/README.md` 8.4 had it.
+
+- **Fix.** `TYPE2_KEYS` holds every type-2 entry of the body's tables as `[group, byte, bit, polarity]`, set by
+  `apply_uiin_layout` from `uiin_layout`'s groups (a second entry of a code included), and `idle_images` releases each
+  one. Before the layout is applied it is E143's control rows' type-2 entries and `CODE0_KEYS`, which are E143's
+  tables' set (X, `emu/test/test_keyidle.mjs`), so E143's idle image is unchanged. Every code-0 type-2 entry on the 19
+  bodies has polarity 0 (X), so `CODE0_KEYS`' level 1 already was its released level. The type-0 entries E143, E146,
+  E125 and E134 carry are not keys and are left as they were.
+- **Rows.** `picfn_left` and `picfn_right` (kind key, `bodykey` `0x122b` / `0x122c`): wired by `apply_uiin_layout`
+  where the body's tables hold the code as a type-2 entry, not wired otherwise, which is every body but E122 (X:
+  test_keyidle). E122's EV names for them are EV_PRESS_ / EV_RELEASE_PICFUNCTION_LEFT and _RIGHT (`Tables.ev_name`
+  on its block). `/api/controls` carries their wiring on the body (playapi.mjs `liveRows`, formerly `posswitchRows`).
+- **Session (X, E122, `bin/session.mjs --model E122`).** UI_IN's group-1 old-state bytes (the record's old-state
+  pointer, `0xa1c583ec` on E122) read `ff 1c` after `wait:3000`: byte 1 bits 2 and 3 at 1, both inputs released.
+  `picfn_left:down` makes them `ff 18`, and 300 ms later the GUI is still SS_COMMON/ID_ST_CA_REQ_DISP; at
+  `picfn_left:up` they are `ff 1c` again and the GUI enters SS_REC/ID_ST_SETVAL (`0x0202`) within the release's
+  step. So with a real press edge the camera enters the editor at the release, which 8.4 left open. On E147 the
+  group-1 old state (`0xa32da084`) reads `ff 02` after `wait:3000`: `0x120b`'s bit (byte 0 bit 3) at 1.
+- **Golden.** E143's and E146's idle images do not change. A default session on a body that had unnamed keys now
+  starts with them released, so that body's layers can move (E147's among the golden's bodies).
+- **Open.** (1) No row offers the other bodies' unnamed keys (`0x120b`, `0x1208`, `0x1224`, E134's `0x1232..0x123c`).
+  Their EV names differ by body: `0x120b` is EV_PRESS_CUSTOM4_KEY on E122 and EV_PRESS_CUSTOM6_KEY on E147,
+  `0x1224` EV_PRESS_CUSTOM7_KEY on both. The `ael` row stays E143's variant-1 reason. (2) What the held keys changed
+  in the sessions recorded before this fix was not looked at (?). (3) What SETVAL edits after the picture-function
+  release on E122 (8.4's setting 931 after a main-dial step) is not checked here.
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

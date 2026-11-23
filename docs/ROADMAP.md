@@ -804,10 +804,9 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
 - Fn-type buttons (wired 2026-10-15): a dial turn, alone or with +/- held, leaves the shown compensation at 0.0; AFL,
   one-touch WB, PREVIEW and CHANGE_LV_STATE change nothing on screen (their camera-side work is not modelled); AEL/AFL
   `0x120b` exists only in UI_IN variant 1, BKT has no key in the matrix.
-- Type-2 keys no control row names idle at the pressed level (a defect of the lab's, FIDELITY 7.7: E122's two
-  picture-function inputs, E147's `0x120b`): the idle image should give every type-2 entry its released level, and
-  the PEN-F's two inputs want control rows (`analysis/oly-fw-analysis/README.md` 8.4); hours to a day with a pure
-  test over every body's table.
+- Type-2 keys idle released on every body since 2026-11-22 (FIDELITY 7.7, hle-gaps.md 4.7.8, test_keyidle.mjs), and
+  E122's two picture-function inputs are controls `picfn_left` / `picfn_right`. Left: rows for the other bodies'
+  unnamed keys (`0x120b`, `0x1208`, `0x1224`, E134's seven more), whose EV names differ by body.
 - The display-switch trigger chain from the eye sensor / EVFSW to the sender `0x5105053c`, the eye driver's path to the
   setter `0x50050efd` and its publish gate `(0xa31f1d26)` = 119 (H-EYESTATE stands in).
 - The Super Control Panel's Live Control, live-guide and ART / SCN variants (settings 109 and 44,

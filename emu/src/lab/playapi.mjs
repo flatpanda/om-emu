@@ -199,7 +199,7 @@ export class PlayApi {
     }
     const no = this.allowed(req, path, args);
     if (no) return no;
-    if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables, this.posswitchRows()));
+    if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables, this.liveRows()));
     if (path === '/api/screens') return this.send(200, { ...screensDoc(), stand_ins: standInRows() });
     if (path === '/api/status') {
       const after = intArg(args, 'after');
@@ -230,11 +230,13 @@ export class PlayApi {
   }
   // /api/controls' position switches (play.mjs creative_dial) as the model's UI_IN tables wire them: E143's rows are
   // the other controls' (playui.mjs), and E143 has no position switch
-  posswitchRows() {
+  liveRows() {
     const image = this.tables?.image;
     if (!image) return {};
     apply_uiin_layout(image);
-    return Object.fromEntries(CONTROLS.filter((c) => c.posswitch).map((c) => [c.id, { uiin: c.uiin, positions: c.positions, labels: c.labels, status: c.status, reason: c.reason }]));
+    const pos = CONTROLS.filter((c) => c.posswitch).map((c) => [c.id, { uiin: c.uiin, positions: c.positions, labels: c.labels, status: c.status, reason: c.reason }]);
+    const keys = CONTROLS.filter((c) => c.bodykey).map((c) => [c.id, { uiin: c.uiin, status: c.status, reason: c.reason }]);
+    return Object.fromEntries([...pos, ...keys]);
   }
   // GET /api/card, /api/card/file and /api/card/image (the header says what each answers)
   card(path, args) {

@@ -529,7 +529,9 @@ the release. Whether the camera enters the editor at the press or at the release
 `0x1208` with `0x1224` on E148, E144, E137, E142, E140, E125 and E130; `0x1224` on E118 and E120; `0x120b` twice and
 a second code-4 key on E139; `0x120b`, `0x1224` and seven more on E134); E143, E146, E133, E145, E129 and E132 have
 none. What a held level changes in those sessions was not looked at (?). Not fixed as of 2026-11-14; recorded as the
-lab's defect in `emu/FIDELITY-NOTES.md` 7.7.
+lab's defect in `emu/FIDELITY-NOTES.md` 7.7. Fixed 2026-11-22 (`docs/hle-gaps.md` 4.7.8): every type-2 entry idles
+released, E122 has the controls `picfn_left` / `picfn_right`, and with a real press edge E122's GUI enters
+SS_REC/ID_ST_SETVAL at the left input's release, not at its press (X).
 
 What it would take: two control rows wired where a body's table holds the codes, named as the firmware names them;
 the idle image giving every type-2 entry of the body's table its released level; and a session test on E122 whose

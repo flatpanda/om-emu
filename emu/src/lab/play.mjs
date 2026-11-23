@@ -258,6 +258,17 @@ CONTROLS.push(row('creative_dial', 'Creative dial', 'posswitch', null, [null, nu
 export const STILL_MOVIE_CODE = 0x1909;
 CONTROLS.push(row('still_movie', 'Still / movie switch', 'posswitch', null, [null, null, null], { posswitch: STILL_MOVIE_CODE, positions: null, labels: null,
   status: 'not-wired', reason: "0x1909 is not in E143's UI_IN tables" }));
+// The PEN-F's two picture-function inputs (E122): UI_IN keys 0x122b and 0x122c, type 2 at polarity 0 in its group 1
+// (byte 1 bits 2 and 3), whose EV names are EV_PRESS_ / EV_RELEASE_PICFUNCTION_LEFT and _RIGHT (D: the E122 image's
+// tables, Tables.ev_name; analysis/oly-fw-analysis/README.md 8.4). E143's and E147's builds name the same events, and
+// no table of theirs holds either code (X). A row of bodykey is wired by apply_uiin_layout where the body's tables hold
+// the code, a key as any other (the camera application maps the code itself); what the camera does with the press is
+// the body's own (not read here)
+export const PICFUNCTION_CODES = [0x122B, 0x122C];
+CONTROLS.push(
+  row('picfn_left', 'Picture function left', 'key', null, [null, null, null], { bodykey: 0x122B, status: 'not-wired', reason: "0x122b is not in E143's UI_IN tables" }),
+  row('picfn_right', 'Picture function right', 'key', null, [null, null, null], { bodykey: 0x122C, status: 'not-wired', reason: "0x122c is not in E143's UI_IN tables" }),
+);
 export const FW_KEYS = [
   [0, 0, 6, 0x1229, 1, 0], [1, 0, 2, 0x000B, 2, 0], [1, 0, 3, 0x2403, 1, 0], [1, 0, 6, 0x200D, 2, 0],
   [1, 0, 7, 0x2007, 1, 1], [1, 1, 0, 0x1506, 1, 0], [1, 1, 1, 0x1518, 1, 0], [1, 1, 2, 0x1712, 1, 0],
@@ -292,6 +303,13 @@ export const GROUP_LIVE = GROUP_BYTES.map(() => true);
 export const UIIN_ENTRIES = new Map();
 for (const c of CONTROLS) if (c.uiin && c.uiin[3] !== MODE_DIAL_CODE) UIIN_ENTRIES.set(c.uiin.slice(0, 3).join(','), c.uiin);
 export const CODE0_KEYS = [[0, 0, 3], [0, 0, 4], [0, 0, 5]];
+// Every type-2 entry of the body's UI_IN tables as [group, byte, bit, polarity], named by a control row or not
+// (apply_uiin_layout sets it from the image; before that, E143's CONTROLS and CODE0_KEYS, which are its tables' type-2
+// entries, X: test_keyidle). idle_images releases each one (bit != polarity). Until 2026-11-22 only the entries a
+// control row names were released, and an unnamed one kept bit 0, its pressed level at polarity 0, from the session's
+// start (FIDELITY-NOTES 7.7: E122's 0x122b / 0x122c, E147's 0x120b, one to nine on twelve other ported bodies)
+export const TYPE2_KEYS = [...UIIN_ENTRIES.values()].filter((e) => e[4] === 2).map(([g, b, bit, , , pol]) => [g, b, bit, pol])
+  .concat(CODE0_KEYS.map(([g, b, bit]) => [g, b, bit, 0]));
 export const MONITOR_OPEN = [1, 0, 4];
 
 // Tables: the firmware's EV names, code -> EV translations, switch table, GUI message names (cached per image)
@@ -453,10 +471,7 @@ export function startKeySite(v) {
 // S-KEYBITS idle image.
 export function idle_images() {
   const imgs = GROUP_BYTES.map((n) => new Uint8Array(n));
-  for (const [key, [, , , , typ, pol]] of UIIN_ENTRIES) {
-    const [g, b, bit] = key.split(',').map(Number);
-    if (typ === 2) set_bit(imgs[g], b, bit, 1 - pol);
-  }
+  for (const [g, b, bit, pol] of TYPE2_KEYS) set_bit(imgs[g], b, bit, 1 - pol);
   for (const [g, b, bit] of CODE0_KEYS) set_bit(imgs[g], b, bit, 1);
   set_bit(imgs[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 1);
   if (ON_LAB_MODEL) set_lever(imgs, LEVER_IDLE_STATE);
@@ -509,6 +524,7 @@ export function apply_uiin_layout(image) {
   if (dials.length !== 1) throw new PlayError(`UI_IN tables: ${dials.length} groups of 0x${fx(MODE_DIAL_CODE, 4)} entries (groups ${dials.join(', ') || 'none'}): no single mode dial`);
   const dial = { group: dials[0], positions: groups[dials[0]].entries.map(([b, bit, , , pol]) => [b, bit, pol]) };
   const live = groups.map((x) => x.entries.length > 0);
+  TYPE2_KEYS.splice(0, TYPE2_KEYS.length, ...groups.flatMap(({ entries }, g) => entries.filter((e) => e[3] === 2).map(([b, bit, , , pol]) => [g, b, bit, pol])));
   if (ON_LAB_MODEL) {
     const same = groups.length === GROUP_BYTES.length && groups.map((x) => x.bytes).join() === GROUP_BYTES.join() && live.join() === GROUP_LIVE.join() &&
       dial.group === MODE_DIAL.group && dial.positions.join() === MODE_DIAL.positions.join() &&
@@ -550,6 +566,12 @@ export function apply_uiin_layout(image) {
     if (named && named.length !== l.length) throw new PlayError(`${c.name}: src/fw/models.mjs names ${named.length} positions, ${MODEL}'s UI_IN tables hold ${l.length}`);
     Object.assign(c, { uiin: at.get(c.posswitch), positions: l, labels: named ?? l.map((_, k) => `position ${k}`), status: named ? 'wired' : 'decoded',
       reason: named ? null : `UI_IN decodes it natively; what each position selects is not read on ${MODEL}` });
+  }
+  for (const c of CONTROLS) {                      // the keys only some bodies have (picfn_left, picfn_right)
+    if (!c.bodykey) continue;
+    const e = at.get(c.bodykey);
+    if (e && e[4] === 2) Object.assign(c, { uiin: e, status: 'wired', reason: null });
+    else c.reason = e ? `0x${fx(c.bodykey, 4)} is of type ${e[4]}, not a key (2), in ${MODEL}'s UI_IN tables` : `0x${fx(c.bodykey, 4)} is not in ${MODEL}'s UI_IN tables`;
   }
   for (const c of CONTROLS) if (c.uiin && c.uiin[3] !== MODE_DIAL_CODE) UIIN_ENTRIES.set(c.uiin.slice(0, 3).join(','), c.uiin);
   MODE_DIAL.names = mode_dial_names(imageView(image, IMAGE_BASE, MODEL), MODE_DIAL.positions.length);

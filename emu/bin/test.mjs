@@ -74,6 +74,7 @@
 // The Stand-ins tab's rows against the labels a session can report, and does report on E143 and E147 (test_standins.mjs).
 // What a picture is, said at the picture, and a shot's source on E143 and E147 (test_sources.mjs).
 // The lab's call on a synthetic block of hand-written functions, without firmware (test_slice.mjs).
+// The idle key image on every body: no type-2 key idles pressed (test_keyidle.mjs).
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -962,6 +963,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`Fn-type buttons in play: ${fk.checks - fk.bad.length}/${fk.checks}`);
   fk.bad.forEach((x) => console.log('  ', x));
   bad += fk.bad.length;
+}
+// the idle key image releases every type-2 entry of each body's UI_IN tables; the picture-function rows (test_keyidle.mjs)
+{
+  const { keyIdleTests } = await import('../test/test_keyidle.mjs');
+  const ki = await keyIdleTests();
+  console.log(`idle key image: ${ki.bodies.length} bodies, ${ki.bad.length ? 'FAILED' : 'ok'}`);
+  ki.bad.forEach((x) => console.log('  ', x));
+  bad += ki.bad.length;
 }
 // the 12-40 on the mount (S-LENS, or natively with S-LENSMCU) and the camera's own exposure plan (S-EXPOSE)
 {

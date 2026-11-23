@@ -2262,6 +2262,7 @@ camDriverSession (8 of 8) and `emu/test/test_take_release.mjs` camFeSession (6 o
   `0x9c700000`) as register files, each block's reads checked for branches (days). (3) The seven units the first
   kind-7 request leaves pending, from the start loop's table `0x5021c800` to their interrupts: the first interrupt a
   stand-in must raise (days, open-ended; 4.2 seam D). (4) The argument 1 / 2 path needs the mechanism driver (7.2).
+  (1) is done in 4.2.8: S-CAMFE models the command unit and request 6 now stops in the units' set-up.
 
 #### 4.2.7 The histogram unit (2026-11-11; D unless tagged, addresses E143's)
 
@@ -2403,6 +2404,61 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   The EVF switch's order (4.3.6). S-SCENE seeds a frame's noise with the count of frames rendered, which follows
   the composites taken while no run asks for a frame: a moving scene's bins can then differ by that noise between
   a session and its replay (not changed here).
+
+#### 4.2.8 SSG1's command unit in S-CAMFE (2026-11-22; D unless tagged, addresses E143's)
+
+4.2.6's Next (1): the unit of SSG1 that sends the sensor its serial commands (that role I), where a native request 6
+stopped (`0x9b000a04` = `0x2100` at `0x5019dcb6`). S-CAMFE now models it (`emu/src/dev/camfe.mjs` SSG, under two
+named assumptions, A-CAMFE-3 and A-CAMFE-4), and under `--take probe` with `cam_fe` the sensor's power-on runs past it
+to the units' set-up, where the next unsettled device is the clock block's gate `0x9b5008a0`. No stand-in is added
+beyond S-CAMFE's device and S-TAKECAM keeps requests 6 and 5 in sessions, as the power-on still does not complete.
+Default sessions do not build S-CAMFE and are unchanged. `emu/test/test_camfe.mjs` camFeUnits (27 of 27) and
+camFeSsgSession (8 of 8) and `emu/test/test_expcb.mjs` camFrontEndSession (15 of 15) pin what follows.
+
+- **The device (D: the driver `0x5019deed..0x5019e47c`, the SSG's request 8 `0x5019dacb` -> `0x5019dc8f`).** SSG1's
+  +0x004 is the status, written back by IRQ 18's handler `0x5019e218` after it ands +0x014 (`0x5019e237..0x5019e247`),
+  so write 1 to clear; IRQ 18 is high while status & +0x014 is not 0 (I, as IRQs 15-17). A start +0xa00 = count << 8 |
+  1 (`0x5019e167..0x5019e171`, `0x5019e20c`) runs count entries of the command RAM `0x9b003000..` (two words each, at
+  most 120, `0x5019e0b9`, `0x5019e100..0x5019e10f`; mode 1 writes entry 0 at `0x5019e1b0..0x5019e1bd`); the handler's
+  ends write +0xa00 = 0 (`0x5019e287`, `0x5019e38f`). +0x000 bit 6 is cleared before a start (`0x5019e076`) and set
+  when a queue empties (`0x5019e2e7`, `0x5019e418`). The configuration words (+0xa04, +0xa08, +0xa0c, +0xa14, +0xa18,
+  +0xa1c, +0xa20, +0xa24, +0xa40..+0xa64) are storage; the driver reads back only +0xa14 (the enqueue `0x5019e01e`),
+  +0xa04 and +0xa0c (the mode-1 queue's end, `0x5019e3ef..0x5019e40f`: +0xa04 |= `0x100`, +0xa0c &= ~`0x3f0`). The
+  sensor's reply +0xa10 (`0x5019e366`, stored in the request's buffer +12 at index +28) is refused by name: nothing in
+  the lab answers for the sensor. `0x5019db72`, called after each copy with the entry count, is an empty counting loop
+  (no memory access; I: a pause).
+- **Mode 0 or mode 1 (I, part of A-CAMFE-3).** A one-entry batch and a mode-1 entry both start with `0x101`, and the
+  end bit differs (21 for a batch, `0x5019e279`; 20 for an entry, `0x5019e34b`), so the unit must tell them apart by
+  something the code does not show. The model takes +0xa04 bit 8: mode 1 writes +0xa04 from `0x62a254e0` before its
+  start (`0x5019e1f4`) and sets bit 8 again when its queue empties, and the power-on's +0xa04 = `0x2100` has it set.
+  `0x62a254e0` / `0x62a254e4` are request 7's table +112 / +116 under its flag bit 24 (`0x5019de8d..0x5019dea3`); in
+  the session they hold 0 (X), so no mode-1 entry is on the power-on's path either way.
+- **The end's time (A-CAMFE-3).** +0xa18 / +0xa1c are written from five pairs of words that request 7 fills from its
+  table (`0x5019db7d`, `0x5019dba6`, `0x5019dbcf`, `0x5019dbf8`, `0x5019dc21`: `0x62a254c8` / `cc`, `d8` / `dc`, `f0` /
+  `f4`, `f8` / `fc`, `0x62a25500` / `04`); the power-on writes `0x12d50001` / 0. No code converts them to a time, so
+  the run's length is not in the firmware: a run ends 10 us + 1 us per entry of lab time after its start (RUN_NS,
+  ENTRY_NS). The driver waits for IRQ 18 with no timeout of its own, so only the lab's pace depends on it.
+- **+0x60c (A-CAMFE-4).** The driver and the handler read it before and between their accesses into `0x62a25ee4`,
+  whose ten references are all stores (`0x5019d86f` .. `0x5019e413`): it reads 0 and no code depends on the value.
+- **Request 6 past the unit (X, camFeSsgSession: camapp 1, `--take probe --cpu2 native`, `cam_fe`; the test makes
+  request 6 as in 4.2.6).** At `0x1000000` the SSG's request 8 configures the unit (+0xa04 `0x2100`, +0xa08
+  `0x10100020`, +0xa18 `0x12d50001`, +0xa20 = +0xa24 = `0x10101`, +0xa40..+0xa64 = 1..10) and the three
+  `0x50171ade(1, n; 131)` send 13 mode-0 batches: ten of 120 entries and one of 27 (the 1227 of 4.2.6's experiment),
+  then one and one. Every batch ends on IRQ 18 through `0x5019e218` and `0x5019e279` (13 each); no mode-1 end and no
+  bit-22 call. The entries are 4.2.6's (`{0x60000000, 0x00000081}`, `0x01fc0081`, `0x39030081` first; the single ones
+  `0x00010081` and `0x005a0081`). Events `0x2000`, `0x4000`, `0x8000` and `0x10000` follow; the last batch waits for
+  `0x4000`'s 20 ms. `0x10000` comes 56.7 ms after the request.
+- **The new stop: the units' set-up (X).** `0x5019d287` calls `0x501a3647`, `0x501a36bf`, `0x501a37ba`, `0x501a3832`
+  and `0x501a38b4`, which change system clocks through the kernel's clk_ctrl (`d0` 43, then 25 twice, seen at
+  `0x501a3858`, `0x501a38d9`, `0x501a38e6`) and print "[Caution]PLLK != 576MHz!!!" and "[Caution]per_sysclk_change_slvs
+  -ch / -clk"; these run natively. Its sixth call is the clock gate `0x50160cee` (the shape of 4.2.6's gates: the count
+  byte `0x629a7f4f`, at 0 it writes 1 to +0x8a0, `0x50160cfe`), which S-CAMFE refuses: the session stops there. The
+  kind-7 sender `0x5019d460`, the front end's entry and TAKE's completion `0x502cd4d0` are not reached; cam.c logs
+  nothing. The set-up's programs (4.2.6's 597 registers of the clock block among them) begin here.
+- **Next (I; Claude wall-clock).** (1) The units' set-up's programs from +0x8a0 on as register files of S-CAMFE (4.2.6
+  Next (2): each block's writes recorded, its reads checked for branches; days). (2) Then the seven units the first
+  kind-7 request leaves pending (4.2.6 Next (3)). (3) The mode-1 reply (+0xa10) when a path that sends a mode-1 entry
+  is reached: the requests' buffer +12 consumers are not read.
 
 ### 4.3 Still capture, image processing and recording
 

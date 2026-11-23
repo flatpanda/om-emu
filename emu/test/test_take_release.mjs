@@ -290,7 +290,7 @@ export async function focusSession() {
 // and no stop (s2Rest; docs/hle-gaps.md 4.1.9, 4.7.6).
 // Round 6 (docs/hle-gaps.md 4.2.6): the sensor is never powered on here. TAKE_FUNC_CP's start makes cam.c's request 6
 // (cam_seq_power.c's power-on) with the argument 0 and S-TAKECAM answers it, as without cam_fe: natively the power-on
-// would stop at the sensor's serial unit (test_expcb.mjs camFrontEndSession) and TAKE's start would not end. So
+// would stop in the units' set-up (test_expcb.mjs camFrontEndSession) and TAKE's start would not end. So
 // through the start, S1 and S2 no event of the power sequence and no power rail step runs, the front end's entry is
 // not called and its records stay unarmed, which is why EXP_MOVIE's wait above cannot end in this session
 export async function camFeSession() {

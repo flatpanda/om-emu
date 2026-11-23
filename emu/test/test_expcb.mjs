@@ -38,7 +38,8 @@
 //                       so S-EXPOSE stays
 //   camDriverSession    round 2 (docs/hle-gaps.md 4.2.3): cam.c natively (below)
 //   camFrontEndSession  round 3 (docs/hle-gaps.md 4.2.5): cam.c's second init against S-CAMFE (below); round 4 (4.2.6):
-//                       cam.c's request 6, the sensor's power-on, natively to the sensor's serial unit
+//                       cam.c's request 6, the sensor's power-on, natively past the sensor's serial unit to the
+//                       units' set-up (2026-11-22)
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -311,16 +312,17 @@ export async function camDriverSession() {
 // 5, 0, 2 and 5 ms), 0x800 and 0x10800000, which turns the camera clocks on (0x5019d213: S-CAMFE takes the gates
 // +0x800 = 0x2000 and 1, +0x870 = 1, +0x008 = 0x700, cam_cpm.c's +0x9a0 / +0x9e0 |= 0x10 and the strobe +0xa08) and
 // port 16; 7 ms later 0x10001000 (port 13), 1 ms later 0x11000000 (ports 14 and 15), whose configuration of SSG1's
-// command unit stops the session at that unit's first register: 0x9b000a04 = 0x2100 written at 0x5019dcb6, 35 ms
-// after the request, with the SSG's register clock on (+0x810 = 1). The kind-7 sender 0x5019d460, the front end's
-// entry and TAKE's completion are not reached
+// command unit stopped the session at that unit's first register until 2026-11-22 (0x9b000a04 = 0x2100 at
+// 0x5019dcb6). Since S-CAMFE models the unit (4.2.6, 2026-11-22; test_camfe.mjs camFeSsgSession pins its batches) the
+// power-on goes on through 0x2000, 0x4000, 0x8000 and 0x10000 and stops in the units' set-up at the clock gate
+// 0x9b5008a0 (0x50160cfe). The kind-7 sender 0x5019d460, the front end's entry and TAKE's completion are not reached
 const IRQ_TABLE = 0xA32600C0;
 const POWER = {
   events: [0x10000001, 0x10000010, 0x10000008, 0x10000004, 0x10000020, 0x10000040, 0x10000080, 0x10000100, 0x10000200, 0x10000400,
-    0x10000800, 0x10800000, 0x10001000, 0x11000000],
+    0x10000800, 0x10800000, 0x10001000, 0x11000000, 0x10002000, 0x10004000, 0x10008000, 0x10010000],
   ports: [132, 44, 38, 39, 40, 186, 134, 133, 16, 13, 14, 15], port: 0x5002357C, sender: 0x5019D460, completion: 0x502CD4D0,
   clocks: [[0x9B500870, 1], [0x9B500008, 0x700], [0x9B5009A0, 0x10], [0x9B5009E0, 0x10], [0x9B500810, 1]],
-  stop: /stopped at 0x[0-9a-f]+ \(disasm 0x5019dcb6\) fault=2[\s\S]*om1\.camfe UNKNOWN write 0x9b000a04 size 4 value 0x00002100 [\s\S]*SSG1's command unit/,
+  stop: /stopped at 0x[0-9a-f]+ \(disasm 0x50160cfe\) fault=2[\s\S]*om1\.camfe UNKNOWN write 0x9b5008a0 size 4 value 0x00000001 /,
 };
 const FE_IRQS = { 15: 0x501A2478, 16: 0x501A24C2, 17: 0x501A250C, 18: 0x5019E218, 19: 0x501A2EC1, 22: 0x501A2F9F, 24: 0x50195B8E,
   25: 0x501A3BEA, 26: 0x50156528, 27: 0x501919B4, 31: 0x50191DF2, 32: 0x5015789D, 33: 0x501579AA, 34: 0x50157AB7, 35: 0x50157D21,
@@ -403,10 +405,10 @@ export async function camFrontEndSession() {
     ok(JSON.stringify(ports) === JSON.stringify(POWER.ports.map((p) => [p, 1])), `the ports it turns on, in order: ${ports.map(([p, v]) => `${p}=${v}`)} (want ${POWER.ports})`);
     const ms = (a, b) => (at.get(b) - at.get(a)) / 1e6, dt = [ms(0x10000001, 0x10800000), ms(0x10800000, 0x10001000), ms(0x10001000, 0x11000000)].map((x) => Math.round(x));
     ok(JSON.stringify(dt) === JSON.stringify([27, 7, 1]), `the rails take ${dt[0]} ms (want 27: 5 + 5 + 0 + 5 + 5 + 0 + 2 + 5), then ${dt[1]} ms and ${dt[2]} ms (want 7 and 1)`);
-    ok(POWER.clocks.every(([a, v]) => fe.regs.get(a) === v) && fe.writes - w1 === 8 && fe.reads - r1 === 3,
-      `S-CAMFE takes the power-on's clock enables (${POWER.clocks.map(([a]) => `${h8(a)} = ${h8(fe.regs.get(a) ?? 0xFFFFFFFF)}`)}; ${fe.writes - w1} writes, ${fe.reads - r1} reads, want 8 and 3)`);
+    ok(POWER.clocks.every(([a, v]) => fe.regs.get(a) === v) && fe.ssg.ends === 13,
+      `S-CAMFE takes the power-on's clock enables (${POWER.clocks.map(([a]) => `${h8(a)} = ${h8(fe.regs.get(a) ?? 0xFFFFFFFF)}`)}) and SSG1's command unit ends its ${fe.ssg.ends} batches (want 13; ${fe.writes - w1} writes, ${fe.reads - r1} reads)`);
     ok(stop !== null && POWER.stop.test(stop) && !reached.length && !seen.length && take.cam.errlogs.length === e1,
-      `it stops at SSG1's command unit (${String(stop).replace(/\s+/g, ' ').slice(0, 330)}); reached ${JSON.stringify(reached)} ${JSON.stringify(seen)} (want nothing), cam.c logs ${take.cam.errlogs.slice(e1).map(h8)}`);
+      `it stops in the units' set-up at the clock gate 0x9b5008a0 (${String(stop).replace(/\s+/g, ' ').slice(0, 330)}); reached ${JSON.stringify(reached)} ${JSON.stringify(seen)} (want nothing), cam.c logs ${take.cam.errlogs.slice(e1).map(h8)}`);
   } catch (e) { bad.push(`camFrontEndSession: ${e.message.slice(0, 600)}`); }
   pl.close_session();
   return { checks, bad };

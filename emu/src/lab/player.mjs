@@ -592,7 +592,7 @@ export class Player {
     if (this.session?.camapp?.take?.focus_tid) used.push('H-TAKEFOCUS');                     // --take probe: TAKE_FOCUS natively (take.mjs)
     if (this.session?.camapp?.take?.thr_takeover_set) used.push('S-THRTAKEOVER');            // --take probe under camapp 3 (take.mjs)
     if (this.session?.camapp?.take?.cam_inited) used.push('H-CAMINIT');                      // --take probe (take.mjs)
-    if (this.session?.camapp?.take?.cam_fe_inited) used.push('H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2');   // and cam_fe
+    if (this.session?.camapp?.take?.cam_fe_inited) used.push('H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2', 'A-CAMFE-3', 'A-CAMFE-4');   // and cam_fe
     if (this.session?.camapp?.take?.exp_tid != null) used.push('H-EXPINIT');                 // and --cpu2 native
     const stb = this.session?.camapp?.take;                                                  // --take probe: the strobe natively (take.mjs, shoe.mjs)
     if (stb?.stb_tids) used.push('H-STBINIT', 'S-HOTSHOE', ...(stb.shoe.mapped ? ['H-SIOMAP'] : []), 'A-HOTSHOE-1', 'A-HOTSHOE-2');

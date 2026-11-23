@@ -18,9 +18,9 @@
 //   - every other read (the clock gates 0x9b5008xx included: no code in cam.c's range reads them by address, D), a
 //     width other than 4, an address outside PROGRAM and a debugger write are UNKNOWN (a bus error, printed for a CPU
 //     access)
-// No interrupt line is driven: the units' status registers (IRQs 15-22, 24-42 and 243-247, attached by the init) are
-// not modelled, so none of their handlers runs (docs/hle-gaps.md 4.2.5: who would raise them, and why no stand-in
-// does).
+// No other interrupt line is driven: the units' status registers (IRQs 15-17, 19-22, 24-42 and 243-247, attached by
+// the init) are not modelled, so none of their handlers runs (docs/hle-gaps.md 4.2.5: who would raise them, and why no
+// stand-in does); IRQ 18 is SSG1's command unit's (below).
 // The power-on's clock enables (docs/hle-gaps.md 4.2.6; POWER_ON below). cam_seq_power.c's power-on (cam.c's request
 // 6) turns the camera clocks on before it programs anything else in these blocks (its event 0x10800000,
 // 0x5019caac -> 0x5019d213), through the clock block's gate functions: each keeps a count in RAM and writes its gate's
@@ -34,10 +34,35 @@
 //   +0x9a0, +0x9e0      cam_cpm.c's 0x5016591d(0x20000010): group 1 ors its low 29 bits into both
 //                       (0x50165955..0x50165962), each read first: A-CAMFE-1 again (the code branches on neither
 //                       value, D); then the update strobe +0xa08 = 1 and its poll (0x50165b31, A-CAMFE-2's word)
-// They are enables with no reader in the lab, so the register file takes them. The next register the power-on
-// writes is SSG1's +0xa04 (0x5019dcb6: the configuration of the unit that sends the sensor its serial commands,
-// +0xa00..+0xa64 with the command RAM +0x3000 and the end interrupt IRQ 18), which is not modelled: that write is
-// UNKNOWN, and the power-on stops there (docs/hle-gaps.md 4.2.6).
+// They are enables with no reader in the lab, so the register file takes them.
+// SSG1's command unit (docs/hle-gaps.md 4.2.6 and its 2026-11-22 subsection; SSG below), the unit that sends the
+// sensor its serial commands (that role I). Its driver 0x5019deed..0x5019e47c (D) and the SSG's requests 7 / 8
+// (0x5019d91a, 0x5019dacb -> 0x5019dc8f) use, of SSG1 at 0x9b000000:
+//   +0x000      bit 6 cleared before a start (0x5019e076) and set again when a queue empties (0x5019e2e7,
+//               0x5019e418): the init's word (A-CAMFE-1), which now takes 0x40 beside 0
+//   +0x004      status, write 1 to clear (IRQ 18's handler 0x5019e218 reads it, ands +0x014 and writes the result
+//               back): bit 21 a mode-0 batch's end (0x5019e279), bit 20 a mode-1 entry's end (0x5019e34b), bit 22
+//               a one-shot call (0x5019e47c; the model never sets it). IRQ 18 is high while status & +0x014 is not 0
+//   +0x014      the interrupt mask the init writes (0x700000), read by the handler
+//   +0x60c      read before and between the unit's accesses into 0x62a25ee4, which nothing reads (D: the word's ten
+//               references are stores); reads 0 (A-CAMFE-4)
+//   +0xa00      the start: count << 8 | 1 (count 1..120 entries of the command RAM, 0x5019e167..0x5019e171) starts
+//               a run; 0 after an end (0x5019e287, 0x5019e38f). A run ends after RUN_NS + ENTRY_NS per entry of lab
+//               time (A-CAMFE-3), with status bit 21 when +0xa04 bit 8 is set (a mode-0 batch) and bit 20 when it is
+//               clear (a mode-1 entry, count 1). Mode 0 and mode 1 both write 0x101 for one entry; what tells them
+//               apart in the unit is not in the code: the model takes +0xa04 bit 8, which mode 1 sets from its table
+//               word 0x62a254e0 (0x5019e1f4) and which the driver sets again when the mode-1 queue empties
+//               (0x5019e3ef..0x5019e3fa), while the power-on's +0xa04 = 0x2100 has it set (I, part of A-CAMFE-3)
+//   +0xa04..+0xa64  the unit's configuration (+0xa04, +0xa08, +0xa0c, +0xa14, +0xa18, +0xa1c, +0xa20, +0xa24 and
+//               the ten words +0xa40..+0xa64, 0x5019dc8f by the parameter table's flags; +0xa14 by 0x5019dc77, the
+//               enqueue's read 0x5019e01e and the handler's restore 0x5019e31b / 0x5019e44c): storage, a read
+//               before the first write UNKNOWN (+0xa08 keeps A-CAMFE-1). What their values mean (the run's timing,
+//               +0xa18 / +0xa1c, I) is not modelled
+//   +0xa10      the sensor's reply to a mode-1 entry (0x5019e366): UNKNOWN, as nothing in the lab answers for the
+//               sensor
+//   +0x3000..+0x33bf  the command RAM, 120 entries of two words (0x5019e100..0x5019e10f, 0x5019e1b0..0x5019e1bd):
+//               write-only storage; a run's entries are kept in runs (the newest RUNS_KEPT)
+// A start while a run is in progress, or with a count of 0 or above 120, is UNKNOWN.
 // Built on demand by the probe (src/lab/take.mjs H-CAMINIT2), not by the machine.
 import { BUS, K_MMIO, addRegion, findRegion, ctx } from '../core/mem.mjs';
 
@@ -104,11 +129,26 @@ export const POLL = 0x9B500A08;
 // its two read-before-write registers (A-CAMFE-1)
 export const POWER_ON = [[0x9B500000, [[0x8, 0x700], [0x870, 0x1], [0x9A0, 0x10], [0x9E0, 0x10]]]];
 export const POWER_RMW = [0x9B5009A0, 0x9B5009E0];
-// SSG1's command unit (the sensor's serial channel: its registers +0xa00..+0xa64 and the word +0x60c its driver reads
-// around them), named in the refusal of an access to it
-const SENSOR_SERIAL = (a) => (a >= 0x9B000A00 && a < 0x9B000A68) || a === 0x9B00060C;
+// SSG1's command unit (the header's paragraph)
+export const SSG = {
+  base: 0x9B000000, irq: 18, ctrl: 0x9B000000, status: 0x9B000004, mask: 0x9B000014, dummy: 0x9B00060C,
+  start: 0x9B000A00, mode: 0x9B000A04, reply: 0x9B000A10, ram: 0x9B003000, entries: 120,
+  // the configuration words the driver writes (storage)
+  config: [0xA04, 0xA08, 0xA0C, 0xA14, 0xA18, 0xA1C, 0xA20, 0xA24, 0xA40, 0xA44, 0xA48, 0xA4C, 0xA50, 0xA54, 0xA58, 0xA5C, 0xA60, 0xA64].map((o) => 0x9B000000 + o),
+  ctrl_values: [0x0, 0x40],   // +0x000: the init's 0 and the driver's bit 6
+  batch_end: 1 << 21, entry_end: 1 << 20, batch_mode: 0x100,
+};
+// A-CAMFE-3 (I): a run of n entries ends RUN_NS + n * ENTRY_NS of lab time after its start (the unit's serial rate
+// and +0xa18 / +0xa1c's meaning are not known; the driver waits for IRQ 18 with no timeout of its own, D 0x5019deed..
+// 0x5019e47c, so only the lab's pace depends on it)
+export const RUN_NS = 10e3, ENTRY_NS = 1e3;
+// the command runs whose entries are kept (the newest)
+export const RUNS_KEPT = 64;
+// SSG1's command unit's words, named in a refusal
+const SENSOR_SERIAL = (a) => (a >= 0x9B000A00 && a < 0x9B000A68) || a === 0x9B00060C || (a >= 0x9B003000 && a < 0x9B004000);
 const REFUSED = {
-  serial: 'SSG1\'s command unit, the sensor\'s serial channel: not modelled',
+  serial: 'SSG1\'s command unit, the sensor\'s serial channel',
+  reply: 'SSG1\'s command unit\'s reply +0xa10: what the sensor answers is not modelled',
   outside: 'not one the second init or the power-on\'s clock enables touch',
   value: 'a value neither the second init nor the power-on\'s clock enables write',
   write_only: 'a register the firmware only writes here',
@@ -128,6 +168,10 @@ export class CamFe {
     this.regs = new Map();        // address -> the value last written
     this.rmw = new Set([...RMW, ...POWER_RMW]);
     this.writes = 0; this.reads = 0;
+    // SSG1's command unit: its status, the run in progress (due at that lab ns) and the command RAM
+    this.clock = machine.devices.clock; this.intc = machine.devices.intc;
+    this.ssg = { status: 0, due: Infinity, run: null, ram: new Uint32Array(SSG.entries * 2), runs: [], starts: 0, ends: 0, dropped: 0 };
+    this.ssg_config = new Set(SSG.config);
     // one region per block, from the page of its first register to the end of the page of its last; a block that
     // overlaps a region the machine already has is refused
     for (const [base, regs] of PROGRAM) {
@@ -136,6 +180,69 @@ export class CamFe {
       addRegion({ base: lo, size: hi - lo, kind: K_MMIO, name: 'om1.camfe',
         dev: { read: (a, w, dbg) => this.read(a >>> 0, w, dbg), write: (a, v, w, dbg) => this.write(a >>> 0, v, w, dbg) } });
     }
+    // the command RAM's page
+    if (findRegion(SSG.ram) !== null) throw new Error(`S-CAMFE: ${hex8(SSG.ram)} already has the region ${findRegion(SSG.ram).name}`);
+    addRegion({ base: SSG.ram, size: 0x1000, kind: K_MMIO, name: 'om1.camfe',
+      dev: { read: (a, w, dbg) => this.read(a >>> 0, w, dbg), write: (a, v, w, dbg) => this.write(a >>> 0, v, w, dbg) } });
+    this.intc.drive(SSG.irq);
+    this.clock.add({ next: () => this.ssg.due, fire: (at) => this.ssg_end(at) });
+  }
+  // IRQ 18: high while SSG1's status and the mask +0x014 share a bit
+  ssg_update() { this.intc.setLine(SSG.irq, (this.ssg.status & (this.regs.get(SSG.mask) ?? 0)) !== 0); }
+  // a write of +0xa00: 0 after an end, count << 8 | 1 a start (A-CAMFE-3)
+  ssg_start(a, value, size) {
+    const g = this.ssg;
+    if (value === 0) {
+      if (g.due !== Infinity) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: a stop while a run is in progress`);
+      this.regs.set(a, 0); this.writes++; return;
+    }
+    const count = value >>> 8;
+    if ((value & 0xFF) !== 1 || count < 1 || count > SSG.entries) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: a start of count << 8 | 1 with 1..${SSG.entries} entries`);
+    if (g.due !== Infinity) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: a start while a run is in progress`);
+    const mode = this.regs.get(SSG.mode);
+    if (mode === undefined) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: a start before +0xa04 is written`);
+    const batch = (mode & SSG.batch_mode) !== 0;
+    if (!batch && count !== 1) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: a mode-1 start (+0xa04 bit 8 clear) of ${count} entries`);
+    this.regs.set(a, value); this.writes++;
+    g.starts++;
+    g.run = { n: g.starts, t_ns: this.clock.t, count, mode: batch ? 0 : 1, pc: ctx.pc(), entries: Array.from(g.ram.subarray(0, 2 * count)) };
+    g.runs.push(g.run);
+    if (g.runs.length > RUNS_KEPT) { g.runs.shift(); g.dropped++; }
+    g.due = this.clock.t + RUN_NS + count * ENTRY_NS;
+  }
+  // the lab clock: the run in progress ends (A-CAMFE-3)
+  ssg_end(at) {
+    const g = this.ssg;
+    g.due = Infinity; g.ends++;
+    g.run.end_ns = at;
+    g.status = (g.status | (g.run.mode === 0 ? SSG.batch_end : SSG.entry_end)) >>> 0;
+    g.run = null;
+    this.ssg_update();
+  }
+  // SSG1's command unit's words, or undefined for an address that is not one of them
+  ssg_read(a, size, dbg) {
+    if (a === SSG.status) { if (!dbg) this.reads++; return this.ssg.status; }
+    if (a === SSG.mask && this.regs.has(a)) { if (!dbg) this.reads++; return this.regs.get(a); }
+    if (a === SSG.dummy) { if (!dbg) this.reads++; return 0; }                                   // A-CAMFE-4
+    if (a === SSG.reply) return this.unknown('read', a, size, 0, dbg, REFUSED.reply);
+    if (this.ssg_config.has(a) && !this.rmw.has(a)) {
+      if (!this.regs.has(a)) return this.unknown('read', a, size, 0, dbg, `${REFUSED.serial}: a read before the first write`);
+      if (!dbg) this.reads++;
+      return this.regs.get(a);
+    }
+    if (a >= SSG.ram && a < SSG.ram + 0x1000) return this.unknown('read', a, size, 0, dbg, `${REFUSED.serial}: the command RAM is written only`);
+    return undefined;
+  }
+  ssg_write(a, value, size) {
+    if (a === SSG.status) { this.ssg.status = (this.ssg.status & ~value) >>> 0; this.writes++; this.ssg_update(); return true; }
+    if (a === SSG.start) { this.ssg_start(a, value, size); return true; }
+    if (a === SSG.ctrl && SSG.ctrl_values.includes(value)) { this.regs.set(a, value); this.writes++; return true; }
+    if (this.ssg_config.has(a)) { this.regs.set(a, value); this.writes++; return true; }
+    if (a >= SSG.ram && a < SSG.ram + 0x1000) {
+      if (a >= SSG.ram + 8 * SSG.entries) return this.unknown('write', a, size, value, false, `${REFUSED.serial}: past the command RAM's ${SSG.entries} entries`);
+      this.ssg.ram[(a - SSG.ram) >> 2] = value; this.writes++; return true;
+    }
+    return false;
   }
   unknown(kind, a, size, value, dbg, why = '') {
     if (!dbg) this.m.stderr(`om-emu: om1.camfe UNKNOWN ${kind} ${hex8(a)} size ${size} value ${hex8(value)} pc ${hex8(ctx.pc())}${why ? ` (${why})` : ''}`);
@@ -143,6 +250,8 @@ export class CamFe {
   }
   read(a, size, dbg) {
     if (size !== 4 || (a & 3)) return this.unknown('read', a, size, 0, dbg);
+    const sv = this.ssg_read(a, size, dbg);
+    if (sv !== undefined) return sv;
     // A-CAMFE-2: the start bit has cleared
     if (a === POLL) { if (!dbg) this.reads++; return (this.regs.get(a) ?? 0) & ~1; }
     if (!this.rmw.has(a)) {
@@ -156,14 +265,15 @@ export class CamFe {
   write(a, value, size, dbg) {
     value >>>= 0;
     if (dbg || size !== 4 || (a & 3)) return this.unknown('write', a, size, value, dbg);
+    if (this.ssg_write(a, value, size)) return;
     const vs = this.allowed.get(a), pv = this.power.get(a);
     if (!vs && !pv) return this.unknown('write', a, size, value, dbg, this.outside(a));
     if (!vs?.has(value) && !pv?.has(value)) {
-      return this.unknown('write', a, size, value, dbg, SENSOR_SERIAL(a) ? REFUSED.serial : REFUSED.value);
+      return this.unknown('write', a, size, value, dbg, SENSOR_SERIAL(a) ? `${REFUSED.serial}: ${REFUSED.value}` : REFUSED.value);
     }
     this.regs.set(a, value);
     this.writes++;
   }
   // why an address outside the two programs is refused
-  outside(a) { return SENSOR_SERIAL(a) ? REFUSED.serial : REFUSED.outside; }
+  outside(a) { return SENSOR_SERIAL(a) ? `${REFUSED.serial}: a word its driver does not use` : REFUSED.outside; }
 }

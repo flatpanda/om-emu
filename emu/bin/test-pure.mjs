@@ -199,7 +199,7 @@ report('S-MODPOST: the posts it takes, the guard\'s report, the object-name tabl
 report('S-TAKERDY: the take requests it follows with TAKE\'s event or leaves unanswered (src/lab/camapp.mjs take_ready_rule)', await takeReadyUnits());
 report('S-DISPQ\'s queue: posts in an open DISPLAY run kept for the outermost run\'s end, in order (src/lab/dispq.mjs)', await dispqUnits());
 report('S-RELSEQ\'s S1 by the focus mode (HALF_AF) and S-SEQSTANDBY\'s rest test (src/lab/camapp.mjs)', await fnLeverUnits());
-report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, refusals (S-CAMFE)', camFeUnits());
+report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, SSG1\'s command unit (A-CAMFE-3 / 4), refusals (S-CAMFE)', camFeUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());

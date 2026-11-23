@@ -810,9 +810,10 @@ CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
 // 0, 0x502cda60); then the camera clocks (0x5019d213), four more ports, the configuration of SSG1's command unit (the
 // SSG's requests 7 and 8, applied by 0x5019dc8f), three requests of cam_frame_driver.c (0x50171ade with 131), the
 // units' set-up (0x5019d287) and the kind-7 sender 0x5019d460, which calls the front end's entry (hle-gaps 4.2.5),
-// twice. Natively under cam_fe it runs the rails and the clocks, which S-CAMFE takes (camfe.mjs POWER_ON), and stops
-// at the command unit's first register (0x9b000a04, written at 0x5019dcb6): the sensor's serial channel is not
-// modelled, and the request would not complete. So S-TAKECAM keeps answering requests 6 and 5 (the power-off's first
+// twice. Natively under cam_fe it runs the rails and the clocks, which S-CAMFE takes (camfe.mjs POWER_ON), and the
+// command unit, which S-CAMFE models since 2026-11-22 (camfe.mjs SSG: 13 mode-0 batches, each ended on IRQ 18), and
+// stops in the units' set-up at the clock gate 0x9b5008a0 (0x50160cfe), so the request would not complete
+// (hle-gaps 4.2.6). So S-TAKECAM keeps answering requests 6 and 5 (the power-off's first
 // event sends the front end a kind-7 request, 0x5019cf56), and cam_install only records the sequences' events and
 // rail steps for a test that makes the request itself (test_expcb.mjs camFrontEndSession)
 export const CAM_E143 = {

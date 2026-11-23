@@ -12,10 +12,16 @@
 //                    chains, the locked file kept with its bytes, first cluster and read-only bit, its folder kept; the
 //                    firmware's count 1 and S-CARD's records 1. Unlocked by the DCF edit, the second Erase All: no
 //                    picture counted, the emptied folder removed from DCIM, the free count the start's. MENU back to
-//                    the shooting screen and S2: the next picture counted and on the card. Last, the dialog's Save
-//                    (the rating-exclusive erase all, command 6) stops the session at S-MDACTRL with the command named.
-//                    On a body without the native erase all (no S-MDACTRL, or no erase-all call read: ERASE_ALL has the
-//                    others) the session is not run.
+//                    the shooting screen and S2: the next picture counted and on the card. Then (2026-11-22,
+//                    docs/hle-gaps.md 4.8.16) a second picture, the first locked again by the DCF edit, Reset All
+//                    Images, Reset Protect and Yes: the media control's unlock all (command 5) natively, the first
+//                    file's read-only bit cleared on the card and its fnode's lock bit; the second picture rated 3 by
+//                    the firmware's own DCF edit (OBJ_RATING, the test's own action, the Exif Rating tag 0x4746 read
+//                    back as 3 by refs/exif.mjs, the rest of the file unchanged), and Erase All, Save and Yes: the
+//                    rating-exclusive erase all (command 6) natively, the rated file kept with its bytes, the other
+//                    erased; the firmware's count 1 (on E146 and E147, not in RATING_ERASE, Save is refused at S-MDACTRL
+//                    with the command named and both files kept). On a body without the native erase all (no S-MDACTRL, or no
+//                    erase-all call read: ERASE_ALL has the others) the session is not run.
 //   node emu/test/test_eraseall.mjs   (with OM_EMU_MODEL=E146 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -27,7 +33,17 @@ import zlib from 'node:zlib';
 // E148 0x50a6c105). The other bodies have no S-MDACTRL (their application runs the media control itself, S-MDAEND)
 export const ERASE_ALL = new Set(['E143', 'E146', 'E147', 'E148']);
 export const ERASE_ALL_BODIES = ['E146', 'E147', 'E148', 'E144', 'E122'];
-const DCFED_OBJ_LOCK = 0x23, DCFED_OBJ_UNLOCK = 0x24, READ_ONLY = 0x01, ERASE_ALL_CMD = 3, SAVE_CMD = 6, MAX_TABS = 8;
+// the bodies whose rating-exclusive erase all (Erase All's Save, command 6) runs natively (X, 2026-11-22; models.mjs
+// card_fs.hls.ctrl.rating_erase): E146's and E147's DCF edit takes its buffer from a memory pool past the lab's DRAM
+// (docs/hle-gaps.md 4.8.16), so S-MDACTRL refuses the command there
+export const RATING_ERASE = new Set(['E143', 'E148']);
+const DCFED_OBJ_LOCK = 0x23, DCFED_OBJ_UNLOCK = 0x24, DCFED_OBJ_RATING = 0x2b, READ_ONLY = 0x01, ERASE_ALL_CMD = 3, UNLOCK_ALL_CMD = 5, SAVE_CMD = 6, MAX_TABS = 8;
+// the DCF edit's OBJ_RATING block (dcfedit.c op 6, E143 0x508744e4, D): +2 the drive, +4 the fnode, +20 the rating,
+// +24 a buffer of RATING_BUF bytes holding the file's head, which the edit's Exif rating set (0x5042aade) changes and
+// its sector write (0x50873f37, dosfile operation 4, RATING_BUF >> 9 sectors from the file's first cluster) puts back
+// (for the main image it reads nothing first, 0x5087412f; the rating API 0x504022b5, API 0x7004b, takes the buffer
+// from its caller, 0x50534dd1, not read further: the test fills it from the card); the Exif Rating tag 0x4746 (IFD0)
+const RATING_BUF = 0x10000, RATING = 3, EXIF_RATING = 0x4746;
 const MENU = 'SS_MENU/ID_ST_MENU';
 
 export async function eraseAllSession() {
@@ -41,6 +57,7 @@ export async function eraseAllSession() {
   const { pack } = await import('../src/util/bytes.mjs');
   const { openVolume } = await import('../refs/volume.mjs');
   const { MenuWalk, screenTexts } = await import('../src/lab/menuwalk.mjs');
+  const { readExif } = await import('../refs/exif.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000,
     deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: 'tft' }, env);
@@ -59,19 +76,21 @@ export async function eraseAllSession() {
     const files = new Map((dir ? v.list(dir) : []).filter((e) => !e.dir).map((e) => [e.name, { ...e, chain: v.chain(e.cluster), sha: sha(v.data(e)) }]));
     return { v, dcim, dir, files, deleted: dir && v.type === 'FAT32' ? v.deleted(dir) : [], free: v.freeClusters(), fsinfo: v.fsInfo() };
   };
-  const edit = (code, index, label) => {
+  const edit = (code, index, label, more = null) => {
     const pic = st.fnode(index, 'test'), blk = lab.alloc(new Uint8Array(128), 4);
     lab.sim.write(blk + 2, pack('<H', 0));
     lab.sim.write(blk + 4, pack('<I', pic.fnode));
+    if (more) more(blk);
     return st.ask(code, blk, 128, label, 'test').status;
   };
-  // MENU, then the sub dial until the page holds Erase All, the walker to Erase All and the choice, UP to Yes (the
-  // confirm's cursor starts on No, X) and OK, its release with no idle after it, so the erase all is still running
-  const toEraseAll = (choice) => {
+  // MENU, then the sub dial until the page holds Erase All, the walker to the item (Erase All, Reset All Images) and
+  // the choice, UP to Yes (the confirm's cursor starts on No, X) and OK, its release with no idle after it, so the
+  // command is still running
+  const toEraseAll = (choice, item = 'Erase All') => {
     press('menu');
     for (let i = 0; i < MAX_TABS && !texts().includes('Erase All'); i++) { s.dial_input('sub', 1); cam.pump(); s.idle_slice(lab.lab_time() + 600e6); }
     const walk = new MenuWalk({ press, frame: () => s.frame('boundary'), draws: () => lab.draw_log });
-    walk.to([{ row: ['Erase All'] }, { row: [choice] }]);
+    walk.to([{ row: [item] }, { row: [choice] }]);
     press('up');
     const confirm = texts();
     // (the start is taken at OK's press: while S-MDACTRL runs the card input is refused)
@@ -82,9 +101,9 @@ export async function eraseAllSession() {
     cam.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key('ok', 'up'); cam.pump();
     return { walk: walk.log, confirm, running, held };
   };
-  // lab time until the erase all is done
-  const run = (n) => {
-    for (let i = 0; i < 200 && media.erases < n; i++) s.idle_slice(lab.lab_time() + 50e6);
+  // lab time until the erase all (or with key 'unlocks', the unlock all) is done
+  const run = (n, key = 'erases') => {
+    for (let i = 0; i < 200 && media[key] < n; i++) s.idle_slice(lab.lab_time() + 50e6);
     s.idle_slice(lab.lab_time() + 1000e6);
   };
   s.idle_slice(lab.lab_time() + 1500e6);
@@ -132,11 +151,49 @@ export async function eraseAllSession() {
   const next = card(), pic = cam.images[cam.images.length - 1];
   ok(cam.card_images() === 1 && next.files.size === 1 && pic?.folder === 100 && pic?.number === 1,
     `${MODEL}: the next picture: ${cam.card_images()} counted, ${[...next.files.keys()].join(' ')} on the card, ${pic?.folder}-${String(pic?.number).padStart(4, '0')}`);
-  // the dialog's Save: the rating-exclusive erase all, which S-MDACTRL refuses
-  let refusal = null;
-  try { toEraseAll('Save'); } catch (e) { refusal = e.message; }
-  ok(refusal !== null && new RegExp(`S-MDACTRL: the media control's command ${SAVE_CMD} \\(media 0\\)`).test(refusal) && card().files.size === 1,
-    `${MODEL}: Erase All, Save, Yes: ${refusal ? refusal.slice(0, 200) : 'no refusal'}; ${card().files.size} file(s) on the card`);
+  // a second picture, the first locked again: Reset All Images, Reset Protect, Yes (the unlock all, command 5)
+  press('s1'); press('s2');
+  const relock = edit(DCFED_OBJ_LOCK, 1, 'dcf lock'), two = card(), [p1, p2] = [...two.files.values()];
+  ok(relock === 0 && two.files.size === 2 && (p1.attr & READ_ONLY) !== 0 && (p2.attr & READ_ONLY) === 0,
+    `${MODEL}: two pictures, the first locked: status ${relock}, ${[...two.files.values()].map((e) => `${e.name} 0x${e.attr.toString(16)}`).join(', ')}`);
+  const two2 = two.v.data(p2).slice();         // (the volume reads the card at each call)
+  const go5 = toEraseAll('Reset Protect', 'Reset All Images');
+  ok(go5.confirm.includes('Yes') && media.started?.cmd === UNLOCK_ALL_CMD && media.started.media === 0 && go5.running,
+    `${MODEL}: Reset All Images, Reset Protect, Yes: the media control's start ${JSON.stringify(media.started)} (command ${UNLOCK_ALL_CMD}, media 0 expected; the walk ${go5.walk.join('; ')}; the confirm ${JSON.stringify(go5.confirm)}), ${go5.running ? 'running' : 'not running'} at OK's press`);
+  run(1, 'unlocks');
+  const open = card(), u1 = open.files.get(p1.name);
+  ok(media.unlocks === 1 && media.ctrl === null && u1 && (u1.attr & READ_ONLY) === 0 && u1.sha === p1.sha && open.files.size === 2 && (st.fnode(1, 'test').attr & 1) === 0,
+    `${MODEL}: the unlock all: ${JSON.stringify(media.status())}, ${p1.name} 0x${u1?.attr.toString(16)} (read-only ${u1 && (u1.attr & READ_ONLY) ? 'kept' : 'cleared'}), ${open.files.size} files, the fnode's lock ${st.fnode(1, 'test').attr & 1}`);
+  ok(name() === MENU && cam.card_images() === 2, `${MODEL}: after the unlock all the menu, ${cam.card_images()} counted: ${name()} ${JSON.stringify(texts())}`);
+  // the second picture rated by the DCF edit, its buffer the file's head from the card (the menu closed first)
+  for (let i = 0; i < 3 && name() === MENU; i++) press('menu');
+  const rate = edit(DCFED_OBJ_RATING, 2, 'dcf rating', (blk) => {
+    const buf = lab.alloc(st.card.read(open.v.sectorOf(p2.cluster), RATING_BUF >> 9), 4);
+    lab.sim.write(blk + 20, pack('<II', RATING, buf));
+  });
+  const rated = card(), r2 = rated.files.get(p2.name), d2 = r2 && rated.v.data(r2), rating = d2 ? readExif(d2)?.ifd0.get(EXIF_RATING) : undefined;
+  // (two bytes change: the Exif tag's value and the XMP packet's xmp:Rating digit, X)
+  const diff = d2 ? [...d2].reduce((n, b, k) => n + (b !== two2[k]), 0) : -1, xmp = d2 ? Buffer.from(d2).includes(`xmp:Rating="${RATING}"`) : false;
+  ok(rate === 0 && rating === RATING && xmp && d2.length === two2.length && diff === 2 && (r2.attr & READ_ONLY) === 0,
+    `${MODEL}: the DCF edit's rating of ${p2.name}: status ${rate}, its Exif Rating ${rating} (${RATING} expected), the XMP's ${xmp ? '' : 'not '}${RATING}, ${diff} byte(s) changed (2 expected)`);
+  // Erase All, Save, Yes: the rating-exclusive erase all (command 6), natively where RATING_ERASE has the body, else
+  // refused at S-MDACTRL with the command named and nothing erased
+  ok(!!media.f.ctrl.rating_erase === RATING_ERASE.has(MODEL), `${MODEL}: the rating-exclusive erase all ${media.f.ctrl.rating_erase ? 'stood in' : 'refused'}, ${RATING_ERASE.has(MODEL) ? 'stood in' : 'refused'} expected (RATING_ERASE)`);
+  if (!RATING_ERASE.has(MODEL)) {
+    let refusal = null;
+    try { toEraseAll('Save'); } catch (e) { refusal = e.message; }
+    ok(refusal !== null && new RegExp(`S-MDACTRL: the media control's command ${SAVE_CMD} \\(media 0\\)`).test(refusal) && card().files.size === 2,
+      `${MODEL}: Erase All, Save, Yes: ${refusal ? refusal.slice(0, 200) : 'no refusal'}; ${card().files.size} file(s) on the card`);
+    return { checks, bad };
+  }
+  const go6 = toEraseAll('Save');
+  ok(go6.confirm.includes('Yes') && media.started?.cmd === SAVE_CMD && media.started.media === 0 && go6.running,
+    `${MODEL}: Erase All, Save, Yes: the media control's start ${JSON.stringify(media.started)} (command ${SAVE_CMD}, media 0 expected), ${go6.running ? 'running' : 'not running'} at OK's press`);
+  run(3);
+  const saved = card(), k2 = saved.files.get(p2.name), gone1 = saved.deleted.find((d) => d.cluster === p1.cluster);
+  ok(media.erases === 3 && media.ctrl === null && saved.files.size === 1 && k2?.sha === sha(d2) && k2.cluster === p2.cluster && gone1 && gone1.tail === p1.name.slice(1),
+    `${MODEL}: the rating-exclusive erase all: ${JSON.stringify(media.status())}, on the card ${[...saved.files.keys()].join(' ')} (${p2.name} kept${k2?.sha === sha(d2) ? ' with its bytes' : ', bytes changed'}), ${p1.name} ${gone1 ? 'deleted' : 'not deleted'}`);
+  ok(cam.card_images() === 1 && name() === MENU, `${MODEL}: after Save ${cam.card_images()} counted, ${name()}`);
   return { checks, bad };
 }
 

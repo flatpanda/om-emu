@@ -326,9 +326,11 @@ the survey table.
   settings in TAKE's shot record), and E139, E134 and E125, the other two-slot bodies);
   the media control's other commands (erase all, copy, unlock; the erase all done 2026-11-16, hle-gaps.md 4.8.15:
   the playback menu's Erase All sends command 3, S-MDACTRL calls the picture file API's erase all natively and FILECLBK
-  runs the DCF edit's ALL_DELETE, a locked picture kept, the card read back, on E143, E146, E147 and E148; open: the copy all 2, the unlock all 5,
-  whose start notifies the Wi-Fi remote take component first, and the rating-exclusive erase all 6, each still
-  refused); an SDXC card (done
+  runs the DCF edit's ALL_DELETE, a locked picture kept, the card read back, on E143, E146, E147 and E148; since
+  2026-11-22, hle-gaps.md 4.8.16, Reset Protect's unlock all 5 natively on the four, its Wi-Fi notification native,
+  and Erase All's Save, the rating-exclusive erase all 6, natively on E143 and E148, a rated picture kept; open: the
+  copy all 2, and command 6 on E146 and E147, whose DCF edit's 64 KiB buffer lies past the lab's 384 MiB DRAM);
+  an SDXC card (done
   2026-10-29, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an independent exFAT
   reader `refs/exfat.mjs`; the firmware formats a blank 64 or 128 GiB card exFAT in an MBR partition and mounts it,
   X; the tooling, the HLS side and the other bodies with it on 2026-10-29, 4.8.6 round 5: the Card panel and

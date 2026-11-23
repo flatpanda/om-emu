@@ -8604,6 +8604,73 @@ Independent stops the session (below).
   (6), the component's error kinds; the single frame's erase all (play request 23, `PlaySingleFrame::eraseAll`),
   still refused by S-PLAYSEQ: its sender is not found (finding 110), and the menu's Erase All does not use it (X).
 
+#### 4.8.16 The media control's unlock all and rating-exclusive erase all (2026-11-22; D unless tagged, addresses E143's)
+
+- **Why.** 4.8.15 left two of the menu's media control commands refused: Reset All Images' Reset Protect (command 5)
+  and Erase All's Save (command 6). Both now run to the file module natively through S-MDACTRL, as the erase all.
+- **The unlock all (command 5).** executeUnlockAllStart `0x50cebc59` registers for `0x04020011`, takes
+  CapWif_WifiRemoteTake's instance (`0x50bd6bb9`: the singleton `0x60362b64`, made by operator new and its
+  constructor `0x50bd66cc` at the first call) and calls its Wifi_Notify_Callback `0x50bd8f5e` with the event
+  `0x041b0055`, d1 0, a1 0 and a0 the instance (`0x50cebc9d..0x50cebcad`), then the picture file API's unlock all
+  `0x503ff28b(media, 0)` (API `0x70025`). The notification logs where the component's state `0x60362b60` is 3 and
+  calls the notify API `0x503f654e` (API `0xb000e`), which by the connection byte `0x62a5d3be` (1, 9 or 10) or
+  `0x50a6c07d` (not negative) picks one of three senders (`0x503f63ea`, `0x503f5e7f`, `0x503f590a`); in the lab the
+  byte is 0 and none of the three runs (X, E143: each hooked, Wifi_Notify_Callback returns 1), so the notification
+  runs natively and sends nothing. The API: a media of 2 or more (by `0x503fea13`) or `0x8010` returns 0; else a
+  56-byte block, +2 the media, +12 the option `0x40000`, posted by the API's sender as the erase all's with FILECLBK's
+  code 35 (OBJ_LOCK) for d1 1 and 36 (`0x24`, OBJ_UNLOCK, `0x503ff365`) otherwise. The DCF edit's lock / unlock
+  (`0x50872dfc`) takes an option with a bit of `0x60000` to its walk of every object (`0x50872f04`: the progress
+  total the count + 1, the DCF process's commands 3 and 4 around the walk `0x50872f56`) instead of the one fnode at
+  +4. getMediaCtrlCBC gives 55; executeUnlockAllEnd `0x50cebce9` drops the registration; the component's end is the
+  erase all's (4.8.15).
+- **The rating-exclusive erase all (command 6).** executeRatingExclusiveEraseAllStart `0x50cebd29` registers for
+  `0x04020010` and `0x04020011` and calls `0x5040263e(media)` (API `0x7004e`): the erase all's 56-byte ALL_DELETE
+  block (code 37, `0x504026e6`) with +12 the option `0x10` (`0x504026ad`) and +20 1. MULTI_DELETE's body (4.8.15)
+  allocates a 64 KiB buffer at +48 (`0x508740b8`: memory pool 2, `0x50536126`), and its walk's callback
+  (`0x50873412`), for an object not locked and with the option's bit `0x10` (`0x508734aa`), asks `0x50873fbc`: for
+  the object types 17, 19 and 260 it reads the file's first 64 KiB into the buffer (`0x50873f37`, dosfile operation
+  3 by sectors), parses its Exif (`0x504289d1`, `0x504289eb`) for IFD0's tag `0x4746`, the Rating
+  (`0x5042817e`, `0x50428450`), and keeps the object where the rating is +20 (1) or more (`0x508740a5..0x508740b0`).
+  Its progress, getRatingExclusiveEraseAllProgress `0x50cebdbb`, divides the `0x04020011` event's parameter x 100 by
+  the total the component kept from `0x04020010` (its event handler `0x50ce4a66`, `0x50ce4ad0`); the file module
+  posts both from its progress words `0x62ae4cd4` / `0x62ae4cd8` (`0x50890247`, `0x5089029a`), which getMediaProgress
+  (`0x503f093a`) divides the same way, so S-MDACTRL's progress stays getMediaProgress for every command. CBC 54.
+- **The rating, the test's own action.** The DCF edit's OBJ_RATING (FILECLBK `0x2b`, op 6 `0x508744e4`): +4 the
+  fnode, +20 the rating, +24 a 64 KiB buffer holding the file's head; for the main image (fnode +88 of 1 or 3) it
+  reads nothing first (`0x5087412f`), sets the rating in the buffer (`0x5042aade`) and writes the 128 sectors back
+  (`0x50873f37`, dosfile operation 4). The firmware's sender is the picture file API's rating `0x504022b5` (API
+  `0x7004b`), whose buffer comes from its caller (`0x518bfbae`, `0x50534dd1`, not read further, ?). The test fills
+  the buffer from the card. With rating 3 the file's IFD0 Rating reads 3 (`refs/exif.mjs`) and the XMP packet's
+  `xmp:Rating="0"` reads `"3"`; no other byte of the file changes (X, E143, E146, E147, E148).
+- **S-MDACTRL** (`emu/src/lab/media.mjs`): `card_fs.hls.ctrl` names `unlock_all` 5 and `rating_erase` 6 and the
+  unlock all's notification (`wifi`: the instance getter, Wifi_Notify_Callback and the event, D on each body: E146
+  `0x50be6384` / `0x50be8650`, E147 `0x50bf7506` / `0x50bf981a`, E148 `0x5095ba27` / `0x5095df02`, each called
+  as E143's, the event `0x041b0055` on all four). At TRA 1511 with command 5 the stand-in calls the getter and the
+  notification natively, then the API's unlock all with d1 0; with command 6 the API's rating-exclusive erase all;
+  then the erase all's progress and end (no remount; S-CARD's records dropped after command 6 alone).
+  `src/fw/facts.mjs` pictureErase reads both calls by rule (fact `erase.unlock_all`: the one `mov 0x70025,d0`, its
+  function holding `mov 36,d0`; `erase.rating_erase`: the one `mov 0x7004e,d0`, its function holding `mov 37,d0`):
+  unlock_all on the 17 bodies with the object delete, rating_erase on E143, E146, E147 and E148 alone (X: the rule
+  on every body; each the call its start makes, D: E146 `0x50cfc533` / `0x50cfc605`, E147 `0x50d07afc` /
+  `0x50d07bce`, E148 `0x50a6c1d5` / `0x50a6c2a7`). The new facts reach the other bodies at the next
+  `bin/port.mjs all`.
+- **What it does (X, `emu/test/test_eraseall.mjs`, after 4.8.15's steps).** Two pictures, the first locked by
+  OBJ_LOCK: Reset All Images, Reset Protect, Yes starts command 5 for media 0; the file module replies 0; the first
+  file's read-only bit is clear on the card (`refs/fat.mjs`), its bytes kept, its fnode's lock bit clear, and the
+  application is on the Reset All Images list (Reset Print Orders, Reset Protect, Reset share Order, Reset Ratings).
+  The second picture rated 3: Erase All, Save, Yes starts command 6; the rated P1010002 is kept with its bytes and
+  first cluster, P1010001 is deleted (its entry marked), the firmware's count 1, the application back on the File
+  page. E143 26/26; E146 and E147 24/24 and E148 26/26 with the facts the rule reads set in memory (the port not run
+  yet).
+- **E146 and E147: command 6 refused (X).** Their menus send command 6 for Save too, and the unlock all and the
+  rating run, but in the rating-exclusive erase all the walk's Exif read faults: memory pool 2's 64 KiB buffer is
+  `0xbc849400` on E146 (E143's `0xaefbfc00`), past the lab's DRAM, 384 MiB to `0xb8000000` (board fact
+  `dram_size`, `src/fw/facts.mjs` dramSize), and the parser's first read of it (E146 `0x50424cfd`, E147
+  `0x50432fcd`) stops the session. That the two bodies have more DRAM is I. `card_fs.hls.ctrl` gives them no
+  `rating_erase`, so S-MDACTRL refuses the command with its number, and test_eraseall holds that refusal there.
+- **Open.** The copy all (2); command 6 on E146 and E147 (the DRAM's size there, then the pool's place); Reset
+  Ratings, whose command is not read; the component's error kinds.
+
 ### 4.9 HDMI and DisplayPort
 
 Status (2026-10-23): the plug of a cable runs natively down to the transmitter and the hot-plug pin, with the play

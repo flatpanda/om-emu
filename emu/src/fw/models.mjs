@@ -285,8 +285,14 @@ export const MODELS = {
         // erase_all: the command the playback menu's Erase All sends (X: its Erase and Yes send command 3, media 0;
         // the start table's command 3 is executeEraseAllStart 0x50cebba1, getMediaProgress and executeEraseAllEnd
         // 0x50cebc19, X; getMediaCtrlCBC gives 54; the same command from E146's, E147's and E148's menus, X; docs/hle-gaps.md
-        // 4.8.15)
-        ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
+        // 4.8.15). unlock_all and rating_erase (docs/hle-gaps.md 4.8.16): the commands Reset All Images' Reset Protect
+        // and Erase All's Save send (X, E143: 5 and 6, media 0; the start table's executeUnlockAllStart 0x50cebc59 and
+        // executeRatingExclusiveEraseAllStart 0x50cebd29). wifi: what executeUnlockAllStart calls before the picture
+        // file API's unlock all, CapWif_WifiRemoteTake's instance getter 0x50bd6bb9 (the singleton 0x60362b64, made
+        // at the first call) and its Wifi_Notify_Callback 0x50bd8f5e with the event 0x041b0055 (d1 0, a1 0, a0 the
+        // instance; 0x50cebc9d..0x50cebcad, D; the same three calls on E146, E147 and E148, D)
+        ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5, rating_erase: 6,
+          wifi: { instance: 0x50BD6BB9, notify: 0x50BD8F5E, event: 0x041B0055 }, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
           api: 0x503F0820, reply_queue: 0x600431D0, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503F0BD7, flag: [0x50AB4F75, 15261] },
         // The HLS mount state words, by media kind (getter 0x50aca51d, setter 0x50aca6b1(kind d0, a0 -> value)):
@@ -565,7 +571,11 @@ export const MODELS = {
         reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
         events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },
         ids: { progress: 1511, result: 1512 },
-        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50CFC765, progress: 0x50CFC1E7,
+        // no rating_erase on E146 and E147 (docs/hle-gaps.md 4.8.16): Erase All's Save sends command 6 there too (X),
+        // but the DCF edit's walk takes its 64 KiB buffer from a memory pool past the lab's DRAM (X: 0xbc849400 on
+        // E146, the DRAM 384 MiB to 0xb8000000, src/fw/facts.mjs dramSize), and its Exif read there faults: refused
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5,
+          wifi: { instance: 0x50BE6384, notify: 0x50BE8650, event: 0x041B0055 }, cbc: 0x50CFC765, progress: 0x50CFC1E7,
           api: 0x503ECA4D, reply_queue: 0x6004320E, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503ECE04, flag: [0x50ABEF30, 15261] },
         mount: { get: 0x50AD4AF7, set: 0x50AD4C8B, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
@@ -665,7 +675,9 @@ export const MODELS = {
         reception: 0x50AD0628, sync_slot: 2, new: 0x50DB82B6,
         events: { result: [0x50ADD60E, 44], media: [0x50ADD2F9, 36], mount: [0x50ADD571, 40] },
         ids: { progress: 1511, result: 1512 },
-        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50D07D2E, progress: 0x50D077B0,
+        // (no rating_erase: E146's)
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5,
+          wifi: { instance: 0x50BF7506, notify: 0x50BF981A, event: 0x041B0055 }, cbc: 0x50D07D2E, progress: 0x50D077B0,
           api: 0x503FA7E4, reply_queue: 0x60043180, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x503FAB9B, flag: [0x50AC8F6B, 15261] },
         mount: { get: 0x50ADEE2B, set: 0x50ADEFBF, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
@@ -801,7 +813,8 @@ export const MODELS = {
         reception: 0x5083BF33, sync_slot: 2, new: 0x50B1BB11,
         events: { result: [0x5084A01D, 44], media: [0x50849D08, 36], mount: [0x50849F80, 40] },
         ids: { progress: 1514, result: 1515 },
-        ctrl: { request: 1512, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, cbc: 0x50A6C407, progress: 0x50A6BE89,
+        ctrl: { request: 1512, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5, rating_erase: 6,
+          wifi: { instance: 0x5095BA27, notify: 0x5095DF02, event: 0x041B0055 }, cbc: 0x50A6C407, progress: 0x50A6BE89,
           api: 0x502D60F6, reply_queue: 0x600417F8, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
           status: 0x502D64AD, flag: [0x50834A90, 15261] },
         mount: { get: 0x50849183, set: 0x50849317, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },

@@ -3459,14 +3459,25 @@ export function dcfCounts(img) {
 // - erase_all (id 0x70010, 0x503fdaf6: d0 the media; 2 or more returns 0) builds the DCF edit's ALL_DELETE request:
 //   +2 the media, +12 0, FILECLBK's code 37 (0x25: `mov 37,d0; mov d0,(40,sp)`, 0x503fdba2), and posts it through
 //   the API's sender with the API's reply queue (0x503fdbdc), returning the token (src/lab/media.mjs S-MDACTRL's
-//   erase all; docs/hle-gaps.md 4.8.15). An image without it gives erase_all null.
+//   erase all; docs/hle-gaps.md 4.8.15). An image without it gives erase_all null;
+// - unlock_all (id 0x70025, 0x503ff28b: d0 the media, d1 1 to lock, else unlock; a media 2 or more, or 0x8010,
+//   returns 0) builds the DCF edit's request for every picture: +2 the media, +12 the option 0x40000 (the edit's
+//   walk of all objects, 0x50872dfc: option bits 0x60000), FILECLBK's code 35 (0x23, OBJ_LOCK) for d1 1, else 36
+//   (0x24, OBJ_UNLOCK: `mov 36,d0`, 0x503ff365), posted as the erase all's (src/lab/media.mjs S-MDACTRL's unlock
+//   all, the media control's command 5). An image without it gives unlock_all null;
+// - rating_erase (id 0x7004e, 0x5040263e: d0 the media) builds the erase all's ALL_DELETE request with +12 the option
+//   0x10 (`or 16,d0`, 0x504026ad) and +20 1, FILECLBK's code 37 (`mov 37,d0`, 0x504026e6), posted as the erase
+//   all's: with the option bit 0x10 the edit's walk keeps every picture whose Exif Rating (tag 0x4746) is +20 or
+//   more (0x508734aa, 0x50873fbc; S-MDACTRL's rating-exclusive erase all, command 6). An image without it gives
+//   rating_erase null.
 // The entry of each is the greatest call target within API_ENTRY bytes before its id's load. One load of each id
 // in d0 on 17 images, none on E118 and E120 (X, a byte scan; E144's and E130's functions read as E143's, D: E144
-// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all}, or null where the first two ids are
+// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all, unlock_all, rating_erase}, or null where the first two ids are
 // not loaded; throws for an id loaded twice, a load with no call target before it, or a function without its code or
 // its read within API_BODY bytes of whole instructions.
-export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1, erase_all: 0x503FDAF6 };
-const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ERASE_ALL = 0x70010, API_ENTRY = 0x20, API_BODY = 0x200, DCFED_OBJ_DEL = 0x21, DCFED_ALL_DELETE = 0x25, FNODE_ATTR = 89;
+export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1, erase_all: 0x503FDAF6, unlock_all: 0x503FF28B, rating_erase: 0x5040263E };
+const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ERASE_ALL = 0x70010, API_UNLOCK_ALL = 0x70025, API_RATING_ERASE = 0x7004E, API_ENTRY = 0x20, API_BODY = 0x200;
+const DCFED_OBJ_DEL = 0x21, DCFED_OBJ_UNLOCK = 0x24, DCFED_ALL_DELETE = 0x25, FNODE_ATTR = 89;
 export function pictureErase(img) {
   const rule = 'pictureErase', D = (o) => h8(0x50000000 + o);
   const fn = (id, what, has) => {
@@ -3482,7 +3493,9 @@ export function pictureErase(img) {
   const del = fn(API_OBJECT_DELETE, "`mov 33,d0` (the DCF edit's object delete)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_DEL);
   const attr = fn(API_ATTRIBUTE, "`movbu (89,aN),dM` (the fnode's attribute)", (q) => img[q] === 0xf8 && (img[q + 1] & 0xf0) === 0x40 && img[q + 2] === FNODE_ATTR);
   const all = fn(API_ERASE_ALL, "`mov 37,d0` (the DCF edit's ALL_DELETE)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_ALL_DELETE);
-  return del === null || attr === null ? null : { object_delete: del, attribute: attr, erase_all: all };
+  const unlock = fn(API_UNLOCK_ALL, "`mov 36,d0` (the DCF edit's OBJ_UNLOCK)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_UNLOCK);
+  const rating = fn(API_RATING_ERASE, "`mov 37,d0` (the DCF edit's ALL_DELETE)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_ALL_DELETE);
+  return del === null || attr === null ? null : { object_delete: del, attribute: attr, erase_all: all, unlock_all: unlock, rating_erase: rating };
 }
 // The HLS media layer's status word of the SD card in the first slot (fact 'media_status', and through bin/port.mjs
 // the place of E143's MEDIA_STATUS_E143; src/lab/camapp.mjs S-CARD's CARD_STATUS; docs/model-survey.md finding 138).

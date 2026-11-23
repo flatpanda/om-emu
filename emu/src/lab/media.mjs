@@ -24,9 +24,16 @@
 //              its own delete mount among its steps), the progress as the format's (the same getMediaProgress and
 //              progress event), and at the reply the same end, without the DCF numbering mount (the component
 //              starts its remount request for the format alone, D) and with S-CARD's records of the erased
-//              pictures dropped. Any other command (the copy all 2, the unlock all 5, the rating-exclusive erase
-//              all 6), and an error status, stops the session: the component's other starts and its error kinds
-//              (70 / 71 / 118) are not modelled. The ids are E143's: a later build renumbers them
+//              pictures dropped. Since 2026-11-22 (docs/hle-gaps.md 4.8.16) the unlock all (command 5, Reset All
+//              Images' Reset Protect, f.ctrl.unlock_all): executeUnlockAllStart's notification of the Wi-Fi remote
+//              take component natively (f.ctrl.wifi), then the picture file API's unlock all (fact
+//              erase.unlock_all), which posts FILECLBK the DCF edit's OBJ_UNLOCK of every object, natively; and the
+//              rating-exclusive erase all (command 6, Erase All's Save, f.ctrl.rating_erase, on E143 and E148):
+//              the API's ALL_DELETE with the option 0x10 (fact erase.rating_erase), whose walk keeps every picture
+//              with an Exif Rating of 1 or more, natively; both with the erase all's progress and end (the unlock all
+//              erases nothing, S-CARD's records stay). Any other command (the copy all 2, and command 6 where
+//              f.ctrl has no rating_erase), and an error status, stops the session: the component's other starts
+//              and its error kinds (70 / 71 / 118) are not modelled. The ids are E143's: a later build renumbers them
 //              (src/fw/models.mjs card_fs.hls of E146, E147 and E148), and the log names each event by the id its
 //              constructor gave it
 //   S-MEDIA    the media manager's part of a card's removal and insertion, from the card switch's change: UI_IN decodes
@@ -89,15 +96,20 @@ const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
 // NOT_PRESENT so, X; the addresses are in docs/hle-gaps.md 4.8.3). The second slot's word is not placed in the lab (no
 // rule reads the setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
 export const MEDIA_NO_MOUNT = 0, MEDIA_NOT_PRESENT = 0x1001, MEDIA_OK = 0xF000;
+// S-MDACTRL's commands, by their key in f.ctrl (src/fw/models.mjs card_fs.hls.ctrl: the command each sends), and the
+// picture file API's call of each in the fact 'erase' (src/fw/facts.mjs pictureErase)
+const WHAT = { format: 'format', erase_all: 'erase all', unlock_all: 'unlock all', rating_erase: 'rating-exclusive erase all' };
+const FACT = { [WHAT.erase_all]: 'erase_all', [WHAT.unlock_all]: 'unlock_all', [WHAT.rating_erase]: 'rating_erase' };
 
 export class HlsMedia {
   // session: the PlaySession; storage: its Storage (storage.mjs), whose facts carry hls
   constructor(session, storage) {
     this.s = session; this.lab = session.lab; this.storage = storage; this.f = storage.f.hls;
     this.log = [];                  // [kind, detail] of every stand-in action
-    this.ctrl = null;               // S-MDACTRL: the format or erase all in progress {cmd, api, media, cbc, token, t0, progress, sent, reply}
+    this.ctrl = null;               // S-MDACTRL: the command in progress {cmd, what, api, media, cbc, token, t0, progress, sent, reply}
     this.formats = 0;               // formats finished
-    this.erases = 0;                // S-MDACTRL: erase alls finished
+    this.erases = 0;                // S-MDACTRL: erase alls finished (the rating-exclusive one too)
+    this.unlocks = 0;               // S-MDACTRL: unlock alls finished
     this.switched = false;          // S-MEDIA: the slot's card switch changed, not yet handled
     this.switched2 = false;         // S-MEDIA: the second slot's (a body whose second slot the lab models)
     this.notified = [];             // the notifications delivered, [id or 711 state, the reception's answer]
@@ -221,32 +233,51 @@ export class HlsMedia {
     const cmd = b[c.cmd], media = b[c.media] | b[c.media + 1] << 8, option = b[c.option] | b[c.option + 1] << 8;
     this.log.push(['control', `command ${cmd}, media ${media}, option ${option}`]);
     this.started = { cmd, media };
-    const api = cmd === c.format ? c.api : cmd === c.erase_all ? this._erase_all_api(cmd, media) : null;
-    if (api === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (media ${media}): only the format (${c.format}) and the erase all (${c.erase_all}) are stood in`);
+    const what = WHAT[Object.keys(WHAT).find((k) => c[k] !== undefined && c[k] === cmd)];
+    const api = what === WHAT.format ? c.api : what ? this._file_api(cmd, media, what) : null;
+    if (api === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (media ${media}): only ${Object.keys(WHAT).filter((k) => c[k] !== undefined).map((k) => `the ${WHAT[k]} (${c[k]})`).join(', ')} are stood in`);
     if (this.ctrl !== null) throw new MediaError(`S-MDACTRL: a second media control start while command ${this.ctrl.cmd} runs`);
-    this.ctrl = { cmd, api, media, cbc: null, token: null, queue: null, t0: null, progress: 0, sent: 0, reply: null };
+    this.ctrl = { cmd, what, api, media, cbc: null, token: null, queue: null, t0: null, progress: 0, sent: 0, reply: null };
   }
-  // the erase all's call (executeEraseAllStart's, E143 0x50cebba1: the picture file API's erase all, API 0x70010, d0
-  // the media; for media 0 or 1 it posts FILECLBK the DCF edit's ALL_DELETE, code 0x25, and returns the token), on a
-  // body whose build's call the rule reads and whose DCF database holds the pictures (the edit erases what the
-  // database lists), else refused
-  _erase_all_api(cmd, media) {
-    const cam = this.s.camapp, at = cam?.erase_facts?.()?.erase_all ?? null;
-    if (at === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (erase all, media ${media}): the rule reads no picture file API's erase all in ${MODEL}'s build`);
-    if (!cam.dcf_db()) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (erase all, media ${media}): ${MODEL}'s DCF database learns of the lab's pictures only at a mount`);
+  // the picture file API's call a start other than the format's makes (src/fw/facts.mjs pictureErase, fact 'erase'):
+  // executeEraseAllStart's erase all (E143 0x50cebba1: API 0x70010, d0 the media; for media 0 or 1 it posts FILECLBK
+  // the DCF edit's ALL_DELETE, code 0x25, and returns the token), executeUnlockAllStart's unlock all (0x50cebc59: API
+  // 0x70025, d0 the media, d1 0: OBJ_UNLOCK, code 0x24, with the option of every object) and
+  // executeRatingExclusiveEraseAllStart's (0x50cebd29: API 0x7004e, d0 the media: ALL_DELETE with the option 0x10, the
+  // rated pictures kept); on a body whose build's call the rule reads and whose DCF database holds the pictures (each
+  // edit walks what the database lists), else refused
+  _file_api(cmd, media, what) {
+    const cam = this.s.camapp, at = cam?.erase_facts?.()?.[FACT[what]] ?? null;
+    if (at === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (${what}, media ${media}): the rule reads no picture file API's ${what} in ${MODEL}'s build`);
+    if (!cam.dcf_db()) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (${what}, media ${media}): ${MODEL}'s DCF database learns of the lab's pictures only at a mount`);
     return at;
   }
   _start() {
-    const lab = this.lab, f = this.f.ctrl, c = this.ctrl, what = this._what();
+    const lab = this.lab, f = this.f.ctrl, c = this.ctrl, what = c.what;
     c.cbc = lab.call(f.cbc, { d0: c.cmd }, null, null, LIMIT).d0 >>> 0;
     c.queue = lab.sim.read(f.reply_queue, 2)[0] | lab.sim.read(f.reply_queue + 1, 1)[0] << 8;
+    // the unlock all's start first notifies the Wi-Fi remote take component (CapWif_WifiRemoteTake), natively: its
+    // instance (the getter makes it at the first call) and Wifi_Notify_Callback(event, 0, instance, 0), as
+    // executeUnlockAllStart calls them (E143 0x50cebc9d..0x50cebcad, D); with no wireless connection the notify
+    // API (0x503f654e, API 0xb000e) sends nothing (X: none of its three senders runs)
+    if (what === WHAT.unlock_all) {
+      const w = f.wifi, inst = lab.call(w.instance, null, null, null, LIMIT).a0 >>> 0;
+      const r = lab.call(w.notify, { d0: w.event, d1: 0, a0: inst, a1: 0 }, null, null, LIMIT).d0 >>> 0;
+      this.log.push([what, `the Wi-Fi remote take ${h8(inst)} notified of ${h8(w.event)}: ${r}`]);
+    }
     c.t0 = lab.lab_time();
-    c.token = lab.call(c.api, { d0: c.media }, null, null, LIMIT).d0 >>> 0;
+    // (the unlock all's d1: 0 unlocks, 1 locks; executeUnlockAllStart passes 0, D)
+    c.token = lab.call(c.api, { d0: c.media, d1: 0 }, null, null, LIMIT).d0 >>> 0;
     if (!c.token) throw new MediaError(`S-MDACTRL: the ${what} of media ${c.media} returned no token`);
     this.log.push([what, `media ${c.media}: token ${h8(c.token)}, the callback id ${c.cbc}, the reply on queue ${c.queue}`]);
     this.s.settle(`S-MDACTRL ${what}`);
   }
-  _what() { return this.ctrl.cmd === this.f.ctrl.format ? 'format' : 'erase all'; }
+  _what() { return this.ctrl.what; }
+  // getMediaProgress natively (api_media 0x503f093a: the file module's done words 0x62ae4cd8 x 100 / its total
+  // 0x62ae4cd4, 0 for no total), the progress of the format, the erase all and the unlock all. The rating-exclusive
+  // erase all's own getRatingExclusiveEraseAllProgress (E143 0x50cebdbb) wants the component (it divides the
+  // 0x04020011 event's parameter x 100 by the total the component kept from 0x04020010, 0x50ce4ad0, D); both events
+  // carry those same two words (0x50890247, 0x5089029a, D), so getMediaProgress gives its quotient
   _progress() {
     const lab = this.lab, f = this.f, c = this.ctrl;
     const pct = lab.calls(f.ctrl.progress, { d0: c.cmd }, undefined, undefined, LIMIT).d0 >>> 0;
@@ -267,12 +298,12 @@ export class HlsMedia {
     });
     this._result(f.ids.progress, c.cbc, f.ctrl.kinds.progress, PROGRESS_DONE, 0);
     this._media(1, c.media);
-    // the erase all: no remount (the component starts that request after a format alone, E143 0x50cec36e, D); the
-    // DCF edit's delete mount ran in FILECLBK
-    if (what === 'erase all') {
+    // the erase alls and the unlock all: no remount (the component starts that request after a format alone, E143
+    // 0x50cec36e, D); the DCF edit's delete mount ran in FILECLBK. The unlock all erases nothing: S-CARD's records stay
+    if (what !== WHAT.format) {
       this.ctrl = null;
-      this.erases += 1;
-      this.s.camapp?.card_erased?.();
+      if (what === WHAT.unlock_all) this.unlocks += 1;
+      else { this.erases += 1; this.s.camapp?.card_erased?.(); }
       this._result(f.ids.result, c.cbc, f.ctrl.kinds.done, 0, 0);
       return;
     }
@@ -353,7 +384,7 @@ export class HlsMedia {
       if (c.token === null) this._start();
       if (c.progress > c.sent) this._progress();
       if (c.reply !== null) this._finish();
-      else if (this.lab.lab_time() - c.t0 > REPLY_LIMIT_MS * 1e6) throw new MediaError(`S-MDACTRL: no reply to the format (token ${h8(c.token)}) after ${REPLY_LIMIT_MS} ms of lab time`);
+      else if (this.lab.lab_time() - c.t0 > REPLY_LIMIT_MS * 1e6) throw new MediaError(`S-MDACTRL: no reply to the ${c.what} (token ${h8(c.token)}) after ${REPLY_LIMIT_MS} ms of lab time`);
     }
     while (this.ends.length) this._end(this.ends.shift());                   // S-MDAEND
     if (this.switched && this.ctrl === null) this._changed();
@@ -361,7 +392,7 @@ export class HlsMedia {
   }
   take_log() { return this.log.splice(0); }
   status() {
-    return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.erases && { erases: this.erases }), ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
+    return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.erases && { erases: this.erases }), ...(this.unlocks && { unlocks: this.unlocks }), ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
       mount_state: this.mount_state(this.f.slots[SLOT].kind),
       // the second slot, once it holds a card (a session with the default empty slot keeps the document it had)
       ...(this.storage.second?.card ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };

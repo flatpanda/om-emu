@@ -1077,10 +1077,15 @@ const MM_INIT_FOUND = { E143: null, E144: null, E134: null, E122: 0x50483A1F, E1
 const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', 'a0'], E118: ['d1', 'a0'], E120: ['d1', 'a0'] };
 // The picture file API's object delete and attribute (erase; src/fw/facts.mjs pictureErase), as read (D: E144's code 33
 // at 0x502dfb7a and its fnode +89 read at 0x502dfe5a, E130's at 0x502d7564 and 0x502d7899, each after its API id's
-// load as E143's), and none on E118 and E120, which load neither id (X: a byte scan)
-const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3, erase_all: 0x502DFC28 },
-  E130: { object_delete: 0x502D7450, attribute: 0x502D7809, erase_all: 0x502D762C }, E146: { object_delete: 0x503F9B1B, attribute: 0x503F9E58, erase_all: 0x503F9C9D },
-  E147: { object_delete: 0x50407991, attribute: 0x50407CCE, erase_all: 0x50407B13 }, E118: null, E120: null };
+// load as E143's), and none on E118 and E120, which load neither id (X: a byte scan). The unlock all (id 0x70025) on
+// the 17 others, the rating-exclusive erase all (id 0x7004e) on E143, E146, E147 and E148 alone (X, 2026-11-22: the
+// rule on every body; E146 0x503fb432 and 0x503fe7db, E147 0x504092a8 and 0x5040c651, each the call its
+// executeUnlockAllStart and executeRatingExclusiveEraseAllStart make, D: E146 0x50cfc533 and 0x50cfc605, E147
+// 0x50d07afc and 0x50d07bce)
+const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3, erase_all: 0x502DFC28, unlock_all: 0x502E13BD, rating_erase: null },
+  E130: { object_delete: 0x502D7450, attribute: 0x502D7809, erase_all: 0x502D762C, unlock_all: 0x502D9143, rating_erase: null },
+  E146: { object_delete: 0x503F9B1B, attribute: 0x503F9E58, erase_all: 0x503F9C9D, unlock_all: 0x503FB432, rating_erase: 0x503FE7DB },
+  E147: { object_delete: 0x50407991, attribute: 0x50407CCE, erase_all: 0x50407B13, unlock_all: 0x504092A8, rating_erase: 0x5040C651 }, E118: null, E120: null };
 // The SD card's HLS media status word (media_status; src/fw/facts.mjs mediaStatus), as read (D: the setter's medium 4
 // store, E144 0x5084940a, E137 0x507b72ef, E130 0x506ff7fd, E122 0x506a75e9; the map had E137's, E130's and E122's 8
 // bytes low, on the second slot's word)

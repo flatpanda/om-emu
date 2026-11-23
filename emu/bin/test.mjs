@@ -1081,6 +1081,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   su.bad.forEach((x) => console.log('  ', x));
   bad += su.bad.length;
 }
+// PER_SIO's channel map set at the play bring-up (H-SIOMAP, test_siomap.mjs)
+{
+  const { sioMapSession } = await import('../test/test_siomap.mjs');
+  const sm = await sioMapSession();
+  console.log(`PER_SIO's channel map at the bring-up: ${sm.checks - sm.bad.length}/${sm.checks}`);
+  sm.bad.forEach((x) => console.log('  ', x));
+  bad += sm.bad.length;
+}
 // the memory map's rules at addRegion (src/core/mem.mjs), without firmware
 {
   const { memUnits } = await import('../test/test_mem.mjs');

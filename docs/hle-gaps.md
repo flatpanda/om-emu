@@ -7509,6 +7509,24 @@ below, no code change).
   application's wake-up judgement reads the same form, must be read from the placed table before S-BOOTKEY can be
   retired. `0x5014ce00`, `0x5014d62e`, `0x5014d97a` are not read in this pass.
 
+#### 4.7.12 PER_SIO's channel map on every body (2026-11-22; D unless tagged, addresses E143's)
+
+- **Why the lab did not reach it.** The map's setter `0x5005f0b2` is the end of PER_SIO's channel init `0x5005f03f`,
+  which the boot calls (E132 `0x50022205`, 4.7.5); the lab does not run the boot, so the word `0xa32c9e48` stayed 0
+  and every PER_SIO channel's controller index was a byte of low memory. Only the TG-5s (H-SIOMAP in S-SIOIIC's
+  bring-up) and E143's take probe (S-HOTSHOE) ran the setter.
+- **The model.** H-SIOMAP now also runs at the start of the play bring-up on every body without PER_SIO devices
+  (`src/lab/play.mjs` sio_map_bring_up): the setter is fact `sio.map_init` (`src/fw/facts.mjs` sioDriver, read by
+  bytes on each body), refused where unplaced and checked against the port map's place for `0x5005f0b2`
+  (`src/fw/ports.mjs`); the word must be 0 before and set after. The E118 family's driver has no map (4.7.5), so
+  nothing runs there. The mutant `no-siomap` leaves it out. S-HOTSHOE's own call then finds the word set and skips
+  (its `mapped` stays false).
+- **Then (X, E143).** The map is `0x6011be1c` and the panel's channel 2 (configuration `0xa32c6efc`, channel byte 2,
+  4.7.1) has the controller index 2 (`emu/test/test_siomap.mjs`).
+- **Open.** The other bodies' sessions and goldens with the map set are not re-run (this round skipped verification);
+  which accesses changed index with it on each body, and whether a channel now reaches a register page a lab stub
+  denies (the accelerometer probe's stop at `0x98500028`, 4.7.3), is not read.
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

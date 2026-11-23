@@ -522,6 +522,7 @@ export class Player {
     if (fact('mm_init', null)) used.push('H-MMINIT');                                       // the boot chain's stage-3 module init (osd.mjs)
     if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
+    else if (this.session?.sio_map) used.push('H-SIOMAP');                                   // PER_SIO's channel map alone (play.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
     if (this.session?.start_key?.state !== undefined) used.push('H-STARTKEY');              // USTART5's MENU state step (play.mjs)
     if (this.session?.mec?.runs) used.push('H-MECCOUNT');                                  // the mechanism driver's count (mec.mjs)

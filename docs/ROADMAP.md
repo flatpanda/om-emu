@@ -784,7 +784,8 @@ store in the lab (vsc spec §10).
   `0x500532b2` (kernel spec §9.5).
 - A-VEC, A-IAGR, A-TMR-1..5, A-INTC-ORDER; the meaning of udf12/13/21 (A-UNIT); TRAP, NMI, level 0; K-IPI and
   K-BOOTSYNC with CPUs 1..3 (intc/timer spec §5, udf spec).
-- The I2C map init `0x5005f0b2` is not run, so the panel I2C channel byte comes from low RAM 0.
+- The I2C map init `0x5005f0b2` runs at the play bring-up on every body with the map since 2026-11-22 (H-SIOMAP,
+  hle-gaps.md 4.7.12; E143's panel channel 2 is index 2). Open: the other bodies' sessions with it, not re-run.
 - Store init in boot order as the default: an option since M8, the default for EVF starts since PLAYFIX; making it the
   default for TFT starts needs A15's bracket recorder first.
 

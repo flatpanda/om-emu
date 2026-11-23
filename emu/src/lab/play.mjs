@@ -20,7 +20,8 @@ import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs
 import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, MODE_DIAL_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, MODE_DIAL_E143, SIO_E143 } from '../fw/facts.mjs';
+import { FACTS } from '../fw/ports.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
 import * as K from './kernel.mjs';
@@ -1310,6 +1311,7 @@ export class PlaySession extends N.NavSession {
     lab.play_init(o);
     this.begin('play-bring-up');
     if (!this.lens && lab.sim.m.devices.dpc) this.dpc_bring_up();
+    if (!MODEL_INFO.sio_devices && o.mutant !== 'no-siomap') this.sio_map_bring_up();
     const tid = [];
     for (const [t, [e]] of lab.nk.tasks()) if (e === UI_IN) tid.push(t);
     if (tid.length !== 1) throw new PlayError(`UI_IN: static tasks with entry ${h8(UI_IN)}: ${show(tid)}`);
@@ -1392,6 +1394,25 @@ export class PlaySession extends N.NavSession {
   // S-SIOIIC (src/lab/bodystart.mjs sioStart), before the power task's start configures the charger's channel
   sio_bring_up() {
     this.sio = sioStart(this.lab);
+  }
+  // H-SIOMAP on a body without PER_SIO devices: the channel map's setter (fact 'sio.map_init', E143 0x5005f0b2, the
+  // end of PER_SIO's channel init 0x5005f03f, which the boot calls and the lab does not) run natively at the bring-up,
+  // so each channel's controller index (the panel's channel 2 among them) is the board's, not a byte of low memory.
+  // A body whose driver has no map (the E118 family, src/fw/facts.mjs sioDriver) has none to set. Returns the map
+  // pointer, or null where there is none
+  sio_map_bring_up() {
+    const lab = this.lab, sim = lab.sim;
+    if (!ON_LAB_MODEL && !FACTS[MODEL]?.sio && !MODEL_INFO.sio) return null;
+    const f = fact('sio', SIO_E143);
+    if (!f?.map_init || !f.channels) return null;
+    refuseUnmapped(f.map_init, 'H-SIOMAP');
+    if (A(SIO_E143.map_init) !== f.map_init) throw new PlayError(`H-SIOMAP: the port map places ${h8(SIO_E143.map_init)} at ${h8(A(SIO_E143.map_init))}, the rule read the setter at ${h8(f.map_init)}`);
+    if (sim.u32(f.channels)) throw new PlayError(`H-SIOMAP: PER_SIO's channel map word ${where(f.channels)} is set before its setter runs`);
+    lab.call(f.map_init, null, null, null, 20000);
+    const map = sim.u32(f.channels) >>> 0;
+    if (!map) throw new PlayError(`H-SIOMAP: the setter ${h8(f.map_init)} left the channel map word ${where(f.channels)} at 0`);
+    this.sio_map = { word: f.channels, map };
+    return map;
   }
   // H-PWRTASK (src/lab/bodystart.mjs powerTaskStart), at the bring-up on a body with the power task
   power_task_bring_up() {

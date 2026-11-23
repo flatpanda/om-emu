@@ -2,7 +2,7 @@
 // tables idles at its pressed level (bit = polarity), named by a control row or not (FIDELITY-NOTES 7.7; until
 // 2026-11-22 an unnamed one kept bit 0, pressed at polarity 0: E122's 0x122b / 0x122c, E147's 0x120b); on E143 the
 // static TYPE2_KEYS (CONTROLS and CODE0_KEYS) is its tables' set; the picture-function rows (picfn_left, picfn_right)
-// are wired exactly on the bodies whose tables hold their codes as keys. No session runs: each body's main block, its
+// and the Shortcut row (shortcut, 0x1224) are wired exactly on the bodies whose tables hold their codes as keys. No session runs: each body's main block, its
 // tables read by uiin_layout, in a child process of its own (the model is fixed when the lab is imported).
 //   keyIdleTests  every body of src/fw/ports.mjs PORTS and E143; a body whose unpacked block is missing is a failure
 //   node emu/test/test_keyidle.mjs            (all bodies)
@@ -34,7 +34,7 @@ export async function bodyTests() {
     const tab = new Set(type2.map(({ g, b, bit, pol }) => key([g, b, bit, pol])));
     ok(tab.size === static0.size && [...tab].every((k) => static0.has(k)), `E143: the static TYPE2_KEYS (${[...static0].join(' ')}) is not its tables' (${[...tab].join(' ')})`);
   }
-  for (const id of ['picfn_left', 'picfn_right']) {
+  for (const id of ['picfn_left', 'picfn_right', 'shortcut']) {
     const c = P.BY_ID.get(id), held = type2.find((e) => e.code === c.bodykey);
     ok(held ? c.status === 'wired' && c.uiin?.[3] === c.bodykey && c.uiin?.[4] === 2 : c.status === 'not-wired' && c.uiin === null,
       `${id}: status ${c.status}, uiin ${JSON.stringify(c.uiin)}; the tables ${held ? 'hold' : 'lack'} 0x${c.bodykey.toString(16)}`);

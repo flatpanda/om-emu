@@ -77,9 +77,11 @@ export const CASES = [
     card_put: EP7_CARD_PUT,
     // the owner's repro (FILM_DOWN_CRASH.md): power on, half-press (the card loader runs and the looks load), the
     // Shortcut button opens the Colour Profile page, Down (or Up three times) reaches the colour wheel, page 1, whose
-    // guide label v0.32+ draws through sn_gd
-    scenario: ['wait:4500', 's1', 'wait:1500', 'shortcut', 'wait:500', 'down', 'wait:1500'],
-    pending_tokens: { shortcut: 'the E-P7 Shortcut button: no om-emu input on E142 names it yet (key:shortcut)' },
+    // guide label v0.32+ draws through sn_gd. The lab's blank camera opens the page on MONO (the stock MONO guide label
+    // 0x60e27209 runs at Down); Left first takes it to the COLOR page the owner's camera showed, whose Down runs the
+    // patched label site 0x60e2757d and jumps to sn_gd 0x61242c40 (X, 2026-11-23, both builds)
+    scenario: ['wait:4500', 's1', 'wait:1500', 'shortcut', 'wait:500', 'left', 'wait:500', 'down', 'wait:1500'],
+    pending_tokens: {},
     detector: 'strict-flash-init',
     detector_alt: ['crash'],
     expect: {
@@ -94,7 +96,12 @@ export const CASES = [
     },
     // om-emu keeps the whole image in DRAM from the reset (FIDELITY-NOTES 7.18), so the word reads its patched value
     // as in their flat-image emulator: only a strict mode that flags a read of a flash init-image word after the boot's
-    // .data copy catches it
+    // .data copy catches it. sn_gd reads the SD loader's state u16 0x622cbcc2 first (movhu at 0x61242c5a, add -1,
+    // cmp 0xa941, bcc at 0x61242c68 to the stock label at 0x61242cb5) and keeps the stock label while it is 0; the
+    // loader v3 (0x605b7400) leaves it 0 unless E142's copied mask 0xa272e420 has bits 0 to 8 set at S1 (and 511 /
+    // cmp 511 / bne at 0x605b742b), the gate test 7a stops at. With the Shortcut input alone the case ran missed (X,
+    // 2026-11-23); with S-SECLOADED setting the mask the looks load, the init-word read at 0x61242c94 runs, and
+    // --strict reports it as init-read (X, 2026-11-23)
     needs: ['edits-json', 'strict-flash-init', 'key:shortcut'],
   },
   {
@@ -189,10 +196,9 @@ export const CASES = [
     loader: 'edits-json',
     card_put: [],
     // "opening Extras": the look editor's Extras stop (INFO cycles S, L, H, X on the colour editor); the exact key
-    // path on s1 is not recorded
-    scenario: ['wait:4500', 's1', 'wait:1500', 'shortcut', 'wait:500', 'info', 'info', 'info', 'info', 'wait:1500'],
+    // path on s1 is not recorded. Left takes the blank camera's Colour Profile page from MONO to COLOR, as in #48
+    scenario: ['wait:4500', 's1', 'wait:1500', 'shortcut', 'wait:500', 'left', 'wait:500', 'info', 'info', 'info', 'info', 'wait:1500'],
     pending_tokens: {
-      shortcut: 'the E-P7 Shortcut button: no om-emu input on E142 names it yet (key:shortcut)',
       info: 'the INFO count to the Extras stop on s1 is not recorded',
     },
     detector: 'strict-misaligned',
@@ -298,7 +304,7 @@ const PROBES = {
   'strict-misaligned': () => listed('STRICT_CLASSES', 'misaligned'),
   'strict-image-write': () => listed('STRICT_CLASSES', 'image-store'),
   'strict-flash-init': () => listed('STRICT_CLASSES', 'init-read'),
-  // an input row named shortcut in the play runtime's controls
+  // an input row named shortcut in the play runtime's controls (src/lab/play.mjs: UI_IN key 0x1224 on E142)
   'key:shortcut': () => /row\('shortcut'/.test(labSources()),
   // no probe can show these yet: fidelity steps, named when they land
   'e139-still-chain': () => named('e139-still-chain'),

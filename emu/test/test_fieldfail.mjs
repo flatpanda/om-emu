@@ -54,7 +54,7 @@ const FETCH = 'node emu/test/test_fieldfail.mjs --fetch';
 const EXT_REPO = { 'caduceus-ep7': 'cakelesscoder/caduceus-ep7', 'E-M1-Miii': 'dfeldt91-blip/E-M1-Miii' };
 export const CAPABILITIES = {
   ...FRAME_CAPABILITIES,
-  'key:shortcut': { kind: 'lab', what: "the E-P7 Shortcut button as a session input on E142 (no om-emu input names it yet)", probe: () => ep7CapabilityPresent('key:shortcut') },
+  'key:shortcut': { kind: 'lab', what: "the E-P7 Shortcut button as a session input on E142 (control shortcut, UI_IN key 0x1224)", probe: () => ep7CapabilityPresent('key:shortcut') },
   'e139-still-chain': { kind: 'lab', what: "E139's still image chain built at S2 (S-JPEGENC stands in for the image library's run, FIDELITY-NOTES 7.9)", probe: () => ep7CapabilityPresent('e139-still-chain') },
 };
 export const RELEASE_URL = {
@@ -239,6 +239,13 @@ export async function runBuild(c, which, tmp) {
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   const local = b.kind === 'synthetic' ? await syntheticPatch(b, out) : buildFiles(b, thirdpartyRoot(), readOrNull).local;
+  // a build with card files puts them on a card the body's own firmware formatted (bin/card.mjs new; --card-put needs
+  // a formatted card), one per run
+  if (local.cardPut) {
+    const { formatCard, fileCard } = await import('../host/card.mjs');
+    local.card = path.join(out, 'card.omsd');
+    fileCard(local.card).save((await formatCard()).card);
+  }
   const s = await openSession({ model: c.body, ...c.session, ...(CAPABILITIES[c.detector]?.session ?? {}), ...local, out });
   if (s.first.ok) for (const t of c.scenario) { const r = s.step(t); if (!r.ok) break; }
   const sum = s.close();

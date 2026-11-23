@@ -44,7 +44,8 @@
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the playback menu's Erase All natively on E143, E146, E147 and E148 (test_eraseall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
-// refused on E143 and moved on E147 (test_smswitch.mjs), the display switch both ways with a shot on each display and
+// refused on E143 and moved on E147 (test_smswitch.mjs), the E-P7's Shortcut button refused on E143 and opening the
+// Colour Profile page on E142 (test_shortcut.mjs), the display switch both ways with a shot on each display and
 // the TFT's frame at idle on E146 and E147, LV in S2's rec view on all three (test_dispswitch.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
 // watchpoints on E143 and E147 (test_trace.mjs), its stack captures, dumps, breaks at hooked pcs, calls at a stop,
@@ -879,6 +880,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`still / movie switch: E143 ${sm.checks - sm.bad.length}/${sm.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...sm.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += sm.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the E-P7's Shortcut button (UI_IN key 0x1224, test_shortcut.mjs): refused on E143 with its reason; on E142 in a
+// process of its own, a press from the shooting screen opens the Colour Profile page
+{
+  const { shortcutSession } = await import('../test/test_shortcut.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const sc = await shortcutSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_shortcut.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: 'E142' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`shortcut button: E143 ${sc.checks - sc.bad.length}/${sc.checks}; E142 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...sc.bad, ...(r.status === 0 ? [] : lines.map((l) => `E142: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += sc.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the display switch and the TFT's frame at idle on the bodies whose touch driver's close waits for the touch task
 // and sleeps in its wake (test_dispswitch.mjs, H-CHAINREST): E146 and E147 each in a process of its own, through

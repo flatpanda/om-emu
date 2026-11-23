@@ -274,6 +274,15 @@ CONTROLS.push(
   row('picfn_left', 'Picture function left', 'key', null, [null, null, null], { bodykey: 0x122B, status: 'not-wired', reason: "0x122b is not in E143's UI_IN tables" }),
   row('picfn_right', 'Picture function right', 'key', null, [null, null, null], { bodykey: 0x122C, status: 'not-wired', reason: "0x122c is not in E143's UI_IN tables" }),
 );
+// The E-P7's Shortcut button (E142, top plate beside REC): UI_IN key 0x1224, type 2 at polarity 0 in its group 1 (byte
+// 0 bit 6; REC 0x120a is bit 4), EV_PRESS_ / EV_RELEASE_CUSTOM7_KEY (D: the E142 image's tables, Tables.ev_name). A
+// press from the shooting screen takes the GUI to SS_MENU_LV/ID_ST_PROFILE_SELECT_MENU, the Colour Profile page
+// Caduceus E-P7's FILM_DOWN_CRASH.md names the Shortcut button's (X, test_shortcut.mjs). E144, E130, E140, E137,
+// E148, E134, E125, E118 and E120 hold 0x1224 as a key too (EV_PRESS_CUSTOM7_KEY on each, X), wired there as here;
+// which physical button it is on those bodies is not read. E142's other unnamed key, 0x1208 (EV_PRESS_CUSTOM_KEY,
+// bit 5), has no row: a press of it from the shooting screen changed neither the GUI state nor the frame (X)
+export const SHORTCUT_CODE = 0x1224;
+CONTROLS.push(row('shortcut', 'Shortcut button', 'key', null, [null, null, null], { bodykey: SHORTCUT_CODE, status: 'not-wired', reason: "0x1224 is not in E143's UI_IN tables" }));
 export const FW_KEYS = [
   [0, 0, 6, 0x1229, 1, 0], [1, 0, 2, 0x000B, 2, 0], [1, 0, 3, 0x2403, 1, 0], [1, 0, 6, 0x200D, 2, 0],
   [1, 0, 7, 0x2007, 1, 1], [1, 1, 0, 0x1506, 1, 0], [1, 1, 1, 0x1518, 1, 0], [1, 1, 2, 0x1712, 1, 0],

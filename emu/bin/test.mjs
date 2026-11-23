@@ -26,7 +26,8 @@
 // boot's section loader (test_sections.mjs: the rules and the unloaded ranges on a synthetic block, a patched routine
 // past section 6's end through debug.mjs on E143 and E147, and S-SECLOADED with its negative control on E143), the
 // boot's stage bits S-BOOTSTAGE sets and the boot job they follow on E143, E146 and E147 (test_bootstage.mjs), the hidden
-// service screens with MENU held at power-on on E143 (test_hidemode.mjs), the HDMI
+// service screens with MENU held at power-on on E143 and the MS count (H-MECCOUNT) on E143, E146 and E147
+// (test_hidemode.mjs), the HDMI
 // port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and E147 and its PER_ROTATE groups
 // (--rotate on) on E143, E146 and E147 (test_acc.mjs), the picture's orientation tag with --rotate on E143 and E146
@@ -467,6 +468,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the hidden screens: the MENU state step ${hi.checks - hi.bad.length}/${hi.checks}, the sessions ${hs.checks - hs.bad.length}/${hs.checks}`);
   [...hi.bad, ...hs.bad].forEach((x) => console.log('  ', x));
   bad += hi.bad.length + hs.bad.length;
+}
+// the MS count (H-MECCOUNT, docs/hle-gaps.md 4.6.6): the mechanism driver's counter sites on E143, E146 and E147 (each
+// in a process of its own), PAGE 2's MS row after three shots on E143, and the count over a power cycle under S-NVRAM
+{
+  const { mecCountSites, mecCountSession } = await import('../test/test_hidemode.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const ms = await mecCountSites(), mc = await mecCountSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_hidemode.mjs', import.meta.url).pathname, '--mec'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).split('\n').filter((l) => /^\s/.test(l))];
+  });
+  console.log(`the MS count: E143's sites ${ms.checks - ms.bad.length}/${ms.checks}, its sessions ${mc.checks - mc.bad.length}/${mc.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...ms.bad, ...mc.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += ms.bad.length + mc.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the OSD engine's picture runs across a row end (A-BMPWRAP): the units, then Caduceus for OM-3's v0.29 guides on E147
 // in a process of its own when OM_CADUCEUS names their checkout (skipped otherwise; their bytes are read there)

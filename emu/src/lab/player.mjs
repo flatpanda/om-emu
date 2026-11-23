@@ -524,6 +524,7 @@ export class Player {
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
     if (this.session?.start_key?.state !== undefined) used.push('H-STARTKEY');              // USTART5's MENU state step (play.mjs)
+    if (this.session?.mec?.runs) used.push('H-MECCOUNT');                                  // the mechanism driver's count (mec.mjs)
     if (this.session?.camapp?.erased) used.push('H-OBJDEL');                                 // a picture erased in playback (camapp.mjs)
     if (this.session?.camapp?.aflock_fed) used.push('S-AFLOCK');                             // an AF lock fed (E143)
     if (this.session?.camapp?.standby_answers) used.push('S-SEQSTANDBY');                    // the standby gate answered (E143)

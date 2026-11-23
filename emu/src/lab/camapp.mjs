@@ -2005,6 +2005,7 @@ export class CamApp {
       this.view_release = this.release;
       this.post('START_SHOOTING_PICTURE');
       this.post('START_EXPOSE');
+      this.s.mec?.step();                                                          // H-MECCOUNT: the mechanism counts it
       const t = live ? SC.exposureOf(sc).shutter_s : DEFAULT_SHUTTER_S;
       this.shutter_sound?.open(this.s.lab.lab_time());                             // S-SHUTTERSND: the exposure starts
       this.at(t * 1e9, 'END_EXPOSE');

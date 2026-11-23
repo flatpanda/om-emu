@@ -6178,7 +6178,52 @@ S2, UP for PAGE 1 and RIGHT for PAGE 2) are the GUI state SS_MENU_MAIN/ID_ST_HID
   reads it into `0x6296597c`, and `0x5010f8fe` adds 1 and writes it back. That driver does not run in the lab, so
   a lab shot does not count (X: three S2 shots, MS 000000) and every counter shows the blank store's 0. Open: the
   counters' persistence (where the camera keeps the kinds across power cycles), and the MS count with the mechanism
-  driver (section 7).
+  driver (section 7). Both closed in 4.6.6.
+
+#### 4.6.6 The MS count and the counters' persistence (2026-11-22; D unless tagged, addresses E143's)
+
+- **The driver's counter.** The mechanism driver's init `0x50108fe0` (called once from the boot chain's
+  `0x500248b4..0x50024dcf`) calls `0x501129b0`, whose last call is the counter init `0x5010efc6`: it clears
+  `0x62965974` (12 bytes), `0x62965934` and `0x62965954` (32 each), keeps `(0x6296b990)` in `0x62965978`, makes two
+  120-byte records with ids 4 and 25 through `0x50114c1a` (from the driver's own pool, `0x501104aa`, base
+  `(0x6296b978)`, which the driver's init sets up), then reads the camera state kind `0x8344` index 0 into
+  `0x6296597c` (`0x5010f00f..0x5010f025`). The step `0x5010f8fe` adds 1 to `0x6296597c` and writes it to the kind
+  (`0x5004188b(0x8344, 0, count)`). Nothing else in the image names `0x6296597c` (a byte scan: the init's store and
+  the step's load and store). No instruction of either touches the block at `0x9b900000`.
+- **Where a release counts.** The step is the last call of three exposure sequence starts, after `0x5010f742` sets
+  the sequence's objects (`0x5010a928`, `0x5010a9e9`, `0x5010a9af`, `0x5010aa30`): `0x5010f5c3`, `0x5010f668` and
+  `0x5010f6fd`. The shutter request `0x5010f028` (called from `0x50112a32` and `0x50112b0f`, the handlers
+  `0x5010973a`, `0x5010982d` and `0x50109928` reached by `calls`) splits on its first word by `0x5010f061`: up to
+  36000 to `0x5010f07c`, which counts through `0x5010f5c3` unless `0x5010f766` answers 22 (the byte at +8 neither
+  0, 2 nor 3); up to 60000 to `0x5010f0d0` and above to `0x5010f13a`, whose start `0x5010f628` does not count. Those
+  two count later through `0x5010f668`, from `0x5010f1e2` and `0x5010f336`, whose callers are not found as call
+  sites (by pointer, ?); `0x5010f6fd` is started by `0x5011311e` (from `0x50109bee`). That the word is the exposure
+  time in microseconds and the byte at +8 the shutter type is I. So the camera counts each mechanical exposure once,
+  at its sequence's start (I).
+- **Where the counters are kept.** The four kinds PAGE 2 reads are words of store E: `0x3874` and `0x38b4` (layout
+  entries `0x600d97bc`, `0x600d97c4`), `0x8344` and `0x8354` (`0x600e56c8`, `0x600e56d0`), each one u32 with the
+  template 0 (a walk of the F, B, E and M lists, which ends at each next layout; the user pose table `0x4eba` lands in
+  E, as 2.1 of the settings spec has it). Store E is S-NVRAM's: the camera keeps the counters in the settings flash.
+- **In the lab (H-MECCOUNT, src/lab/mec.mjs).** At the bring-up, after H-STARTKEY, the init's read
+  `0x5010f00f..0x5010f025` runs natively (its `ret [],4` the call's frame); the head, with the pool's records, is not
+  run. At each release S-RELSEQ makes, at its START_EXPOSE (where S-SHUTTERSND's open click is), the step runs
+  natively and the kind is read back. Both sites are read by their instructions (`mecCountSite`): the kind and the
+  word from the site's bytes, the calls checked against the camera state read and write the port places. With
+  `--held menu` three S2 shots and 4.6.5's recipe show PAGE 2's MS at 000003 (X: the frame; the code's S2 inside the
+  hidden screen counts nothing, the shooting service is not running there). Under S-NVRAM two shots and the power
+  lever's off save store E natively (the NAND write returning to `0x5003f6a4`, in the save `0x5003f5dd`; E
+  then M), and the next session's init
+  read finds 2 (X); two shots and the session closed without the power-off leave the next one at 0 (X), as a battery
+  pulled before the power-off would (I). The S row (`0x8354`, the flash's count by the web) and `0x38b4` / `0x3874`
+  persist the same way, but nothing in the lab writes them (their writers are not read).
+- **E146 and E147.** The same instructions at E146 `0x5010f00f` / `0x5010f8fe` (counter `0x6298f174`) and E147
+  `0x50118fb7` / `0x501198a6` (counter `0x6298ec4c`), the calls each body's camera state read and write (D, a byte
+  scan of the three images); the port's pairing (`emu/out/port/<model>/rev.bin`) places both E143 addresses there.
+  E146 counts as E143; E147 counts once `bin/port.mjs all` carries the two new addresses into src/fw/ports.mjs.
+  E144 has the init's read (`0x500d45ba`, its own counter word) but not this step's shape (another lineage, ?).
+- **Not modelled.** Which drive settings select the electronic shutter (section 7.3) is ?, so every S-RELSEQ release
+  counts, as S-SHUTTERSND sounds at every release (I). The driver's init, its pool and the sequences stay out of the
+  lab (section 7.2).
 
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
@@ -9525,7 +9570,8 @@ Tv limit and possibly the adjustment data (layout ?).
 
 The OM-1 line (E143, E146, E147) is a generation change, not a tier change: a revised block with 271 registers and 408
 references, identical on the three, three IRQs instead of one, and new sub-blocks SHQ, DCM, PICNT0/1 (D). The driver is
-gap@0x50108fe0 (19.6k instructions, 404 references to the block) plus `cam_mec_ctrl`; none of it runs in the lab.
+gap@0x50108fe0 (19.6k instructions, 404 references to the block) plus `cam_mec_ctrl`; none of it runs in the lab
+but its release count's init read and step (H-MECCOUNT since 2026-11-22, 4.6.6: the same instructions on E146 and E147).
 
 - **Clocks (D):** open `0x5010b937` (ref count `0x6296572c`): `0x50061c3a(0, 5, 1)`, `+0x000` = 0 (reset), clocks 105
   and 106 on, `+0x004` = 0; close `0x5010ba1e` reverses it (`+0x004` = `0x1ffff`, `+0x000` = 1). That 105 / 106 are

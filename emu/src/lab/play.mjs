@@ -41,6 +41,7 @@ import { displayed_windows } from './windows.mjs';
 import { SettingsIds } from './settings_ids.mjs';
 import * as SC from './scene.mjs';
 import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
+import { MecCount } from './mec.mjs';
 import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
 import { Cpu2, CPU2_QUANTUM } from './cpu2.mjs';
@@ -1361,6 +1362,8 @@ export class PlaySession extends N.NavSession {
     if (chain.slices) this.camapp.expose();            // S-EXPOSE: the plan on the screen the start reached
     this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status(), ...(chain.slices ? { chain_rest: chain } : {}) });
     this.start_key_bring_up();
+    this.mec = new MecCount(this);                     // H-MECCOUNT: the mechanism driver's count read (mec.mjs)
+    this.mec.bring_up();
     for (const id of this.held) this.key(id, 'up');    // released once the start is done (opts.held)
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
   }

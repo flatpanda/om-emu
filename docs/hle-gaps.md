@@ -7421,6 +7421,32 @@ addresses `LATER_INITS_E143`, not yet in `src/fw/facts.mjs`).
 - **Open.** The wait in `0x50044ed7` read to its cause; then `0x50044f7d`, the `0x14` at the start and the battery
   check's `0x11` requests (4.7.6 Open (1), (3)).
 
+#### 4.7.11 UI_IN's module init and the boot key (2026-11-22; D unless tagged, addresses E143's)
+
+Read for retiring H-UIINRING's partial init and S-BOOTKEY; not yet run natively (the result of this pass is the read
+below, no code change).
+
+- **The module init `0x5014bf91`:** clears the byte `0xa32dab3c` and the word `0xa32daba4`, then calls in order the
+  ring init `0x5014cb5f` (H-UIINRING), `0x5014e3ab`, `0x5014ce00`, `0x5014d49e`, the port scan `0x5005d36a`
+  (H-UIINSCAN), `0x5014d62e` and `0x5014d97a`, and returns. The start stage `0x5014bfc6` follows it.
+- **`0x5014e3ab`, the tables and the boot key:** indexes three DRAM tables by UI_IN's variant `(0xa32dab38)`
+  (UIIN_VARIANT): `0x6034f960[v]` to `0xa32dadf0`, `0x6034f968[v]` to `0xa32dadec` (the bit table, walked as seven
+  12-byte entries, each through `0x5004e3fc`), `0x6034f958[v]` to `0x6298882c` (the wake-factor key table); it clears
+  `0xa32dadf4` and `0xa32daef4`. It then reads the wake factor, the halfword `(0xa32bff5e)` (`0x5004dec8`, the cause
+  halfword PER_SCPU's task start also reads, 4.7.1): factor 5 stores the result of `0x50055f6a`; a factor below 12
+  stores the table's entry `[0x6298882c][factor]`; any other factor stores `0x01000001`. The store is the boot key word
+  `0xa32dab30` (S-BOOTKEY's word). An entry of `0x01000003` becomes `0x01000006` when the SCPU interface register
+  `0x98e00004` reads `0x01000006` (`0x5004e501`). Last, it writes `0x98e00004` to 0 (`0x5004e4f3(0)`), sets
+  `0xa32dab34` to `0x01000000` and calls `0x5004ded1(0x6016f554)`, whose first steps call `0x50053ebe` and
+  `0x5003b31e(0x09050009, 255)`, not read further.
+- **What a native run needs (I):** the wake factor halfword at the bring-up (the lab's SCPU link leaves it as its
+  start does; which value the sub-CPU's power-button wake gives is not read), the DRAM tables at `0x6034f9xx`
+  (placed by the loader; not read statically here), a stand-in for `0x98e00004` (the model's SCPU interface block),
+  and the effects of `0x5004e3fc` and `0x5004ded1`. Open (I): the table entries are 32-bit codes of the
+  `0x01xxxxxx` shape, while S-BOOTKEY writes `0x000c`; which entry the power-button wake selects, and whether the
+  application's wake-up judgement reads the same form, must be read from the placed table before S-BOOTKEY can be
+  retired. `0x5014ce00`, `0x5014d62e`, `0x5014d97a` are not read in this pass.
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

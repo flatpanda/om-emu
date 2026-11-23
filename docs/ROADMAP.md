@@ -795,7 +795,9 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   lever, Fn lever, S1) comes from the SCPU's port registers through IRQ 320 natively on E143, E146 and E147 since
   2026-10-23 (hle-gaps.md §4.7.2); the E144 family's bodies still push it.
 - UI_IN's module init: only the ring init `0x5014cb5f` runs (H-UIINRING); `0x5014e3ab`, `0x5014ce00`, `0x5005d36a`,
-  `0x5014d62e`, `0x5014d97a` do not; the board byte that selects the bit-table variant.
+  `0x5014d62e`, `0x5014d97a` do not; the board byte that selects the bit-table variant. `0x5014e3ab` (the boot key
+  from the wake factor `(0xa32bff5e)` and a DRAM key table) is read in hle-gaps.md 4.7.11 (2026-11-22); running it
+  needs the placed table and the wake factor.
 - Switch idle state: HDMI `0x0501` and `0x0400` both at 1 make the menu close paint the black panel 6 (X); what
   `0x0400` is.
 - The encoder: H-DIALSTEP calls the counter writer `0x5014bae6` per detent; the encoder position read `0x50059fa4` and

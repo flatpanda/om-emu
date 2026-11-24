@@ -83,9 +83,10 @@ export class Simulator {
     // clear, recorded by a fetch audit; null without the option (no guard, nothing changes)
     this.secReady = env.secReady ? secReadyWatch(env) : null;
     // the strict mode (src/lab/strict.mjs): env.strict, the host's StrictLog for the run (or 'on' / 'off'), else
-    // OM_STRICT; this.strict the log (null: off)
+    // OM_STRICT; this.strict the log (null: off). env.stockRom, the stock run-time image beside an overlay, gives the
+    // ranges the patch made the boot load (cave-store)
     this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL }) : null;
-    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null }) ?? null;
+    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null, stock: env.stockRom ?? null }) ?? null;
     this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded,
       fetchAudit: this.secReady?.guard ?? null, strict });
     this.breakpoints = new Set();

@@ -13,7 +13,8 @@
 //                    buffer 0xbc857f00 lies in the E143 family's 512 MiB of bus DRAM since 2026-11-23 (src/fw/facts.mjs
 //                    mmDramSize; docs/hle-gaps/4.8.md 4.8.18, 4.8.22). With --dram 384 (the DRAM before) PLAY gets
 //                    as far as the decode's go there and the go is refused at its stream, whose address no backed
-//                    range of om1.bus holds: the test then pins that stop (a control)
+//                    range of om1.bus holds: the test then pins that stop (a control). The GUI stays in the view
+//                    on all three (E146 and E147 with the calibration word's read answered, A-HDMICAL; 4.8.26)
 //   node emu/test/test_playmod.mjs [--dram 384]     (OM_EMU_MODEL=E146 / E147 for the other bodies)
 import { fileURLToPath } from 'node:url';
 
@@ -61,9 +62,10 @@ export async function playBodySession() {
       for (let t = 5; t <= 1000; t += 5) { idle(5); if (t === 100) key(k, 'up'); look(); }
       return seen;
     };
-    const used = pl.stand_ins_in_use();
-    ok(pm && STAND_INS.every((x) => used.includes(x)) && !['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW'].some((x) => used.includes(x)),
-      `${MODEL}: the stand-ins ${used.filter((x) => /PLAY|JPEGDHT|IMGPIPE/.test(x))}`);
+    // E146 and E147 (src/fw/facts.mjs hdmiCalib): the calibration word's read answered (A-HDMICAL)
+    const used = pl.stand_ins_in_use(), stand_ins = MODEL === 'E143' ? STAND_INS : [...STAND_INS, 'A-HDMICAL'];
+    ok(pm && stand_ins.every((x) => used.includes(x)) && !['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW'].some((x) => used.includes(x)),
+      `${MODEL}: the stand-ins ${used.filter((x) => /PLAY|JPEGDHT|IMGPIPE|HDMICAL/.test(x))}`);
     const waiting = pm.tids.map(([t]) => (lab.nk.state(t) & 0xF) === WAI);
     ok(JSON.stringify(pm.tids.map(([, n]) => n)) === JSON.stringify(PLAY_TASK_NAMES) && waiting.every(Boolean),
       `${MODEL}: H-PLAYSTART's tasks ${JSON.stringify(pm.tids)} waiting ${waiting}`);
@@ -93,10 +95,10 @@ export async function playBodySession() {
     }
     if (stop !== null) throw new Error(stop);
     ok(MODEL === 'E143' || (dec.src === PLAY_BUFFER_E146 && bus.span(dec.src, file?.length ?? 1)), `${MODEL}: the play buffer ${dec.src?.toString(16)} on om1.bus's DRAM`);
-    // E146 and E147 (X, 2026-11-23): the view is shown (DISP_SIMPLE after the run), then within 10 ms the GUI goes to
-    // SS_COMMON/ID_ST_BLACK_SCREEN and SS_COMMON/ID_ST_WARNING, which E143 does not; why is not read
-    // (docs/hle-gaps/4.8.md 4.8.22): the test pins it
-    const after = MODEL === 'E143' ? [DISP_SIMPLE] : [DISP_SIMPLE, 'SS_COMMON/ID_ST_BLACK_SCREEN', 'SS_COMMON/ID_ST_WARNING'];
+    // the view stays: on E146 and E147 the GUI went on to SS_COMMON/ID_ST_BLACK_SCREEN and SS_COMMON/ID_ST_WARNING
+    // until 2026-11-24, the camera application's PC_START_PC_USB_SELECT, which the calibration word's template
+    // brought about (A-HDMICAL, docs/hle-gaps/4.8.md 4.8.26)
+    const after = [DISP_SIMPLE];
     ok(JSON.stringify(states.slice(states.indexOf(DISP_SIMPLE))) === JSON.stringify(after) && pm.decodes.length === 1 && pm.waits === 1 && !dec.stood_in && pm.unit.runs === 1
       && dec.width === PICTURE[0] && dec.height === PICTURE[1] && dec.dst_width === VIEW[0] && dec.dst_height === VIEW[1]
       && JSON.stringify(dec.ratio) === JSON.stringify(RATIO) && JSON.stringify(ratios) === JSON.stringify([RATIO]),

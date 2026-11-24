@@ -9,7 +9,8 @@
 //                    S-BOOTKEY and H-UIINSCAN, the path before): the stand-ins (H-UIININIT and S-WAKEFACTOR, neither
 //                    S-BOOTKEY nor H-UIINRING nor H-UIINSCAN with the init), the boot key 0x000c both ways, the wake
 //                    factor 1, two IRQ 320 callbacks (PER_SCPU's and UI_IN's), the interface word 0x98e00004 cleared,
-//                    the A/D channel's one error log; and the same screen, frame and lab time both ways at the start and
+//                    no error log (the A/D channel open finds its channel: H-ADINIT, test_adc.mjs; its 0x28001511
+//                    there before, 4.7.17); and the same screen, frame and lab time both ways at the start and
 //                    after each of MENU, down, OK, MENU (the key handling)
 //   node emu/test/test_uiininit.mjs [units|session]
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -91,7 +92,7 @@ export async function uiinInitSession() {
   ok(n.init !== null && n.boot_key === null && n.key === POWER && o.key === POWER && n.factor === 1 && o.factor === 0,
     `the boot key 0x${n.key.toString(16)} natively (factor ${n.factor}), 0x${o.key.toString(16)} by S-BOOTKEY (factor ${o.factor})`);
   ok(n.callbacks === 2 && o.callbacks === 2 && n.word4 === 0, `IRQ 320 callbacks ${n.callbacks} / ${o.callbacks}; word 0x04 ${h8(n.word4)}`);
-  ok(JSON.stringify(n.init?.errlog) === JSON.stringify([['0x28001511', h8(0x5014CE00)]]) && n.init?.scan?.reply === '04880000', `the init's error log ${JSON.stringify(n.init?.errlog)}, scan ${JSON.stringify(n.init?.scan)}`);
+  ok(JSON.stringify(n.init?.errlog) === '[]' && n.init?.scan?.reply === '04880000', `the init's error log ${JSON.stringify(n.init?.errlog)} (none with H-ADINIT), scan ${JSON.stringify(n.init?.scan)}`);
   ok(n.states.every((x) => x.frame !== null), `frames published: ${JSON.stringify(n.states)}`);
   ok(JSON.stringify(n.states) === JSON.stringify(o.states), `the start and ${KEYS.join(', ')}: ${JSON.stringify(n.states)} natively, ${JSON.stringify(o.states)} without`);
   ok(new Set(n.states.map((x) => x.gui)).size > 1, `the keys change the screen: ${n.states.map((x) => x.gui).join(' ')}`);

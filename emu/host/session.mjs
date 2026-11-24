@@ -496,7 +496,7 @@ export async function openSession(o = {}) {
     take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: E.loadImage() } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
     wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r), settingNames: () => settingNames(MODEL) },
     onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16, device: meta.device }; }, onAudio: () => {} };

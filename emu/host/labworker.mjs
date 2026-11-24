@@ -43,7 +43,7 @@ const cardSize = process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.e
 const fw = patches ? patchedFirmware(patches) : null;
 const env = {
   rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(trace?.fields ?? {}),
-  ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}),
+  ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: loadImage() } : {}),
   loaded,                            // --loaded: S-STALERAM (src/lab/sim.mjs loadedRanges)
   ...(secReady ? { secReady } : {}),  // --sec-ready: the main thread's static pass, and the watch (src/lab/secready.mjs)
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),

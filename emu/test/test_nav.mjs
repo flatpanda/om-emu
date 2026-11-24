@@ -13,8 +13,9 @@
 //               finding 162): on the bodies with the power task the power module's start ran (src/lab/menu.mjs
 //               power_start: H-DPCINIT, S-SIOIIC on the TG-5s, H-PWRTASK), on E145, E129 and E132 lab time ran while
 //               the GUI slept in POWER_ON's power-source read (H-GUISLEEP); on the bodies whose GUI waits for the connect
-//               message (E118, E120) the session posted it (H-GUICONNECT, 0x9601 with lOutput 2); on the others
-//               neither. Controls: without H-GUISLEEP the GUI state is 0 after the bring-up (E145, E129, E132), and
+//               message (E118, E120) the session posted it through that gate (H-GUICONNECT, 0x9601 with lOutput 2),
+//               on the other ported bodies too, without one (the TFT layout's reset, test_navlayout.mjs), on E143
+//               not. Controls: without H-GUISLEEP the GUI state is 0 after the bring-up (E145, E129, E132), and
 //               without power_start on the TG-5s (E129, E132; E145 reaches POWER_ON without it); without
 //               H-GUICONNECT OPEN leaves the GUI at POWER_ON (E118, E120); without S-DISPSYNC's release OPEN
 //               leaves the start's frame (SYNC_HELD)
@@ -30,6 +31,8 @@ export const NAV_BODIES = ['E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137
 // gui_connect)
 export const POWER_BODIES = ['E144', 'E148', 'E137', 'E142', 'E140', 'E145', 'E129', 'E132'], SLEEP_BODIES = ['E145', 'E129', 'E132'];
 export const CONNECT_BODIES = ['E118', 'E120'];
+// the bodies whose TFT connect (H-GUICONNECT) resets the GUI's layout to 0 (test_navlayout.mjs)
+export const LAYOUT0_BODIES = ['E129', 'E132'];
 // the bodies whose GUI's updates are display requests of type 3 (S-DISPSYNC's kind in play, src/lab/camapp.mjs), which
 // stay pending until an image sync only the application sends (X: E137's requests from 0x507d537c and E122's from
 // 0x502c076a, d0 3, at the start, OPEN and DOWN; E145's from 0x506d4d35, E129's from 0x506a59ce, E132's from
@@ -69,21 +72,25 @@ export async function navSession() {
     return seen.size;
   };
   const shifted = nav.index_of(N.OPEN) !== N.OPEN;
+  let released = null;                    // the menu's frame after OPEN (S-DISPSYNC's release run)
   try {
     ok(nav.lab.state() === MM.STATE_POWER_ON, `${MODEL}: the bring-up ends at POWER_ON (${h4(nav.lab.state())})`);
     const power = POWER_BODIES.includes(MODEL), sleep = SLEEP_BODIES.includes(MODEL), connect = CONNECT_BODIES.includes(MODEL), ps = nav.lab.power_started;
     ok(power ? ps !== null && ps.tid > 0 && ps.dpc === true && (ps.sio !== null) === !!MODEL_INFO.sio_devices : ps === null,
       `${MODEL}: the power module's start ${power ? 'ran' : 'did not run'} (${show(ps && { dpc: ps.dpc, sio: ps.sio?.labels ?? null, tid: ps.tid })})`);
     ok(sleep ? nav.lab.gui_sleep_ms > 0 : nav.lab.gui_sleep_ms === 0, `${MODEL}: H-GUISLEEP ${sleep ? 'ran lab time' : 'ran none'} (${nav.lab.gui_sleep_ms} ms)`);
-    ok(connect ? nav.gui_connected?.message === '0x9601' && nav.gui_connected.loutput === 2 : nav.gui_connected === null,
-      `${MODEL}: H-GUICONNECT ${connect ? 'posted 0x9601 with lOutput 2' : 'did not run'} (${show(nav.gui_connected)})`);
+    // since 2026-11-24 every ported body's session posts it on the TFT (the layout's reset, test_navlayout.mjs); the
+    // gate is E118's and E120's only; E143's session posts none
+    const lab_model = MODEL === 'E143', gc = nav.gui_connected;
+    ok(lab_model ? gc === null : gc?.message === '0x9601' && gc.loutput === 2 && gc.gate === connect,
+      `${MODEL}: H-GUICONNECT ${lab_model ? 'did not run' : `posted 0x9601 with lOutput 2${connect ? ' through the GUI\'s gate' : ''}`} (${show(gc)})`);
     ok(nav.lab.state_names.get(MM.STATE_MENU) === 'SS_MENU/ID_ST_MENU', `${MODEL}: STATE_MENU ${h4(MM.STATE_MENU)} is named ${nav.lab.state_names.get(MM.STATE_MENU)}`);
     const start = digest();
     const r = nav.step('OPEN');
     ok(r.messages.length === 1 && r.messages[0] === h4(OPEN_MESSAGE), `${MODEL}: OPEN posts message ${h4(OPEN_MESSAGE)} (index ${r.indices}, ${r.messages})`);
     if (nav.lab.state() !== MM.STATE_MENU) nav.step('WAIT:1000');
     ok(nav.lab.state() === MM.STATE_MENU, `${MODEL}: OPEN reaches the menu's state ${h4(MM.STATE_MENU)} (${r.state.gui} ${r.state.gui_name}, then ${h4(nav.lab.state())})`);
-    const menu = digest(), held = SYNC_HELD.includes(MODEL);
+    const menu = released = digest(), held = SYNC_HELD.includes(MODEL);
     ok(r.texts.length > 0 || nav.steps.slice(1).some((x) => x.texts.length), `${MODEL}: the menu's open draws its texts`);
     ok(menu !== start && colours() > 2, `${MODEL}: the menu's frame differs from the start's and is drawn (${colours()} colours)`);
     const d = nav.step('DOWN');
@@ -118,16 +125,22 @@ export async function navSession() {
   };
   if (SLEEP_BODIES.includes(MODEL)) bare('H-GUISLEEP', class extends N.NavLab { gui_sleep() { this.gui_sleep_ms = 0; } });
   if (SLEEP_BODIES.includes(MODEL) && MODEL_INFO.sio_devices) bare('the power module\'s start', class extends N.NavLab { power_start() { this.power_started = null; } });
-  // the control of the release: without it the GUI's synced updates stay pending, and OPEN leaves the start's frame
+  // the control of the release: without it the GUI's synced updates stay pending, and OPEN leaves the start's frame.
+  // On the TG-5s the connect (H-GUICONNECT, since 2026-11-24) programs the OSD planes on the GUI's buffers (X: CTRL3
+  // 8 -> 0x48, the three planes' bases written, which without it only the release's image sync wrote), so there the
+  // held OPEN shows the menu's bitmaps with the tab icons' colours not yet updated: the frame is neither the start's
+  // nor the released one
   if (SYNC_HELD.includes(MODEL)) {
     class Held extends N.NavSession { dispsync_install() { this.dispsync = null; } }
     const c = new Held(env, { open_menu: false, png: 'none', time: true, device: 'tft' }).enter();
     try {
       const frame = () => createHash('sha256').update(words_to_rgb(c.lab.compose('tft').words)).digest('hex');
-      const start = frame();
+      const start = frame(), planes = LAYOUT0_BODIES.includes(MODEL);
       c.step('OPEN');
       if (c.lab.state() !== MM.STATE_MENU) c.step('WAIT:1000');
-      ok(c.lab.state() === MM.STATE_MENU && frame() === start, `${MODEL}: control: without S-DISPSYNC the menu opens (${h4(c.lab.state())}) and the frame stays the start's`);
+      const f = frame();
+      ok(c.lab.state() === MM.STATE_MENU && f !== released && (planes ? f !== start : f === start),
+        `${MODEL}: control: without S-DISPSYNC the menu opens (${h4(c.lab.state())}) and the frame ${planes ? 'is neither the start\'s nor the released one' : 'stays the start\'s'}`);
     } catch (e) {
       ok(false, `${MODEL}: control (S-DISPSYNC): ${e.message.slice(0, 600)}`);
     } finally { c.close(); }

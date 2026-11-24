@@ -54,8 +54,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // docs/hle-gaps/4.7.md 4.7.17), in the model's disassembly notation: init, the module init, whose calls the lab reads
 // from its bytes and runs in its order; left, the calls it leaves out; wake [word, getter], the SCPU init's wake
 // factor halfword and its getter (`movhu (word),d0; retf`); ad_errlog [code, call], the error log the init's A/D
-// channel open makes in the lab. A body without it runs only the ring init (H-UIINRING) and sets the boot key
-// (S-BOOTKEY)
+// channel open makes in the lab without the A/D driver's init (the mutant no-adinit; with H-ADINIT it logs none); keys
+// [read, list, map], the init's call that reads and arms UI_IN's GIO key pins, the per-variant list of its pin table
+// and the GIO driver's pin map (the lab checks the call's bytes, maps each table pin through the firmware's map and
+// sets the board's gio_keys pins to the idle image's levels before the call runs, H-GIOKEYS), absent where the body
+// leaves that call out. A body without it runs only the ring init (H-UIINRING) and sets the boot key (S-BOOTKEY)
 //
 // `hdmi`: the HDMI port (src/dev/hdmi.mjs with the board's hdmi; src/lab/display.mjs H-GIOSLOTS, src/lab/play.mjs the
 // hdmi input; docs/hle-gaps/4.9.md 4.9), in the model's disassembly notation: gio_slots, the reset of the GIO interrupt
@@ -159,7 +162,22 @@ export const MODELS = {
     image_base: 0x60021020,
     res_len: 10031072, res_sha256: '03a18d68e950ab0f55df3f1379d26ace4ee654a6e4a276bc8872daa1e9ebfa6c',
     panels: { tft: [900, 600], evf: [1600, 1200] },
-    board: { family: 'E143' },
+    // gio_keys (src/dev/gio.mjs): the GIO pins of UI_IN's key init 0x5014d62e, by the pin the driver drives: its pin
+    // table 0x602241d0 names 18, 47, 20, 48, 49, 108, 25 and 131 for group 1's bits 0..7, and the pin map 0x500029ad
+    // turns 131 into 164 on core 0 (the class-0 list 0x6034def4[core] = 0x6034de34, pair 131 -> 164; the lab task's
+    // core byte is 0), D; each pin's word (0x60025ff8)[pin] and its interrupt record 0x600268f4 + 32 x
+    // (0x60026788)[pin]: dedicated (+4 = 1) or a group's, its IRQ, its status and enable words and its type-0 and
+    // type-1 bits (D, the tables' bytes)
+    board: { family: 'E143', gio_keys: { pins: [
+      { pin: 18, word: 0x9B880680, status: 0x9B882F8C, enable: 0x9B8830CC, bits: [0x1, 0x2], irq: 66, shared: false },
+      { pin: 47, word: 0x9B880DC0, status: 0x9B882FF8, enable: 0x9B883138, bits: [0x1, 0x2], irq: 93, shared: false },
+      { pin: 20, word: 0x9B880700, status: 0x9B882F94, enable: 0x9B8830D4, bits: [0x1, 0x2], irq: 68, shared: false },
+      { pin: 48, word: 0x9B880E00, status: 0x9B882FFC, enable: 0x9B88313C, bits: [0x1, 0x2], irq: 94, shared: false },
+      { pin: 49, word: 0x9B880E40, status: 0x9B883000, enable: 0x9B883140, bits: [0x1, 0x2], irq: 95, shared: true },
+      { pin: 108, word: 0x9B883E80, status: 0x9B883094, enable: 0x9B8831D4, bits: [0x10000, 0x20000], irq: 132, shared: true },
+      { pin: 25, word: 0x9B880840, status: 0x9B882FA8, enable: 0x9B8830E8, bits: [0x1, 0x2], irq: 73, shared: false },
+      { pin: 164, word: 0x9B882A80, status: 0x9B88308C, enable: 0x9B8831CC, bits: [0x40000, 0x80000], irq: 130, shared: true },
+    ] } },
     // the SCPU's block at file offset 0x0e560000 (docs/om1-scpu-spec.md section 2; X: it boots on the STM32L4 machine,
     // section 8 step 5); pins (D, section 3.1): PB12 the request's EXTI input, PC3 pin 102, PC2 the message line;
     // gate: the literal pool word 0x80135c4 the power-on gate 0x8012d72 and the release 0x801305d reach their flag
@@ -174,11 +192,13 @@ export const MODELS = {
     scpu_port: { irq: [0x5004E1FD, 5], register: 0x5004DED1, callback: 0x5014E534, old_state: 0x5014E51E },
     // UI_IN's module init 0x5014bf91 calls 0x5014cb5f, 0x5014e3ab, 0x5014ce00, 0x5014d49e, 0x5005d36a, 0x5014d62e,
     // 0x5014d97a (0x5014bf9e..0x5014bfbe, D); 0x5014d62e reads and arms the GIO pins 18, 47, 20, 48, 49, 108, 25 and
-    // 131 (its table 0x602241d0, D), which the lab does not model, and 0x5014d97a is not read: both left out. The
+    // 131 (its table 0x602241d0 = (0x6034f978)[variant 0], loaded at 0x5014d64d, D; the board's gio_keys above; the pin
+    // map 0x500029ad) and eight IO expander pins it reads from their drivers' RAM; 0x5014d97a is not read: left out. The
     // SCPU init 0x5004dc55 stores the wake factor halfword 0xa32bff5e (0x5004ddca..0x5004de3b), which 0x5004dec8
     // returns; 0x5014ce00's A/D channel open 0x5004d4f4 fails (the A/D driver's init does not run, its channel count
     // 0xa32bff14 stays 0) and it logs 0x28001511 (0x5014ce92..ceb0, D)
-    uiin_init: { init: 0x5014BF91, left: [0x5014D62E, 0x5014D97A], wake: [0xA32BFF5E, 0x5004DEC8], ad_errlog: [0x28001511, 0x5014CE00] },
+    uiin_init: { init: 0x5014BF91, left: [0x5014D97A], wake: [0xA32BFF5E, 0x5004DEC8], ad_errlog: [0x28001511, 0x5014CE00],
+      keys: [0x5014D62E, 0x6034F978, 0x500029AD] },
     // the GIO init 0x50002a20 ends with 0x50002b5d (0x50002a2d), which marks the 325 slots at 0xa32c1f74 free (255);
     // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
     hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
@@ -612,10 +632,17 @@ export const MODELS = {
         // E146, the DRAM 384 MiB to 0xb8000000, src/fw/facts.mjs dramSize), and its Exif read there faults: refused
         // (since 2026-11-23 the E143 family's DRAM is 512 MiB, src/fw/facts.mjs mmDramSize, which holds 0xbc849400;
         // the native command is not re-run yet, docs/hle-gaps/4.8.md 4.8.22)
+        // copy_all: E143's (docs/hle-gaps/4.8.md 4.8.27, D): the start table's command 2 is executeCopyAllStart
+        // 0x50cfc2e3 and getCopyAllProgress 0x50cfc371 (their run-time addresses loaded by the table's fill,
+        // 0x50cf466d and 0x50cf468e, where E143's loads its own); the start calls the count 0x503f9dc4 (API 0x70011)
+        // and the picture file API's copy all 0x503f99b8 (API 0x7000e), each E143's instruction for instruction but
+        // for call targets, branches and the reply queue 0x6004320e; the end check 0x50cfce4c loads 0xf0000024
+        // (0x50cfce85)
         ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5,
           wifi: { instance: 0x50BE6384, notify: 0x50BE8650, event: 0x041B0055 }, cbc: 0x50CFC765, progress: 0x50CFC1E7,
           api: 0x503ECA4D, reply_queue: 0x6004320E, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
-          status: 0x503ECE04, flag: [0x50ABEF30, 15261] },
+          status: 0x503ECE04, flag: [0x50ABEF30, 15261],
+          copy_all: 2, copy: { api: 0x503F99B8, count: 0x503F9DC4, progress: 0x50CFC371, no_copy: 0xF0000024 } },
         mount: { get: 0x50AD4AF7, set: 0x50AD4C8B, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
         slots: [{ kind: 4, switch: 0x1506 }, { kind: 8, switch: 0x1518 }],
         switch_level: 0x5014FD76, switch_event: 0x02020000, publish: 0x50025160,

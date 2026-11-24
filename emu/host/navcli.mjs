@@ -136,7 +136,7 @@ function run(a) {
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
   const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: a.loaded, ...(secReady ? { secReady } : {}),
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: loadImage() } : {}), loaded: a.loaded, ...(secReady ? { secReady } : {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });

@@ -32,7 +32,7 @@
 //              the API's ALL_DELETE with the option 0x10 (fact erase.rating_erase), whose walk keeps every picture
 //              with an Exif Rating of 1 or more, natively; both with the erase all's progress and end (the unlock all
 //              erases nothing, S-CARD's records stay). Since 2026-11-22 too (docs/hle-gaps/4.8.md 4.8.21) the copy
-//              all (command 2, f.ctrl.copy_all, E143): the picture file API's copy all between the two slots
+//              all (command 2, f.ctrl.copy_all, E143 and E146, 4.8.27): the picture file API's copy all between the two slots
 //              natively, with its own progress function and the component's end check of the record's media's
 //              count. Any other command (the copy all 2 where f.ctrl has no copy_all, and command 6 where f.ctrl
 //              has no rating_erase), and an error status, stops the session: the component's other starts
@@ -245,7 +245,7 @@ export class HlsMedia {
   }
   // the copy all's call (executeCopyAllStart's, E143 0x50ceba68: the picture file API's copy all, API 0x7000e, d0 the
   // start record's +2, d1 its +4, taken here as the request's media and option, I; it posts FILECLBK code 38 with
-  // both drives and returns the token), where the model names it (f.ctrl.copy, E143 alone) and its bytes and the
+  // both drives and returns the token), where the model names it (f.ctrl.copy, E143 and E146) and its bytes and the
   // count's read as the build's (each opens with its own API id's load), and both cards are in the lab's slots
   _copy_all_api(cmd, media, option) {
     const f = this.f.ctrl.copy, img = this.lab.image, two = this.storage.f.slots;

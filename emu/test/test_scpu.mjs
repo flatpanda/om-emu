@@ -21,7 +21,11 @@
 //              that is not a write of its own); the power manager's 0x14: a write with no reply and no message, the
 //              two slots' inserted and second bytes kept as the sub-CPU keeps them (byte 0 unread), 0xff again
 //              after a reset, the refusals (a size but 5, the PBH's battery inserted, a body with another sub-CPU
-//              image, the sibling writes 0x11 and 0x13) and the bodies that take it (E143, E146: the image's digest);
+//              image, the sibling write 0x13) and the bodies that take it (E143, E146: the image's digest); the
+//              battery information 0x11: slot 0's request {0, 0, kind, 0} for kinds 0..2 answered by the message
+//              0x11 of 57 bytes {0, 0, kind, 1, 0x33, 1, 51 zeros} through the poll (no pack answering), byte 0
+//              not 0 and a kind above 4 taken with no message, the refusals (kinds 3 and 4, slot 1, a body with
+//              another sub-CPU image, a quiet 0x11);
 //              the inbound direction: a message drops the message line while idle
 //              and the poll's reply carries it, a second waits in the queue, one during a transaction drops the line
 //              at once, one taken with the request line low waits for the release; 0x88 answers {result, busy} and
@@ -296,13 +300,38 @@ function sourceTests(ok, now) {
   ok(throwsAs(() => m3.send(0x14, [0, 1, 1, 3, 3]), ScpuError), 'a 0x14 with the PBH\'s battery inserted stops the session: the grip\'s bring-up is not modelled');
   const [, m4] = on();
   ok(throwsAs(() => m4.send(0x13, [0]), ScpuError), 'the power manager\'s 0x13 stays refused');
-  const [, m5] = on();
-  ok(throwsAs(() => m5.send(0x11, [0, 0, 0, 0]), ScpuError), 'its battery request 0x11 stays refused');
   const [d6, m6] = on(false);
   ok(throwsAs(() => m6.send(0x14, [0, 1, 0, 3, 0]), ScpuError) && kept(d6) === '[[255,255],[255,255]]', 'a body whose sub-CPU image is not the one read has its 0x14 refused');
   ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x14] }), ScpuError), '0x14 cannot be a body\'s quiet write');
   const taking = Object.keys(MODELS).filter((m) => MODELS[m].scpu_lle?.sha256 === SOURCES_IMAGE);
   ok(JSON.stringify(taking) === JSON.stringify(['E143', 'E146']), `the bodies whose sub-CPU image is the one 0x14 is read from (src/lab/menu.mjs takes it on those): ${taking}`);
+  batteryTests(ok, on);
+}
+
+// The battery information 0x11 (docs/hle-gaps/4.7.md 4.7.19): the MN's {0, slot, kind, 0}; the sub-CPU's battery task
+// asks slot 0's pack, which on the lab board does not answer, and posts the message 0x11 of 57 bytes {0, slot, kind,
+// 1, 0x33, result 1, the cleared record's 51 bytes} (X: the image's answer to the battery check's request)
+const BAT_ANSWER = '3b11' + '000000013301' + '00'.repeat(51);
+function batteryTests(ok, on) {
+  const [dev, mn] = on();
+  ok(mn.send(0x11, [0, 0, 0, 0]) === null && dev.frames.at(-1).reply === null && mn.st.message === 0,
+    `0x11 {0, 0, 0, 0} is a write and the answer drops the message line: ${JSON.stringify(dev.frames.at(-1))}, message line ${mn.st.message}`);
+  ok(mn.send(0x8f, [], true) === BAT_ANSWER && mn.st.message === 1 && dev.log.at(-1) === `sent 0x11 ${BAT_ANSWER.slice(4)}`,
+    `the poll carries the message 0x11 of 57 bytes {0, 0, 0, 1, 0x33, 1, 51 zeros}: ${dev.frames.at(-1).reply}`);
+  ok(mn.send(0x8f, [], true) === '04000000', 'one answer per request: the next poll is empty');
+  mn.send(0x11, [0, 0, 2, 0]);
+  ok(mn.send(0x8f, [], true) === '3b11' + '000002013301' + '00'.repeat(51), 'kind 2 is answered alike, its kind byte echoed');
+  mn.send(0x11, [1, 0, 0, 0]);
+  ok(mn.st.message === 1 && /byte 0 not 0/.test(dev.log.at(-1)), `byte 0 not 0: taken with no message (0x80150a5): ${dev.log.at(-1)}`);
+  mn.send(0x11, [0, 0, 5, 0]);
+  ok(mn.st.message === 1 && /kind 5 logged/.test(dev.log.at(-1)), `a kind above 4: the battery task logs it and answers nothing: ${dev.log.at(-1)}`);
+  const [, m2] = on();
+  ok(throwsAs(() => m2.send(0x11, [0, 0, 3, 0, 0, 0]), ScpuError), 'kind 3 (the pack request of another form, 0x8019c44) is refused');
+  const [, m3] = on();
+  ok(throwsAs(() => m3.send(0x11, [0, 1, 0, 0]), ScpuError), 'slot 1 (the PBH\'s pack, its own UART) is refused');
+  const [, m4] = on(false);
+  ok(throwsAs(() => m4.send(0x11, [0, 0, 0, 0]), ScpuError), 'a body whose sub-CPU image is not the one read has its 0x11 refused');
+  ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x11] }), ScpuError), '0x11 cannot be a body\'s quiet write');
 }
 
 // The inbound direction, as PER_SCPU drives it: a message drops the message line, the MN polls [2, 0x8f] while the

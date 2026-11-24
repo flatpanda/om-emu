@@ -353,7 +353,7 @@ MODELS bodies (pinned in `emu/test/test_facts.mjs` NAMES_FOUND):
 | E139 | `0x20403f0` | 1,948 |
 | E134 | `0x20403f0` | 1,912 |
 | E130, E133 | `0x1a003e0` | 1,676 |
-| E118, E122, E125, E129, E132, E137 | refused: `MODE_DRIVE` and its siblings stand in 72-byte records with words after the name (E137's at `0x1ec0404`), another form, not read | |
+| E118, E122, E125, E129, E132, E137 | refused: `MODE_DRIVE` and its siblings stand in 72-byte records with words after the name (E137's at `0x1ec0404`), another form whose number per name is not the store's id (`docs/hle-gaps/4.6.md` 4.6.11), not read | |
 | E120, E140, E142, E145 | refused: no `MODE_DRIVE` record in block 2 | |
 
 Only E143's and E146's block 2 are unpacked (`unpacked/`, pinned in `BLOBS.sha256`); the others are read from the

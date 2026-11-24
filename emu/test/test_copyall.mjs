@@ -1,16 +1,19 @@
 // The playback menu's Copy All with two cards, natively (src/lab/media.mjs S-MDACTRL's copy all; docs/hle-gaps/4.8.md
 // 4.8.21, 4.8.23):
-//   copyAllSession  (firmware, E143) a blank card formatted by the lab in slot 1 of a first session, then put in slot
+//   copyAllSession  (firmware, E143 and E146) a blank card formatted by the lab in slot 1 of a first session, then put in slot
 //                   2 of a second session with another blank card in slot 1; S1 and S2 twice (two pictures on card
 //                   1), MENU, the sub dial to the page that holds Copy All, the walker to Copy All, OK on the copy
 //                   screen's choice and the walker to the confirm's Yes (its cursor starts there, X): the media control's start with the copy all's command, the copy run by the file module
 //                   natively, and card 2 read back by the independent reader (refs/volume.mjs, as bin/card.mjs ls
 //                   reads a card): the same DCF file names with the same bytes as card 1's.
-//   node emu/test/test_copyall.mjs   (exit 1 on a failure)
+//   node emu/test/test_copyall.mjs [--model E146]   (exit 1 on a failure; --model sets OM_EMU_MODEL before the lab
+//                                                    loads, as OM_EMU_MODEL=E146 does)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 
-export const COPY_ALL = new Set(['E143']);
+// the bodies whose model gives the copy all's command and calls (src/fw/models.mjs card_fs.hls.ctrl.copy_all and
+// ctrl.copy; docs/hle-gaps/4.8.md 4.8.21, 4.8.27)
+export const COPY_ALL = new Set(['E143', 'E146']);
 const COPY_ALL_CMD = 2, MAX_TABS = 8;
 
 export async function copyAllSession() {
@@ -90,6 +93,8 @@ export async function copyAllSession() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const at = process.argv.indexOf('--model');
+  if (at > 0) process.env.OM_EMU_MODEL = process.argv[at + 1];
   const r = await copyAllSession();
   console.log(`the menu's copy all: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));

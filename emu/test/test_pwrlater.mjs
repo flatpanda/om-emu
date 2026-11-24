@@ -4,13 +4,18 @@
 //                  opt-in: both inits (fact power.later: 0x50044ed7, 0x50044f7d) return with PWR_MAIN waiting and no
 //                  errlog, the first sends the start's 0x14 {0, 1, 0, 3, 0} and the second the battery check's 0x11
 //                  {0, 0, 0, 0}, A and C read 1, the player reports H-PWRLATER, and the start reaches the shooting
-//                  screen (GUI 0x0108), as the same start without the opt-in does (no H-PWRLATER there); then with
-//                  S-SCPUDEV the opt-in stops at the second init on S-SCPUDEV's refusal of 0x11
+//                  screen (GUI 0x0108) with the frame and lab time of the same start without the opt-in (no
+//                  H-PWRLATER there); in the next second the sub-CPU answers 0x11 through the poll with its 57-byte
+//                  message and the MN sends 0x14 {0, 1, 0, 1, 0}; then with S-SCPUDEV (4.7.19) the opt-in runs both
+//                  inits, the second's frames being 0x11, the poll with the image's answer and that 0x14, and
+//                  reaches the shooting screen with the same frame and lab time, as S-SCPUDEV's start without it
 //   node emu/test/test_pwrlater.mjs   (exit 1 on a failure)
 import { createHash } from 'node:crypto';
 
 const GUI_SHOOTING = '0x0108';
 const START_14 = '0001000300', CHECK_11 = '00000000';   // the frames' data (4.7.6: {0, inserted 0, inserted 1, recommend 0, recommend 1}; {0, slot, kind, 0})
+// the sub-CPU's answer to CHECK_11 (4.7.19: its poll reply, the message 0x11 of 57 bytes, X) and the MN's 0x14 after it
+const BAT_ANSWER = '3b11' + '000000013301' + '00'.repeat(51), RECOMMEND_14 = '0001000100';
 
 export async function pwrLaterSession() {
   const bad = [], skipped = [];
@@ -33,13 +38,18 @@ export async function pwrLaterSession() {
     const pl = new Player(args, { ...base, ...(scpu === 'native' ? { scpu: 'native', scpuImage } : { scpu: 'off' }) });
     try { pl.open_session(); return { pl }; } catch (e) { try { pl.close_session(); } catch { /* never opened */ } return { pl, error: e }; }
   };
+  // the start's end: GUI, the published frame's sha16 and the lab time
+  const end = (pl) => ({ gui: pl.session.status().gui, frame: pl.frame?.[3] ?? null, lab: pl.session.lab.lab_time(), used: pl.stand_ins_in_use() });
+  const same = (a, b) => a && b && a.gui === b.gui && a.frame === b.frame && a.lab === b.lab;
+  const show = (x) => (x ? `GUI ${x.gui} frame ${x.frame} lab ${x.lab}` : 'none');
   try {
     // the control: the start without the opt-in
     const c = open(false, 'native');
     ok(!c.error, `${MODEL}: the start without the opt-in: ${c.error?.message.split('\n')[0]}`);
-    const control = c.error ? null : { gui: c.pl.session.status().gui, used: c.pl.stand_ins_in_use() };
+    const control = c.error ? null : end(c.pl);
     if (!c.error) c.pl.close_session();
-    ok(control?.gui === GUI_SHOOTING && !control.used.includes('H-PWRLATER'), `${MODEL}: the control reaches the shooting screen without H-PWRLATER: GUI ${control?.gui}`);
+    ok(control?.gui === GUI_SHOOTING && control.frame && !control.used.includes('H-PWRLATER'), `${MODEL}: the control reaches the shooting screen without H-PWRLATER: ${show(control)}`);
+    let answer = null;
     // the opt-in with the sub-CPU's own firmware
     const r = open(true, 'native');
     ok(!r.error, `${MODEL}: the start with H-PWRLATER: ${r.error?.message.split('\n')[0]}`);
@@ -52,18 +62,41 @@ export async function pwrLaterSession() {
       ok(frames[0] === `0x14 ${START_14}` && frames[1] === `0x11 ${CHECK_11}`, `${MODEL}: the first sends 0x14 ${START_14}, the second 0x11 ${CHECK_11}: ${JSON.stringify(frames)}`);
       ok(lab.sim.read(f.a, 1)[0] === 1 && lab.sim.read(f.c, 1)[0] === 1, `${MODEL}: A and C set by ${hex(f.late)}`);
       ok(r.pl.stand_ins_in_use().includes('H-PWRLATER'), `${MODEL}: H-PWRLATER reported`);
-      ok(s.status().gui === GUI_SHOOTING, `${MODEL}: the start reaches the shooting screen with H-PWRLATER: GUI ${s.status().gui}`);
+      const e = end(r.pl);
+      ok(same(e, control), `${MODEL}: the start reaches the shooting screen with H-PWRLATER, as the control: ${show(e)} (control ${show(control)})`);
+      // the sub-CPU's answer: its poll and the MN's 0x14 that follows, within a second of lab time
+      const n0 = lab.scpu_dev.frames.length;
+      for (let t = lab.lab_time(), k = 1; k <= 20; k++) s.idle_slice(t + k * 50e6);
+      const after = lab.scpu_dev.frames.slice(n0).map((y) => `${y.cmd} ${y.data} ${y.reply}`);
+      answer = after[0]?.split(' ')[2] ?? null;
+      ok(after.length === 2 && after[0] === `0x8f  ${BAT_ANSWER}` && after[1] === `0x14 ${RECOMMEND_14} null`,
+        `${MODEL}: the sub-CPU answers 0x11 with {0, 0, 0, 1, 0x33, 1, 51 zeros} through the poll, then the MN sends 0x14 ${RECOMMEND_14}: ${JSON.stringify(after)}`);
       r.pl.close_session();
     }
-    // the opt-in with S-SCPUDEV: its refusal of the battery check's 0x11, at the second init
+    // S-SCPUDEV: its start without the opt-in, and with it both inits, the 0x11 answered as the image answers it
+    const dc = open(false, 'off');
+    ok(!dc.error, `${MODEL}: S-SCPUDEV's start without the opt-in: ${dc.error?.message.split('\n')[0]}`);
+    const dcontrol = dc.error ? null : end(dc.pl);
+    if (!dc.error) dc.pl.close_session();
+    ok(same(dcontrol, control), `${MODEL}: S-SCPUDEV's start as the sub-CPU's own: ${show(dcontrol)}`);
     const d = open(true, 'off');
-    ok(d.error && /H-PWRLATER: 0x50044f7d: .*S-SCPUDEV: command 0x11/.test(d.error.message), `${MODEL}: with S-SCPUDEV the opt-in stops on 0x11 at ${hex8(f.late)}: ${d.error ? d.error.message.split('\n')[0] : 'it opened'}`);
+    ok(!d.error, `${MODEL}: S-SCPUDEV's start with H-PWRLATER: ${d.error?.message.split('\n')[0]}`);
+    if (!d.error) {
+      const s = d.pl.session, lab = s.lab, later = s.power_manager?.later ?? [];
+      const frames = later.map((x) => x.frames.map((y) => `${y.cmd} ${y.data}${y.reply ? ` ${y.reply}` : ''}`));
+      ok(later.length === 2 && later.every((x) => x.state === 4 && !x.errlog.length), `${MODEL}: S-SCPUDEV: both inits ran, PWR_MAIN waiting, no errlog: ${JSON.stringify(later.map((x) => [x.init, x.state, x.errlog]))}`);
+      ok(JSON.stringify(frames) === JSON.stringify([[`0x14 ${START_14}`], [`0x11 ${CHECK_11}`, `0x8f  ${BAT_ANSWER}`, `0x14 ${RECOMMEND_14}`]]) && answer === BAT_ANSWER,
+        `${MODEL}: S-SCPUDEV: the second init's 0x11, the poll with the image's answer, the 0x14 that follows: ${JSON.stringify(frames)}`);
+      ok(lab.sim.read(f.a, 1)[0] === 1 && lab.sim.read(f.c, 1)[0] === 1 && d.pl.stand_ins_in_use().includes('H-PWRLATER'), `${MODEL}: S-SCPUDEV: A and C set, H-PWRLATER reported`);
+      const e = end(d.pl);
+      ok(same(e, control), `${MODEL}: S-SCPUDEV: the start with H-PWRLATER reaches the shooting screen as the control: ${show(e)}`);
+      d.pl.close_session();
+    }
   } finally {
     if (was === undefined) delete process.env.OM_POWER_LATER; else process.env.OM_POWER_LATER = was;
   }
   return { checks, bad, skipped };
 }
-const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { checks, bad, skipped } = await pwrLaterSession();

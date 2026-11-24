@@ -19,6 +19,7 @@ import { Scpu } from './dev/scpu.mjs';
 import { Hdmi } from './dev/hdmi.mjs';
 import { AudioPort } from './dev/audio.mjs';
 import { LinkPins } from './dev/linkpins.mjs';
+import { GioKeyPins } from './dev/gio.mjs';
 import { LensSsc } from './dev/lensssc.mjs';
 import { Dml } from './dev/dml.mjs';
 import { Pdt } from './dev/pdt.mjs';
@@ -27,6 +28,7 @@ import { Imgpro } from './dev/imgpro.mjs';
 import { ImgPipe } from './dev/imgpipe.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
 import { Timer2 } from './dev/timer2.mjs';
+import { Adc } from './dev/adc.mjs';
 import { Cores } from './core/cores.mjs';
 
 export { Unported, TbUndecidable };
@@ -166,6 +168,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const hdmiPort = hdmi ? new Hdmi(m, intc, HDMI_WINDOW, HDMI_DOORBELL) : null;
   // the sub-CPU link's GIO pins, on a board that gives them (src/dev/linkpins.mjs; the lab wires the sub-CPU)
   const linkPins = boardKnows('scpu_link') ? new LinkPins(m, intc, BOARD.scpu_link) : null;
+  // UI_IN's GIO key pins, on a board that gives them (src/dev/gio.mjs; the lab sets their levels, H-GIOKEYS)
+  const gioKeys = boardKnows('gio_keys') ? new GioKeyPins(m, intc, BOARD.gio_keys) : null;
   // the lens mount's controller, the FCS unit's words and the detect pin, and the deferred-call triggers, on a board
   // that gives them (src/dev/lensssc.mjs, src/dev/dpc.mjs; passive until the lab connects a lens or a post writes)
   const lensSsc = boardKnows('lens') ? new LensSsc(m, intc, bus, BOARD.lens) : null;
@@ -190,9 +194,12 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const imgpipe = boardKnows('imgpipe') ? new ImgPipe(m, lclock, intc, bus, BOARD.imgpipe) : null;
   const stub = new Stub(m);
   // the E118 family's second timer unit, on a board that gives it (src/dev/timer2.mjs; passive until the firmware starts
-  // a channel), the last of the lab clock's sources; it reads clock 19's divider words from the stub as the CPU would
+  // a channel), before the A/D converter among the lab clock's sources; it reads clock 19's divider words from the stub as the CPU would
   const stubWord = (a) => { try { return stub.read(a, 4, true); } catch (e) { if (e === BUS) return null; throw e; } };
   const timer2 = boardKnows('timer2') ? new Timer2(m, lclock, intc, BOARD.timer2, stubWord) : null;
+  // the A/D converter, on a board that gives it (src/dev/adc.mjs; passive until the firmware starts a conversion),
+  // after the second timer unit: the last of the lab clock's sources
+  const adc = boardKnows('adc') ? new Adc(m, lclock, intc, BOARD.adc) : null;
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
   // the second core (src/core/cores.mjs), which takes over the controller's request callbacks
@@ -256,9 +263,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
     cores,
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}), ...(gioKeys ? { gio_keys: gioKeys } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}),
-      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}), ...(timer2 ? { timer2 } : {}) },
+      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}), ...(timer2 ? { timer2 } : {}), ...(adc ? { adc } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

@@ -7,7 +7,9 @@
 // where a record MODE_DRIVE is followed by records that start with MODE_, the run ending at the first record that is
 // not one, and its last record MODE_LABEL_PLAT_END (X, a scan of the 19 MODELS bodies' block 2, 2026-11-17: nine hold
 // it, test/test_facts.mjs NAMES_FOUND; E118, E122, E125, E129, E132 and E137 hold MODE_DRIVE in records of another
-// form, 72 bytes with words after the name, which this rule does not read; E120, E140, E142 and E145 none). That the
+// form, 72 bytes with words after the name, which this rule does not read: their records are not in id order and the
+// number in their last word is not the store's id at the ids the descriptor table pins, docs/hle-gaps/4.6.md 4.6.11;
+// E120, E140, E142 and E145 none). That the
 // index is the setting id: X on E143, E146 and E147 (test/test_setnames.mjs: MODE_MOVIE is 44, the setting E147's
 // still / movie switch moves, with MODE_ACTION_DIAL 2188; MODE_EXPOSE 24 reads the mode; MODE_SLEEP 32 the value SET
 // wrote). A name longer than 51 characters is cut to 51 in its record, so several ids can read one name (E147's 1120 and

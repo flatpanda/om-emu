@@ -124,6 +124,12 @@ export function caduceusUnits() {
   const sp = strictPin(strictSites(doc));
   ok(sp.sites === 3 && same(sp.classes, { 'image-store': 2, 'init-read': 1 }) && sp.on_patched === 2 && same(sp.span, ['0x60f4b000', '0x60f98264'])
     && same(sp.not_patched, [{ class: 'image-store', at: '0x5001095c', addr: '0x60f98264', size: 2, dir: 'w' }]) && sp.allowed === true && sp.dropped === 0, `strictPin: ${JSON.stringify(sp)}`);
+  // a cave-store finding: pinned by its range, its sites and their digest, its count n left out
+  const cdoc = { ...doc, findings: [...doc.findings, { class: 'cave-store', range: '0x60f49800..0x6103f000', sites: 240, patched: 239, stock_sites: [{ site: '0x6001097c', disasm: '0x5001095c', addr: '0x60f98264', size: 2 }],
+    span: ['0x60f4b4e8', '0x6101d01e'], digest: '0badcafe', n: 9000 }] };
+  const cp = strictPin(strictSites(cdoc));
+  ok(cp.sites === 3 && cp.classes['cave-store'] === 1 && same(cp.caves, [{ range: '0x60f49800..0x6103f000', sites: 240, on_patched: 239, not_patched: [{ at: '0x5001095c', addr: '0x60f98264', size: 2 }], span: ['0x60f4b4e8', '0x6101d01e'], digest: '0badcafe' }])
+    && cp.digest === sp.digest && same(cp.span, sp.span), `strictPin with a cave-store finding: ${JSON.stringify(cp)}`);
   const recount = strictPin(strictSites({ ...doc, findings: doc.findings.map((f) => ({ ...f, n: f.n + 1 })) }));
   const moved = strictPin(strictSites({ ...doc, findings: doc.findings.map((f, i) => (i ? f : { ...f, addr: '0xa0f4b988' })) }));
   ok(recount.digest === sp.digest && moved.digest !== sp.digest, `strictPin's digest: counts left out (${recount.digest}), an address moved told apart (${moved.digest} vs ${sp.digest})`);
@@ -255,26 +261,32 @@ async function flowRun(dir, version, flow, tmp, strict = false) {
 }
 
 // A strict log's findings as pinned (test/fixtures/caduceus-strict.json): per site its class, instruction (disassembly
-// notation), first address, size, direction, count and whether it lies on patched bytes; the allowed stock accesses
-// as their count
+// notation), first address, size, direction, count and whether it lies on patched bytes; a cave-store finding (a
+// range the patch made the boot load, src/lab/strict.mjs ownRanges) as its range, its sites' count, how many are on
+// patched bytes, the others, the span and digest of its addresses; the allowed stock accesses as their count
 export function strictSites(doc) {
-  return { findings: doc.findings.map((f) => ({ class: f.class, at: f.disasm, addr: f.addr, size: f.size, dir: f.dir, n: f.n, ...(f.patched ? { patched: true } : {}), ...(f.where ? { where: f.where } : {}) })),
+  const cave = (f) => ({ class: f.class, range: f.range, sites: f.sites, patched: f.patched, stock_sites: f.stock_sites.map((x) => ({ at: x.disasm, addr: x.addr, size: x.size })), span: f.span, digest: f.digest, n: f.n });
+  return { findings: doc.findings.map((f) => (f.class === 'cave-store' ? cave(f) : { class: f.class, at: f.disasm, addr: f.addr, size: f.size, dir: f.dir, n: f.n, ...(f.patched ? { patched: true } : {}), ...(f.where ? { where: f.where } : {}) })),
     allowed: doc.allowed.reduce((x, e) => x + e.n, 0) > 0, dropped: doc.dropped };
 }
 
 // The pinned form of strictSites' result: {sites, classes: {class: n}, on_patched, span: [lo, hi] of the addresses in
 // the cached view, not_patched: the sites whose instruction is not on bytes a patch changed (a stock routine, or code
 // run from outside the image, which the patch ranges do not map), digest: sha256 of the sorted lines "class at addr
-// size dir" (the counts n left out), allowed, dropped (sites past the log's cap, src/lab/strict.mjs STRICT_SITES_MAX)}
+// size dir" (the counts n left out), for the per-site findings; caves: per cave-store finding {range, sites,
+// on_patched, not_patched, span, digest} (its counts n left out); allowed, dropped (sites past the log's cap per
+// class, src/lab/strict.mjs STRICT_SITES_MAX)}
 export function strictPin(st) {
   const c = (a) => { const v = parseInt(a, 16); return v >= 0xA0000000 && v < 0xC0000000 ? v - 0x40000000 : v; };
   const classes = {};
   for (const f of st.findings) classes[f.class] = (classes[f.class] ?? 0) + 1;
-  const addrs = st.findings.map((f) => c(f.addr)).sort((a, b) => a - b);
+  const per = st.findings.filter((f) => f.class !== 'cave-store');
+  const addrs = per.map((f) => c(f.addr)).sort((a, b) => a - b);
   const hx = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
-  const lines = st.findings.map((f) => `${f.class} ${f.at} ${f.addr} ${f.size} ${f.dir}`).sort();
-  return { sites: st.findings.length, classes, on_patched: st.findings.filter((f) => f.patched).length, span: addrs.length ? [hx(addrs[0]), hx(addrs.at(-1))] : null,
-    not_patched: st.findings.filter((f) => !f.patched).map(({ n, ...f }) => f), digest: sha(lines.join('\n')).slice(0, 16), allowed: st.allowed, dropped: st.dropped };
+  const lines = per.map((f) => `${f.class} ${f.at} ${f.addr} ${f.size} ${f.dir}`).sort();
+  const caves = st.findings.filter((f) => f.class === 'cave-store').map((f) => ({ range: f.range, sites: f.sites, on_patched: f.patched, not_patched: f.stock_sites, span: f.span, digest: f.digest }));
+  return { sites: per.length, classes, on_patched: per.filter((f) => f.patched).length, span: addrs.length ? [hx(addrs[0]), hx(addrs.at(-1))] : null,
+    not_patched: per.filter((f) => !f.patched).map(({ n, ...f }) => f), digest: sha(lines.join('\n')).slice(0, 16), caves, allowed: st.allowed, dropped: st.dropped };
 }
 
 // The control: v0.29's block with section 6's end word put back to stock, as --main (made here, then removed)
@@ -359,7 +371,8 @@ export async function caduceusSession({ strict = false } = {}) {
       }
       f.forEach((x) => ok(false, x));
       ok(true, `${v} flow`);
-      const st = strict && res.strict ? `; strict ${strictPin(res.strict).sites} site(s)` : '';
+      const sp = strict && res.strict ? strictPin(res.strict) : null;
+      const st = sp ? `; strict ${sp.sites} site(s)${sp.caves.map((c) => `, cave-store ${c.range} ${c.sites} site(s)`).join('')}` : '';
       notes.push(`${v}: ${f.length ? 'FAILED' : 'as pinned'} (${res.seconds.toFixed(1)} s${pins[v] ? (pins[v].expect.open === 'ok' ? '' : `; ${pins[v].expect.open}`) : '; no flow pin, default flow'}${st})`);
     }
     // the control on the lab: v0.29 with section 6's end word put back stops at the open, naming section 6

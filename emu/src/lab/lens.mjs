@@ -82,7 +82,8 @@ export class NativeLens {
     const access = s.storage.f.nand.access;
     // (named after the layers below: S-FSNAND, and S-RESNAND where H-RESINIT runs)
     lab.wrap(access, (prev) => (h, r) => this._nand(h, r, prev), `${lab.hooks.get(runtime(access))?.[1] ?? 'S-FSNAND'}, S-LENSNAND`);
-    lab.step('H-DPCINIT the deferred-call init 0x50050279 (pre-kernel)', () => lab.call(this.dpc_init, null, null, null, 200000));
+    // (where H-ADINIT runs, the play bring-up ran H-DPCINIT before it: src/lab/play.mjs)
+    if (!s.dpc_init) lab.step('H-DPCINIT the deferred-call init 0x50050279 (pre-kernel)', () => lab.call(this.dpc_init, null, null, null, 200000));
     lab.step('H-LENSINIT the lens module init 0x502a5d10 (boot call 0x50024ab6)', () => lab.call(f.module_init, null, null, null, 2000000));
     lab.step('H-LENSINIT the lens data cache load 0x502a6371 (USTART_L)', () => lab.call(f.cache_init, null, null, null, 2000000));
     lab.step('H-LENSINIT the lens task variables 0x502a5dff (USTART_L)', () => lab.call(f.task_vars, null, null, null, 200000));

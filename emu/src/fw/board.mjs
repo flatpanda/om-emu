@@ -93,6 +93,9 @@ export const FAMILIES = {
     // bit (the pin read 0x50002a35: bit 4 of the word (0x60025ff8)[77]) and its GIO record (slot 124 of the slot table
     // 0x60026788, record 0x600268f4 + 32 x 124): its group's status and enable words, the pin's type-0 bit and the
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
+    // UI_IN's GIO key pins (src/dev/gio.mjs, src/lab/play.mjs H-GIOKEYS): read for E143 only, given there (src/fw/models.mjs
+    // board); E146's and E147's key inits are not read
+    gio_keys: UNKNOWN,
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
     // the audio serial port and the SCA (src/dev/audio.mjs, built only with the machine's audio option;
     // docs/hle-gaps/4.5.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
@@ -152,6 +155,11 @@ export const FAMILIES = {
     // 0x50050279 attaches (53 and 54 on CPUs 0..3 through 0x50053fcd, 55..58 on the calling core through 0x50053f76;
     // the words 0x9b880044..0x9b880058, D; src/fw/facts.mjs deferredCalls reads the same on E143, E146 and E147, X)
     dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] },
+    // the A/D converter (src/dev/adc.mjs; docs/hle-gaps/4.7.md 4.7.20): its registers (the A/D driver's single-channel
+    // path 0x5004cce0..0x5004d3a0: +0x00..+0x74) and IRQ 319, which the driver's init 0x5004d3c3 attaches with the
+    // handler 0x5004d09c (0x5004ccc7). E143's (D); E146's and E147's inits attach IRQ 319 the same way (0x5004e749,
+    // 0x5004e4f5, D), their drivers' register paths not read; passive until a conversion starts
+    adc: { base: 0x98C00000, irq: 319 },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
@@ -258,7 +266,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
     // the sub-CPU link's pins: not read for the family; E139 and E134, the bodies that run PER_SCPU, give theirs (pins
     // 77 / 76 / 57 in the family's GIO block, src/fw/models.mjs)
-    scpu_link: UNKNOWN,
+    scpu_link: UNKNOWN, gio_keys: UNKNOWN,
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
     hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
@@ -390,7 +398,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
-    scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
+    scpu_link: UNKNOWN, gio_keys: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
     imgpro: UNKNOWN, imgpipe: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,

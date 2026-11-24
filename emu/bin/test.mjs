@@ -10,7 +10,8 @@
 // (test_debug.mjs) and its live route to a play session (test_live.mjs) with its call op (test_call.mjs: mid-function
 // calls with stop pcs too, and through bin/session.mjs on E143 and E147), the firmware's setting names and the setting
 // op and tokens on E143, E146 and E147 (test_setnames.mjs), the settings init chain's rule and its sessions against the off switch on
-// E143, E146 and E147 (test_setchain.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// E143, E146 and E147 (test_setchain.mjs), the date prompt's end at a display switch on the same three
+// (test_promptend.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
@@ -46,7 +47,7 @@
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the playback menu's Erase All natively on E143, E146, E147 and E148 (test_eraseall.mjs), its Copy All to
-// the second card natively on E143 (test_copyall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
+// the second card natively on E143 and E146 (test_copyall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
 // refused on E143 and moved on E147 (test_smswitch.mjs), the E-P7's Shortcut button refused on E143 and opening the
 // Colour Profile page on E142 (test_shortcut.mjs), the display switch both ways with a shot on each display and
 // the TFT's frame at idle on E146 and E147, LV in S2's rec view on all three (test_dispswitch.mjs), the scripted session through
@@ -511,6 +512,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...u.bad, ...s.bad].forEach((x) => console.log('  ', x));
   bad += u.bad.length + s.bad.length;
 }
+// the strict mode's cave-store class (src/lab/strict.mjs ownRanges): stores into a range the patch made the boot load
+// aggregated per range, a stock range's per site, the cap per class (firmware-free)
+{
+  const { strictCaveUnits } = await import('../test/test_strict_cave.mjs');
+  const u = await strictCaveUnits();
+  console.log(`strict cave-store: units ${u.checks - u.bad.length}/${u.checks}`);
+  u.bad.forEach((x) => console.log('  ', x));
+  bad += u.bad.length;
+}
 // the boot's stage bits (S-BOOTSTAGE, src/lab/menu.mjs stage_bits): the boot job they follow read from the block and
 // the stage word after a play session's open, E143 here, E146 and E147 each in a process of its own
 {
@@ -612,6 +622,25 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`USB cable (E143): ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   bad += r.bad.length;
+}
+// a session with no USB cable (USB_IDLE 'out'): the lever's off follows the application's own shutdown on E143
+{
+  const { usbIdleSessions } = await import('../test/test_usbcable.mjs');
+  const r = await usbIdleSessions();
+  console.log(`USB idle out (E143): ${r.checks - r.bad.length}/${r.checks}`);
+  r.bad.forEach((x) => console.log('  ', x));
+  bad += r.bad.length;
+}
+// the USB plug under control camapp 3 from a start with the cable out: without S-USBHOST CA_MAIN's handler ends, with
+// it command 38 PC_START_PC_USB_SELECT, "One Moment" and the PC application's startPc on E143
+{
+  const { usbSelectSession } = await import('../test/test_usbselect.mjs');
+  for (const host of [false, true]) {
+    const r = await usbSelectSession(host);
+    console.log(`USB select ${host ? 'with S-USBHOST' : 'control'} (E143): ${r.checks - r.bad.length}/${r.checks}`);
+    r.bad.forEach((x) => console.log('  ', x));
+    bad += r.bad.length;
+  }
 }
 // the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and E147 and its PER_ROTATE
 // groups R1 and R2 (PER_ROTATE by default, with their mutant on E143) on E143, E146 and E147, each in a process of
@@ -722,6 +751,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   runs.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`))).forEach((x) => console.log('  ', x));
   bad += runs.filter(([, rc]) => rc !== 0).length;
 }
+// the second card slot on the bodies whose slots the rule reads (test_slot2_rule.mjs: E139 and E125 one card and two,
+// S2 on each card; E134's second card stops at the slave ASIC's CCI after S-SASIC; docs/hle-gaps/4.8.md 4.8.17,
+// 4.8.29), each body in a process of its own
+{
+  const { spawnSync } = await import('node:child_process');
+  const runs = ['E139', 'E134', 'E125'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_slot2_rule.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n')];
+  });
+  console.log(`the second card slot by the rule: ${runs.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  runs.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`))).forEach((x) => console.log('  ', x));
+  bad += runs.filter(([, rc]) => rc !== 0).length;
+}
 // Playback with two pictures (RIGHT, LEFT, OK's wizard and PLAY from it, INFO's three views, the erase dialog's request
 // performed or refused where Delete opens it) and INFO's still information, from the picture's own
 // record: E143 here (S-PLAYCOMP's answer in the
@@ -790,13 +832,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += r.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the playback menu's Copy All (S-MDACTRL's copy all, the picture file API's call natively, FILECLBK's code 38): two
-// pictures on card 1, Copy All, the copy screen's choice and Yes, card 2 read back with card 1's files: E143 alone
+// pictures on card 1, Copy All, the copy screen's choice and Yes, card 2 read back with card 1's files: E143 here,
+// E146 in a process of its own (docs/hle-gaps/4.8.md 4.8.27)
 {
   const { copyAllSession } = await import('../test/test_copyall.mjs');
   const r = await copyAllSession();
   console.log(`the menu's copy all: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   bad += r.bad.length;
+  const { spawnSync } = await import('node:child_process');
+  const e146 = spawnSync(process.execPath, [new URL('../test/test_copyall.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
+  console.log(`the menu's copy all on E146: ${(e146.stdout.match(/copy all: (\S+)/) ?? [])[1] ?? 'no result'}`);
+  if (e146.status !== 0) { console.log(e146.stdout.split('\n').slice(1).join('\n') + (e146.stderr ?? '')); bad += 1; }
 }
 // touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here, E146, E147 and
 // the E144 and E118 families' bodies with a touch panel each in a process of its own, four at a time (on the
@@ -835,6 +882,25 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`nav session: E143 ${nv.checks - nv.bad.length}/${nv.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
   [...nv.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += nv.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// nav's TFT layout: the connect posted on the ported bodies, the TG-5s' layout 0 with the value column and "Set"
+// whole, the other bodies' frames unchanged by it; E143 here, NAV_BODIES each in a process, four at a time
+// (test_navlayout.mjs)
+{
+  const { navLayout, NAV_BODIES } = await import('../test/test_navlayout.mjs');
+  const { spawn } = await import('node:child_process');
+  const nl = await navLayout();
+  const run = (m) => new Promise((done) => {
+    const c = spawn(process.execPath, [new URL('../test/test_navlayout.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m } });
+    let out = '';
+    c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
+    c.on('close', (rc) => done([m, rc, out.trim().split('\n')]));
+  });
+  const others = [];
+  for (let i = 0; i < NAV_BODIES.length; i += 4) others.push(...await Promise.all(NAV_BODIES.slice(i, i + 4).map(run)));
+  console.log(`nav layout: E143 ${nl.checks - nl.bad.length}/${nl.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
+  [...nl.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += nl.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // subject detection's frames: the scene's subject boxes and DISP_FRAME's transform without firmware, then a play
 // session on E143 whose DISP_FRAME draws the frames from MDET's own table on the scene's rider while the setting names
@@ -979,6 +1045,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`settings init chain: units ${cu.checks - cu.bad.length}/${cu.checks}; E143 ${cs.checks - cs.bad.length}/${cs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...cu.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += cu.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the date prompt's end within a display switch's step (test_promptend.mjs): the event ring the chain's step 10 sizes,
+// the switch on the prompt with it and with its size zeroed, on E143 here and on E146 and E147 in processes of their own
+{
+  const { promptendSession } = await import('../test/test_promptend.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const pe = await promptendSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_promptend.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`date prompt's end at a switch: E143 ${pe.checks - pe.bad.length}/${pe.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...pe.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += pe.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the scripted session's traces, breakpoints and watchpoints (test_trace.mjs): its units, then whole runs through the
 // command line on E143 here and on E147 in a process of its own
@@ -1167,6 +1247,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...uu.bad, ...us.bad].forEach((x) => console.log('  ', x));
   bad += uu.bad.length + us.bad.length;
 }
+// UI_IN's GIO key pins (H-GIOKEYS, src/dev/gio.mjs; test_giokeys.mjs, E143): the board's pins against the driver's
+// tables; the key init reads and arms them at the idle levels; a tap still accepted; OK through its pin decoded natively
+{
+  const { gioKeysUnits, gioKeysSession } = await import('../test/test_giokeys.mjs');
+  const gu = await gioKeysUnits(), gs = await gioKeysSession();
+  console.log(`UI_IN's GIO key pins: units ${gu.checks - gu.bad.length}/${gu.checks}; in play ${gs.checks - gs.bad.length}/${gs.checks}`);
+  [...gu.bad, ...gs.bad].forEach((x) => console.log('  ', x));
+  bad += gu.bad.length + gs.bad.length;
+}
 // the 12-40 on the mount (S-LENS, or natively with S-LENSMCU) and the camera's own exposure plan (S-EXPOSE)
 {
   const { exposeSessions } = await import('../test/test_expose.mjs');
@@ -1336,8 +1425,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...mu.bad, ...ms.bad, ...ms.skipped.map((x) => `SKIPPED ${x}`), ...e146].forEach((x) => console.log('  ', x));
   bad += mu.bad.length + ms.bad.length + ms.skipped.length + (r.status === 0 ? 0 : 1);
 }
+// the A/D converter and the A/D driver's init (H-ADINIT; test_adc.mjs): the device without firmware, the rule on E143's
+// image, and E143's start with and without it (UI_IN's channel open, and with OM_POWER_LATER=on the temperature read,
+// through the converter)
+{
+  const { adcUnits, adcFacts, adcSession } = await import('../test/test_adc.mjs');
+  const au = adcUnits(), af = await adcFacts(), as = await adcSession();
+  console.log(`the A/D converter: units ${au.checks - au.bad.length}/${au.checks}; rule ${af.checks - af.bad.length}/${af.checks}; in play ${as.checks - as.bad.length}/${as.checks}`);
+  [...au.bad, ...af.bad, ...as.bad].forEach((x) => console.log('  ', x));
+  bad += au.bad.length + af.bad.length + as.bad.length;
+}
 // the power manager's later inits at the bring-up (H-PWRLATER, opt-in; test_pwrlater.mjs), E143 with the SCPU's own
-// firmware
+// firmware and with S-SCPUDEV
 {
   const { pwrLaterSession } = await import('../test/test_pwrlater.mjs');
   const pw = await pwrLaterSession();

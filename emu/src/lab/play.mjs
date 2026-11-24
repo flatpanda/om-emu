@@ -6,7 +6,7 @@
 // player.mjs. The mutants (opts.mutant, the Player's --x-mutant: negative controls) sit at the sites they break.
 // Addresses are disassembly notation unless marked run-time.
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, isUnmapped, fact } from '../fw/model.mjs';
-import { BOARD } from '../fw/board.mjs';
+import { BOARD, boardKnows } from '../fw/board.mjs';
 import { SCPU_DOORBELL, HDMI_WINDOW, HDMI_DOORBELL } from '../machine.mjs';
 import { SET_INPUTS } from '../dev/scpu.mjs';
 import { PLUG, UNPLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS, W_SCDC_WRITES } from '../dev/hdmi.mjs';
@@ -17,10 +17,11 @@ import { SdCard, cardSectors } from './sdcard.mjs';
 import { NativeLens } from './lens.mjs';
 import { ResNand } from './resnand.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager, laterInits } from './power.mjs';
+import { SCAN_IDLE } from './scpudev.mjs';
 import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, MODE_DIAL_E143, SIO_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, MODE_DIAL_E143, SIO_E143, AD_E143 } from '../fw/facts.mjs';
 import { FACTS } from '../fw/ports.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
@@ -41,7 +42,7 @@ import { Tally } from '../util/tally.mjs';
 import { displayed_windows } from './windows.mjs';
 import { SettingsIds } from './settings_ids.mjs';
 import * as SC from './scene.mjs';
-import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
+import { CamApp, CA_MODULE9_READERS, pcPdQueue } from './camapp.mjs';
 import { MecCount } from './mec.mjs';
 import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
@@ -93,12 +94,27 @@ export const SCPU_PORT_GROUP = 0;
 // sub-CPU's message 0x08, which PER_SCPU's poll takes and its handler 0x5005d43e gives the same producer (D)
 export const UIIN_PORT_SCAN = A(0x5005D36A);
 const uiinScan = () => fact('scpu.port_scan', true);
+// USB_IDLE (docs/hle-gaps/4.10.md 4.10.2, 4.10.3): the USB cable at a session's start, as the sub-CPU's PC13 (active
+// low, D): 'in' (PC13 low, the default) or 'out' (PC13 high, no cable), opts.usb_idle or OM_USB_IDLE. The sub-CPU's
+// model (S-SCPUDEV, or its own firmware with OM_EMU_SCPU=native) starts its port scan at that level, so UI_IN's module
+// init takes it from the scan's first report; S-USBCABLE's first step is then a plug. With 'out' the lever's off makes
+// the application call startShutDown itself, and S-SHUTDOWN follows that call (src/lab/power.mjs)
+export const USB_IDLE = { in: 0, out: 1 };
+export function usbIdle(o) {
+  const v = o.usb_idle ?? globalThis.process?.env?.OM_USB_IDLE ?? 'in';
+  if (!Object.hasOwn(USB_IDLE, v)) throw new ValueError(`usb_idle ${show(v)}: in or out`);
+  // (X, E146: H-UIINSCAN in UI_IN's init's place decodes the scan's 0x0400 at state 1 against the lab's idle image,
+  // which keeps it at 0: the image's start with no cable is not read there)
+  if (v === 'out' && (uiinInit() === null || o.mutant === 'no-uiininit')) throw new ValueError(`usb_idle out: ${MODEL} does not run UI_IN's module init natively (H-UIININIT, src/fw/models.mjs uiin_init; E143), so its idle image holds the USB switch 0x0400 at a cable in`);
+  return v;
+}
 // H-UIININIT (src/fw/models.mjs uiin_init; docs/hle-gaps/4.7.md 4.7.17): on a body that gives it, UI_IN's module init
 // runs natively at the bring-up in place of H-UIINRING, S-BOOTKEY and H-UIINSCAN: its calls, read from its bytes, in its
-// order, but for the ones the body's entry leaves out (E143: the GIO keys' init 0x5014d62e and 0x5014d97a). Its key
+// order, but for the ones the body's entry leaves out (E143: 0x5014d97a, 4.7.21). Its key
 // step (E143 0x5014e3ab) stores the boot key from the key table at the wake factor, configures the SCPU's ports from
 // its bit table (0x5004e3fc, A-SCPU-4), clears the SCPU interface's word 0x04 and registers UI_IN's IRQ 320 callback
-// (H-UIINPORT's registration); 0x5014d49e sets group 4's image and old state; the port scan is H-UIINSCAN's request.
+// (H-UIINPORT's registration); 0x5014d49e sets group 4's image and old state; the port scan is H-UIINSCAN's request;
+// the key init (E143 0x5014d62e) reads and arms group 1's GIO key pins (H-GIOKEYS, below uiinKeyPins).
 // S-WAKEFACTOR: the SCPU init, which stores the wake factor, does not run (the halfword stays 0, the factor of a start
 // with the interface's bit 1 of word 0x00 clear, E143 0x5004ddbe..ca, D), so the lab sets it to the power button's,
 // 1: the factor the init stores for bit 0 of the interface's word 0x90 (0x5004ddda..e2, D), whose key table entry is
@@ -106,6 +122,42 @@ const uiinScan = () => fact('scpu.port_scan', true);
 // which took the factor 0 and reset the sub-CPU ("SCPU RST!", 4.7.1): the lab's link start stays a cold start (I)
 const uiinInit = () => MODEL_INFO.uiin_init ?? null;
 export const WAKE_POWER_BUTTON = 1;
+// H-ADINIT (src/fw/facts.mjs adDriver, fact 'adc'; src/dev/adc.mjs; docs/hle-gaps/4.7.md 4.7.20): the A/D driver's
+// init (E143 0x5004d3c3), which the boot calls at stage 0_3..0_l (0x50023f55), after its head's deferred-call init
+// and before UI_IN's module init (1_l, 0x50024b7d; 4.6.5's table, D), natively at the bring-up in that order: the
+// channel table (0xa32bff10, count 0xa32bff14) filled from the record of the core byte, the request ring cleared and
+// the converter's IRQ 319 attached. A request then finds its channel and runs through the converter (0x5004d831), and
+// its end posts its completion as a deferred call (E143's table gives every channel completion kind 5, 0x5004d1ee ->
+// 0x500503d4, D), so the deferred calls' init runs before it, also on a body whose native lens ran it in its own
+// bring-up (H-DPCINIT, src/lab/lens.mjs). A body whose board gives the converter, whose facts give the init and which
+// AD_BODIES lists runs it: E143 alone. E146 and E147 carry the fact since the port of 2026-11-24, but neither body's
+// channels were read against the converter's model, and E147's table names converter channel 8, which the model does
+// not have (X: its bring-up stopped there), so they keep the path before; the mutant no-adinit keeps the path before, where every
+// request takes the driver's 'no channel' path (a deferred completion with no samples; UI_IN's channel open logs
+// 0x28001511, 4.7.17). The converter's channels' values (src/dev/adc.mjs values), by the driver's channel (the table
+// gives each its converter channel, D):
+// - UI_IN's channel (E143 12, converter channel 7; the request 0x62988790 its channel open 0x5014ce00 builds from
+//   0x6034f998[variant] = 0x602243f4, D) is the mode dial's: UI_IN maps a sample v to position k where t[k] <= v <
+//   t[k + 1] in the threshold table its open stores at (0x6298877c) (0x5014d1bc, eleven words, E143 0x602243c8: 0,
+//   0xac, 0x1f9, 0x330, 0x467, 0x5b7, 0x710, 0x884, 0xa08, 0xb63, 0xe0b) and writes 1 << k as the mode dial's group-2
+//   image (0x5014cf0a, 0x5014d078, D). The lab gives the midpoint of the lab's dial position's interval (A-ADC-5, I:
+//   any value in it is the same position to the firmware)
+// - the power manager's channels (E143 1..5; the readers of 0x50042366: 1 at 0x500427e0 and 0x50042ecd; 2 and 3,
+//   BODY and PBH vb_ad, at 0x50045b75 and 0x50045b89, and 0x5004317e; 4 and 5, BODY and PBH TEMP AD, at 0x50045a5e and
+//   0x50045a72, D): 0 (A-ADC-4, I), the result every read gave through the 'no channel' path before (4.7.16: the
+//   deferred completion leaves the sum 0), so that the power manager decides as the lab's did (X: the same start with
+//   OM_POWER_LATER=on). What a body reads there is ? (the temperature step's bands, 0x5004675c: above 3024,
+//   2501..3024, 1663..2500, below; its 'inserted' test 0x500467e8: below 3766, D)
+// Any other channel has no value: its conversion's start is UNKNOWN (src/dev/adc.mjs)
+export const AD_DIAL_CHANNEL = 12, AD_POWER_CHANNELS = [1, 2, 3, 4, 5], AD_POWER_VALUE = 0;
+export const AD_DIAL_THRESHOLDS = A(0x6298877C), AD_DIAL_POSITIONS = 10;
+export const AD_ERRLOG = 0x28001511;
+const AD_BODIES = new Set(['E143']);
+const adInit = () => {
+  if (!boardKnows('adc') || !AD_BODIES.has(MODEL)) return null;
+  if (!ON_LAB_MODEL && !FACTS[MODEL]?.adc) return null;
+  return fact('adc', AD_E143);
+};
 // The module init's calls, from its bytes (E143 0x5014bf91..0x5014bfc5, D): `clr d0; movbu d0,(B); mov d0,(W)`, then
 // calls, `cd rel16 regs size` or `dd rel32 regs size`, up to `ret [],4`. {stores: [B, W], calls: [disassembly
 // notation]}; throws for any other shape
@@ -124,6 +176,26 @@ export function uiinInitCalls(image, init) {
     if (calls.length > 16) throw new PlayError(`H-UIININIT: UI_IN's module init ${h8(init)} makes more than 16 calls`);
   }
   return { stores, calls };
+}
+// H-GIOKEYS (src/fw/models.mjs uiin_init.keys; docs/hle-gaps/4.7.md 4.7.21): UI_IN's key init (E143 0x5014d62e)
+// reads, for each of its 16 keys, the pin of its table's entry {u32 pin, ...} pair (24 bytes a key; the table
+// (list)[UI_IN's variant], `mov (variant),d0` at +0x19 and `mov list,a0` at +0x1f) into bit i of the group whose
+// old state it writes (`add old,a2` at +0x48), then arms each pin's interrupt for the level it is not at (D,
+// 0x5014d62e..0x5014d768). {list, variant, old, group, table, keys: [{bit, pin}]}: the pins as the table names them
+// (class 0 the MN's GIO pins, which the driver maps by core through `map`; classes 2 and 3 the IO expanders' pins,
+// read from their drivers' RAM; 255 none); throws where the bytes differ or the group is not 16 bits wide
+export function uiinKeyPins(image, keys, groups) {
+  const [read, list] = keys, v = imageView(image, IMAGE_BASE, MODEL), at = runtime(read);
+  const op = (k, b0, b1) => v.u8(at + k) === b0 && v.u8(at + k + 1) === b1;
+  if (!op(0x19, 0xFC, 0xA4) || !op(0x1F, 0xFC, 0xDC) || !op(0x48, 0xFC, 0xD2) || v.u32(at + 0x21) !== list) {
+    throw new PlayError(`H-GIOKEYS: UI_IN's key init ${h8(read)} does not load its variant, the list ${h8(list)} and its group's old state at +0x19, +0x1f and +0x48`);
+  }
+  const variant = v.u32(at + 0x1B), old = v.u32(at + 0x4A), group = groups.findIndex((g) => g.old === old);
+  if (variant !== UIIN_VARIANT) throw new PlayError(`H-GIOKEYS: the key init reads the variant at ${h8(variant)}, not UI_IN's ${h8(UIIN_VARIANT)}`);
+  if (group < 0 || groups[group].bytes * 8 !== 16) throw new PlayError(`H-GIOKEYS: the key init's old state ${h8(old)} is no UI_IN group of 16 bits (group ${group})`);
+  const table = v.u32(list), out = [];                     // variant 0 (the bring-up checks UI_IN's variant word)
+  for (let i = 0; i < 16; i++) out.push({ bit: i, pin: v.u32(table + 24 * i) });
+  return { list, variant, old, group, table, keys: out };
 }
 // The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps/4.9.md 4.9): the machine
 // gets the transmitter, the hot-plug pin and the sink, the lab runs H-GIOSLOTS, and the input hdmi plug puts the sink
@@ -170,6 +242,12 @@ export const HFW_CALLBACK = A(0x50B76E60), TP_MASK_ALL = 0x11F1, TP_MASK_WORD = 
 export const HFW_STATUS = [[A(0x50B76FE3), [16, 225]], [A(0x50B7706B), [128, 226]], [A(0x50B770F3), [1, 227]], [A(0x50B7717C), [32, 228]],
   [A(0x50B77205), [256, 229]], [A(0x50B77297), [64, 230]], [A(0x50B77320), [4096, 300]]];
 export const GPIO_TP = [[48, 0x9B880E00], [49, 0x9B880E40], [108, 0x9B883E80]], GPIO_TP_PAGE = 0x9B880000;
+// S-GPIO-TP where the board's GIO key pins model 48, 49 and 108 (gio_keys, E143; src/dev/gio.mjs): there the pins
+// hold UI_IN's levels (H-GIOKEYS: the idle image's 0, 1, 0 for 0x2403, 0x2402, 0x2401), at which the touch driver
+// accepts no touch, and the stub's presets would not be read. The driver's four reads of them, the pin read
+// 0x5000297f called at 0x501e485a, 0x501e4864, 0x501e486e (`mov 48 / 49 / 108,d0` before each) and 0x501e4bbd (49),
+// the only calls of it with these pins in the image (D: a byte scan), are answered 1 at the call instead
+export const GPIO_TP_READS = [[A(0x501E485A), 48], [A(0x501E4864), 49], [A(0x501E486E), 108], [A(0x501E4BBD), 49]], PIN_READ = A(0x5000297F);
 export const GESTURES = new Map([[1, 'LIFTOFF'], [16, 'PRESS'], [32, 'CLICK'], [64, 'DCLICK'], [128, 'LONGPRESS'], [256, 'SLIDE'], [4096, 'FLICK']]);
 export const BGDRAW = A(0x50B3DCCA), BGDRAW_CALLERS = [A(0x510C9A07), A(0x510C9CF5)];
 export const CA_CALL = A(0x51084994), CA_TOUCH_EVENT = 35, CAFWD_CALLERS = [A(0x5124F6AE), A(0x5124F5CC)];
@@ -201,6 +279,21 @@ const MODULE9_SECOND_READS = [MM.TAKEOVER_READERS[1], A(0x50ABB044)];
 // S-USBCABLE: the module-9 readers the USB switch's code reaches (X, E143 2026-10-25: docs/hle-gaps/4.7.md 4.7, the
 // inbound path in play) and the lab time a cable step runs
 export const USB_MODULE9_READERS = [A(0x50ABB01D), A(0x50B7A2DE)], USB_SETTLE_MS = 1500;
+// the further module-9 readers a plug reaches under control camapp 3, where module 9 is the components' 0 and the
+// code goes past the first read (X, E143 2026-11-23/24: docs/hle-gaps/4.10.md 4.10.2, 4.10.4): the code filter's
+// second read 0x50abb028, 0x50b7a2c4's second 0x50b7a2ee, the two of 0x50d78440.. (0x50d78459, 0x50d78469) and, once
+// CA_MAIN's OLY_USB_CONNECTED handler issues PC_START_PC_USB_SELECT (S-USBHOST), 0x50abe6f0
+export const USB_CMP_MODULE9_READERS = [A(0x50ABB028), A(0x50B7A2EE), A(0x50D78459), A(0x50D78469), A(0x50ABE6F0)];
+// S-USBHOST (docs/hle-gaps/4.10.md 4.10.4, D unless tagged): the USB driver's state query 0x5102b555
+// (isCommunicateUsbDevice's end, API 68118) builds {u8 cmd 8, u8 seq, u16 state} on its stack (`mov 8,d0; movbu
+// d0,(4,sp)` at 0x5102b56d), sends it synchronously (0x5002e39d, the call at 0x5102b585) to the queue whose id is the
+// halfword 0x60043362 (PC_PD_CMD_EXEC, 207 = fact api.pc_pd, S-MODACK's queue) and stores the request's +2 halfword
+// into the state 0x62b2d9f4 (`movhu (6,sp),d1` at the return 0x5102b58c, `movhu d1,(0x62b2d9f4)` at 0x5102b590), 0
+// where the send's status is not 0. The receiver, task 127 (entry 0x5102b2a4, the strings "PCPDC" and "USB
+// SCPU_CONN"), dispatches command 8 to 0x5102b7fa, which passes the request to the sub-CPU (PER_SCPU command 0x40 from
+// 0x5102b8f7, waiting on the flag 0x60043134 for the answer written into the request) and clears +2 when that fails
+export const USB_STATE_CALL = A(0x5102B585), USB_STATE_RETURN = A(0x5102B58C), USB_STATE_CMD = 8;
+export const USB_STATE_QUEUE_WORD = A(0x60043362), USB_STATE_WORD = A(0x62B2D9F4), USB_STATE_HOST = 1;
 // S-TOUCHMAP: HFW status -> GUI touch kind, by name (I)
 export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], [227, [3, 'RELEASE']], [228, [4, 'TAP']],
   [230, [5, 'DOUBLE TAP']], [229, [6, 'SLIDE']], [300, [7, 'FLICK -> 7 (unnamed)']]]);
@@ -455,7 +548,8 @@ export const POSITION_SWITCHES = [];
 // SCPU port scan's, reported through that producer (docs/hle-gaps/4.7.md 4.7, the 0x88 reply), which does not run, and the
 // lab's level would be undone by the producer's next push (X: E146, E147). So the E143 family keeps 0x0400 at state
 // 0, as E143's own idle image above does; its starts publish no USB connection (X). State 0 is a cable in there too
-// (the sub-CPU's PC13 low, D: docs/hle-gaps/4.10.md 4.10.2), kept because the lever's off depends on it (X). The
+// (the sub-CPU's PC13 low, D: docs/hle-gaps/4.10.md 4.10.2), the default (USB_IDLE 'in'); E143's start with no cable
+// takes the state from the port scan through UI_IN's own init (USB_IDLE 'out', 4.10.3). The
 // composite video cable 0x0500 (the E118 family's; its switch-table names EV_CONPOSITE_CONNECTED for state 0 and
 // _DISCONNECTED, D) with no cable (state 1): at state 0 E122's application took the composite output as connected
 // (getCompositeState: the switch query on 0x0500, docs/model-survey.md finding 31, D), so its output choice answered
@@ -1355,6 +1449,8 @@ export class PlaySession extends N.NavSession {
     if (!['lab', 'reads'].includes(us)) throw new ValueError(`us_clock ${show(us)}: lab or reads`);
     if (us === 'reads') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 0));
     lab.mutant = this.opts.mutant ?? null;           // (nvram-b-unread: menu.mjs nvram_load)
+    this.usb_idle = usbIdle(this.opts);              // USB_IDLE: the sub-CPU's PC13 at the start (menu.mjs store_init)
+    lab.scan_idle = { ...SCAN_IDLE, PC13: USB_IDLE[this.usb_idle] };
     // H-TPINIT before the start's display open (PlayLab.kernel_display) where the driver waits for the INT
     lab.touch_init_early = this.touch_on && (fact('touch_int', null) ?? null) !== null;
   }
@@ -1367,7 +1463,10 @@ export class PlaySession extends N.NavSession {
     const lab = this.lab, o = this.opts;
     lab.play_init(o);
     this.begin('play-bring-up');
-    if (!this.lens && lab.sim.m.devices.dpc) this.dpc_bring_up();
+    const ad = o.mutant !== 'no-adinit' ? adInit() : null;
+    // H-DPCINIT here, and with the native lens too where H-ADINIT runs: a request's completion is a deferred call
+    if ((!this.lens || ad) && lab.sim.m.devices.dpc) this.dpc_bring_up();
+    if (ad) this.ad_bring_up(ad);                     // H-ADINIT, before UI_IN's module init as in the boot
     if (!MODEL_INFO.sio_devices && o.mutant !== 'no-siomap') this.sio_map_bring_up();
     const tid = [];
     for (const [t, [e]] of lab.nk.tasks()) if (e === UI_IN) tid.push(t);
@@ -1376,6 +1475,15 @@ export class PlaySession extends N.NavSession {
     const [wp, rp, start] = UI_IN_RING;
     if (lab.sim.u32(wp) || lab.sim.u32(rp)) throw new PlayError(`UI_IN ring pointers already set: ${h8(lab.sim.u32(wp))} ${h8(lab.sim.u32(rp))}`);
     const native = uiinInit() !== null && o.mutant !== 'no-uiininit';
+    // S-USBCABLE's start with no cable (usb_start 'out'): the sub-CPU's PC13 high before UI_IN's module init, whose
+    // port scan (0x88) then reads it, so group 4's image and old state hold 0x0400 at state 1 and nothing is decoded
+    // (X, E143: docs/hle-gaps/4.10.md 4.10.2, 4.10.4); the lab's idle PC13 is low otherwise (S-SCPUDEV)
+    if (o.usb_start !== undefined) {
+      if (o.usb_start !== 'out') throw new ValueError(`usb_start ${show(o.usb_start)}: only 'out'`);
+      if (!native || !lab.scpu_link || typeof lab.scpu_dev?.port !== 'function') throw new ValueError(`usb_start out: ${MODEL} has no sub-CPU model and UI_IN module init here (S-SCPUDEV, H-UIININIT)`);
+      lab.scpu_dev.port('PC13', 1);
+      this.usb_plugged = false;                     // the cable's state (usb_cable_in) follows PC13, as USB_IDLE 'out'
+    }
     if (native) this.uiin_init_bring_up(uiinInit());   // H-UIININIT, S-WAKEFACTOR
     else {
       lab.call(UI_IN_RING_INIT, null, null, null, 10);
@@ -1454,6 +1562,57 @@ export class PlaySession extends N.NavSession {
   // native lens the lens's bring-up runs it (src/lab/lens.mjs)
   dpc_bring_up() {
     this.dpc_init = dpcInit(this.lab, PlayError);
+  }
+  // H-ADINIT (above, adInit): the A/D driver's init natively, after H-DPCINIT. Checked: the converter's IRQ is the
+  // board's and has no handler before; the table's words are 0 before (the BSS value; the init does not run); after it
+  // the count is not 0, the table is the word +4 of the configuration record the core byte selects, every entry's
+  // converter channel is below the converter's 8 and the IRQ has a handler. The converter's values from then on are
+  // the lab's (adValue)
+  ad_bring_up(f) {
+    const lab = this.lab, sim = lab.sim, adc = sim.m.devices.adc;
+    if (f.irq !== BOARD.adc.irq) throw new PlayError(`H-ADINIT: the A/D init ${h8(f.init)} attaches IRQ ${f.irq}, the board's converter raises ${BOARD.adc.irq}`);
+    if (!this.dpc_init) throw new PlayError('H-ADINIT: the deferred calls\' handlers are not attached (H-DPCINIT): a request\'s completion would be a deferred call nothing runs');
+    refuseUnmapped(f.init, 'H-ADINIT');
+    if (sim.u32(f.table) || sim.read(f.count, 1)[0] || sim.u32(IRQ.HANDLER_TABLE + 4 * f.irq)) {
+      throw new PlayError(`H-ADINIT: before the init, the table ${where(f.table)} = ${h8(sim.u32(f.table))}, its count ${sim.read(f.count, 1)[0]}, IRQ ${f.irq}'s handler ${h8(sim.u32(IRQ.HANDLER_TABLE + 4 * f.irq))}`);
+    }
+    adc.values = (k) => this.ad_value(k);
+    lab.lt.idle_steps.push(() => this.ad_idle_step());
+    lab.call(f.init, null, null, null, 200000);
+    const n = sim.read(f.count, 1)[0], table = sim.u32(f.table), core = sim.read(BOARD.core_byte, 1)[0];
+    const record = f.configs + 16 * core;
+    if (!n || table !== sim.u32(record + 4) || n !== sim.read(record + 8, 1)[0] || !sim.u32(IRQ.HANDLER_TABLE + 4 * f.irq)) {
+      throw new PlayError(`H-ADINIT: after ${h8(f.init)}: ${n} channels at ${h8(table)} (the record ${h8(record)} of core byte ${core}), IRQ ${f.irq}'s handler ${h8(sim.u32(IRQ.HANDLER_TABLE + 4 * f.irq))}`);
+    }
+    const e = sim.read(table, 3 * n), channels = Array.from({ length: n }, (_, i) => [e[3 * i], e[3 * i + 1], e[3 * i + 2]]);
+    const bad = channels.filter(([, k]) => k >= 8);
+    if (bad.length) throw new PlayError(`H-ADINIT: channels ${show(bad)} name a converter channel the converter (src/dev/adc.mjs) does not have`);
+    if (new Set(channels.map(([, k]) => k)).size !== n) throw new PlayError(`H-ADINIT: channels ${show(channels)} share a converter channel`);
+    this.ad_channels = new Map(channels.map(([c, k]) => [k, c]));
+    this.ad_init = { init: h8(f.init), count: n, table: h8(table), channels };
+  }
+  // the lab task's idle point (src/lab/kernel.mjs idle_steps): while the converter converts and its IRQ is not presented,
+  // lab time runs to its next event (a sample, or an earlier event of another source), as time passes for a CPU that
+  // idles while the converter works
+  ad_idle_step() {
+    const adc = this.lab.sim.m.devices.adc;
+    if (adc.next === Infinity || (adc.status && adc.ie)) return false;
+    this.lab.run_to_event(adc.next);
+    return 'again';
+  }
+  // the value of converter channel k (src/dev/adc.mjs values; H-ADINIT's list above): by the driver's channel the table
+  // gives it; null where the lab has none
+  ad_value(k) {
+    const c = this.ad_channels?.get(k);
+    if (AD_POWER_CHANNELS.includes(c)) return AD_POWER_VALUE;   // A-ADC-4
+    if (c === AD_DIAL_CHANNEL) {                            // A-ADC-5: the dial's position k's interval's midpoint
+      if (isUnmapped(AD_DIAL_THRESHOLDS)) return null;
+      const sim = this.lab.sim, t = sim.u32(AD_DIAL_THRESHOLDS), pos = this.mode_index;
+      if (!t || !(pos >= 0 && pos < AD_DIAL_POSITIONS)) return null;
+      const lo = sim.u32(t + 4 * pos), hi = sim.u32(t + 4 * pos + 4);
+      return lo < hi ? (lo + hi) >>> 1 : null;
+    }
+    return null;
   }
   // S-SIOIIC (src/lab/bodystart.mjs sioStart), before the power task's start configures the charger's channel
   sio_bring_up() {
@@ -1541,9 +1700,11 @@ export class PlaySession extends N.NavSession {
     sim.write(word, pack('<H', WAKE_POWER_BUTTON));
     const { register, callback } = this.scpu_port ?? {}, regs = [];
     if (register) lab.observe(register, (l, r) => { regs.push(r.a0 >>> 0); this.scpu_callback_check(r); }, 'obs-scpu-callback');
+    const keys = f.keys ? this.gio_keys_levels(f.keys, calls) : null;   // H-GIOKEYS
     const e0 = lab.kernel.errors.length, f0 = lab.scpu_dev?.frames.length ?? 0, errlog = [], run = [];
     for (const fn of calls) {
       if (f.left.includes(fn)) continue;
+      if (keys && fn === f.keys[0] && sim.u32(UIIN_VARIANT) !== 0) throw new PlayError(`H-GIOKEYS: UI_IN's variant (${h8(UIIN_VARIANT)}) is ${sim.u32(UIIN_VARIANT)} before the key init: its table is variant 0's`);
       const k0 = lab.kernel.errors.length;
       lab.call(fn, null, null, null, 2000000);
       if (fn === UI_IN_RING_INIT && (sim.u32(wp) !== start || sim.u32(rp) !== start)) throw new PlayError('H-UIININIT: the ring init did not set the ring pointers');
@@ -1555,8 +1716,9 @@ export class PlaySession extends N.NavSession {
     const key = sim.u32(MM.bootFacts().key), power = BY_ID.get('power').uiin[3];
     if (key !== power) throw new PlayError(`H-UIININIT: UI_IN's boot key ${h8(MM.bootFacts().key)} is 0x${key.toString(16)} after its init with the wake factor ${WAKE_POWER_BUTTON}, not the power switch's 0x${power.toString(16)}`);
     if (register && (regs.length !== 1 || regs[0] !== runtime(callback))) throw new PlayError(`H-UIININIT: IRQ 320 callbacks registered ${regs.map(h8).join(' ') || 'none'}, not UI_IN's ${h8(callback)} once`);
-    if (errlog.length !== 1 || errlog[0][0] !== code || errlog[0][1] !== adCall) {
-      throw new PlayError(`H-UIININIT: error log ${errlog.map(([c, fn]) => `${h8(c)} in ${fn === null ? 'the settle' : h8(fn)}`).join('; ') || 'none'}, not ${h8(code)} in ${h8(adCall)} alone`);
+    // with H-ADINIT the channel open finds its channel and logs nothing; without it, its 'no channel' error alone
+    if (this.ad_init ? errlog.length : errlog.length !== 1 || errlog[0][0] !== code || errlog[0][1] !== adCall) {
+      throw new PlayError(`H-UIININIT: error log ${errlog.map(([c, fn]) => `${h8(c)} in ${fn === null ? 'the settle' : h8(fn)}`).join('; ') || 'none'}, not ${this.ad_init ? 'none (H-ADINIT)' : `${h8(code)} in ${h8(adCall)} alone`}`);
     }
     const frames = lab.scpu_dev?.frames.slice(f0) ?? [];
     if (scan ? frames.length !== 1 || frames[0].cmd !== '0x88' || frames[0].reply?.slice(6, 8) !== '00' : frames.length) {
@@ -1568,8 +1730,45 @@ export class PlaySession extends N.NavSession {
       const [gg, b, bit, , , pol] = BY_ID.get(id).uiin;
       if (gg === 4) set_bit(this.images[4], b, bit, pol);
     }
+    if (keys) this.gio_keys_check(keys);
     this.uiin_init = { calls: run.map(h8), left: f.left.map(h8), wake: WAKE_POWER_BUTTON, key: h8(key), group4: bytesHex(g4),
-      errlog: errlog.map(([c, fn]) => [h8(c), h8(fn)]), ...(scan && { scan: { reply: frames[0].reply, report: lab.scpu_dev.scanReport } }) };
+      errlog: errlog.map(([c, fn]) => [h8(c), h8(fn)]), ...(scan && { scan: { reply: frames[0].reply, report: lab.scpu_dev.scanReport } }),
+      ...(keys && { keys: { group: keys.group, old: keys.old_state, pins: keys.pins.map(({ bit, pin, phys, level }) => [bit, pin, phys, level]), expanders: keys.expanders } }) };
+  }
+  // H-GIOKEYS (uiinKeyPins above): before UI_IN's key init, the board's GIO key pins (src/dev/gio.mjs) at the levels of
+  // the lab's idle image of the init's group (S-KEYBITS' image: the keys released, the switches at its levels), each
+  // table pin of class 0 mapped to the pin the driver drives by the firmware's own map (lab.call of keys' map, on the
+  // lab task's core, as the init's read and arm calls map it). The init then reads them, writes them to the group's
+  // old state and arms each pin for the level it is not at. The IO expanders' pins (classes 2 and 3) are read from
+  // their drivers' RAM (E143 0x5005605b, 0x50054262, D), which the lab does not set: their bits are what that RAM
+  // holds. Every class-0 pin must be one the board models
+  gio_keys_levels(f, calls) {
+    const lab = this.lab, gio = lab.sim.m.devices.gio_keys, [read, , map] = f;
+    if (!calls.includes(read)) throw new PlayError(`H-GIOKEYS: UI_IN's module init does not call its key init ${h8(read)}`);
+    if (!gio) throw new PlayError(`H-GIOKEYS: ${MODEL}'s board gives no GIO key pins (src/fw/board.mjs gio_keys) for its key init ${h8(read)}`);
+    const k = uiinKeyPins(lab.image, f, uiin_layout(lab.image).groups), img = this.images[k.group], pins = [], expanders = [];
+    for (const { bit, pin } of k.keys) {
+      if (pin === 0xFF) continue;
+      if ((pin >>> 24) & 15) { expanders.push([bit, h8(pin)]); continue; }
+      const phys = lab.call(map, { d0: pin }, null, null, 2000).d0 >>> 0;
+      if (!gio.has(phys)) throw new PlayError(`H-GIOKEYS: key ${bit}'s pin ${pin} maps to ${phys}, which the board's GIO key pins do not model`);
+      const level = (img[bit >> 3] >> (bit & 7)) & 1;
+      gio.setLevel(phys, level);
+      pins.push({ bit, pin, phys, level });
+    }
+    return { ...k, pins, expanders, gio };
+  }
+  // H-GIOKEYS' check after the init: the group's old state holds each modelled pin's level at its bit, and each pin is
+  // armed (its enable word set) with no interrupt pending (status & enable 0: armed for the level it is not at)
+  gio_keys_check(k) {
+    const sim = this.lab.sim, old = sim.read(k.old, 2), bad = [];
+    for (const { bit, phys, level } of k.pins) {
+      const i = k.gio.byPin.get(phys), got = (old[bit >> 3] >> (bit & 7)) & 1;
+      if (got !== level) bad.push(`bit ${bit} (pin ${phys}) ${got} in the old state, its level ${level}`);
+      if (!k.gio.enable[i] || (k.gio.status[i] & k.gio.enable[i])) bad.push(`pin ${phys} enable ${h8(k.gio.enable[i])} status ${h8(k.gio.status[i])}`);
+    }
+    if (bad.length) throw new PlayError(`H-GIOKEYS: after UI_IN's key init: ${bad.join('; ')}`);
+    k.old_state = bytesHex(old);
   }
   // H-SCPUIRQ: what the SCPU init (not run) does for the event word: the ports at the idle image's levels, their
   // events cleared as the init clears them (127 to the event word), IRQ 320 attached to its handler at the init's level
@@ -1715,7 +1914,10 @@ export class PlaySession extends N.NavSession {
     const a = new Uint8Array(12 * allow.length);
     allow.forEach(([p, n], i) => a.set(pack('<III', p, n, 1), 12 * i));
     lab.sim.write(D.STUB + 0x100, a);
-    const presets = [...D.STUB_PRESETS, ...GPIO_TP.map(([, addr]) => [addr, 0x10])];
+    const gio = lab.sim.m.devices.gio_keys, modelled = GPIO_TP.filter(([pin]) => gio?.has(pin));
+    if (modelled.length && modelled.length !== GPIO_TP.length) throw new PlayError(`S-GPIO-TP: the board's GIO key pins model ${modelled.map(([p]) => p).join(', ')} of the touch driver's ${GPIO_TP.map(([p]) => p).join(', ')}`);
+    if (modelled.length) this.gpio_tp_reads();
+    const presets = [...D.STUB_PRESETS, ...(modelled.length ? [] : GPIO_TP.map(([, addr]) => [addr, 0x10]))];
     const pr = new Uint8Array(16 * presets.length);
     presets.forEach(([ad, v], i) => pr.set(pack('<IIII', ad, v, 0, 1), 16 * i));
     lab.sim.write(D.STUB + 0x400, pr);
@@ -1747,6 +1949,19 @@ export class PlaySession extends N.NavSession {
     const mask = lab.alloc(pack('<I', TP_MASK_ALL), 4);
     lab.call(TP_MASK, { a0: mask }, null, null, 5000);
     this.settle('H-TPSTART');
+  }
+  // S-GPIO-TP at the touch driver's pin reads (GPIO_TP_READS): each call's bytes checked (`mov pin,d0` (80 pin), then
+  // the call of the pin read), then hooked to go on after it with d0 = 1
+  gpio_tp_reads() {
+    const lab = this.lab;
+    this.gpio_tp_answered = 0;
+    for (const [at, pin] of GPIO_TP_READS) {
+      const rt = runtime(at), b = lab.sim.read(rt - 2, 7);
+      if (b[0] !== 0x80 || b[1] !== pin || b[2] !== 0xDD || ((rt + unpack('<i', b.subarray(3, 7))[0]) >>> 0) !== runtime(PIN_READ)) {
+        throw new PlayError(`S-GPIO-TP: the touch driver's read at ${h8(at)} is ${bytesHex(b)}, not mov ${pin},d0 and a call of the pin read ${h8(PIN_READ)}`);
+      }
+      lab.hook(at, (h, r) => { this.gpio_tp_answered++; h.skip_call({ ...r, d0: 1 }); }, 'S-GPIO-TP');
+    }
   }
   // ---- primitives
   // Group g's image to UI_IN: S-KEYBITS, or for group 0 on a body with the SCPU's port path H-SCPUPORT (below); returns
@@ -2067,12 +2282,22 @@ export class PlaySession extends N.NavSession {
   }
   // H-POWER after the power lever's off (src/lab/power.mjs): on a body that gives power_native and runs PER_SCPU over
   // the link, the firmware's own power-off from the HFW's shutDown to its last write, as a step of its own; null
-  // elsewhere (the player closes the session at once, as before)
+  // elsewhere (the player closes the session at once, as before). With the USB cable out (USB_IDLE 'out', or an
+  // unplug) the application calls shutDown itself in the lever's step, and the lab follows that call (power_arm, before
+  // the step) instead of making its own (docs/hle-gaps/4.10.md 4.10.3)
+  power_runs() { return !!(POWER_OFF && this.lab.scpu_link && this.power_manager); }
+  usb_cable_in() { return this.usb_plugged ?? this.usb_idle === 'in'; }   // USB_IDLE at the start, then S-USBCABLE's steps
+  power_arm() {
+    if (!this.power_runs() || this.usb_cable_in()) return null;
+    this.power_off = new PowerOff(this, POWER_OFF, { follow: true });
+    this.power_off.arm();
+    return this.power_off;
+  }
   power_down() {
-    if (!POWER_OFF || !this.lab.scpu_link || !this.power_manager) return null;
+    if (!this.power_runs()) return null;
     const lab = this.lab, n0 = lab.log.length;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-power off`);
-    const off = new PowerOff(this, POWER_OFF).run();
+    const off = (this.power_off ?? new PowerOff(this, POWER_OFF)).run();
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
   }
@@ -2080,8 +2305,8 @@ export class PlaySession extends N.NavSession {
   // is the sub-CPU's port scan: PC13 (GIO port 45) is active low, and its change posts the MN the message 0x08 {level}
   // (scpudev.mjs port, D), PER_SCPU's dispatch 0x5005d43e gives it to UI_IN's group-4 producer as the switch 0x0400
   // (H-UIINSCAN's path, X), whose state 0 the application's USB test 0x50abb032 takes as connected (D). The plug drops
-  // PC13, the unplug raises it. The cable's state starts at the sub-CPU's PC13 level: S-SCPUDEV's SCAN_IDLE is low, a
-  // cable in, so a session's first cable step is an unplug. The application's code filter 0x50abafce reads module 9
+  // PC13, the unplug raises it. The cable's state starts at the sub-CPU's PC13 level, USB_IDLE's: 'in' (S-SCPUDEV's
+  // SCAN_IDLE, low) by default, so a session's first cable step is an unplug, a plug with 'out'. The application's code filter 0x50abafce reads module 9
   // (0x50abb01d) and drops the code at S-TAKEOVER's state 2 (X 2026-11-23); the readers USB_MODULE9_READERS are let
   // through S-TAKEOVER's guard from the first cable step on. Refused: a session without the sub-CPU's model, a scan
   // report not yet enabled (no 0x88 read), a plug with the cable in, an unplug with it out
@@ -2090,12 +2315,14 @@ export class PlaySession extends N.NavSession {
     if (!lab.scpu_link || typeof dev?.port !== 'function') throw new ValueError(`usb: ${MODEL} has no sub-CPU model here (S-SCPUDEV)`);
     if (action !== 'plug' && action !== 'unplug') throw new ValueError(`usb: action ${show(action)} (plug, unplug)`);
     const plug = action === 'plug';
-    const cable = this.usb_plugged ?? dev.scan?.PC13 === 0;      // the sub-CPU's level: PC13 low, a cable in
+    const cable = this.usb_cable_in();                           // the sub-CPU's PC13 low: a cable in
     if (plug === cable) throw new ValueError(`usb ${action}: the cable is ${plug ? 'in' : 'out'} already (the sub-CPU's PC13 ${plug ? 'low' : 'high'})`);
     if (!dev.scanReport) throw new PlayError('usb: the port scan\'s report is not enabled (no 0x88 read, H-UIINSCAN)');
     const tag = `usb ${action}`;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     for (const x of USB_MODULE9_READERS) lab.takeover_allowed.add(x);   // the unplug's code reads 0x50abb01d too (X)
+    if (this.camapp?.native_tra) for (const x of USB_CMP_MODULE9_READERS) lab.takeover_allowed.add(x);
+    if (this.opts.usb_host && !this.usb_host) this.usb_host_install();   // S-USBHOST
     const c0 = lab.uiin_codes.length, f0 = dev.frames.length, m0 = lab.module9_reads?.length ?? 0, state0 = lab.state();
     dev.port('PC13', plug ? 0 : 1);
     this.usb_plugged = plug;
@@ -2104,6 +2331,37 @@ export class PlaySession extends N.NavSession {
       { kind: 'usb', extra: () => ({ usb: { cable: plug ? 'in' : 'out', state_before: '0x' + state0.toString(16), state: '0x' + lab.state().toString(16),
         frames: dev.frames.slice(f0).map((f) => f.cmd), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => '0x' + (x >>> 0).toString(16)),
         module9: (lab.module9_reads ?? []).slice(m0).map(([, x]) => h8(x)) } }) });
+  }
+  // S-USBHOST (USB_STATE_CALL's comment; docs/hle-gaps/4.10.md 4.10.4): the USB host behind the cable, at the USB
+  // driver's state query. While S-USBCABLE's cable is in, the query's synchronous command 8 to PC_PD_CMD_EXEC (from
+  // USB_STATE_CALL only) is answered E_OK with the request's state halfword +2 set to 1, the value
+  // isCommunicateUsbDevice's caller 0x5105160c needs (D); that 1 means a host communicating is I (PCPDC passes the
+  // request to the sub-CPU's USB PD side, not modelled). With the cable out, or from any other site, the send stays
+  // S-MODACK's (E_OK, nothing written). Installed at the session's first cable step when opts.usb_host is set; the
+  // site is checked by its bytes (the call of the synchronous send, the queue word's load, the state's store) and
+  // the queue word must hold PC_PD_CMD_EXEC's id. E143 only (the sites are not ported)
+  usb_host_install() {
+    const lab = this.lab, image = lab.image, sim = lab.sim;
+    for (const a of [USB_STATE_CALL, USB_STATE_QUEUE_WORD, USB_STATE_WORD]) if (isUnmapped(a)) throw new ValueError(`usb_host: ${MODEL} does not place ${h8(a)} (S-USBHOST is E143's)`);
+    const at = (a, n) => [...image.subarray(a - 0x50000000, a - 0x50000000 + n)];
+    const le = (v) => [v & 0xFF, v >>> 8 & 0xFF, v >>> 16 & 0xFF, v >>> 24];
+    const want = [[USB_STATE_CALL - 11, [0xFC, 0xAC, ...le(USB_STATE_QUEUE_WORD)]], [USB_STATE_RETURN, [0xF8, 0xBD, 0x06]],
+      [USB_STATE_RETURN + 4, [0xFC, 0x87, ...le(USB_STATE_WORD)]], [USB_STATE_CALL - 24, [0x80, USB_STATE_CMD, 0xF8]]];
+    const bad = want.find(([a, b]) => at(a, b.length).join() !== b.join());
+    if (!is_call_to(image, USB_STATE_CALL, D.SYNC_SEND) || bad) throw new PlayError(`S-USBHOST: the state query's site ${h8(USB_STATE_CALL)} is not the synchronous send of command ${USB_STATE_CMD} with the queue word ${h8(USB_STATE_QUEUE_WORD)} and the store to ${h8(USB_STATE_WORD)}${bad ? ` (${h8(bad[0])}: ${bytesHex(Uint8Array.from(at(bad[0], bad[1].length)))})` : ''}`);
+    const q = unpack('<H', sim.read(USB_STATE_QUEUE_WORD, 2))[0], pd = pcPdQueue();
+    if (q !== pd) throw new PlayError(`S-USBHOST: the queue word ${h8(USB_STATE_QUEUE_WORD)} holds ${q}, not PC_PD_CMD_EXEC's ${pd}`);
+    const prev = lab._sync_send.bind(lab);
+    this.usb_host = { queue: q, answers: [] };
+    lab._sync_send = (h, r) => {
+      if ((r.d0 & 0xFFFF) === q && r.d1 === USB_STATE_CMD && disasm(r.mdr) === USB_STATE_RETURN && this.usb_plugged === true) {
+        sim.write((r.a0 >>> 0) + 2, pack('<H', USB_STATE_HOST));
+        this.usb_host.answers.push([this.steps.length, lab.lab_time()]);
+        h.finish(r, { d0: 0 });
+        return;
+      }
+      return prev(h, r);
+    };
   }
   // The HDMI cable (see HDMI_PLUG_MS): plug, and unplug once it is in (the transmitter's side A-HDMI-1, the device
   // model's header). A second plug and an unplug without the cable are refused.
@@ -2363,11 +2621,18 @@ export class PlaySession extends N.NavSession {
     // (test/test_dispswitch.mjs's control).
     const recview = state0 === STATE_SHOOTING && panel0 === 0 && this.camapp?.in_recview === true && this.opts.mutant !== 'recview-unheld';
     // From the start's date prompt (0x0108 panel 324, the unset clock's prompt over the shooting screen) the re-entry
-    // builds the prompt again (ShowPanelEx(324) at 0x5124357f), and the prompt's own end, the application's event that
-    // gives it way to the shooting screen at the first idle (GESetEvent 0xf001 from the event object's dispatch
-    // through 0x50ab8974, then panel 10 by 0x511eb186), may come within the step: under the settings init chain it is
-    // dispatched at the re-entry (X, E143, E146, E147; the narrow store path dispatched it 78 ms later, after the
-    // step). The switch then holds the re-entry to the prompt rebuilt and the shooting screen after it.
+    // builds the prompt again (ShowPanelEx(324) at 0x5124357f), and the prompt gives way to the shooting screen (panel
+    // 10 by 0x511eb186) at the application's next event dispatched through 0x50ab8974. Within the switch's step that
+    // event is the switch's own: the eye sensor's module event 0x02022301 (the lab sets the eye sensor's state for LV
+    // and the eye sensor alike), which the application's event task (164) reads through its receive 0x503eaabd (called
+    // at 0x503ea2b9), parks there in its event ring (push 0x503eb5a0 at 0x503eaba6) and takes from the ring
+    // (0x503eb42f at 0x503ea2c3), posting EV_EYESENSOR_STATUS 198 (0x50b79aae). The ring's size, 300 at 0x62a5fc88, is written by
+    // the settings init chain's step 10 (0x503ea27e -> 0x503eb3df); with the size 0 the push drops the event
+    // (0x503eb5c9), so the narrow H-STOREINIT path, which leaves it 0, ended the prompt 78 ms later at the next
+    // event, EV_CHANGE_ZOOM_RING 176, after the step. The chain is the boot's own init: the end within the step is the
+    // firmware's (D; X on E143, E146 and E147: the ring's size zeroed after the start gives the narrow path's run,
+    // test/test_promptend.mjs; docs/hle-gaps/4.6.md 4.6.10). The switch holds the re-entry to the prompt rebuilt and
+    // the shooting screen after it.
     const prompt = state0 === STATE_SHOOTING && panel0 === DATE_PROMPT_PANEL && lab.state() === STATE_SHOOTING && panel1 === SHOOT_PANEL
       && on_connect.lastIndexOf(DATE_PROMPT_PANEL) === on_connect.length - 2 && on_connect.lastIndexOf(0) === on_connect.length - 3;
     const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state())

@@ -17,7 +17,8 @@
 //            fill (clockBytes)
 // The rest of the board is S-SCPUBOARD: the step 5 machine's (src/core/m4/periph/board.mjs: nothing attached, no I2C
 // device acknowledging, no battery pack answering, every ADC channel 0, the hardware-phase straps on their pull-ups)
-// with the port scan's inputs PC13 and PC5 held low, S-SCPUDEV's levels (scpudev.mjs SCAN_IDLE): PC13 low gives the
+// with the port scan's inputs PC13 and PC5 held low, S-SCPUDEV's levels (scpudev.mjs SCAN_IDLE; PC13 high for a
+// session started with no USB cable, src/lab/play.mjs USB_IDLE 'out', passed as board.drive): PC13 low gives the
 // port scan's result bit 0 that keeps UI_IN's switch 0x0400 at the lab's idle image (H-UIINSCAN checks it), and it
 // selects bkground at a power-off (scpu spec 3.4) where the machine's default, PC13 on its pull-up, leads the sub-CPU
 // into standby 3 s after reset (X, step 5); PC5's level is ? (I for both: the camera's levels are not known).

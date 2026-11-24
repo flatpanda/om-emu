@@ -1648,6 +1648,8 @@ function powerTask(img, kcb) {
 // - flash_save: the return address of the one call of the flash save in OlyHfwPower's startShutDown 0x50af654b
 //   (reached from shutDown through 0x50abe7e0), the function that loads its trace "OlyHfwPower::startShutDown
 //   nextShootTime = %d" (0x50af6c52): the call at 0x50af6a0e, return 0x50af6a15
+// - start_shutdown: that function's entry, OlyHfwPower's startShutDown 0x50af654b, which the application reaches
+//   itself at the lever's off with no USB cable (src/lab/power.mjs, the follow; docs/hle-gaps/4.10.md 4.10.3, X)
 // - log: the RAM log's save (api 0xc0036 0x50420fd4 -> 0x518f7381: the callbacks of the table 0x60379ef0, 50 ms,
 //   0x50039def writing 0x100 to +0x800 of the four interrupt-controller banks, a checksum of 2 MiB from 0x63ae0000)
 //   to the NAND: the one call of the NAND access after `mov area,a1; mov size,d0; mov op,d1` with the access's write
@@ -1659,7 +1661,7 @@ function powerTask(img, kcb) {
 export const POWER_OFF_E143 = {
   pwr: { init: 0x50044EB6, id_word: 0x60042D3A },
   shutdown: { object: 0x50AFCCD5, slot: 2, entry: 0x50AFD2D7, mode: 1, reason: 1 },
-  flash_save: 0x50AF6A15, log: { nand: [0x4E820000, 0x200000], ret: 0x518F742F }, end: 0x50044DEE,
+  flash_save: 0x50AF6A15, start_shutdown: 0x50AF654B, log: { nand: [0x4E820000, 0x200000], ret: 0x518F742F }, end: 0x50044DEE,
   ioexp: { body: { post: 0x50056A85, flag: 0x60043170 }, pbh: { post: 0x50054EDE, flag: 0x60043180 } },
   poll: { at: 0x5005CEAF, pin: 102 },
 };
@@ -1760,7 +1762,7 @@ function powerOff(img, save) {
   if (logs.length !== 1) throw new Error(`${rule}: ${logs.length} NAND writes of an area its function sums, want one`);
   return {
     pwr: starts[0], shutdown: { object: 0x50000000 + getter, slot: img[slotAt + 8] / 4, entry: 0x50000000 + entry, mode: usage.value, reason: button.value },
-    flash_save: saves[0], log: logs[0], end: 0x50000000 + lastCall + len,
+    flash_save: saves[0], start_shutdown: 0x50000000 + start, log: logs[0], end: 0x50000000 + lastCall + len,
     ioexp: ex.length ? { body: ex[0], pbh: ex[1] } : null, poll: polls[0],
   };
 }
@@ -2924,6 +2926,47 @@ export function deferredCalls(img) {
   if (init === undefined) throw new Error(`deferredCalls: the trigger init's stores at ${h8(0x50000000 + p)} have no entry a call reaches`);
   return { init: 0x50000000 + init, triggers: w, irqs };
 }
+// The A/D driver's init (fact 'adc', src/lab/play.mjs H-ADINIT; docs/hle-gaps/4.7.md 4.7.20), which the boot calls at
+// stage 0_3..0_l (E143 0x5004d3c3 from 0x50023f55, D) and which alone fills the channel table the driver's requests
+// look their channel up in (0x5004d62d). Its form (E143 0x5004d3c3..0x5004d42b, D): `clr d0` and three stores of the
+// driver's state, the core byte's getter, `extbu d0; asl 4,d0; mov d0,a1; add CONFIGS,a1` (16-byte records by the
+// core byte), `mov (4,a1),d0; mov RING,a0; mov d0,(TABLE); movbu (8,a1),d0; movbu d0,(COUNT)` (the table of 3-byte
+// entries {channel, converter channel, completion kind} and its count), the request ring cleared, `mov (12,a1),d0;
+// call CONV; ret [],4`, where the converter's init CONV opens `mov d0,d1; clr d0; movbu d0,(abs); mov IRQ,d0` and
+// attaches the converter's IRQ (E143 0x5004ccc7, 319). E143's (AD_E143): CONFIGS 0x60118724, TABLE 0xa32bff10, COUNT
+// 0xa32bff14, IRQ 319. One such init on every expanded image of the E143 and E144 families (X, a byte scan of the
+// table's load and stores: E143 0x5004d3e9, E146 0x5004ee6b, E147 0x5004ec07, E144 0x500474c8, E145 0x50045536,
+// E148 0x50048228, E142 0x50046262, E140 0x5004583b, E132 0x50045243; none on E122). Returns {init, configs, table,
+// count, irq} (disassembly notation and the words), undefined where no init has the form; throws for two.
+export const AD_E143 = { init: 0x5004D3C3, configs: 0x60118724, table: 0xA32BFF10, count: 0xA32BFF14, irq: 319 };
+const AD_TABLE_LOAD = [0xf8, 0x01, 0x04, 0xfc, 0xdc, null, null, null, null, 0xfc, 0x81, null, null, null, null, 0xf8, 0x41, 0x08, 0xfc, 0x82];
+const AD_HEAD = [0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0x81, null, null, null, null, 0xfc, 0x82, null, null, null, null];
+const AD_SPAN = 0x80;
+export function adDriver(img) {
+  const rule = 'adDriver', D = (o) => h8(0x50000000 + o), found = [];
+  for (let o = img.indexOf(0xf8); o >= 0 && o + AD_TABLE_LOAD.length + 4 <= img.length; o = img.indexOf(0xf8, o + 1)) {
+    if (!bytesAt(img, o, AD_TABLE_LOAD)) continue;
+    // before it: `extbu d0; asl 4,d0; mov d0,a1; add imm32,a1` (14 f8 c0 04 f1 e1 fc d1 imm32), after the head and the
+    // core byte's call (d32 call, 7 bytes)
+    const add = o - 6, getter = add - 6 - 7;
+    if (!bytesAt(img, add - 6, [0x14, 0xf8, 0xc0, 0x04, 0xf1, 0xe1]) || !bytesAt(img, add, [0xfc, 0xd1]) || img[getter] !== 0xdd) continue;
+    const init = getter - AD_HEAD.length;
+    if (!bytesAt(img, init, AD_HEAD)) continue;
+    found.push({ init, configs: u32(img, add + 2), table: u32(img, o + 11), count: u32(img, o + 20) });
+  }
+  if (!found.length) return undefined;
+  if (found.length > 1) throw new Error(`${rule}: ${found.length} A/D inits (${found.map((f) => D(f.init)).join(', ')}), want one`);
+  const f = found[0];
+  if (!callsTo(img, f.init).length) throw new Error(`${rule}: the A/D init ${D(f.init)} is called by nothing`);
+  // the converter's init: the init's last call, `mov (12,a1),d0; call CONV; ret [],4`
+  let conv;
+  for (let p = f.init; p < f.init + AD_SPAN; p++) {
+    if (bytesAt(img, p, [0xf8, 0x01, 0x0c])) { const c = callAt(img, p + 3); if (c && bytesAt(img, p + 3 + c.len, [0xdf, 0x00, 0x04])) conv = c.to; break; }
+  }
+  if (conv === undefined) throw new Error(`${rule}: the A/D init ${D(f.init)} does not end calling the converter's init with the record's word +12`);
+  if (!bytesAt(img, conv, [0x81, 0x00, 0xfc, 0x82, null, null, null, null, 0x2c])) throw new Error(`${rule}: the converter's init ${D(conv)} does not open mov d0,d1; clr d0; movbu d0,(abs); mov imm16,d0`);
+  return { init: 0x50000000 + f.init, configs: f.configs, table: f.table, count: f.count, irq: img[conv + 9] | img[conv + 10] << 8 };
+}
 // The serial controller's driver under PER_SIO's channels (fact 'sio', src/lab/sio.mjs S-SIOBUS), the layer that
 // PER_SIO's IIC calls start their transfers through (E132: the IIC write 0x5004ba70 and write-read 0x5004bac8 call
 // the transfer start 0x500506cb, the write-read the receive start 0x500509be before it, D):
@@ -3975,6 +4018,40 @@ function recTraced(img, scan, rule, name, kind) {
   if (fns.size > 1 || fns.has(undefined)) throw new Error(`${rule}: the trace of "${name}" in ${fns.size} functions, want one`);
   return fns.size ? [...fns][0] : undefined;
 }
+// The packet's fields by REC's packet dump (the function that loads the field name "pExifParam ", E143 0x50541561;
+// recFile, dualSlot): each field's read and its padded name's load before the call that prints them, a3 the packet,
+// a2 a3 + N (`mov N,a2; add a3,a2`), a1 the record a3 points at once moved past the packet's last field (`add P,a3;
+// mov (a3),a1`, or `mov (a3),a0` for its last field, SlotNo: E146 and E147's image record). Returns name -> {ptr, at, width} (ptr null: the packet's +at; else the
+// record whose pointer is the packet's +ptr, its +at), or undefined where the dump is not found in its shape.
+function recDump(img) {
+  const { base } = imageBase(img), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  const dumps = findString(img, REC_DUMP_FIELD, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0)).filter((p) => img[p + 1] === 0xdc);
+  const dump = dumps.length === 1 ? entryOf(img, dumps[0], REC_FN_SPAN) : undefined;
+  if (dump === undefined || img[dump] !== 0x93) return undefined;
+  const named = new Map(), reg = { 0: null, 1: null, 2: null, 3: { ptr: null, at: 0 } };
+  const read = (q) => {
+    let x, d = 0;
+    if (img[q] >= 0x70 && img[q] <= 0x73) x = img[q] & 3;
+    else if (img[q] === 0xf0 && img[q + 1] >= 0x40) x = img[q + 1];
+    else if (img[q] === 0xf8) { x = img[q + 1]; d = img[q + 2] << 24 >> 24; } else if (img[q] === 0xfa) { x = img[q + 1]; d = s16(q + 2); } else return null;
+    const r = reg[x & 3], w = REC_WIDTH[x >> 4];
+    return (x & 0x0c) || w === undefined || !r ? null : { ptr: r.ptr, at: r.at + d, width: w };
+  };
+  // (a return that a conditional branch right before it skips does not end the dump: E146's before its record's part)
+  const skipped = (p) => img[p - 2] >= 0xc0 && img[p - 2] <= 0xca && p - 2 + (img[p - 1] << 24 >> 24) === p + 3;
+  for (let p = dump + 1, name = null, f = null, pend = null; p < dump + REC_DUMP_SPAN && !(isRet(img, p) && !skipped(p)); p = step(p)) {
+    const op = img[p], o2 = img[p + 1];
+    if (op === 0x9a) pend = o2;
+    else if (op === 0xf1 && o2 === 0x7e) reg[2] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + pend };
+    else if (op === 0xfa && o2 === 0xd3) reg[3] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + s16(p + 2) };
+    else if (op === 0xf0 && (o2 === 0x07 || o2 === 0x03)) reg[o2 >> 2] = reg[3]?.ptr === null ? { ptr: reg[3].at, at: 0 } : null;
+    else if (op === 0xfc && o2 === 0xdc) name = text(u32(img, p + 2) - base).trim();
+    else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
+  }
+  return named;
+}
 export function recFile(img, kcb) {
   const rule = 'recFile', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
   const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
@@ -4010,32 +4087,9 @@ export function recFile(img, kcb) {
     return c?.to === post;
   });
   if (post === undefined || !posts.length) return undefined;
-  // the packet's fields by its dump: each field's read and its padded name's load before the call that prints them,
-  // a3 the packet, a2 a3 + N (`mov N,a2; add a3,a2`), a1 the record a3 points at once moved past the packet's last
-  // field (`add P,a3; mov (a3),a1`, E146 and E147's image record)
-  const dumps = findString(img, REC_DUMP_FIELD, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0)).filter((p) => img[p + 1] === 0xdc);
-  const dump = dumps.length === 1 ? entryOf(img, dumps[0], REC_FN_SPAN) : undefined;
-  if (dump === undefined || img[dump] !== 0x93) return undefined;
-  const named = new Map(), reg = { 1: null, 2: null, 3: { ptr: null, at: 0 } };
-  const read = (q) => {
-    let x, d = 0;
-    if (img[q] >= 0x70 && img[q] <= 0x73) x = img[q] & 3;
-    else if (img[q] === 0xf0 && img[q + 1] >= 0x40) x = img[q + 1];
-    else if (img[q] === 0xf8) { x = img[q + 1]; d = img[q + 2] << 24 >> 24; } else if (img[q] === 0xfa) { x = img[q + 1]; d = s16(q + 2); } else return null;
-    const r = reg[x & 3], w = REC_WIDTH[x >> 4];
-    return (x & 0x0c) || w === undefined || !r ? null : { ptr: r.ptr, at: r.at + d, width: w };
-  };
-  // (a return that a conditional branch right before it skips does not end the dump: E146's before its record's part)
-  const skipped = (p) => img[p - 2] >= 0xc0 && img[p - 2] <= 0xca && p - 2 + (img[p - 1] << 24 >> 24) === p + 3;
-  for (let p = dump + 1, name = null, f = null, pend = null; p < dump + REC_DUMP_SPAN && !(isRet(img, p) && !skipped(p)); p = step(p)) {
-    const op = img[p], o2 = img[p + 1];
-    if (op === 0x9a) pend = o2;
-    else if (op === 0xf1 && o2 === 0x7e) reg[2] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + pend };
-    else if (op === 0xfa && o2 === 0xd3) reg[3] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + s16(p + 2) };
-    else if (op === 0xf0 && o2 === 0x07) reg[1] = reg[3]?.ptr === null ? { ptr: reg[3].at, at: 0 } : null;
-    else if (op === 0xfc && o2 === 0xdc) name = text(u32(img, p + 2) - base).trim();
-    else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
-  }
+  // the packet's fields by its dump (recDump)
+  const named = recDump(img);
+  if (named === undefined) return undefined;
   const fields = {};
   for (const [name, width] of Object.entries({ ...REC_FIELDS, Command: 4, RecordMediaMode: 1 })) {
     const f = named.get(name);
@@ -4321,6 +4375,85 @@ export function recImage(img, kcb, rec) {
     encode: { set_call: 0x50000000 + sets[0].at, set: 0x50000000 + sets[0].to, run: 0x50000000 + mk[ri - 1].to, result: 0x50000000 + result,
       release: 0x50000000 + mk[ri + 1].to, id, packet: img[imageParam + 1] },
   };
+}
+
+// Dual Independent's second image (fact 'dual_slot', src/lab/rec.mjs record and image_native; docs/hle-gaps/4.8.md
+// 4.8.24, 4.8.28), read where recFile reads REC_FILE (rec, its result: E143, E146, E147). D on E143 and E146 unless
+// tagged:
+// - one, two, types: REC_IMAGE's settings copy for a double-slot mode with Media 1 alone, `mov T2,a0; add a2,a0; movhu
+//   (a0),d0; mov ET,d3; add d2,d3; mov d3,a1; movhu d0,(a1); movhu (a0),d0; movhu d0,(T1,a2); movhu (a0),d0; movhu
+//   d0,(abs); movhu (B,a2),d0; movhu d0,(A,a2)` three times (E143 0x5053de93, E146 0x5051b739), one site: the shot
+//   record's file types of the first and the second slot [T1, T2] (+37896, +37898; E146 +37548, +37550: TAKE's fill
+//   writes 0 for a JPEG quality there, 0x503bbb19, E146 0x503bc446), the second slot's image settings two [B] and the
+//   first slot's one [A] (+38000, +38016, +38020 and +37998, +38014, +38018; E146 +37652, +37668, +37672 and +37650,
+//   +37666, +37670), ET the packet's ExifFileType
+// - the double-slot test (E143 0x5053dd22, E146 0x5051b5c8): rec_jpeg_exec's (rec's traced) call of it that, where it
+//   answers, reads SlotNo and tests it for 1, `call T; exthu d0; cmp 0,d0; beq; [mov d3,a0; mov (a0),a0;] movbu
+//   (S,An),d0; cmp 1,d0; bne`, one call; T reads the shot record's two in turn, `movhu (B,a0),d2` (0x5053dd4a..), and
+//   the packet's ExifFileType and ExifFileTypeDoubleSlot, `movhu (ET,a2),d1` (0x5053dd78, 0x5053dd80)
+// - slot {record, at}, addr, size: SlotNo, BuffAddrDoubleSlot and BuffSizeDoubleSlot by the packet dump's names
+//   (recDump): SlotNo the packet's +313 on E143 (record null), on E146 the image record's +49 (record: the packet's
+//   word that points at it, +180, rec.jpeg.image.record.at; rec_jpeg_exec's d3 is the packet + 180, E146 0x50527887);
+//   the SlotNo read above at the dump's offset, in the record's form (`mov d3,a0; mov (a0),a0`) where the dump's is
+//   the record's; after it, up to rec_jpeg_exec's `jmp`, its two stores `mov Dm,(d16,An)` at the dump's
+//   BuffAddrDoubleSlot and BuffSizeDoubleSlot (E143 0x505499a9, 0x505499ad: +172, +168; E146 0x50527a72, 0x50527a78:
+//   +160, +156)
+// Returns the parts in DUAL_SLOT_E143's shape; throws where a part is not found in its shape or is found twice.
+export const DUAL_SLOT_E143 = { slot: { record: null, at: 313 }, addr: 168, size: 172, one: [37998, 38014, 38018], two: [38000, 38016, 38020],
+  types: [37896, 37898] };
+const DUAL_COPY = [0x24, null, null, 0xf1, 0x78, 0xf0, 0x60, 0x2f, null, null, 0xeb, 0xf1, 0xed, 0xf0, 0x71, 0xf0, 0x60, 0xfc, 0x72, null, null, null, null,
+  0xf0, 0x60, 0xfc, 0x83, null, null, null, null,
+  0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null, 0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null,
+  0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null];
+const DUAL_EXEC_SPAN = 0x800, DUAL_TEST_SPAN = 0x80, DUAL_STORE_SPAN = 0x20;
+export function dualSlot(img, rec) {
+  const rule = 'dualSlot', D = (o) => h8(0x50000000 + o), u16 = (o) => img[o] | img[o + 1] << 8;
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  // REC_IMAGE's settings copy: the types, two and one
+  const cp = oneAt(img, DUAL_COPY, rule, 'settings copies for Media 1 alone');
+  if (cp === null) throw new Error(`${rule}: no settings copy for Media 1 alone in REC_IMAGE's form`);
+  const et = u16(cp + 8), types = [u32(img, cp + 19), u16(cp + 1)];
+  const two = [0, 1, 2].map((k) => u32(img, cp + 33 + 12 * k)), one = [0, 1, 2].map((k) => u32(img, cp + 39 + 12 * k));
+  // the dump's names
+  const named = recDump(img), field = (name, width) => {
+    const f = named?.get(name);
+    if (f?.width !== width) throw new Error(`${rule}: the packet dump names no ${width}-byte ${name} (${JSON.stringify(f)})`);
+    return f;
+  };
+  const slotNo = field('SlotNo', 1), addr = field('BuffAddrDoubleSlot', 4), size = field('BuffSizeDoubleSlot', 4);
+  const ft = field('ExifFileType', 2), ft2 = field('ExifFileTypeDoubleSlot', 2);
+  if ([addr, size, ft, ft2].some((f) => f.ptr !== null)) throw new Error(`${rule}: the dump's BuffAddrDoubleSlot, BuffSizeDoubleSlot, ExifFileType or ExifFileTypeDoubleSlot is not the packet's`);
+  if (ft.at !== et || ft2.at !== et + 2) throw new Error(`${rule}: the settings copy ${D(cp)} writes ExifFileType at +${et}, the dump names +${ft.at} and +${ft2.at}`);
+  const record = slotNo.ptr;
+  if (record !== null && record !== rec.jpeg.image?.record?.at) throw new Error(`${rule}: the dump's SlotNo is in a record at the packet's +${record}, not REC_IMAGE's image record (+${rec.jpeg.image?.record?.at})`);
+  // rec_jpeg_exec's call of the double-slot test before its SlotNo test, and the two stores after it
+  const scan = recTraceScan(img, rule), exec = scan && recTraced(img, scan, rule, 'rec_jpeg_exec', REC_ENTRY_TRACE);
+  if (exec == null) throw new Error(`${rule}: no rec_jpeg_exec by its trace`);
+  const read = record === null ? [0xfa, null, slotNo.at & 0xff, slotNo.at >> 8] : [0xf1, 0xec, 0xf0, 0x00, 0xf8, 0x40, slotNo.at];
+  const hits = [];
+  for (let p = exec; p < exec + DUAL_EXEC_SPAN; p = step(p)) {
+    const c = callAt(img, p);
+    if (!c) continue;
+    const q = p + c.len, r = q + 5;
+    if (!bytesAt(img, q, [0x1c, 0xa0, 0x00, 0xc8, null]) || !bytesAt(img, r, read) || !bytesAt(img, r + read.length, [0xa0, 0x01, 0xc9])) continue;
+    if (record === null && (img[r + 1] & 0xfc) !== 0x40) continue;          // movbu (d16,An),d0
+    const stores = [];
+    for (let s = r + read.length + 4; s < r + read.length + 4 + DUAL_STORE_SPAN && img[s] !== 0xcc; s = step(s)) if (img[s] === 0xfa && (img[s + 1] & 0xf0) === 0x10) stores.push(u16(s + 2));
+    hits.push({ at: p, test: c.to, stores });
+  }
+  if (hits.length !== 1) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} tests SlotNo (+${slotNo.at}${record === null ? '' : ` of the record at +${record}`}) for 1 after ${hits.length} calls, want one`);
+  const [{ test, stores }] = hits;
+  if (stores.length !== 2 || !stores.includes(addr.at) || !stores.includes(size.at)) throw new Error(`${rule}: rec_jpeg_exec's stores after its SlotNo test are at +${stores.join(', +')}, not BuffAddrDoubleSlot +${addr.at} and BuffSizeDoubleSlot +${size.at}`);
+  // the double-slot test's reads
+  const reads = [], typeReads = [];
+  for (let p = test; p < test + DUAL_TEST_SPAN && !isRet(img, p); p = step(p)) {
+    if (img[p] === 0xfc && img[p + 1] === 0x68) reads.push(u32(img, p + 2));
+    if (img[p] === 0xfa && img[p + 1] === 0x66) typeReads.push(u16(p + 2));
+  }
+  if (JSON.stringify(reads) !== JSON.stringify(two) || JSON.stringify(typeReads) !== JSON.stringify([ft.at, ft2.at])) {
+    throw new Error(`${rule}: the double-slot test ${D(test)} reads the shot record's +${reads.join(', +')} and the packet's +${typeReads.join(', +')}, not the second slot's +${two.join(', +')} and ExifFileType +${ft.at}, +${ft2.at}`);
+  }
+  return { slot: { record, at: slotNo.at }, addr: addr.at, size: size.at, one, two, types };
 }
 
 // TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps/4.1.md
@@ -6596,6 +6729,8 @@ export function readPlacedFacts({ img, at }) {
   // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
+  // Dual Independent's second image (SlotNo, the double-slot buffer, the slots' settings and file types), on the same
+  if (recF !== undefined) facts.dual_slot = dualSlot(img, recF);
   // TAKE's requests as S-MODPOST and S-TAKERDY take them, on the same bodies (E143, E146, E147)
   if (recF !== undefined) facts.take_requests = takeRequests(img, at, qewr);
   // TAKE's exposure for a still's record as S-EXIFPRM gives it, on the same bodies
@@ -6678,6 +6813,8 @@ export function readFacts({ img, family, resLoad }) {
   facts.mm_init = mmInit(img);
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
+  const adc = adDriver(img);
+  if (adc !== undefined) facts.adc = adc;
   const sio = sioDriver(img);
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);

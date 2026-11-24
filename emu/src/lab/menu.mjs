@@ -13,7 +13,7 @@ import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { EXEC_SLOTS, GUI_GUARDS, KIND3_RECORD, NRECORDS, REGISTRY, STRIDE, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
-import { ScpuDev, ScpuMemory, SOURCES_IMAGE } from './scpudev.mjs';
+import { ScpuDev, ScpuMemory, SOURCES_IMAGE, SCAN_IDLE } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
 import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
@@ -22,7 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds, settingsChain, SETTINGS_CHAIN_E143 } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds, settingsChain, SETTINGS_CHAIN_E143, objectNameId } from '../fw/facts.mjs';
 import { bootLoads } from '../fw/sections.mjs';
 import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
@@ -170,6 +170,11 @@ export const RPC_ORIGINS = [['finder-style', [A(0x5120CC98), A(0x5120CC9A)]], ['
 export const RES_BITMAPS_CALLERS = [A(0x51251C22), A(0x51251C53)];   // the bitmaps record's loads (E143 record 37)
 
 const h8 = (v) => '0x' + fx(v >>> 0, 8);
+// S-SASIC (_sync_send): the slave ASIC's queue and the task that reads it, by their names in the object-name table
+// (E134: queue 221, task 145, entry 0x5003994a, which the boot starts at 0x500218aa and logs as "SASIC"; D,
+// docs/hle-gaps/4.8.md 4.8.29), and a task's dormant state (kernel.mjs TTS)
+export const SASIC_SLAVE_NAMES = ['SASIC_SLAVE', 'SYS_SASIC_SLAVE'];
+const TTS_DMT = 0x10;
 const h4 = (v) => '0x' + fx(v >>> 0, 4);
 const RT = IMAGE_BASE;
 const u16i = (img, a) => img[a - RT] | img[a - RT + 1] << 8;
@@ -264,6 +269,7 @@ export class MenuLab extends T.TextDisplayLab {
     this.ctor_results = [];
     this.dropped_sends = [];
     this.modack_sends = [];             // S-MODACK's synchronous sends to a body's modack_queues (_sync_send)
+    this.sasic_sends = [];              // S-SASIC's synchronous sends to the slave ASIC's queue (_sync_send)
     this.power_started = null;          // power_start
     this.gui_sleep_ms = 0;              // H-GUISLEEP (gui_sleep)
     this.gui_props = new Tally();
@@ -777,7 +783,7 @@ export class MenuLab extends T.TextDisplayLab {
     // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps/4.7.md 4.7.6)
     if (SCPU_BACKUP) {
       this.scpu_dev = this.scpu_native() ? this.scpu_m4(nvram)
-        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE });
+        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE, scan: this.scan_idle ?? SCAN_IDLE });
       this.store_log.scpu_frames = this.scpu_dev.frames;
       this.scpu_link = new ScpuLink(this, this.scpu_dev);
       this.scpu_link.bring_up();
@@ -929,7 +935,7 @@ export class MenuLab extends T.TextDisplayLab {
     if (nvram) throw new MenuError('OM_EMU_SCPU=native with S-NVRAM: the sub-CPU\'s own backup domain (its RTC and backup registers) is not kept between sessions; use one or the other');
     const image = this.env.scpuImage;
     if (!image) throw new MenuError(`OM_EMU_SCPU=native: the host passed no SCPU image (env.scpuImage: ${MODEL_INFO.name}'s ${MODEL_INFO.scpu_lle.block}; node: checks/lib/env.mjs scpuEnv)`);
-    return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle });
+    return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle, board: { drive: this.scan_idle ?? SCAN_IDLE } });
   }
   // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the
   // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters: M and E for their
@@ -1202,7 +1208,26 @@ export class MenuLab extends T.TextDisplayLab {
       hle.finish(r, { d0: 0 });
       return;
     }
+    // S-SASIC: the slave ASIC's queue (SASIC_SLAVE_NAMES, read in the object-name table: E134's 221, no other body's
+    // table names it), whose task the boot starts and the lab does not (docs/hle-gaps/4.8.md 4.8.29)
+    const sasic = this.sasic_ids();
+    if (sasic && q === sasic.queue && this.nk && this.nk.state(sasic.task) !== TTS_DMT) return this.passthrough(r);   // its task runs
+    if (sasic && q === sasic.queue) {
+      const msg = r.a0 ? unpack('<II', this.sim.read(r.a0, 8)) : [];
+      this.kernel.events.push(['send', `queue ${q} cmd ${cmd} (S-SASIC)`, `param 0x${r.a0.toString(16)} [${msg.map(hex).join(', ')}]`, where(r.mdr)]);
+      this.sasic_sends.push([q, cmd, msg, h8(site)]);
+      hle.finish(r, { d0: 0 });
+      return;
+    }
     throw new MenuError(`synchronous send to queue ${q} cmd ${cmd} (param 0x${r.a0.toString(16)}) from ${where(r.mdr)}: not a DISPLAY message and not an S-SEND drop; its receiver does not run in the lab`);
+  }
+  // S-SASIC's queue and task ({queue, task}, both by name in the object-name table), or null where the table names
+  // neither; read once, at the first send no other path takes
+  sasic_ids() {
+    if (this._sasic !== undefined) return this._sasic;
+    const [queue, task] = SASIC_SLAVE_NAMES.map((n) => objectNameId(this.image, n));
+    if ((queue === null) !== (task === null)) throw new MenuError(`S-SASIC: the object-name table names ${queue === null ? 'the task and not the queue' : 'the queue and not the task'} (${SASIC_SLAVE_NAMES.join(', ')})`);
+    return (this._sasic = queue === null ? null : { queue, task });
   }
   _s_res(hle, r) {
     if (RES_BITMAPS_CALLERS.map(runtime).includes(r.mdr)) {

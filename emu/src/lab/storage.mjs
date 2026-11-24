@@ -437,6 +437,15 @@ export class Storage {
     if (!st?.card?.present) throw new StorageError(`${who}: drive ${SECOND}: the insertion's request with no card in the second slot`);
     this.renumber(who, SECOND);
     this.refresh(SECOND);
+    // A card whose first sector holds a partition table (the MBR's 0x55aa) is one the firmware's mount takes (X: E139
+    // and E125 here, test/test_slot2_rule.mjs; E143 and E146 in test_storage.mjs --slot2's two cards). Left unmounted,
+    // the drive's file requests went a way the lab does not run: on E134 the file layer forwards drive 1's requests to the slave ASIC over CCI (file_cci_com.c's
+    // command 0x81 through sys_sasic_cmd_snd 0x5003a38c, which refuses with the slave's link flag 0; X, with no
+    // command on port 1; docs/hle-gaps/4.8.md 4.8.29), so the session stops here rather than show the card unmounted
+    const mbr = st.card.data.get(0);
+    if (!st.mounted && mbr && mbr[510] === 0x55 && mbr[511] === 0xaa) {
+      throw new StorageError(`${who}: drive ${SECOND}: the firmware left the second card unmounted (drive status ${h8(st.drive_status)}, ${this.port_commands[SECOND]} commands on its port) though it holds a partition table: its file requests do not reach the lab's card`);
+    }
     st.inserted = true;
     this.log.push(['drive', `drive ${SECOND}: status ${h8(st.drive_status)}${st.mounted ? '' : ', not mounted'}`]);
   }

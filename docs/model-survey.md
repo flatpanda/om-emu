@@ -3189,6 +3189,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      reads the texts on the canvas and each row's band on the frame at the pixels that sample it
      (`src/lab/menuwalk.mjs` canvasOf, the compositors' sampling). One to one on the other bodies' TFTs (X: E143's
      channel 2, E144, E148, E122).
+     The GUI's layout on that canvas is the TFT connect's (layout 0 by CCommon::resetCoordinate on the TG-5s, where
+     WinMain's 1 is 80 canvas pixels wider): nav, which had not sent the connect, lost the value column and cut "Set"
+     until 2026-11-24 (`docs/hle-gaps/4.7.md` 4.7.22).
    - *Short tabs.* The TG-5s' Shooting Menu 2 has two rows and their Custom Menu one (X, frames), where the walker
      read a tab with no goal only as a list of three rows or more; and their pages' title and footer, drawn alike at
      the same left edge 431 pixels apart, made a "list" of two. A screen with no goal is now read by its longest list
@@ -3317,7 +3320,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    controller form; the save mode and slot are the settings their remaining-shots query reads (E139 1129 / 1130, E134
    1130 / 1131, E125 1137 / 1138, D). X (scratch sessions): the second slot empty by default, a second card at the
    start mounted from port 1 and S2 on the save slot's card on E139 and E125; E134's second card stops at a
-   synchronous send to queue 221 from the access lamp's callback (open).
+   synchronous send to queue 221 from the access lamp's callback (open). Since 2026-11-24 (4.8.29): queue 221 is the
+   slave ASIC's (`SASIC_SLAVE`, task 145 `SYS_SASIC_SLAVE`, D), answered by S-SASIC; the second card's file requests
+   go to the slave ASIC over CCI (`file_cci_com.c` command `0x81`, X), which the lab does not run (open).
 
 162. **`bin/nav.mjs` on E145, E129, E132, E118 and E120** (2026-11-22, `src/lab/menu.mjs` power_start and gui_sleep,
    `src/lab/nav.mjs` gui_connect, `src/lab/bodystart.mjs`; hle-gaps/4.7.md 4.7.9). Answers finding 160's open items for

@@ -49,6 +49,9 @@ const h8 = (v) => '0x' + fx(v >>> 0, 8);
 // E118), and the span before the GUI task's take its gate is read in (E118's gate 0x39 bytes before the take
 // 0x50b93379, E120's 0x509140a9 before 0x509140e2, D)
 export const CONNECT_TFT = 2, CONNECT_GATE_SPAN = 0x60;
+// The connect message on a build without the gate: E143's message at sendEvent index MM.CONNECT_EVENT (131, play's
+// H-CONNECT index), 0x9601, posted at the build's index of it (two lower on the shifted maps, 129, X)
+export const CONNECT_MESSAGE = 0x9601;
 // S-DISPSYNC (NavSession dispsync_release): the releases one step may make (play's bound, src/lab/camapp.mjs pump)
 export const DISPSYNC_RELEASES = 20;
 const GATE = [0xfa, 0xb4, 0x8c, 0x01, 0xfc, 0xc8], GATE_TAIL = [0x00, 0x00, 0xc9];
@@ -271,21 +274,36 @@ export class NavSession {
   // without it every key, OPEN included, was dropped at the gate and the GUI stayed at POWER_ON (X, E118 and E120,
   // docs/model-survey.md finding 162). lOutput: the TFT's 2, as the application's start; the EVF's 7, H-CONNECT's
   // (src/lab/menu.mjs CONNECT_LOUTPUT). The gate is read at its bytes before the take (MM.DISPATCH, within
-  // CONNECT_GATE_SPAN bytes): a build without it (E143 and the 16 other bodies, X) runs none. gui_connected: null, or
-  // {index, message, loutput}
+  // CONNECT_GATE_SPAN bytes).
+  // The TFT's layout (2026-11-24): on a build without the gate the GUI takes keys unconnected, but its layout stays the
+  // one its WinMain set, SetLayoutMode(1) (the byte LAYOUT_BYTE 1 after the bring-up on all 19 bodies, X), until the
+  // connect's handler resets it: ConnectChangePlay -> CCommon::resetCoordinate (its log text on E129, 0x50c22469;
+  // E143's 0x510c857d), which reads a key (0 at the TFT's connect, X on both), looks it up in its table of {key,
+  // handler} (E143 0x6132c2cc, E129 0x6128d6e0; keys 0..2 one handler, below 1 `blt` to it) and calls SetLayoutMode
+  // with the handler's mode. That handler goes on E143 to `mov 1,d0` (0x510c85bf -> 0x510c8601) and on E129 to
+  // `clr d0` (0x50c224ba -> 0x50c22515), D. Mode 1 picks the widgets' wider rects (docs/om1-menu-spec.md "Layout
+  // mode"), which on the TG-5s' 640-wide canvas put the value column and the right half of "Set" past the canvas's
+  // edge (X, E129 and E132; play, whose application sends the connect at its start, shows layout 0 and both). So on
+  // the TFT the session posts the connect on every ported body, as the application's start does in play: E143's
+  // CONNECT_MESSAGE at the build's index of it, lOutput 2. Layout 1 -> 0 on E129 and E132, 1 -> 1 on the 16 other
+  // ported bodies (X); E143, the lab model, whose checked sessions run without it, and the EVF without the gate run
+  // none (E143's TFT handler keeps layout 1, D above). gui_connected: null, or {index, message, loutput, gate (the
+  // GUI waits for it), layout: [the byte before, after]}
   gui_connect() {
     this.gui_connected = null;
     const gate = connect_gate(this.lab.image);
-    if (gate === null) return;
+    if (gate === null && (ON_LAB_MODEL || this.device !== 'tft')) return;
+    const message = gate ?? CONNECT_MESSAGE;
     let index = 1;
-    for (; index <= 334 && this.message(index) !== gate; index++);
-    if (index > 334) throw new NavError(`H-GUICONNECT: no sendEvent index for the GUI's gate message 0x${fx(gate, 4)} in the build's event map`);
+    for (; index <= 334 && this.message(index) !== message; index++);
+    if (index > 334) throw new NavError(`H-GUICONNECT: no sendEvent index for the ${gate === null ? '' : 'GUI\'s gate '}connect message 0x${fx(message, 4)} in the build's event map`);
     const loutput = this.device === 'evf' ? MM.CONNECT_LOUTPUT : CONNECT_TFT;
+    const layout0 = this.lab.sim.read(MM.LAYOUT_BYTE, 1)[0];
     this.begin('H-GUICONNECT');
     this.post(index, loutput);
     this.settle('H-GUICONNECT');
     if (this.lab.state() !== MM.STATE_POWER_ON) throw new NavError(`H-GUICONNECT: GUI state ${this.lab.state_name(this.lab.state())} after the connect message, not POWER_ON`);
-    this.gui_connected = { index, message: h4(gate), loutput };
+    this.gui_connected = { index, message: h4(message), loutput, gate: gate !== null, layout: [layout0, this.lab.sim.read(MM.LAYOUT_BYTE, 1)[0]] };
   }
   // S-DISPSYNC in nav (src/lab/camapp.mjs has the stand-in's text, src/fw/facts.mjs displaySync the evidence): with
   // the lab's own creation of the GUI no application runs, and on the bodies whose GUI asks for the display sync at

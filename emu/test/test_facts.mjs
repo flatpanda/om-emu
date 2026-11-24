@@ -51,7 +51,7 @@ import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, T
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, POWER_LATER_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileQueue, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
   TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot,
-  TAKE_FILLS_E143, takeFills, mmBank0 } from '../src/fw/facts.mjs';
+  TAKE_FILLS_E143, takeFills, mmBank0, AD_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -225,20 +225,21 @@ const TOUCH_START_FOUND = {
 // poll 0x5005e931, the last write 0x5004fa52 at 0x500459ee, the RAM log's write 0x5190a062, shutDown 0x50b08199
 // loading 0x10102 at +0x10; E147 the starter's 0x50024120 with 0x60042ce2, the sequence 0x50045807 calling no
 // expander, the sender 0x500599f7's poll 0x50059aa9, the last write 0x5004f78f at 0x50045923, the RAM log's write
-// 0x519123a8), and none on the bodies whose firmware holds no start of PWR_MAIN (X)
+// 0x519123a8; start_shutdown, the entry of the function loading startShutDown's trace, read by the rule 2026-11-24:
+// E146 0x50b01313, E147 0x50b0bba1, X), and none on the bodies whose firmware holds no start of PWR_MAIN (X)
 const POWER_SEQ_FOUND = {
   E143: POWER_OFF_E143,
   E146: {
     pwr: { init: 0x50045ABD, id_word: 0x60042D62 },
     shutdown: { object: 0x50B07B86, slot: 2, entry: 0x50B08199, mode: 1, reason: 1 },
-    flash_save: 0x50B017E1, log: { nand: [0x4E820000, 0x200000], ret: 0x5190A069 }, end: 0x500459F5,
+    flash_save: 0x50B017E1, start_shutdown: 0x50B01313, log: { nand: [0x4E820000, 0x200000], ret: 0x5190A069 }, end: 0x500459F5,
     ioexp: { body: { post: 0x50058507, flag: 0x6004319E }, pbh: { post: 0x50056960, flag: 0x600431AE } },
     poll: { at: 0x5005E931, pin: 102 },
   },
   E147: {
     pwr: { init: 0x500459F2, id_word: 0x60042CE2 },
     shutdown: { object: 0x50B124FA, slot: 2, entry: 0x50B12B11, mode: 1, reason: 1 },
-    flash_save: 0x50B0C09E, log: { nand: [0x4E820000, 0x200000], ret: 0x519123AF }, end: 0x5004592A,
+    flash_save: 0x50B0C09E, start_shutdown: 0x50B0BBA1, log: { nand: [0x4E820000, 0x200000], ret: 0x519123AF }, end: 0x5004592A,
     ioexp: null, poll: { at: 0x50059AA9, pin: 102 },
   },
   E144: null, E139: null, E134: null, E137: null, E142: null, E140: null,
@@ -1152,7 +1153,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true, focal: null }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null, slots: SLOTS_FOUND.E143 },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, adc: AD_E143, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
   hdmi: { calib: null },
 };

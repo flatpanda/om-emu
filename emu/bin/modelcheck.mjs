@@ -169,7 +169,7 @@ if (OVERLAY) {
   }
 }
 const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
-  ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}) };
+  ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: loadImage() } : {}) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];

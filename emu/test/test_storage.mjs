@@ -77,9 +77,9 @@
 //                   save slot (read back independently on that card alone), each card goes out and in while the
 //                   camera runs; a blank card put into the empty slot stays unformatted (out and in again too) until
 //                   Card Formatting formats it from the menu, and the player keeps it for its next session; the
-//                   double-slot save modes record on both cards (Dual Same; Dual Independent on E143, with the
-//                   slots' settings alike one image, different two, each card its own: docs/hle-gaps/4.8.md 4.8.14,
-//                   4.8.20, 4.8.24); on E143 under control camapp 3 the firmware's own media
+//                   double-slot save modes record on both cards (Dual Same; Dual Independent on E143 and E146, with
+//                   the slots' settings alike one image, different two, each card its own: docs/hle-gaps/4.8.md
+//                   4.8.14, 4.8.20, 4.8.24, 4.8.28); on E143 under control camapp 3 the firmware's own media
 //                   manager does the same: one card, its menu camapp 1's, a blank card in and out; two cards mounted
 //                   by it, S2 on the second, the second out and in
 //   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls] [--slot2]
@@ -1564,9 +1564,9 @@ export async function storageSlots() {
     two(5, 2);
     // Dual Independent with the arrow up (docs/hle-gaps/4.8.md 4.8.20): TAKE's shot record fill writes the second slot's
     // image settings natively; with the two slots' settings alike (the store's defaults) REC_IMAGE makes one image and
-    // REC_FILE's double-slot record writes it on both cards, as Dual Same. E143 alone: REC reads the second slot's
-    // settings at E143's offsets and refuses Dual Independent on another body (src/lab/rec.mjs)
-    const indep = MODEL === 'E143';
+    // REC_FILE's double-slot record writes it on both cards, as Dual Same. On E143 and E146 (the second slot's settings
+    // at the offsets src/fw/facts.mjs dualSlot reads; docs/hle-gaps/4.8.md 4.8.28 for E146)
+    const indep = MODEL === 'E143' || MODEL === 'E146';
     if (indep) {
       s.set(MODE, 3); idle(s, 300);
       two(3, 4);

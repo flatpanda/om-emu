@@ -21,7 +21,7 @@
 //                 no frame where on publishes one; --device evf and the eye sensor's switch: shot: takes the EVF's
 //                 frame; the lv and eye tokens switch the display (eye:down refused); --osd-errors: a step whose engine refused a picture fails by default and only reports
 //                 with report (the refusal counted through the module API; test_osdwrap.mjs makes real ones); on
-//                 E118, whose stock INFO meets BMP_LUT refusals, the default is report and fail fails the step.
+//                 E118, the default is report and fail fails the step.
 //                 E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a 32-word stack capture at the
 //                 per-shot EXIF fill site through S2, untraced and traced equal; a call of E147's settings getter at
 //                 a breakpoint on the fill site, the run after it (lab time, frame, the JPEG's EXIF) the run without
@@ -250,12 +250,12 @@ async function e143({ ok }, { T, step }) {
         `E143 an OSD refusal fails the step by default: ${JSON.stringify(r).slice(0, 300)} ${sm.ok}`);
     } else ok(r.ok && JSON.stringify(r.osd_errors) === '{"BMP_TOKEN":1}' && next.ok && !('osd_errors' in next) && sm.ok && sm.osd_errors_policy === 'report', `E143 --osd-errors report: ${JSON.stringify(r).slice(0, 300)}`);
   }
-  // the default per body (host/session.mjs OSD_FAIL_BODIES): E118's stock INFO meets BMP_LUT refusals (X, 2026-11-14),
-  // so there the default is report (the step passes and lists them) and --osd-errors fail fails it (control: with fail
-  // as every body's default the first run fails at INFO, by hand)
+  // the default per body (host/session.mjs OSD_FAIL_BODIES): report on E118, fail with --osd-errors fail (the summary
+  // names the policy; the refusal itself fails a step as on E143 above). E118's stock INFO met BMP_LUT refusals until
+  // 2026-11-22, when run-length bitmaps sent with no table were drawn (src/dev/engine.mjs); it now meets none, X, so
+  // both runs pass INFO
   const r118 = cli(['--model', 'E118', 'wait:1500', 'info', 'wait:300']), f118 = cli(['--model', 'E118', '--osd-errors', 'fail', 'wait:1500', 'info', 'wait:300']);
-  ok(r118.rc === 0 && r118.sum?.osd_errors_policy === 'report' && step(r118, 'info').osd_errors?.BMP_LUT > 0 && f118.rc === 1 && f118.sum?.osd_errors_policy === 'fail'
-    && /FAILED at step 2 \(info\): the OSD engine refused \d+ picture\(s\) \(BMP_LUT \d+\)/.test(f118.last),
+  ok(r118.rc === 0 && r118.sum?.osd_errors_policy === 'report' && !('osd_errors' in step(r118, 'info')) && f118.rc === 0 && f118.sum?.osd_errors_policy === 'fail',
     `E118 the default report, --osd-errors fail: ${r118.last} ${JSON.stringify(step(r118, 'info').osd_errors)} | ${f118.last}`);
 }
 

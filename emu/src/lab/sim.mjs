@@ -4,7 +4,7 @@
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
 import { A, IMAGE_BASE, IMAGE_END, MODEL } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { StrictLog, strictOn } from './strict.mjs';
+import { StrictLog, strictOn, strictCache } from './strict.mjs';
 import { rangeMessage, POISON } from '../fw/sections.mjs';
 import { sectionsFact, loadedRanges, secReadyWatch } from './patchaudit.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
@@ -60,9 +60,11 @@ export class Simulator {
     this.secReady = env.secReady ? secReadyWatch(env) : null;
     // the strict mode (src/lab/strict.mjs): env.strict, the host's StrictLog for the run (or 'on' / 'off'), else
     // OM_STRICT; this.strict the log (null: off). env.stockRom, the stock run-time image beside an overlay, gives the
-    // ranges the patch made the boot load (cave-store)
-    this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL }) : null;
-    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null, stock: env.stockRom ?? null }) ?? null;
+    // ranges the patch made the boot load (cave-store). Its data-cache model (--strict cache) is CPU 0's: with a second
+    // core running it is refused
+    this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL, cache: strictCache(env.strict) }) : null;
+    if (this.strict?.cacheOpts && cores) throw new Error('strict cache: the data-cache model is CPU 0\'s; a second core (--cpu2 native) is not modelled with it');
+    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null, stock: env.stockRom ?? null, dram: BOARD.dram_size }) ?? null;
     this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded,
       fetchAudit: this.secReady?.guard ?? null, strict });
     this.breakpoints = new Set();

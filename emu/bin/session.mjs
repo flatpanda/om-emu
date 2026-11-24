@@ -5,7 +5,7 @@
 // (emu/README.md "Scripted sessions").
 //   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--no-card]
 //                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
-//                            [--loaded auto|on|off] [--sec-ready] [--strict on|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
+//                            [--loaded auto|on|off] [--sec-ready] [--strict on|cache|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
 //                            [--rotate auto|off|on] [--lang CODE]
 //                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
 // --rotate runs PER_ROTATE natively (play's --rotate, H-ROTINIT; auto by default: on where the body has it, E143,
@@ -58,7 +58,7 @@ const SPEC = [
   { opt: '--nvram', type: 'str', default: 'off', metavar: 'off|FILE' },
   { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
   { opt: '--sec-ready', type: 'flag', default: false },
-  { opt: '--strict', type: 'str', choices: ['on', 'off'] },                 // absent: OM_STRICT (src/lab/strict.mjs)
+  { opt: '--strict', type: 'str', choices: ['on', 'cache', 'off'] },                 // absent: OM_STRICT (src/lab/strict.mjs)
   { opt: '--creative-dial', type: 'int', metavar: 'K' },
   { opt: '--held', type: 'str', repeat: true, metavar: 'KEY' },
   { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },

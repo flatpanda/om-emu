@@ -118,10 +118,13 @@ function watchCheck(a, w, dir, v) {
 // (code fetches still read them, through codePhys). A CPU store into a store range or a load from a read range calls
 // SREP(kind, addr, size, dir, value); so does a misaligned 16/32-bit access (kind 'misaligned'), just before its fault
 // 3, which stays. Debugger, DMA and device accesses never report. Off (SON false): no page is masked and the only cost
-// is the SON test on the slow paths and in the misalignment faults' branches.
-let SON = false, SSTORE = [], SREAD = [], SREP = null;
+// is the SON test on the slow paths and in the misalignment faults' branches. With a data-cache model (cfg.cache,
+// --strict cache: src/core/dcache.mjs) every page of both DRAM views keeps both fast entries off and every CPU RAM
+// load and store is shown to the model before it reads or writes memory.
+let SON = false, SSTORE = [], SREAD = [], SREP = null, SDC = null;
 const SPW = new Uint8Array(65536), SPR = new Uint8Array(65536);
-// cfg: {stores: [[lo, hi)], reads: [[lo, hi)], report(kind, addr, size, dir, value)} (cached-view addresses), or null
+// cfg: {stores: [[lo, hi)], reads: [[lo, hi)], report(kind, addr, size, dir, value), cache: {model, lo, hi} (the data
+// cache's model and the cached view's DRAM [lo, hi); absent: none)} (cached-view addresses), or null
 export function setStrict(cfg) {
   for (let p = 0; p < 65536; p++) if (SPW[p] !== 0 || SPR[p] !== 0) { SPW[p] = 0; SPR[p] = 0; if (WPG[p] === 0) restorePage(p); }
   SON = cfg !== null; SREP = cfg?.report ?? null;
@@ -133,8 +136,15 @@ export function setStrict(cfg) {
     }
   };
   mark(SSTORE, SPW); mark(SREAD, SPR);
+  SDC = cfg?.cache?.model ?? null;
+  if (SDC !== null) {
+    SDC.attach(U8, DRAM_OFF);
+    mark([[cfg.cache.lo, cfg.cache.hi]], SPW); mark([[cfg.cache.lo, cfg.cache.hi]], SPR);
+  }
   maskWatchedPages();
 }
+// K-CFLUSH's write-back and invalidate in the strict mode's data-cache model (src/lab/menu.mjs); without one, nothing
+export function strictCacheFlush() { if (SDC !== null) SDC.flush(); }
 const inList = (list, a) => {
   if (a >= 0xA0000000 && a < 0xC0000000) a -= 0x40000000;
   for (let i = 0; i < list.length; i++) if (a < list[i][1] && a >= list[i][0]) return true;
@@ -283,6 +293,7 @@ function slowLd(a, w) {
   }
   if (r.kind !== K_MMIO) {
     if (!WON && !SON) return ramRead(r.off + ((a >>> 0) - r.base), w);
+    if (SDC !== null && r.kind === K_RAM) SDC.ld(a >>> 0, r.off + ((a >>> 0) - r.base), w);
     const v = ramRead(r.off + ((a >>> 0) - r.base), w);
     if (WON) watchCheck(a, w, 0, v);
     if (SON && inList(SREAD, a >>> 0)) SREP('read', a >>> 0, w, 'r', v >>> 0);
@@ -320,6 +331,7 @@ function slowSt(a, v, w) {
       if (WPL[p] >= 0 && WPG[p] === 0 && SPW[p] === 0) WP[p] = WPL[p];   // a whole RAM page, not watched or strict: its fast store path from now on
       if (WON) watchCheck(a, w, 1, w === 4 ? v : v & (w === 2 ? 0xffff : 0xff));
       if (SON && inList(SSTORE, a >>> 0)) SREP('store', a >>> 0, w, 'w', w === 4 ? v >>> 0 : v & (w === 2 ? 0xffff : 0xff));
+      if (SDC !== null) SDC.st(a >>> 0, o, w, v);       // before the store: the model sees memory's old bytes
       ramWrite(o, v, w);
       return;
     }

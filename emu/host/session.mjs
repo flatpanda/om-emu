@@ -19,7 +19,7 @@
 //   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
 //   loaded 'auto'|'on'|'off' (S-STALERAM), secReady true (--sec-ready, src/lab/secready.mjs: the static section-order
-//   pass at the start, said and in the audit, and the run-time watch; needs patch or main), strict 'on'|'off'
+//   pass at the start, said and in the audit, and the run-time watch; needs patch or main), strict 'on'|'cache'|'off'
 //   (src/lab/strict.mjs; absent: OM_STRICT), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
 //   and --device), rotate 'auto'|'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT; auto, the default, on where the body
@@ -354,7 +354,7 @@ export async function openSession(o = {}) {
   const { PatchRefused, patchLine } = await import('../src/fw/patch.mjs');
   const { startUnloaded, unloadedLine, startSecReady } = await import('../src/lab/patchaudit.mjs');
   const { secReadyLine, secReadyReport } = await import('../src/lab/secready.mjs');
-  const { StrictLog, strictOn, strictLine } = await import('../src/lab/strict.mjs');
+  const { StrictLog, strictOn, strictCache, strictLine } = await import('../src/lab/strict.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { codePc, notationOf } = await import('../src/debug/live.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
@@ -499,10 +499,10 @@ export async function openSession(o = {}) {
   if (STORAGE) say(`${cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)'}${o.noCard ? '; the slot empty at the start (--no-card; card:in puts it in)' : ''}`);
   if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
-  // the strict mode (src/lab/strict.mjs): o.strict 'on' / 'off', else OM_STRICT; one log for the whole run
+  // the strict mode (src/lab/strict.mjs): o.strict 'on' / 'cache' / 'off', else OM_STRICT; one log for the whole run
   let strictLog;
-  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict, process.env) ? new StrictLog({ model: MODEL }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
-  if (strictLog) say('strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words; src/lab/strict.mjs)');
+  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict, process.env) ? new StrictLog({ model: MODEL, cache: strictCache(o.strict, process.env) }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
+  if (strictLog) say(`strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words${strictLog.cacheOpts ? '; the data-cache model: stale cached reads, lost write-backs, stale uncached reads' : ''}; src/lab/strict.mjs)`);
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
     take: 'stand-in', cpu2: o.cpu2 ?? 'auto', camapp: String(o.camapp ?? '1'), play_native: o.playNative ?? 'auto', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg, lang: langArg };

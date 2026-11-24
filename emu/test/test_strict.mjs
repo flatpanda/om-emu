@@ -9,7 +9,11 @@
 //                  entry counted and not reported, by pc and by address, and its controls (an entry for another pc, of
 //                  another kind, or an address range that misses: reported), a site on patched bytes reported despite
 //                  its entry, the cap and its count; strictOn's option and OM_STRICT; strictLine; the allowlist's
-//                  shape (kinds, ordered ranges, a reason)
+//                  shape (kinds, ordered ranges, a reason). The data-cache model (--strict cache): a cached store
+//                  then an uncached load (cache-uncached-stale), a cached load, an uncached store and a cached load
+//                  (cache-stale-read, once), a cached and an uncached store over it written back by K-CFLUSH and by an
+//                  eviction (cache-lost-write); controls: a flush between, a cached store in place of the uncached
+//                  one, strict without the model; the log's cache range and doc; strictCache
 //   strictSession  (the stock blocks; each model in a child bin/session.mjs, four at once) STOCK_SESSIONS on E143,
 //                  E146, E147, E142 and E139 and MORE_SESSIONS (movie mode and a recording; a walk over the menu's
 //                  pages) on E143, E146, E147 and E139 with --strict on: no new site, and accesses allowed (the
@@ -62,7 +66,7 @@ export async function strictUnits() {
   const { createMachine } = await import('../src/machine.mjs');
   const mem = await import('../src/core/mem.mjs');
   const { IMAGE_BASE } = await import('../src/fw/model.mjs');
-  const { StrictLog, strictRanges, strictOn, strictLine, allowed } = await import('../src/lab/strict.mjs');
+  const { StrictLog, strictRanges, strictOn, strictCache, strictLine, allowed, STRICT_CLASSES, STRICT_CACHE_CLASSES } = await import('../src/lab/strict.mjs');
   const { STRICT_ALLOW } = await import('../src/fw/strict-allow.mjs');
 
   // the machine: a synthetic block at the lab's image base; `mov d0,(a0)` at +0x100, `mov (a0),d0` at +0x110,
@@ -108,6 +112,38 @@ export async function strictUnits() {
   run(m, ST, IN); run(m, LD, READS[0]);
   ok(reports.length === 0, `control: setStrict(null), nothing reported: ${JSON.stringify(reports)}`);
 
+  // the data-cache model (--strict cache, src/core/dcache.mjs; 8 KiB, 2 ways, 16-byte lines: lines 4 KiB apart share a
+  // set) on the same machine, its reports beside the ranges' ones
+  const { DataCache } = await import('../src/core/dcache.mjs');
+  const U = (a) => (a + 0x40000000) >>> 0;
+  const cfgc = () => ({ ...cfg(), cache: { model: new DataCache({ report: (kind, a, w, dir, v, where) => reports.push({ kind, a, w, dir, v, where, pc: mem.ctx.pc() }) }), lo: 0x60000000, hi: 0x70000000 } });
+  const kinds = () => reports.map((x) => x.kind).join();
+  m = fresh(cfgc());
+  run(m, ST, OUT); run(m, LD, U(OUT));
+  ok(kinds() === 'cache-uncached-stale' && reports[0].a === U(OUT) && reports[0].pc === LD && /not written back/.test(reports[0].where), `a cached store, then an uncached load of its bytes: cache-uncached-stale: ${JSON.stringify(reports)}`);
+  m = fresh(cfgc());
+  run(m, ST, OUT); mem.strictCacheFlush(); run(m, LD, U(OUT));
+  ok(reports.length === 0, `control: K-CFLUSH between them, nothing reported: ${JSON.stringify(reports)}`);
+  m = fresh(cfgc());
+  run(m, LD, OUT + 0x100); run(m, ST, U(OUT + 0x100), 0x55667788); run(m, LD, OUT + 0x100);
+  ok(kinds() === 'cache-stale-read' && reports[0].a === OUT + 0x100 && reports[0].v === 0x88 && m.getRegs()[0] === 0x55667788, `a cached load, an uncached store, a cached load: cache-stale-read, the lab still reading memory: ${JSON.stringify(reports)}`);
+  reports.length = 0; run(m, LD, OUT + 0x100);
+  ok(reports.length === 0, `the same load again: taken up once, not reported again: ${JSON.stringify(reports)}`);
+  m = fresh(cfgc());
+  run(m, LD, OUT + 0x100); run(m, ST, OUT + 0x100); run(m, LD, OUT + 0x100);
+  ok(reports.length === 0, `control: a cached store in place of the uncached one, nothing reported: ${JSON.stringify(reports)}`);
+  m = fresh(cfgc());
+  run(m, ST, OUT + 0x200); run(m, ST, U(OUT + 0x200), 0x99aabbcc); mem.strictCacheFlush();
+  ok(kinds() === 'cache-lost-write' && reports[0].a === OUT + 0x200 && /at the flush/.test(reports[0].where), `a cached store, an uncached store over it, the flush: cache-lost-write: ${JSON.stringify(reports)}`);
+  m = fresh(cfgc());
+  run(m, ST, OUT + 0x300); run(m, ST, U(OUT + 0x300), 0x99aabbcc); run(m, LD, OUT + 0x300 + 0x1000); run(m, LD, OUT + 0x300 + 0x2000);
+  ok(kinds() === 'cache-lost-write' && reports[0].a === OUT + 0x300 && /at an eviction/.test(reports[0].where), `the same written back by an eviction (two more lines of its set): ${JSON.stringify(reports)}`);
+  m = fresh(cfg());
+  run(m, ST, OUT); run(m, LD, U(OUT)); run(m, ST, U(OUT + 0x200)); mem.strictCacheFlush();
+  ok(reports.length === 0, `control: strict without the cache model, nothing reported: ${JSON.stringify(reports)}`);
+  ok(throws(() => new DataCache({ kib: 8, ways: 3 }), /not a whole number of sets/), 'DataCache: a geometry with no whole number of sets refused');
+  mem.setStrict(null);
+
   // the log, with ctx's pc set by hand (base B, a block of SIZE; a preload row's source at +0x8000..+0x9000 copied to
   // 0x61000000; a gap +0x20000..+0x30000 past section 1's end)
   const loads = { gaps: [{ lo: B + 0x20000, hi: B + 0x30000, n: 1, end: B + 0x20000, word: B + 0x100 }], unshown: [] };
@@ -138,6 +174,13 @@ export async function strictUnits() {
     ok(by[h8(code(0x108))]?.class === 'init-read' && by[h8(code(0x108))].where === 'copied to 0x61000010 at the boot', `init-read with its copy: ${JSON.stringify(by[h8(code(0x108))])}`);
     ok(by[h8(code(0x10c))]?.class === 'unloaded-read' && /past section 1's loaded end/.test(by[h8(code(0x10c))].where), `unloaded-read with its range: ${JSON.stringify(by[h8(code(0x10c))])}`);
     ok(by[h8(code(0x110))]?.class === 'misaligned', `misaligned: ${JSON.stringify(by[h8(code(0x110))])}`);
+    const LC = new StrictLog({ model: 'T', allow: { T: [] }, cache: true });
+    const armed = LC.arm({ rom, base: B, end: B + SIZE, dram: 0x4000000 });
+    pc = B + 0x120; LC.report('cache-lost-write', 0x6c000000, 1, 'w', 0x44, 'written back at the flush over an uncached store\'s byte (memory 0x11)');
+    const lc = LC.doc();
+    ok(armed.cache?.model === LC.cache && armed.cache.lo === 0x60000000 && armed.cache.hi === 0x64000000 && lc.findings[0]?.class === 'cache-lost-write' && /at the flush/.test(lc.findings[0].where) && lc.cache?.kib === 8 && lc.cache.ways === 2,
+      `the log with the cache model: its range, a cache class with its where, the model in the doc: ${JSON.stringify(lc)}`);
+    ok(throws(() => new StrictLog({ model: 'T', cache: true }).arm({ rom, base: B, end: B + SIZE }), /no DRAM size/) && !('cache' in log([]).doc()), 'the cache model needs the DRAM size; without it no cache in the doc');
     const line = strictLine(d);
     ok(line.startsWith('strict: 5 new site(s): image-store at 0x50000100 to ') && line.includes('x2') && line.includes('init-read at 0x50000108 from'), `strictLine: ${line}`);
     // the allowlist: by pc, by address; its controls; patched bytes
@@ -166,9 +209,11 @@ export async function strictUnits() {
   // strictOn
   ok(strictOn('on', {}) && !strictOn('off', { OM_STRICT: '1' }) && strictOn(undefined, { OM_STRICT: '1' }) && strictOn(undefined, { OM_STRICT: 'on' }) && !strictOn(undefined, {}) && !strictOn(undefined, { OM_STRICT: '0' }),
     'strictOn: the option wins, else OM_STRICT 1 / on');
-  ok(throws(() => strictOn('yes', {}), /strict yes: on or off/), 'strictOn: an unknown value refused');
+  ok(throws(() => strictOn('yes', {}), /strict yes: on, cache or off/), 'strictOn: an unknown value refused');
+  ok(strictOn('cache', {}) && strictOn(undefined, { OM_STRICT: 'cache' }) && strictCache('cache', {}) && !strictCache('on', { OM_STRICT: 'cache' }) && strictCache(undefined, { OM_STRICT: 'cache' }) && !strictCache(undefined, { OM_STRICT: 'on' }),
+    'strictCache: cache turns the mode on with the data-cache model; the option wins, else OM_STRICT=cache');
   // the allowlist's shape
-  const KINDS = new Set(['misaligned', 'image-store', 'init-read', 'unloaded-read']);
+  const KINDS = new Set([...STRICT_CLASSES, ...STRICT_CACHE_CLASSES]);
   const shape = Object.entries(STRICT_ALLOW).flatMap(([model, list]) => list.filter((e) => !KINDS.has(e.kind) || (!e.at && !e.addr) || (e.at && !(e.at[0] < e.at[1])) || (e.addr && !(e.addr[0] < e.addr[1])) || !(e.why?.length > 8)).map((e) => `${model} ${JSON.stringify(e)}`));
   ok(shape.length === 0 && SESSION_MODELS.every((k) => STRICT_ALLOW[k]?.length), `the allowlist's entries: ${shape.join('; ')}`);
   ok(SESSION_MODELS.every((m) => scriptsOf(m).length === (m === 'E142' ? 2 : 4) && scriptsOf(m).every((t) => !t.includes('MOVIE') && !(NO_EVF.has(m) && t.includes('eye'))))

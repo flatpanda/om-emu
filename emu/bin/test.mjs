@@ -375,6 +375,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...du.bad, ...ds.bad].forEach((x) => console.log('  ', x));
   bad += du.bad.length + ds.bad.length;
 }
+// S-HEAP's opt-in fill (test_heapfill.mjs, FIDELITY-NOTES.md 7.1): the option's forms without firmware; on E143 with
+// OM_HEAP_FILL=deadbeef every block handed out and taken back over 5 s of idle reads the fill; control: without it
+{
+  const { heapFillUnits, heapFillSession } = await import('../test/test_heapfill.mjs');
+  const hu = heapFillUnits(), hs = await heapFillSession();
+  console.log(`S-HEAP's fill: the option ${hu.checks - hu.bad.length}/${hu.checks}; in play (E143, 5 s idle, with a control) ${hs.checks - hs.bad.length}/${hs.checks}`);
+  [...hu.bad, ...hs.bad].forEach((x) => console.log('  ', x));
+  bad += hu.bad.length + hs.bad.length;
+}
 // TAKE's take-ready on the second shot (test_take_ready.mjs, camapp 3 with --take probe and --cpu2 native): the first
 // S1's 794 comes from TAKE_MAIN's event 0x04080032 through Com_EvSenderManager; S1's release stops the take-ready with
 // TAKE_EXEC command 7, which TAKE_MAIN does not read in RdyFcsRdy3, so the sequence waits in phase 111 and the second

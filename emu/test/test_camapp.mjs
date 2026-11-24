@@ -42,10 +42,11 @@
 //                  histogram runs again with IMG1 on, left enabled by playback: its bins' read is not modelled and
 //                  stops the session (the furthest point, docs/hle-gaps/4.1.md 4.1.12; where it is modelled: S2's
 //                  take-picture request is not answered, phase 106, MENU not taken); control: S-MODACK's requests left
-//                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
-//                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
-//                  plane drawn, and the plug's cmd 15 waits as the menu's does; in both, the native lens's LENS_EXEC
-//                  and LENS_COMMAND, whose tasks wait on them, are left out of S-MODACK (which takes what it answers)
+//                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's two TRA 588
+//                  are the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with
+//                  the GUI's planes (A15), and the plug's cmd 15 waits as the menu's does; in both, the native lens's
+//                  LENS_EXEC and LENS_COMMAND, whose tasks wait on them, are left out of S-MODACK (which takes what it
+//                  answers)
 //   camapp3FramesSession  control camapp 3's frames (E143): the TFT composes with the histogram's registers under
 //                  A-VSCHIST-3 at the shooting screen, the menu (the through image's bank as IMG2, the background's
 //                  colour) and its close, PLAY and its return; with --cpu2 native the histogram's bin 5 column is the
@@ -434,13 +435,16 @@ export async function traRoutingSession() {
         const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
         idle(500);
         const plug = taken(), tra588 = plug.filter(([id]) => id === 588);
-        ok(tra588.length === 1 && tra588[0][2] === 0 && !ca.outdev_done.length && rec.hdmi?.scdc_writes === 1,
-          `${tag}: the plug's TRA 588 answered 0 by the component, no S-OUTDEV (${ca.outdev_done.length}), the open's SCDC write ${rec.hdmi?.scdc_writes}`);
+        // two TRA 588: the HDMI output, then HDMI and the TFT (setOutputType's HDMI layout; test_hdmi.mjs
+        // hdmiCamapp3Session has the rest)
+        ok(tra588.length === 2 && tra588.every(([, , res]) => res === 0) && !ca.outdev_done.length && rec.hdmi?.scdc_writes === 1,
+          `${tag}: the plug's TRA 588 answered 0 by the component, no S-OUTDEV (${ca.outdev_done.length}), the open's SCDC write ${rec.hdmi?.scdc_writes}: ${JSON.stringify(tra588)}`);
         ok(ca.hist_ends >= 1 && ca.hist_waited.length >= 1 && ca.hist_waited.every(([d0]) => d0 === 0),
           `${tag}: the plug's DISPLAY cmd 15 waited for the histogram's end natively (S-HISTEND ${ca.hist_ends}; ${JSON.stringify(ca.hist_waited)})`);
+        lab.vsc.set_assume(0, lab.vsc.assumed(0) | 1);         // A15 (the session's --a15 on): channel 0's CTRL3 0x41
         const c = lab.compose('hdmi', true, true), hd = c.header;
-        ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.drawn === 0,
-          `${tag}: channel 0 composes its 1920 x 1080 window, no plane drawn (the GUI's HDMI layout is not drawn): ${c.status} ${JSON.stringify(hd)}`);
+        ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.drawn > 0,
+          `${tag}: channel 0 composes its 1920 x 1080 window with the GUI's planes drawn: ${c.status} ${JSON.stringify(hd)}`);
         continue;
       }
       // the take API (0x50417cd9, d0 the control) and Com_EvSenderManager's 794 build (0x50d77eaf) from here on, read

@@ -15,20 +15,21 @@
 //   L4  Level Adjust's Adjust runs to completion: Setup page 6 row 3, Adjust, OK; within 2 s of lab time the GUI is at
 //       its message receive again, back on the shooting screen, and the store's user pose 0 holds the sample of the
 //       tilt it was adjusted at (x, y, z) and 250 (25.0 degC)
-// With --rotate on (PER_ROTATE natively, H-ROTINIT; run by --only, not by default):
+// With PER_ROTATE natively (H-ROTINIT; --rotate auto, the play default since 2026-11-23, which every group here
+// runs with; R1 and R2 run by --only, not by default):
 //   R1  PER_ROTATE's orientation with its own hysteresis: the session starts reporting index 1 (EXIF code 1); turned
 //       about the lens axis the orientation goes portrait past 50 degrees and comes back below 40 (48 and 42 hold the
 //       last one), either way round (EXIF 8 and 6), upside down at 180 (EXIF 3); pitched, the lens down past 60
 //       degrees and back below 50 (orientation 5, the reported index kept from portrait but not from upside down);
 //       one event 0x4020310 for each change of the reported index and none otherwise; the gauge's getter reads the
-//       orientation as its body and, in portrait, the roll from upright as its horizon. Without --rotate a tilt of 50
-//       degrees is refused and the orientation is not reported; with it, 181 is
+//       orientation as its body and, in portrait, the roll from upright as its horizon. With --rotate off a tilt of 50
+//       degrees is refused and the orientation is not reported; with PER_ROTATE, 181 is
 //   R2  the GUI follows: on the shooting screen with INFO's gauge, rolled 90 degrees the gauge is drawn for portrait
 //       (its arc at the left, its bar at the bottom: none of the landscape bar's green), rolled -90 the other way (the
 //       bar at the top, none of the landscape arc's green), upside down as level, rolled 95 the arc not green; level
 //       again as before
 // --mutants runs L2..L4 under the stand-in's mutants (acc-still: no sample is delivered; tilt-ignored: the tilt is not
-// applied), with --only R1,R2 those groups under no-rotinit (--rotate on's range with PER_ROTATE not started), and
+// applied), with --only R1,R2 those groups under no-rotinit (PER_ROTATE's range with PER_ROTATE not started), and
 // passes when each is caught.
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
 import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
@@ -165,9 +166,10 @@ function l3(mutant = null) {
     g.true('pitch 9: the bar is not green, the arc is', pitched[1] === 0 && pitched[0] > 200, show(pitched));
     tilt(pl, 0, 0);
     g.eq('level again: the arc and the bar are green as before', gauge_pixels(s), level);
+    // the range by the session's PER_ROTATE (on by default on these bodies; R1 checks A-ACC-2's 45 with --rotate off)
     let refused = null;
-    try { tilt(pl, 50, 0); } catch (e) { refused = e.message; }
-    g.true('a tilt beyond 45 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
+    try { tilt(pl, s.acc.rotate ? 181 : 50, 0); } catch (e) { refused = e.message; }
+    g.true(`a tilt beyond the range is refused (${s.acc.rotate ? 'roll within 180' : 'A-ACC-2'})`, refused !== null && (s.acc.rotate ? /within 180/ : /A-ACC-2/).test(refused), show(refused));
   });
   return g;
 }
@@ -196,10 +198,10 @@ function r1(mutant = null) {
   const g = new Group('R1 rotation');
   let refused = null;
   withPlayer(null, (pl, s) => {
-    g.true('without --rotate: the orientation is not reported and H-ROTINIT not listed', s.acc.status().rotation === undefined && !pl.stand_ins_in_use().includes('H-ROTINIT'));
+    g.true('--rotate off: the orientation is not reported and H-ROTINIT not listed', s.acc.status().rotation === undefined && !pl.stand_ins_in_use().includes('H-ROTINIT'));
     try { tilt(pl, 50, 0); } catch (e) { refused = e.message; }
-    g.true('without --rotate: a tilt of 50 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
-  });
+    g.true('--rotate off: a tilt of 50 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
+  }, { rotate: 'off' });
   withPlayer(mutant, (pl, s, lab) => {
     const r = MODEL_INFO.acc.rotate, events = [];
     lab.observe(r.publish, (l, regs) => { if ((regs.d0 >>> 0) === r.event) events.push(l.sim.u32(r.index)); }, 'obs-rotate-event');
@@ -221,7 +223,7 @@ function r1(mutant = null) {
     refused = null;
     try { tilt(pl, 181, 0); } catch (e) { refused = e.message; }
     g.true('a roll of 181 degrees is refused', refused !== null && /within 180/.test(refused), show(refused));
-  }, { rotate: 'on' });
+  });
   return g;
 }
 function r2(mutant = null) {
@@ -245,7 +247,7 @@ function r2(mutant = null) {
     g.true('roll 95: the left arc not green', p95[2] === 0 && p95[1] === 0, show(p95));
     tilt(pl, 0, 0);
     g.eq('level again: as before', gauge_pixels(s, boxes), level);
-  }, { rotate: 'on' });
+  });
   return g;
 }
 

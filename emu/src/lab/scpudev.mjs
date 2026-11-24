@@ -125,7 +125,11 @@ const blankSources = () => SOURCE_SLOTS.map(() => ({ inserted: SOURCE_UNKNOWN, s
 export const SCAN_PORTS = { PC13: { gio: 45, bit: 0 }, PC5: { gio: 37, bit: 1 } };
 // The levels the model starts with (a model choice): PC13 low gives the result bit 0, which the MN turns into UI_IN's
 // switch 0x0400 at state 0, the state the lab's idle image of the E143 family keeps it in (src/lab/play.mjs
-// IDLE_SWITCH_STATES); PC5's level is ? (the MN masks its bit off)
+// IDLE_SWITCH_STATES); PC5's level is ? (the MN masks its bit off). PC13 is active low, so this is a USB cable in
+// (docs/hle-gaps/4.10.md 4.10.2, D): its message 10 carries the inverted level (0x80126a2), the handler 0x801a436
+// sends 0x08 {0} for PC13 low with 0x8015d44(1), PC13 low wakes the sub-CPU from standby (WKUP2) and selects
+// bkground at a power-off, and the application's USB test 0x50abb032 answers "connected" for state 0. Starting at
+// PC13 high moves the lever's off: the application then calls startShutDown itself (X), which S-SHUTDOWN's call repeats
 export const SCAN_IDLE = { PC13: 0, PC5: 0 };
 // the power states (the system-control task's, by number) and the message each 0x85 mode posts it (0x80130c0..)
 export const POWER_STATES = ['steady', 'steady_wait', 'bkground', 'pwr_save', 'hibernation', 'standby'];

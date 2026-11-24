@@ -22,7 +22,8 @@
 //   pass at the start, said and in the audit, and the run-time watch; needs patch or main), strict 'on'|'off'
 //   (src/lab/strict.mjs; absent: OM_STRICT), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
-//   and --device), rotate 'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
+//   and --device), rotate 'auto'|'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT; auto, the default, on where the body
+//   has it: E143, E146, E147), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
 //   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
@@ -421,10 +422,10 @@ export async function openSession(o = {}) {
   const puts = pairs(o.cardPut, '--card-put'), gets = pairs(o.cardGet, '--card-get');
   // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
   // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
-  const a15Arg = o.a15 ?? 'auto', rotateArg = o.rotate ?? 'off', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
+  const a15Arg = o.a15 ?? 'auto', rotateArg = o.rotate ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
   if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
   if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
-  if (!['off', 'on'].includes(rotateArg)) throw new TokenError(`--rotate ${rotateArg}: off or on`);
+  if (!['auto', 'off', 'on'].includes(rotateArg)) throw new TokenError(`--rotate ${rotateArg}: auto, off or on`);
   if (!['tft', 'evf'].includes(deviceArg)) throw new TokenError(`--device ${deviceArg}: tft or evf`);
   if (deviceArg === 'evf' && !BY_ID.has('eye')) throw new TokenError(`--device evf: ${MODEL} has no eye sensor in the lab (no EVF to start on)`);
   if (o.main && o.patch?.length) throw new TokenError('--main and --patch exclude each other (--main is the whole change to the main code block)');

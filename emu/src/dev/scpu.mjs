@@ -1,4 +1,4 @@
-// OM-1 SCPU (sub-CPU) interface 0x98e00000..0x98e000ff. Storage 0x00, 0x08..0x3c; the clock 0xe8 / 0xec, which
+// OM-1 SCPU (sub-CPU) interface 0x98e00000..0x98e000ff. Storage 0x00, 0x04 (UI_IN's key code word, src/fw/board.mjs), 0x08..0x3c; the clock 0xe8 / 0xec, which
 // ticks with the lab clock (below; on a board whose scpu.ticks is false, storage that stands still); command 0xf4 (a write is stored, counted and printed; a read returns 0, A-SCPU-1);
 // on a board with scpu.events (E143's), the event word 0x98 and the seven port words 0xa0..0xb8 (below), which drive
 // IRQ 320, and the lab's doorbell that sets the ports' input levels;

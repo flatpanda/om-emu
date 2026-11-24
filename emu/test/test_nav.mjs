@@ -6,8 +6,8 @@
 //               map lacks E143's 107 and 108) and the GUI reaches the state the firmware names SS_MENU/ID_ST_MENU
 //               (src/fw/facts.mjs menuState: 0x0b02 on the ListMenu builds, 0x1102 on the Menu_Viewer ones), within
 //               WAIT:1000 where the open first sleeps in lab time (E146, E147: ID_ST_MENU_ENTRY after OPEN); the menu's
-//               texts are drawn and its frame differs from the start's (on SYNC_HELD's bodies it strictly does not:
-//               the display sync nav does not release); DOWN keeps the menu's state and changes the frame; MENU, MENU end at
+//               texts are drawn and its frame differs from the start's (on SYNC_HELD's bodies since nav releases the
+//               display sync, S-DISPSYNC); DOWN keeps the menu's state and changes the frame; MENU, MENU end at
 //               the closed state 0x0104. The control, on a body whose map is shifted (OPEN's index not E143's): E143's
 //               index posted as such (EV:135) does not reach the menu's state. The bring-up's body steps (model-survey
 //               finding 162): on the bodies with the power task the power module's start ran (src/lab/menu.mjs
@@ -16,7 +16,8 @@
 //               message (E118, E120) the session posted it (H-GUICONNECT, 0x9601 with lOutput 2); on the others
 //               neither. Controls: without H-GUISLEEP the GUI state is 0 after the bring-up (E145, E129, E132), and
 //               without power_start on the TG-5s (E129, E132; E145 reaches POWER_ON without it); without
-//               H-GUICONNECT OPEN leaves the GUI at POWER_ON (E118, E120)
+//               H-GUICONNECT OPEN leaves the GUI at POWER_ON (E118, E120); without S-DISPSYNC's release OPEN
+//               leaves the start's frame (SYNC_HELD)
 //   node emu/test/test_nav.mjs   (with OM_EMU_MODEL=E146 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 
@@ -30,11 +31,12 @@ export const NAV_BODIES = ['E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137
 export const POWER_BODIES = ['E144', 'E148', 'E137', 'E142', 'E140', 'E145', 'E129', 'E132'], SLEEP_BODIES = ['E145', 'E129', 'E132'];
 export const CONNECT_BODIES = ['E118', 'E120'];
 // the bodies whose GUI's updates are display requests of type 3 (S-DISPSYNC's kind in play, src/lab/camapp.mjs), which
-// stay pending until an image sync only the application sends: nav runs no application, so their menu runs (its
-// state, its texts drawn) and the composite stays blank (X: E137's requests from 0x507d537c and E122's from
-// 0x502c076a, d0 3, at the start, OPEN and DOWN; no OSD plane committed; E145's from 0x506d4d35, E129's from
-// 0x506a59ce, E132's from 0x506a5fde, E118's from 0x502a9201, type 3, and E120's record form from 0x5067b99e, at OPEN
-// and DOWN, 2026-11-22). Expected strictly: the frame unchanged by OPEN and DOWN
+// stay pending until an image sync only the application sends (X: E137's requests from 0x507d537c and E122's from
+// 0x502c076a, d0 3, at the start, OPEN and DOWN; E145's from 0x506d4d35, E129's from 0x506a59ce, E132's from
+// 0x506a5fde, E118's from 0x502a9201, type 3, and E120's record form from 0x5067b99e, 2026-11-22). Since 2026-11-23
+// nav releases them as play's S-DISPSYNC does (src/lab/nav.mjs dispsync_release): on these bodies a release ran and
+// the menu's frame follows OPEN and DOWN; the control, a session without the release, keeps the start's frame through
+// OPEN (the display sync held). On the other bodies nav releases nothing
 export const SYNC_HELD = ['E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E122', 'E145', 'E129', 'E132', 'E118', 'E120'];
 const OPEN_MESSAGE = 0x9624, CLOSED = 0x0104;
 
@@ -61,6 +63,11 @@ export async function navSession() {
     return { checks, bad };
   }
   const digest = () => createHash('sha256').update(words_to_rgb(nav.lab.compose('tft').words)).digest('hex');
+  const colours = () => {                 // the distinct colours of the TFT frame
+    const rgb = words_to_rgb(nav.lab.compose('tft').words), seen = new Set();
+    for (let i = 0; i + 2 < rgb.length; i += 3) seen.add(rgb[i] << 16 | rgb[i + 1] << 8 | rgb[i + 2]);
+    return seen.size;
+  };
   const shifted = nav.index_of(N.OPEN) !== N.OPEN;
   try {
     ok(nav.lab.state() === MM.STATE_POWER_ON, `${MODEL}: the bring-up ends at POWER_ON (${h4(nav.lab.state())})`);
@@ -78,9 +85,12 @@ export async function navSession() {
     ok(nav.lab.state() === MM.STATE_MENU, `${MODEL}: OPEN reaches the menu's state ${h4(MM.STATE_MENU)} (${r.state.gui} ${r.state.gui_name}, then ${h4(nav.lab.state())})`);
     const menu = digest(), held = SYNC_HELD.includes(MODEL);
     ok(r.texts.length > 0 || nav.steps.slice(1).some((x) => x.texts.length), `${MODEL}: the menu's open draws its texts`);
-    ok(held ? menu === start : menu !== start, `${MODEL}: the menu's frame ${held ? 'is the start\'s (the display sync held)' : 'differs from the start\'s'}`);
+    ok(menu !== start && colours() > 2, `${MODEL}: the menu's frame differs from the start's and is drawn (${colours()} colours)`);
     const d = nav.step('DOWN');
-    ok(d.state.gui === h4(MM.STATE_MENU) && d.texts.length > 0 && (held ? digest() === menu : digest() !== menu), `${MODEL}: DOWN keeps the menu's state, draws, and ${held ? 'leaves the held frame' : 'changes the frame'} (${d.state.gui})`);
+    ok(d.state.gui === h4(MM.STATE_MENU) && d.texts.length > 0 && digest() !== menu, `${MODEL}: DOWN keeps the menu's state, draws, and changes the frame (${d.state.gui})`);
+    const rel = nav.dispsync_released;
+    ok(held ? rel.length > 0 && nav.steps.some((x) => x.dispsync?.length) : rel.length === 0,
+      `${MODEL}: S-DISPSYNC ${held ? 'released the GUI\'s synced updates' : 'released nothing'} (${show(rel.slice(0, 6))})`);
     nav.step('MENU');
     if (nav.lab.state() !== CLOSED) nav.step('MENU');
     ok(nav.lab.state() === CLOSED, `${MODEL}: MENU, MENU close the menu (${h4(nav.lab.state())})`);
@@ -108,6 +118,20 @@ export async function navSession() {
   };
   if (SLEEP_BODIES.includes(MODEL)) bare('H-GUISLEEP', class extends N.NavLab { gui_sleep() { this.gui_sleep_ms = 0; } });
   if (SLEEP_BODIES.includes(MODEL) && MODEL_INFO.sio_devices) bare('the power module\'s start', class extends N.NavLab { power_start() { this.power_started = null; } });
+  // the control of the release: without it the GUI's synced updates stay pending, and OPEN leaves the start's frame
+  if (SYNC_HELD.includes(MODEL)) {
+    class Held extends N.NavSession { dispsync_install() { this.dispsync = null; } }
+    const c = new Held(env, { open_menu: false, png: 'none', time: true, device: 'tft' }).enter();
+    try {
+      const frame = () => createHash('sha256').update(words_to_rgb(c.lab.compose('tft').words)).digest('hex');
+      const start = frame();
+      c.step('OPEN');
+      if (c.lab.state() !== MM.STATE_MENU) c.step('WAIT:1000');
+      ok(c.lab.state() === MM.STATE_MENU && frame() === start, `${MODEL}: control: without S-DISPSYNC the menu opens (${h4(c.lab.state())}) and the frame stays the start's`);
+    } catch (e) {
+      ok(false, `${MODEL}: control (S-DISPSYNC): ${e.message.slice(0, 600)}`);
+    } finally { c.close(); }
+  }
   if (CONNECT_BODIES.includes(MODEL)) {
     class Unconnected extends N.NavSession { gui_connect() { this.gui_connected = null; } }
     const c = new Unconnected(env, { open_menu: false, png: 'none', time: true, device: 'tft' }).enter();

@@ -22,7 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds, settingsChain, SETTINGS_CHAIN_E143 } from '../fw/facts.mjs';
 import { bootLoads } from '../fw/sections.mjs';
 import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
@@ -72,9 +72,15 @@ export const REGISTRY_INIT = A(0x50040AEB), SETTINGS_DB_INIT = A(0x503C5473), GE
 // the property store's module init and its three object words (src/fw/facts.mjs propStore; H-STOREINIT): read where the
 // store starts
 export const propStoreInit = () => fact('prop_store', PROP_STORE_E143);
-// the settings init chain (E143's, called once from the boot at 0x501e9060): 14 inits called while each returns 0,
-// then three unconditional calls (docs/hle-gaps/4.6.md 4.6.8)
-export const SETTINGS_CHAIN = A(0x503DAE30);
+// the settings init chain (E143's 0x503dae30, called once from the boot at 0x501e9060): 14 inits called while each
+// returns 0, then three unconditional calls (docs/hle-gaps/4.6.md 4.6.8, 4.6.9). The body's chain is read from its
+// image by src/fw/facts.mjs settingsChain from the property store's init (E143, E146, E147, E144, E148, E139: one;
+// the other bodies: none, X); on E143 the rule's reading is checked against E143's own
+export function settingsChainOf(rom) {
+  const chain = settingsChain(rom, propStoreInit().init);
+  if (ON_LAB_MODEL && JSON.stringify(chain) !== JSON.stringify(SETTINGS_CHAIN_E143)) throw new MenuError(`settingsChain: E143's chain read as ${show(chain)}, not ${show(SETTINGS_CHAIN_E143)}`);
+  return chain ?? null;
+}
 export const API_SET = A(0x50AC4AFE), API_WRITE = A(0x50B4F28B), DESC_LOOKUP = A(0x503DA999), CUSTOM_LOOKUP = A(0x503C681F);
 export const KEY_SELECTORS = new Map([[A(0x503C589B), 64], [A(0x503C58B9), 141]]);
 export const DIAL_INIT = A(0x5014B7C7), DIAL_TABLE_PTR = A(0xA32DAAB0), DIAL_BOARD = BOARD.core_byte;
@@ -794,18 +800,24 @@ export class MenuLab extends T.TextDisplayLab {
     if (JSON.stringify(reg.prints) !== JSON.stringify(wantPrints) || reg.errlog.length) {
       throw new MenuError(`registry bootstrap: prints ${show(reg.prints)}, errlog ${show(reg.errlog)}; expected ${show(wantPrints)} and none`);
     }
-    // H-STOREINIT: the property store's own module init, the settings init chain's fifth (src/fw/facts.mjs propStore),
-    // which the boot runs after the registry bootstrap and before the DB init (E143: the chain 0x503dae30 at 0x501e9060,
-    // the DB init through 0x501eac35 at 0x501e907b, D); the lab runs none of the chain's other inits. It keeps the mode
+    // The settings init chain, which the boot runs after the registry bootstrap and before the DB init (E143: the
+    // chain 0x503dae30 at 0x501e9060, the DB init through 0x501eac35 at 0x501e907b, D), or, where it does not run
+    // (settings_chain null), H-STOREINIT: the property store's own module init alone, the chain's sixth call (src/fw/
+    // facts.mjs propStore; the chain's other inits do not run then). The store's init keeps the mode
     // store's three data pointers (the banks, the recalled rows, the working copy); without them a mode change staged
     // the working copy from address 0 and wrote zeros into every setting it holds (X: 612 settings read 0 once the
     // dial had left P, docs/om1-settings-spec.md section 2.2)
-    const ps = propStoreInit();
-    const si = this.settings_chain() ? this.native(SETTINGS_CHAIN, null, `settings init chain ${h8(SETTINGS_CHAIN)}`)
+    // By default the whole chain runs natively in that place where the body's image holds it (settings_chain): all
+    // fourteen steps, the store's init the sixth, and the three after them; E143's comparison with the narrow call (the
+    // settings by the getter at the start and after a mode change, the frames, the lab time: the same; the memory each
+    // step writes, docs/hle-gaps/4.6.md 4.6.9, X)
+    const ps = propStoreInit(), chain = this.settings_chain();
+    const si = chain ? this.native(chain.entry, null, `settings init chain ${h8(chain.entry)}`)
       : this.native(ps.init, null, `property store init ${h8(ps.init)}`);
+    this.store_chain = chain;
     const objects = [0, 4, 8].map((k) => this.sim.u32(ps.objects + k));
     if (si.d0 !== 0 || si.prints.length || si.errlog.length || objects.includes(0)) {
-      throw new MenuError(`H-STOREINIT ${h8(ps.init)}: d0 ${si.d0}, prints ${show(si.prints)}, errlog ${show(si.errlog)}, object words ${h8(ps.objects)}: ${objects.map(h8).join(' ')}`);
+      throw new MenuError(`${chain ? `settings init chain ${h8(chain.entry)}` : `H-STOREINIT ${h8(ps.init)}`}: d0 ${si.d0}, prints ${show(si.prints)}, errlog ${show(si.errlog)}, object words ${h8(ps.objects)}: ${objects.map(h8).join(' ')}`);
     }
     const db = this.native(SETTINGS_DB_INIT, null, 'settings-DB init 0x503c5473');
     if (nvram) this.nvram_clock();
@@ -900,9 +912,18 @@ export class MenuLab extends T.TextDisplayLab {
   // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to
   // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage,
   // node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
-  // the settings init chain run whole in H-STOREINIT's place (experimental, OM_EMU_SETTINGS_CHAIN=1; E143 only:
-  // docs/hle-gaps/4.6.md 4.6.8)
-  settings_chain() { return ON_LAB_MODEL && (this.env.settings_chain ?? globalThis.process?.env?.OM_EMU_SETTINGS_CHAIN) === '1'; }
+  // The settings init chain run whole in H-STOREINIT's place: {entry, steps, tail} (settingsChainOf) where the body's
+  // image holds it, by default; null for the narrow H-STOREINIT, where the image holds no chain the rule reads or the
+  // host turns it off (env.settings_chain, node's OM_EMU_SETTINGS_CHAIN: '0' off, '1' on, refused where no chain is
+  // read; docs/hle-gaps/4.6.md 4.6.8, 4.6.9)
+  settings_chain() {
+    const want = this.env.settings_chain ?? globalThis.process?.env?.OM_EMU_SETTINGS_CHAIN;
+    if (want !== undefined && want !== '0' && want !== '1') throw new MenuError(`OM_EMU_SETTINGS_CHAIN ${show(want)}: '0' (the narrow H-STOREINIT) or '1' (the chain whole)`);
+    if (want === '0') return null;
+    const chain = settingsChainOf(this.env.rom);
+    if (chain === null && want === '1') throw new MenuError(`OM_EMU_SETTINGS_CHAIN=1: ${MODEL_INFO.name}'s image holds no settings init chain src/fw/facts.mjs settingsChain reads`);
+    return chain;
+  }
   scpu_native() { return !!MODEL_INFO.scpu_lle && (this.env.scpu ?? globalThis.process?.env?.OM_EMU_SCPU) === 'native'; }
   scpu_m4(nvram) {
     if (nvram) throw new MenuError('OM_EMU_SCPU=native with S-NVRAM: the sub-CPU\'s own backup domain (its RTC and backup registers) is not kept between sessions; use one or the other');

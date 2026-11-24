@@ -35,7 +35,8 @@ export const ERASE_ALL = new Set(['E143', 'E146', 'E147', 'E148']);
 export const ERASE_ALL_BODIES = ['E146', 'E147', 'E148', 'E144', 'E122'];
 // the bodies whose rating-exclusive erase all (Erase All's Save, command 6) runs natively (X, 2026-11-22; models.mjs
 // card_fs.hls.ctrl.rating_erase): E146's and E147's DCF edit takes its buffer from a memory pool past the lab's DRAM
-// (docs/hle-gaps/4.8.md 4.8.16), so S-MDACTRL refuses the command there
+// (docs/hle-gaps/4.8.md 4.8.16; the 384 MiB before 2026-11-23, now inside the E143 family's 512 MiB, not re-run), so
+// S-MDACTRL refuses the command there
 export const RATING_ERASE = new Set(['E143', 'E148']);
 const DCFED_OBJ_LOCK = 0x23, DCFED_OBJ_UNLOCK = 0x24, DCFED_OBJ_RATING = 0x2b, READ_ONLY = 0x01, ERASE_ALL_CMD = 3, UNLOCK_ALL_CMD = 5, SAVE_CMD = 6, MAX_TABS = 8;
 // the DCF edit's OBJ_RATING block (dcfedit.c op 6, E143 0x508744e4, D): +2 the drive, +4 the fnode, +20 the rating,

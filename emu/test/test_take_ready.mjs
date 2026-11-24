@@ -22,7 +22,7 @@
 //                  link's only transfer from S1 on and nothing comes back, with S-SCPUDEV, which keeps the two slots'
 //                  bytes, as with the sub-CPU's own firmware (env.scpu 'native'), whose power manager's object holds
 //                  the same bytes after it.
-//                  The second S1 is event 826 in phase 111, which makes no take request: no 794, TAKE takes nothing;
+//                  The second S1 is event 826 in phase 111, which makes no take request: no 794, TAKE takes only S1's key callback token 75;
 //                  MENU after it reaches UI_IN and sets no GUI event, with no event to the sequence and no
 //                  isCtrlReleaseEnable call (where it is dropped: not read)
 //   takeReadyUnits  (no firmware) S-TAKERDY's rule take_ready_rule (src/lab/camapp.mjs; docs/hle-gaps/4.1.md 4.1.12): a
@@ -78,8 +78,10 @@ const EVENT_TASK = 0x50ABBF0C, PWR_TASK = 0x50043CDB;
 const PHASE111_TABLE = 0x60E9AEB0, PHASE111_BASE = 281, PHASE111 = 0x50C611D5, PHASE111_DEFAULT = 0x50C615E4;
 // the stop's request as the API sender posts it (OlyQeWr's return 0x503eba07): {reply queue 6, token, command 7}; the
 // token's slot is 6 since the second card slot is empty by default (X: 7 before slot2's merge, 6 after it; I: camapp
-// 3's media manager no longer sends drive 1's mount through the API sender at the start, docs/hle-gaps/4.8.md 4.8.12)
-const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0060000;
+// 3's media manager no longer sends drive 1's mount through the API sender at the start, docs/hle-gaps/4.8.md 4.8.12),
+// 5 since the settings init chain runs whole (step 1 sets the API-exec pool up, so its jobs start at slot 0, not 1;
+// docs/hle-gaps/4.6.md 4.6.9)
+const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0050000;
 // the frame the power manager sends (docs/hle-gaps/4.7.md 4.7.6): its builder 0x500435b0 (a0 the two inserted bits, a1 the
 // two recommend bytes), called from its notice 0x500444b3 (a0 the published state record, a1 the new one: +22
 // pwr_ins, +30 and +64 the slots' recommend bytes; returning to 0x50044533); the cyclic-check byte's setter
@@ -97,7 +99,7 @@ export async function secondShotSession() {
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { disasm, runtime } = await import('../src/lab/hle.mjs');
-  const { S1_EXP, canon2, PWR_14_FRAME } = await import('./test_take_release.mjs');
+  const { S1_EXP, S1_KEY, canon2, PWR_14_FRAME } = await import('./test_take_release.mjs');
   const { SRAM } = await import('../src/core/m4/boot.mjs');
   const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' };
@@ -203,8 +205,8 @@ export async function secondShotSession() {
       const seen4 = seen.splice(0), s4 = since();
       ok(JSON.stringify(seen3) === JSON.stringify(['event 826 in phase 111', 'phase 111\'s default case for 826'])
         && JSON.stringify(seen4) === JSON.stringify(['event 827 in phase 111', 'phase 111\'s default case for 827'])
-        && !s3.length && !s4.length && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE,
-        `${tag}: the second S1 and its release in phase 111 go to its default case, make no take request and get no 794 (${JSON.stringify([...seen3, ...seen4])}), TAKE takes nothing (${JSON.stringify([...s3, ...s4])}), TAKE_EXEC holds ${held()}`);
+        && JSON.stringify(s3) === JSON.stringify([S1_KEY('RdyFcsRdy3')]) && !s4.length && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE,
+        `${tag}: the second S1 and its release in phase 111 go to its default case, make no take request and get no 794 (${JSON.stringify([...seen3, ...seen4])}), TAKE takes only the key callback's token 75 (${JSON.stringify([...s3, ...s4])}), TAKE_EXEC holds ${held()}`);
       // and the keys: MENU reaches UI_IN and sets no GUI event; nothing reaches the sequence and isCtrlReleaseEnable
       // is not asked (in phase 102 it refuses MENU, docs/hle-gaps/4.3.md 4.3.2)
       refused.length = 0;

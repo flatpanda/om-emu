@@ -17,6 +17,7 @@ import { decimalInt, intLiteral, decimalNumber } from '../util/parse.mjs';
 import { pack, bytesHex } from '../util/bytes.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
+import { dispsyncFacts, observeDispsync, releaseDispsync } from './dispsync.mjs';
 
 export let NAV_PRI = 50;
 export const POST_HOOKS = 140, STEP_HOOKS = 40000, STORM = 810;
@@ -48,6 +49,8 @@ const h8 = (v) => '0x' + fx(v >>> 0, 8);
 // E118), and the span before the GUI task's take its gate is read in (E118's gate 0x39 bytes before the take
 // 0x50b93379, E120's 0x509140a9 before 0x509140e2, D)
 export const CONNECT_TFT = 2, CONNECT_GATE_SPAN = 0x60;
+// S-DISPSYNC (NavSession dispsync_release): the releases one step may make (play's bound, src/lab/camapp.mjs pump)
+export const DISPSYNC_RELEASES = 20;
 const GATE = [0xfa, 0xb4, 0x8c, 0x01, 0xfc, 0xc8], GATE_TAIL = [0x00, 0x00, 0xc9];
 // The message the GUI task's gate waits for: `mov (396,sp),d0; cmp imm32,d0; bne` (fa b4 8c 01, fc c8 imm32, c9)
 // within CONNECT_GATE_SPAN bytes before the take (src/lab/menu.mjs DISPATCH, fact 'menu.take'); null where there is
@@ -223,6 +226,9 @@ export class NavSession {
     this.lab = null;
     this.clock_inputs = [];
     this.gui_connected = null;          // H-GUICONNECT (gui_connect)
+    this.dispsync = null;               // S-DISPSYNC (dispsync_install): the device codes with a synced request waiting
+    this.dispsync_fns = null;
+    this.dispsync_released = [];        // S-DISPSYNC: [step tag, device code] of each release
   }
   get lab_class() { return this.constructor.lab_class; }
   enter() {
@@ -239,10 +245,12 @@ export class NavSession {
     try {
       this.lab_created(this.lab);
       if (this.a15) this.lab.assume('A15', true);
+      if (!this.lab.gui_by_app) this.dispsync_install();                    // S-DISPSYNC (the application's own in play)
       this.lab.bring_up(this.device);
       const [rc] = this.lab.nk.svc('chg_pri', { d0: 0, d1: NAV_PRI });
       if (rc !== K.E_OK) throw new NavError(`chg_pri(TSK_SELF, ${NAV_PRI}) = ${rc}`);
       if (!this.lab.gui_by_app && !this.evf_layout) this.gui_connect();     // H-GUICONNECT (H-CONNECT's own on the EVF layout)
+      if (this.dispsync?.size) { this.begin('S-DISPSYNC bring-up'); this.dispsync_release(); }
       this.lab.phase = 'nav';
       this.lab.menu_first = this.lab.exec_history.length;
       this.lab.menu_draw_first = this.lab.draw_log.length;
@@ -278,6 +286,36 @@ export class NavSession {
     this.settle('H-GUICONNECT');
     if (this.lab.state() !== MM.STATE_POWER_ON) throw new NavError(`H-GUICONNECT: GUI state ${this.lab.state_name(this.lab.state())} after the connect message, not POWER_ON`);
     this.gui_connected = { index, message: h4(gate), loutput };
+  }
+  // S-DISPSYNC in nav (src/lab/camapp.mjs has the stand-in's text, src/fw/facts.mjs displaySync the evidence): with
+  // the lab's own creation of the GUI no application runs, and on the bodies whose GUI asks for the display sync at
+  // its start (the application's setDispSync, E137 0x507ebdff, which guiUtility::setDispSync calls) every GUI update is
+  // a synced request (type 3; E120's record form type 5) that leaves the device's buffers pending until an image sync
+  // only the application's stopRecView sends: the menu ran, its texts were drawn, and the frame stayed the start's (X:
+  // E137's requests from 0x507d537c, E122's from 0x502c076a, 12 bodies; docs/model-survey.md findings 160 and 162).
+  // The session observes the request from before the GUI's creation and releases each device with such a request as
+  // play's application stand-in does after each step: at the bring-up's end (after H-GUICONNECT) and at each step's
+  // end. A build whose rule reads no display sync (fact 'display.sync' undefined) observes none. A play session's GUI
+  // is the application's (H-GUIBYAPP): its CamApp releases there, and this does not run
+  dispsync_install() {
+    this.dispsync = null;
+    const sync = dispsyncFacts();
+    if (!sync) return;
+    this.dispsync = new Set();
+    this.dispsync_fns = sync;
+    observeDispsync(this.lab, sync, (code) => this.dispsync.add(code));
+  }
+  // The releases, each followed by a settle (a release can bring the GUI's next synced update), at most
+  // DISPSYNC_RELEASES in one step, as play's
+  dispsync_release() {
+    for (let k = 0; this.dispsync?.size;) {
+      if (++k > DISPSYNC_RELEASES) throw new NavError(`S-DISPSYNC: more than ${DISPSYNC_RELEASES} releases in step ${this.lab.step_tag} (devices ${[...this.dispsync].join(', ')})`);
+      const [code] = this.dispsync;
+      this.dispsync.delete(code);
+      releaseDispsync(this.lab, this.dispsync_fns, code);
+      this.dispsync_released.push([this.lab.step_tag, code]);
+      this.settle('S-DISPSYNC');
+    }
   }
   // The lab, created and not yet brought up: the machine is at its reset (a subclass sets its lab choices here)
   lab_created(lab) {}
@@ -367,7 +405,8 @@ export class NavSession {
     return [n1 - n0, this.lab.log.length - n1];
   }
   end(token, kind, indices, hooks, extra = null) {
-    const lab = this.lab, m = this.marks;
+    const lab = this.lab, m = this.marks, released = this.dispsync_released.length;
+    this.dispsync_release();                                                // S-DISPSYNC (nav's own GUI only)
     lab.harvest();
     const lost = lab.exec_lost - m.lost;
     const stubs = {};
@@ -391,6 +430,7 @@ export class NavSession {
       rpc: lab.rpc_log.slice(m.rpc), dropped_sends: lab.dropped_sends.slice(m.sends), stand_ins: stubs,
       gesetevent: lab.step_sets, gesetevent_callers: callers, hooks, hook_stops: lab.log.length - m.log,
       seconds: Math.round((performance.now() - this.t0) / 10) / 100 };   // wall seconds to 0.01 (every comparison strips them)
+    if (this.dispsync_released.length > released) rec.dispsync = this.dispsync_released.slice(released).map(([, c]) => c);
     Object.assign(rec, extra ?? {});
     rec.state = this.state();
     this.steps.push(rec);
@@ -537,6 +577,30 @@ export class NavSession {
     this.settle(`SET ${sid}`);
     return this.end(tag || `SET:${sid}=${value}`, 'set', [], [[n1 - n0, this.lab.log.length - n1]],
       { set: { id: sid, value, ret: r.d0, read_back: this.get(sid) } });
+  }
+  // The native setter 0x50ac4afe(id, values) for a group id (a descriptor of type 6, such as MODE_QUALITY_SLOT2 1096,
+  // whose members are 1096 and MODE_RAW_SLOT2 1097; docs/hle-gaps/4.8.md 4.8.24): d1 points at one u32 per member, the
+  // group's set writing each member's own value from it (D on E143); values must be one of the descriptor's allowed
+  // records (descriptor +4, +12 bytes of +14-byte records, a u32 per member, the rest 0), and the getter then reads
+  // the descriptor's value-table entry (+8) of that record (X on E143); then settle.
+  set_group(sid, values, tag = null) {
+    if (tag === null) this.begin(`${String(this.steps.length).padStart(2, '0')}-SETGROUP:${sid}=${values.join(',')}`);
+    const d = this.lab.descriptor(sid), sim = this.lab.sim;
+    if (d === null || d.type !== 6) throw new NavError(`SETGROUP ${sid}: descriptor ${show(d)}: not a group (type 6)`);
+    const [allowed, table, nbytes, elem] = [sim.u32(d.address + 4) >>> 0, sim.u32(d.address + 8) >>> 0, ...(() => { const b = sim.read(d.address + 12, 4); return [b[0] | b[1] << 8, b[2] | b[3] << 8]; })()];
+    if (!elem || nbytes % elem || elem % 4 || values.length > elem / 4) throw new NavError(`SETGROUP ${sid}: ${nbytes} bytes of ${elem}-byte records: not ${values.length} u32 values a record`);
+    const recs = Array.from({ length: nbytes / elem }, (_, i) => Array.from({ length: elem / 4 }, (_, k) => sim.u32(allowed + elem * i + 4 * k) >>> 0));
+    const index = recs.findIndex((r) => r.every((v, k) => v === (values[k] ?? 0)));
+    if (index < 0) throw new NavError(`SETGROUP ${sid}=${values.join(',')}: not one of the descriptor's allowed records ${show(recs.map((r) => r.slice(0, values.length)))}`);
+    const want = table ? sim.u32(table + 4 * index) >>> 0 : null;
+    const n0 = this.lab.log.length;
+    const r = this.lab.call(MM.API_SET, { d0: sid, d1: this.lab.alloc(pack(`<${values.length}I`, ...values), 4) }, null, null, this.post_hooks());
+    const n1 = this.lab.log.length;
+    this.settle(`SETGROUP ${sid}`);
+    const back = this.get(sid);
+    if (want !== null && back !== want) throw new NavError(`SETGROUP ${sid}=${values.join(',')}: the getter reads ${back}, the value table's entry ${index} is ${want}`);
+    return this.end(tag || `SETGROUP:${sid}=${values.join(',')}`, 'set', [], [[n1 - n0, this.lab.log.length - n1]],
+      { set: { id: sid, values, record: index, ret: r.d0, read_back: back } });
   }
   get(sid) { return this.lab.get(sid); }
   // S-SCPU-CLOCK: the sub-CPU's counter now reads epoch, and ticks on from it with lab time: one CPU store to om1.scpu's

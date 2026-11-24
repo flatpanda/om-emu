@@ -50,6 +50,13 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // its port init registers; old_state, the init of UI_IN's group-0 old state from the port byte, which UI_IN's start
 // stage calls first. A body without it pushes group 0 as the other groups (S-KEYBITS)
 //
+// `uiin_init`: UI_IN's module init run natively at the play bring-up (src/lab/play.mjs H-UIININIT, S-WAKEFACTOR;
+// docs/hle-gaps/4.7.md 4.7.17), in the model's disassembly notation: init, the module init, whose calls the lab reads
+// from its bytes and runs in its order; left, the calls it leaves out; wake [word, getter], the SCPU init's wake
+// factor halfword and its getter (`movhu (word),d0; retf`); ad_errlog [code, call], the error log the init's A/D
+// channel open makes in the lab. A body without it runs only the ring init (H-UIINRING) and sets the boot key
+// (S-BOOTKEY)
+//
 // `hdmi`: the HDMI port (src/dev/hdmi.mjs with the board's hdmi; src/lab/display.mjs H-GIOSLOTS, src/lab/play.mjs the
 // hdmi input; docs/hle-gaps/4.9.md 4.9), in the model's disassembly notation: gio_slots, the reset of the GIO interrupt
 // slots the GIO init ends with (the init does not run in the lab; without the reset the display init's registration
@@ -165,6 +172,13 @@ export const MODELS = {
     // table of 4; UI_IN's port init 0x5014e3ab registers 0x5014e534 (0x5014e50e..14); UI_IN's start stage 0x5014bfc6
     // calls 0x5014e51e (D)
     scpu_port: { irq: [0x5004E1FD, 5], register: 0x5004DED1, callback: 0x5014E534, old_state: 0x5014E51E },
+    // UI_IN's module init 0x5014bf91 calls 0x5014cb5f, 0x5014e3ab, 0x5014ce00, 0x5014d49e, 0x5005d36a, 0x5014d62e,
+    // 0x5014d97a (0x5014bf9e..0x5014bfbe, D); 0x5014d62e reads and arms the GIO pins 18, 47, 20, 48, 49, 108, 25 and
+    // 131 (its table 0x602241d0, D), which the lab does not model, and 0x5014d97a is not read: both left out. The
+    // SCPU init 0x5004dc55 stores the wake factor halfword 0xa32bff5e (0x5004ddca..0x5004de3b), which 0x5004dec8
+    // returns; 0x5014ce00's A/D channel open 0x5004d4f4 fails (the A/D driver's init does not run, its channel count
+    // 0xa32bff14 stays 0) and it logs 0x28001511 (0x5014ce92..ceb0, D)
+    uiin_init: { init: 0x5014BF91, left: [0x5014D62E, 0x5014D97A], wake: [0xA32BFF5E, 0x5004DEC8], ad_errlog: [0x28001511, 0x5014CE00] },
     // the GIO init 0x50002a20 ends with 0x50002b5d (0x50002a2d), which marks the 325 slots at 0xa32c1f74 free (255);
     // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
     hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
@@ -596,6 +610,8 @@ export const MODELS = {
         // no rating_erase on E146 and E147 (docs/hle-gaps/4.8.md 4.8.16): Erase All's Save sends command 6 there too (X),
         // but the DCF edit's walk takes its 64 KiB buffer from a memory pool past the lab's DRAM (X: 0xbc849400 on
         // E146, the DRAM 384 MiB to 0xb8000000, src/fw/facts.mjs dramSize), and its Exif read there faults: refused
+        // (since 2026-11-23 the E143 family's DRAM is 512 MiB, src/fw/facts.mjs mmDramSize, which holds 0xbc849400;
+        // the native command is not re-run yet, docs/hle-gaps/4.8.md 4.8.22)
         ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, erase_all: 3, unlock_all: 5,
           wifi: { instance: 0x50BE6384, notify: 0x50BE8650, event: 0x041B0055 }, cbc: 0x50CFC765, progress: 0x50CFC1E7,
           api: 0x503ECA4D, reply_queue: 0x6004320E, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
@@ -657,6 +673,10 @@ export const MODELS = {
     // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps/4.4.md 4.4.3; X: the same
     // compares and frames); LLPSW is bit 6 of group 1 byte 0 in its UI_IN tables (E143's bit 4 of byte 1)
     lens_native: true,
+    // the function direct id of RECORDING_MOVIE (src/lab/camapp.mjs S-RELSEQ; E143's 27): row 28 of the function name
+    // table 0x612f17d8 (rows {id, 2, name}; MYSET_5 is row 7, one more than E143's, D), and REC in movie mode starts
+    // function 28 (X, 2026-11-23)
+    func_movie: 28,
     // The resource tables natively, as E143's (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps/4.5.md 4.5, D unless
     // tagged): USTART_L's loader 0x501b5a59 (its call 0x50024234, before the lens data cache load 0x5002426a), res_size
     // 0x501b6526 and res_read 0x501b5fd8 (USTART_L's sound 0 at 0x5002436e / 0x50024386, into 0xa4000000), the NAND

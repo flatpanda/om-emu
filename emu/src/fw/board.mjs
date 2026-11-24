@@ -65,9 +65,13 @@ export const FAMILIES = {
     // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps/4.7.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
     // (the wake / reset cause word, I) with its commit; 0x5004dffc writes 1 << n to 0x9c and 0x5004e02c reads its bit
     // n, and 0x5004dfd0 writes 127 there and commits, the sequence's last write (its meaning, a power cut, is I); no
-    // reader of 0x90 runs in the lab
+    // reader of 0x90 runs in the lab (its reader is the SCPU init's wake factor, 0x5004dda6..0x5004de3b, D: not run,
+    // src/lab/play.mjs S-WAKEFACTOR). Storage 0x04: a key code word UI_IN keeps there: its key step reads it
+    // (0x5004e501, from 0x5014e4d6, where a boot key 0x01000003 becomes 0x01000006 when the word holds 0x01000006) and
+    // clears it (0x5004e4f3(0), 0x5014e4f4), and its key list copy writes 0x01000006 there (0x5014e864), D; it starts
+    // at 0 (I: what the word holds across a power-off is not read). E146's and E147's readers are not read
     scpu: {
-      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c], [0x90, 0x90], [0x9c, 0x9c]],
+      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x04], [0x08, 0x3c], [0x90, 0x90], [0x9c, 0x9c]],
       events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320, message: 3 },
     },
     // The MN's GIO pins of the sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs; docs/om1-scpu-spec.md 3.1):
@@ -152,9 +156,14 @@ export const FAMILIES = {
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
     vector_page: 0x60030000,
-    // the DRAM's size (src/machine.mjs): 384 MiB, where the GUI's first OSD bank ends (0xb8000000, src/fw/facts.mjs
-    // dramSize, which reads the same on E146 and E147)
-    dram_size: 384 << 20,
+    // the DRAM's size (src/machine.mjs, the bus DRAM of src/dev/bus.mjs): 512 MiB, bus 0xa0000000 to the end of the
+    // window segment holding MM's bank 0 (0xb8000000..0xc0000000; src/fw/facts.mjs mmDramSize by the rule dram_rule
+    // names, which reads the same on E146 and E147). Until 2026-11-23 384 MiB, where the GUI's first OSD bank ends
+    // (dramSize), which left MM's bank 0 and the play module's buffer unbacked (docs/hle-gaps/4.3.md 4.3.14, 4.8.md 4.8.18)
+    dram_size: 512 << 20,
+    // which rule of src/fw/facts.mjs reads the bodies' dram_size: 'mm-bank0' (mmBank0, mmDramSize); the other families
+    // none ('gui': dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'mm-bank0',
     // the flash library's run-time window: null (E143 runs it from its image) or {base, size, image: [file offset,
     // length, at]} (RAM holding that part of the main block at base + at)
     library: null,
@@ -263,6 +272,8 @@ export const FAMILIES = {
     // so the region is the family's (I: no session has run with it on them)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
+    // which rule of src/fw/facts.mjs reads dram_size: 'gui' (dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'gui',
     // the stub's pages (as E143's), observed in E144 runs (X) and assumed for the family (I): the clock/reset block,
     // the block the display open writes 0x9a2000xx, the display interface 0x9b800000/0x9b801000 (TFT/EVF device
     // inits), the block 0x98f20000 the measurement 0x50003719 polls (its bit 1 of +0x40, 50 ms steps up to 700 ms),
@@ -319,14 +330,24 @@ export const FAMILIES = {
     // us free-run channel 9, reload 0x3fffffff (0x500030af), read at 0x50001ecf. The tick init the boot calls for CPU 0
     // (0x5004d779) starts channel 1 at reload 999 on IRQ 58 (CPUs 1 and 2 start channels 2 and 3 from their own
     // inits, 0x5004d806, 0x5004d863). The software-timer init 0x50065e50 starts no channel (X: after it only channels 1
-    // and 9 run): its timers count in 2 ms units (0x50066238) on a second timer unit's channel 0 (0x9b800010, which the
-    // lab does not model: docs/model-survey.md finding 155), so soft_tick is null. The
+    // and 9 run): its timers count in 2 ms units (0x50066238) on a second timer unit's channel 0 (0x9b800010: timer2
+    // below, docs/model-survey.md finding 155), so soft_tick, a channel of this block, is null. The
     // hardware-timer init 0x5006ed9b walks 10 entries (the table 0x6012fa78) and its guard functions take an entry
     // index below 10 (`cmp 10,d2`, 0x5006eddb); hw_channels is the range the lab checks those indices against
     timer: {
       channels: 10, reload: 0x28, counter: 0x50, us_channel: 9, us_reload: 0x3fffffff, prescaler: 191,
       groups: [[1, 8, 0x78, 0x7c, null]], irq_base: 57, status_readable: false,
       kernel_ticks: [1], soft_tick: null, hw_channels: [0, 10], hw_entries: 10,
+    },
+    // the second timer unit in the stub page 0x9b800000 (src/dev/timer2.mjs, its evidence there; E122's driver tables
+    // 0x600267b0 and 0x6012d240, the same words on E118 and E120, X): channels 0..9 at ctl 0x10 + 12 n (reload +4),
+    // their status bits in +0xc4 and IE bits in +0xdc, on IRQ 24; clock 19, which the driver programs them in, from the
+    // clock block (32768 Hz / ((0x98800004 + 1) x 2) while 0x9880004c is 0, else 24 MHz / ((0x98800008 + 1) x 2), the
+    // clock query 0x5006e25d). The display interface's words 0x9b800000/0x9b800004, channels 10..14 (+0x88..+0xc0,
+    // their words +0xc8..+0xd8 and +0xe0..+0xf0) and the deferred-call triggers +0xf4..+0x100 stay outside it
+    timer2: {
+      base: 0x9B800000, ctl: 0x10, stride: 12, channels: 10, status: 0xC4, ie: 0xDC, irq: 24,
+      clock: { select: 0x9880004C, slow: [32768, 0x98800004], fast: [24000000, 0x98800008] },
     },
     // the VSC (src/dev/vsc.mjs kind 3): two channels of 0x2000 (channel 1's INTEN1/INTST1 at 0x9c00200c/0x9c002014, its
     // ISR's status read 0x5030a80e); no name table in the image (no "INTEN1" string, X), so the register file is the
@@ -377,6 +398,8 @@ export const FAMILIES = {
     // and E122 load no more of than E143 and E144 do (a few stray `fc xx imm32` matches per 64 KiB, X: a census)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
+    // which rule of src/fw/facts.mjs reads dram_size: 'gui' (dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'gui',
     // the stub's pages, as E122's start writes and reads them (X: each one a denied access first): the GIO pin words
     // 0x9b800000 / 0x9b801000 and the pull / mux block 0x99e20000 of the early driver init's pin configuration
     // (H-DRVINIT, 0x50001be9..0x50001d38, D), the clock block 0x98800000 (the clock query 0x5006e243 reads 0x9880004c),

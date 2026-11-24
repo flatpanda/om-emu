@@ -98,7 +98,7 @@ export async function releaseSession() {
         ok(JSON.stringify(seen1) === JSON.stringify(['event 826 in phase 101', 'S1 guard 0']),
           `${tag}: S1 is event 826 in phase 101, refused at the S1 guard, no take request: ${JSON.stringify(seen1)}`);
       } else {
-        ok(!seen1.length && !s1.length, `${tag}: S1 reaches neither the sequence nor TAKE (${JSON.stringify(seen1)}, ${JSON.stringify(s1)})`);
+        ok(!seen1.length && JSON.stringify(s1) === JSON.stringify(probe ? [S1_KEY('Idle')] : []), `${tag}: S1 reaches neither the sequence nor TAKE but for its key callback's token 75 (${JSON.stringify(seen1)}, ${JSON.stringify(s1)})`);
       }
       if (probe) {
         const count = lab.call(QUEUE_COUNT, { d0: TAKE_EXEC }, null, null, 200000).d0;
@@ -130,7 +130,11 @@ const CALLBACKS = { 0x503C2BCD: 5, 0x503C2BAC: 0, 0x503C2BDD: 2, 0x503C2BBB: 3 }
 export const START_FOCUS = ['TAKE_FUNC -> TAKE_FOCUS 0 sync (native)', 'TAKE_FOCUS <= 0', 'TAKE_FOCUS -> reply',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply'];
-export const S1_FOCUS = ['TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)', 'TAKE_MAIN -> FACE_FD 15 sync (answered)',
+// S1's key callback (H-UIININIT, docs/hle-gaps/4.7.md 4.7.17): UI_IN's key dispatch (0x5014c5e9) calls the callback
+// TAKE's init registers for key 0x02000100 (0x503c2737 -> 0x5014c420), 0x503c4104, which posts token 75 to TAKE_MAIN's
+// mailbox (0x503c411b) while 0x62a4cf1c is 0; TAKE_MAIN takes it and stays where it is
+export const S1_KEY = (state) => `TAKE_MAIN <= mailbox token 75 in ${state}`;
+export const S1_FOCUS = [S1_KEY('Idle'), 'TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)', 'TAKE_MAIN -> FACE_FD 15 sync (answered)',
   'TAKE_MAIN -> TAKE_FUNC 80 sync (native)', 'TAKE_FUNC <= 80', 'TAKE_FUNC -> reply',
   // RdyFcsRdy1: TAKE_FOCUS's RELEASE_READY_START, which posts tokens 5, 0, 2 and 3 to TAKE_MAIN's mailbox at once
   'TAKE_MAIN -> TAKE_FOCUS 768 (native)', 'TAKE_FOCUS <= 768',

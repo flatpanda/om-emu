@@ -6,9 +6,10 @@
 //   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--no-card]
 //                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
 //                            [--loaded auto|on|off] [--sec-ready] [--strict on|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
-//                            [--rotate off|on]
+//                            [--rotate auto|off|on]
 //                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
-// --rotate on runs PER_ROTATE natively (play's --rotate, H-ROTINIT; off by default), and tilt:roll=R[,pitch=P] is the
+// --rotate runs PER_ROTATE natively (play's --rotate, H-ROTINIT; auto by default: on where the body has it, E143,
+// E146 and E147; off keeps the orientation at 0), and tilt:roll=R[,pitch=P] is the
 // play input tilt (degrees), which waits its own lab time.
 // --osd-errors fail fails a step in which the OSD engine refused a picture; report only lists them. The default is
 // fail on E143, E146 and E147, whose stock flows were measured with none, and report on the other bodies.
@@ -62,7 +63,7 @@ const SPEC = [
   { opt: '--held', type: 'str', repeat: true, metavar: 'KEY' },
   { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--device', type: 'str', choices: ['tft', 'evf'], default: 'tft' },
-  { opt: '--rotate', type: 'str', choices: ['off', 'on'], default: 'off' },
+  { opt: '--rotate', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--osd-errors', type: 'str', choices: ['fail', 'report'] },       // the default: openSession's, per body
   { opt: '--settle', type: 'int', metavar: 'MS' },
   { opt: '--out', type: 'path', metavar: 'DIR' },

@@ -433,13 +433,13 @@ export async function scpuSession() {
   const posted = sl.scpu_requests.map((r) => '0x' + r.request.slice(0, 2)), requests = posted.slice(0, posted.length - pm.filter((f) => f.cmd !== '0x8f').length);
   ok(frames[0]?.cmd === '0x85' && frames[0].data === '020000' && frames[0].reply === '0585028501', `${MODEL}: PER_SCPU's start sends 0x85 {2} first, answered [5, 0x85, 2, 0x85, 1]: ${JSON.stringify(frames[0])}`);
   ok(posted.length > 0 && JSON.stringify(cmds.slice(1).filter((c) => c !== '0x8f')) === JSON.stringify(posted), `${MODEL}: every request the API posted reaches the sub-CPU as a frame, in order (with PER_SCPU's polls between): ${JSON.stringify(cmds)} for ${JSON.stringify(posted)}`);
-  // the store init's requests (H-UIINSCAN's 0x88 waits at a site of its own, checked by the scan's bring-up; the power
+  // the store init's requests (H-UIINSCAN's or H-UIININIT's 0x88 waits at a site of its own, checked by the scan's bring-up; the power
   // manager's requests wait at their own, checked by its start)
   const waited = sl.scpu_requests.slice(0, requests.length).filter((r) => r.request.slice(0, 2) !== '88' && r.request.slice(40, 48) !== '00000000').length;   // a completion at +20
   ok(sl.scpu_waits.length === waited && sl.scpu_waits.every((w) => w.rc === 0), `${MODEL}: the requesters' waits return E_OK: ${JSON.stringify(sl.scpu_waits)}`);
-  const scan = s.uiin_scan ?? null, scans = MODEL_INFO.scpu?.port_scan ?? MODEL === 'E143';
+  const scan = s.uiin_scan ?? s.uiin_init?.scan ?? null, scans = MODEL_INFO.scpu?.port_scan ?? MODEL === 'E143';   // (H-UIININIT's own scan where the module init runs)
   ok(scans ? scan?.reply === '04880000' && scan.report && before.at(-1) === '0x88' : scan === null && !cmds.includes('0x88'),
-    `${MODEL}: H-UIINSCAN ${scans ? 'asks the port scan, answered {0, not busy}, the report enabled' : 'does not run (no port-scan request)'}: ${JSON.stringify(scan)}, ${JSON.stringify(cmds)}`);
+    `${MODEL}: ${s.uiin_init ? 'H-UIININIT' : 'H-UIINSCAN'} ${scans ? 'asks the port scan, answered {0, not busy}, the report enabled' : 'does not run (no port-scan request)'}: ${JSON.stringify(scan)}, ${JSON.stringify(cmds)}`);
   if (MODEL === 'E143') {
     ok(JSON.stringify(before) === JSON.stringify(['0x85', '0x06', '0x01', '0x86', '0x88']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back, then the port scan: ${JSON.stringify(frames)}`);
     ok(frames[2].data === 'e60701010000000500', `E143: the reset date's frame cut to 10 bytes, its status 10501 reaching the sub-CPU as 5: ${frames[2].data}`);

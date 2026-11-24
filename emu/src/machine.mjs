@@ -26,6 +26,7 @@ import { Ems1 } from './dev/ems1.mjs';
 import { Imgpro } from './dev/imgpro.mjs';
 import { ImgPipe } from './dev/imgpipe.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
+import { Timer2 } from './dev/timer2.mjs';
 import { Cores } from './core/cores.mjs';
 
 export { Unported, TbUndecidable };
@@ -188,6 +189,10 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // until the firmware writes them), after the imgpro unit
   const imgpipe = boardKnows('imgpipe') ? new ImgPipe(m, lclock, intc, bus, BOARD.imgpipe) : null;
   const stub = new Stub(m);
+  // the E118 family's second timer unit, on a board that gives it (src/dev/timer2.mjs; passive until the firmware starts
+  // a channel), the last of the lab clock's sources; it reads clock 19's divider words from the stub as the CPU would
+  const stubWord = (a) => { try { return stub.read(a, 4, true); } catch (e) { if (e === BUS) return null; throw e; } };
+  const timer2 = boardKnows('timer2') ? new Timer2(m, lclock, intc, BOARD.timer2, stubWord) : null;
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
   // the second core (src/core/cores.mjs), which takes over the controller's request callbacks
@@ -253,7 +258,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     cores,
     devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}),
-      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}) },
+      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}), ...(timer2 ? { timer2 } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

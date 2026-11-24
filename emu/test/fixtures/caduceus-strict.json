@@ -1,0 +1,375 @@
+{
+ "about": "The strict mode's findings (src/lab/strict.mjs, --strict) for each caduceus-om3 release folder on E147, for emu/test/test_caduceus.mjs --session --strict: the release's flow (its pin's, or the default flow for a folder with no pin) under the strict mode with a menu open after it, the findings in strictPin's form. Observations only: no byte of a release.",
+ "releases": {
+  "v0.29": {
+   "sites": 105,
+   "classes": {
+    "image-store": 105
+   },
+   "on_patched": 105,
+   "span": [
+    "0x60f4b4e8",
+    "0x60f903f4"
+   ],
+   "not_patched": [],
+   "digest": "687071585defac45",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.30.3": {
+   "sites": 233,
+   "classes": {
+    "image-store": 233
+   },
+   "on_patched": 232,
+   "span": [
+    "0x60f4b5c0",
+    "0x60fae561"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f937f4",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "3911437a9e1c2504",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.30.4-alpha": {
+   "sites": 234,
+   "classes": {
+    "image-store": 234
+   },
+   "on_patched": 233,
+   "span": [
+    "0x60f4b5c0",
+    "0x60fae561"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f937f4",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "d1ad14271fa66c9c",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-alpha": {
+   "sites": 237,
+   "classes": {
+    "image-store": 237
+   },
+   "on_patched": 236,
+   "span": [
+    "0x60f4b914",
+    "0x60fb2cc1"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f90024",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "b775f59b023f9ca3",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta": {
+   "sites": 244,
+   "classes": {
+    "image-store": 244
+   },
+   "on_patched": 243,
+   "span": [
+    "0x60f4b95c",
+    "0x60fb2d65"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f9829c",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "3e3254ce1adaf705",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta2": {
+   "sites": 244,
+   "classes": {
+    "image-store": 244
+   },
+   "on_patched": 243,
+   "span": [
+    "0x60f4b95c",
+    "0x60fb2d65"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f9829c",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "3e3254ce1adaf705",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta3": {
+   "sites": 247,
+   "classes": {
+    "image-store": 247
+   },
+   "on_patched": 246,
+   "span": [
+    "0x60f4b95c",
+    "0x60fb3349"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f98284",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "95efdff2921e04c4",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40": {
+   "sites": 247,
+   "classes": {
+    "image-store": 247
+   },
+   "on_patched": 246,
+   "span": [
+    "0x60f4b95c",
+    "0x60fb3349"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f98284",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "95efdff2921e04c4",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.1": {
+   "sites": 249,
+   "classes": {
+    "image-store": 249
+   },
+   "on_patched": 248,
+   "span": [
+    "0x60f4b964",
+    "0x60fb3ac9"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f98214",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "a2ec4b70e0e205a4",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.2": {
+   "sites": 249,
+   "classes": {
+    "image-store": 249
+   },
+   "on_patched": 248,
+   "span": [
+    "0x60f4b964",
+    "0x60fb3c09"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f98264",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "c79020d5d597196d",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta": {
+   "sites": 251,
+   "classes": {
+    "image-store": 251
+   },
+   "on_patched": 250,
+   "span": [
+    "0x60f4b4e8",
+    "0x60fbfed2"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f982ac",
+     "size": 2,
+     "dir": "w"
+    }
+   ],
+   "digest": "594b14d312cd98e3",
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta2": {
+   "sites": 256,
+   "classes": {
+    "image-store": 256
+   },
+   "on_patched": 253,
+   "span": [
+    "0x60f4b4f4",
+    "0x60fbff1a"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f982c4",
+     "size": 2,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df916",
+     "addr": "0x60f568f8",
+     "size": 1,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df923",
+     "addr": "0x60f568f9",
+     "size": 1,
+     "dir": "w"
+    }
+   ],
+   "digest": "aa5451fecbbfff30",
+   "allowed": true,
+   "dropped": 4
+  },
+  "v0.40.3-beta3": {
+   "sites": 256,
+   "classes": {
+    "image-store": 256
+   },
+   "on_patched": 253,
+   "span": [
+    "0x60f4b4f4",
+    "0x6101d01e"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f982c4",
+     "size": 2,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df916",
+     "addr": "0x60f568f8",
+     "size": 1,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df923",
+     "addr": "0x60f568f9",
+     "size": 1,
+     "dir": "w"
+    }
+   ],
+   "digest": "4decca5aec298864",
+   "allowed": true,
+   "dropped": 13
+  },
+  "v0.40.3-beta4": {
+   "sites": 253,
+   "classes": {
+    "image-store": 253
+   },
+   "on_patched": 248,
+   "span": [
+    "0x60f4b500",
+    "0x60fbfca2"
+   ],
+   "not_patched": [
+    {
+     "class": "image-store",
+     "at": "0x5001095c",
+     "addr": "0x60f98294",
+     "size": 2,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df916",
+     "addr": "0x60f56878",
+     "size": 1,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26df923",
+     "addr": "0x60f56879",
+     "size": 1,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26f3b96",
+     "addr": "0x60f56878",
+     "size": 1,
+     "dir": "w"
+    },
+    {
+     "class": "image-store",
+     "at": "0xa26f3ba3",
+     "addr": "0x60f56879",
+     "size": 1,
+     "dir": "w"
+    }
+   ],
+   "digest": "5292833700f89ccf",
+   "allowed": true,
+   "dropped": 0
+  }
+ }
+}

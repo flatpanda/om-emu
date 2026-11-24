@@ -140,7 +140,7 @@
 //              whose 0 re-arms the GUI's beep (CBS_AF_LOCK's comment). The application's own changedFocus then plays
 //              the AF beep natively down to UI_OUT's sound request and, with the audio hardware, to the audio port
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
-import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL, PROP_GET } from './display.mjs';
+import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL, PROP_GET, OLYQERD } from './display.mjs';
 import { AssertionError } from './errors.mjs';
 import { RPC_ENTRIES, bootFacts } from './menu.mjs';
 import { packRegs } from './sim.mjs';
@@ -153,9 +153,10 @@ import { SubjectFrames } from './subject.mjs';
 import { MdetDl } from './mdet.mjs';
 import { ShutterSound } from './shuttersnd.mjs';
 import { TakeProbe } from './take.mjs';
+import { dispsyncFacts, observeDispsync, releaseDispsync } from './dispsync.mjs';
 import { PlayModule } from './playmod.mjs';
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
-import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143, STILL_E143, DCF_COUNTS_E143, ERASE_E143, objectNameId, PC_PD_NAME, TAKE_REQUESTS_E143, valueAt } from '../fw/facts.mjs';
+import { RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143, STILL_E143, DCF_COUNTS_E143, ERASE_E143, objectNameId, PC_PD_NAME, TAKE_REQUESTS_E143, valueAt } from '../fw/facts.mjs';
 import { FACTS } from '../fw/ports.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS card_fs)
 //              the card is a real block device (S-SDCARD) the firmware formats and mounts itself, and of S-CARD only
@@ -381,12 +382,6 @@ export function take_ready_rule(q, command, kind, queues = apiQueues(), tr = tak
   if (command === T.ready) return (kind >>> 0) === T.ready_kind ? 'ready' : 'other-kind';
   return command === T.take ? 'take' : null;
 }
-// S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (its value; the panels'
-// d1 values, as stopRecView passes them, and the image sync's kind, the one the type-3 request's pending state takes,
-// are the fact's, displaySync's comment) and image-event flag (a0, as stopRecView passes it). On E120's record form
-// (the fact's record) the request's type and device code and the release's code and device are fields of the record
-// a0 points to, and the synced type is the record's
-const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1, DISPSYNC_RECORD = 8;
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 // camapp 3, the transaction path native (docs/hle-gaps/4.1.md 4.1.5): S-TRAACK hands every transaction to the exec, whose
 // remote path sends through the receiver substance's vt[41] (0x50af8487) and, for the RSB requests (the mode change
@@ -445,6 +440,25 @@ const TRA_OUTPUT_DEVICE = 588, OUTPUT_HDMI = 8, IOD_INSTANCE = A(0x50BE92CA), IO
 const IOD_EVENT_BYTES = 40, IOD_STATE_READY = 6, RX_DISPATCH_SLOT = 33;
 // the property setter CapIod writes the output-device property through (0x50ab4f75 -> 0x503c4b2f, d0 id, d1 value)
 const OUTDEV_PROP_SET = A(0x503C4B2F);
+// S-OUTDEV's rule (docs/hle-gaps/4.9.md 4.9.2): it runs on a body where the three HLS addresses it calls are placed
+// and the HDMI open it leads to gets AUD_EXEC's reply: AUD_MAIN's with the audio hardware (H-AUDSTART), else
+// S-HDMIAUD's, where the port places the driver's exchange (E143 with --audio auto; E146, E147). Until 2026-11-23 it
+// was gated to E143
+const OUTDEV_SITES = [IOD_INSTANCE, IOD_EVENT_NEW, OUTDEV_PROP_SET];
+// S-HDMIAUD (docs/hle-gaps/4.9.md 4.9.2; D unless tagged): the HDMI driver's two AUD_EXEC requests, function 36
+// (0x501d67b4, the open's, called at 0x501d5cba) and function 37 (0x501d683d, called at 0x501d5f2d), each a 16-byte
+// message [reply queue (0x60043308), function, 1, the 52-byte block whose byte 0 is the function] posted with
+// OlyQeWr (the calls at 0x501d682b / 0x501d68b4, returning to 0x501d6832 / 0x501d68bb), and the reply's read
+// (0x501d68c6: OlyQeRd of 12 bytes from the reply queue, the call at 0x501d68f9; the reply is good when its u16 +0 is
+// 0 and its word +4 is 36 or 37, 0x501d6905..0x501d691d). AUD_MAIN's own reply to the open's function 36 is [0, 36,
+// the block] and the read returns 0 (X, E143 with --audio auto: the 12 bytes the read returned), S-MODACK's form
+const HDMI_AUD_POSTS = new Map([[A(0x501D6832), 36], [A(0x501D68BB), 37]]), HDMI_AUD_READ = A(0x501D68F9);
+const HDMI_AUD_MESSAGE = 16, HDMI_AUD_REPLY = 12;
+// A-HDMICAL (docs/hle-gaps/4.9.md 4.9.2): the factory calibration word, data object kind 0x874 (2164) of the store F
+// (X: E143's image list at 0x600bcbe0, between F's layout 0x600bcac4 and E's 0x600bef28, holds it with the template
+// 0xfffffffe, as E146's does; the settings spec 2), which the HDMI connect check's predicate reads on E146 and E147
+// (src/fw/facts.mjs hdmiCalib)
+const CALIB_KIND = 0x874, CALIB_UNSET = 0xFFFFFFFE, CALIB_ANSWER = 0, SETTINGS_READ = A(0x500417DA);
 const SHOOT_POST = A(0x50AF4451), SHOOT_REACTIVE_VT = A(0x60DFF400);
 const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
 // the callbacks' ids, by name in the build's CBS name table (src/fw/facts.mjs cbsIds): a build may number one
@@ -750,7 +764,10 @@ const SET_SAVE = A(0x500421CD), SET_SAVE_RETURNS = new Set([A(0x503F01A4)]);
 // the function direct start past its checks, where the function's id is kept at (28,sp) (E143, the entry's second
 // instruction; another build keeps it there or in a register, fact 'func_direct.id', src/fw/facts.mjs funcDirect,
 // which bin/port.mjs also places the start by)
-const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = 27;
+// RECORDING_MOVIE's id is its row's in the function name table, rows {id, 2, name} from NONE's (E143: the table
+// 0x612c303c, row 27 at 0x612c3180, D); a build whose table numbers it otherwise gives it as func_movie
+// (src/fw/models.mjs: E147 28), and E143's 27 holds where REC was seen to start function 27 (E146 and E139, X)
+const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = MODEL_INFO.func_movie ?? 27;
 // The page's texts for the camera application's stand-ins, kept apart from playui.mjs STAND_INS; the Stand-ins tab
 // shows both (src/lab/playapi.mjs standInRows).
 export const CAMAPP_STAND_INS = {
@@ -795,15 +812,15 @@ export const CAMAPP_STAND_INS = {
   "S-ZOOMNO": "(E129 and E132, the TG-5) the built-in lens's zoom number byte (fact lens.focal's zoom.word) is 1, the wide end, as the lens module's variable init (zoom.init, which the boot's lens init calls, D) stores it first; the init itself is not run, as it goes on to divide by a rate the lab leaves 0 (X). The focal length getter the EXIF set calls then runs natively at a capture and the picture's record carries its 4.5 mm (docs/model-survey.md finding 158); the lab moves no zoom. Set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (the AE result writer 0x50596187 copies them from EXP's result record, in the callback TAKE_EXPOSE puts in its AE request to EXP; one per metering mode, I; read natively only by the plan and the application's get by index, docs/hle-gaps/4.2.md 4.2.2) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (EXP's AE requests, not run: the lab never reaches the through start's request, and posted by hand it stops before the callback, docs/hle-gaps/4.2.md 4.2.2)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I). Under control camapp 3 it answers 6 from the start of a SWITCH to the EVF (play.mjs native_switch), the input that with H-EYESTATE starts the firmware's own output change (docs/hle-gaps/4.3.md 4.3.10)",
-  "S-OUTDEV": "(E143 with --hdmi on) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done. Not used under control camapp 3: there the component answers TRA 588 natively and the device opens through it (X)",
+  "S-OUTDEV": "(--hdmi on, a body where CapIod's singleton, its event 224's constructor and the property setter are placed: E143, E146, E147) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done. Not used under control camapp 3: there the component answers TRA 588 natively and the device opens through it (X)",
   "S-THROUGH": "(with S-SCENE's live view) the application's through-image control OlyHfwOpeShoot::ctrlAutoThrough (0x50abd373; ctrl 0 as the menu opens, 1 as it closes, D from its log) stops and restarts S-SCENE's frames: while stopped the live-view plane shows black (I: what the camera's plane shows while the through image is stopped)",
   "S-SETSAVE": "the settings store's save to flash (0x500421cd, called by the application as the menu closes, return 0x503f01a4) returns 0 without saving, the value of its path for a store that is not dirty: the flash controller (0x98d01800) is not in the lab and persistence is not modelled; a call from anywhere else is an error",
   "S-NVRAM": "(a host that keeps the camera's non-volatile state, env.nvram: bin/play.mjs by default, in ~/.om-emu/nvram-<model>.json, --nvram off / OM_EMU_NVRAM=off for a blank camera, OM_EMU_NVRAM=FILE elsewhere; the browser player by default, in OPFS, nvram=0 for a blank camera; on bodies whose build places its sites, E143, E146 and E147, X) the settings stores' saves run natively down to the NAND write 0x5003d9da (direct, or posted to the flash task through 0x5003d95c, whose callback runs after it), which writes the image to its mirror and to the host; the next session's registry bootstrap restores M and E from those images ('MlR.', 'ElR.'); the SCPU window's backed-up words (the clock signature 0x00, the B store 0x08..0x3c, which the native power-off saves and the bootstrap restores when its check takes them, 'BlR.', src/lab/menu.mjs B_WORDS) and the sub-CPU's memory S-SCPUDEV keeps (its RTC: the host's local time, read once at the session's start, plus the offset the camera's own clock setting left, advancing with lab time in the session; and its backup registers) come back too, and the window clock starts at that date, so the start shows no date prompt (instead of S-SETSAVE). A session is then a function of that state, that one clock read and its inputs: session.json records both per session (src/lab/nvramdoc.mjs), and --replay starts from them in memory",
-  "H-STOREINIT": "the property store's module init (E143 0x503ee2d6, the fifth of the settings init chain 0x503dae30, which the boot runs between the registry bootstrap and the settings-DB init; the body's read by src/fw/facts.mjs propStore) natively at the store init, between the two: it keeps the data pointers of the mode store's three objects (the banks, the recalled rows, the working copy), which a mode change stages the settings from; the chain's other inits do not run",
+  "H-STOREINIT": "(OM_EMU_SETTINGS_CHAIN=0, or a body whose image holds no settings init chain src/fw/facts.mjs settingsChain reads; elsewhere the chain runs whole, natively, in its place: docs/hle-gaps/4.6.md 4.6.9) the property store's module init (E143 0x503ee2d6, the sixth call of the settings init chain 0x503dae30, which the boot runs between the registry bootstrap and the settings-DB init; the body's read by src/fw/facts.mjs propStore) natively at the store init, between the two: it keeps the data pointers of the mode store's three objects (the banks, the recalled rows, the working copy), which a mode change stages the settings from; the chain's other inits do not run",
   "H-SCPUSTART": "the firmware's PER_SCPU started natively at the store init (act_tsk of its static task, as the boot chain would long before; its entry allowed) with the sub-CPU's model at the far end of its link: the task pulses the reset pin, waits for pin 102, sends 0x85 {2} and takes its reply natively; checked: the task waiting, the gate open, that one frame (docs/hle-gaps/4.7.md 4.7.1)",
   "S-SIO2": "PER_SIO's channel API for the one channel PER_SCPU opens (channel 2 on E143; PER_SIO's registers, init and interrupt handlers are not modelled): open calls the opener's callback, a full-duplex transfer hands its bytes to the sub-CPU's model and writes its answer to the rx buffer, and its end is delivered at the MN's next idle point in interrupt context, the rx callback with the descriptor and then the tx callback, as the driver's interrupt calls them; another channel's calls run natively as before (the EVF panel's channel 0), another kind of transfer on PER_SCPU's stops the session",
   "S-SCPUDEV": "the sub-CPU at the far end of the link (src/lab/scpudev.mjs; docs/om1-scpu-spec.md 3): its ready line (pin 102), message line (the window's port 3, dropped while a message of its own waits for the MN's poll [2, 0x8f], whose reply carries it), SPI slave and command manager from its firmware's code: the 10-byte receive, the power-on gate (only 0x85 and 0x02 before 0x85 {2}; anything else stops the session, as it stops the sub-CPU), replies [length, command, data] padded to 4, long writes and reads in chunks. Its handlers: 0x85 (the reply its handler builds; the gate opens at the release), the date (0x01 sets the RTC and its valid flag, backup register 1, for status 0, clears the flag otherwise; 0x81 answers the RTC, advancing with lab time (from the host's clock at the session's start under S-NVRAM), or 2019-01-01 with status 10501 while the flag is clear), the backup words 0x06 / 0x86 (0 on a blank camera), the port scan 0x88 ({result, not busy}: bit 0 PC13, bit 1 PC5, low in the lab, which keeps the USB switch 0x0400 at the idle image's state; the read enables the scan's report, a later change of PC13 is posted as the message 0x08), the GIO read 0x82 of those two ports, the power manager's 0x12 {5}, answered with the message 0x12 {5}, and, on E143 and E146 (the sub-CPU image its handler is read from), its 0x14, the notice of its two battery slots (body and PBH: inserted, recommend), a write taken with no answer, the slots' bytes kept as the sub-CPU keeps them (a frame that changes an inserted byte while the PBH's is 1 stops the session: what the sub-CPU then does depends on flags of its own that are not modelled; docs/hle-gaps/4.7.md 4.7.6); 0x85's releases set its power state (steady, bkground, pwr_save, standby, hibernation) and, for a power-off, drop its messages, stop the link as the sub-CPU leaves steady (pin 102 low) and stop the session at the next request (the wake is not modelled). Any other command stops the session naming it",
-  "H-UIINSCAN": "(a body whose UI_IN has the request, fact scpu.port_scan: E143, E146, E147) UI_IN's module init's port scan (0x5005d36a, not run with the init) natively at play bring-up: the request 0x88 over the link, the reply's bit 0 to group 4's switch 0x0400 through the group-4 producer; checked: one 0x88 frame, not busy, no errlog, group 4 still the idle image (docs/hle-gaps/4.7.md 4.7.1)",
+  "H-UIINSCAN": "(a body whose UI_IN has the request, fact scpu.port_scan, and no H-UIININIT: E146, E147; on E143 the module init makes the request itself) UI_IN's module init's port scan (0x5005d36a, not run with the init) natively at play bring-up: the request 0x88 over the link, the reply's bit 0 to group 4's switch 0x0400 through the group-4 producer; checked: one 0x88 frame, not busy, no errlog, group 4 still the idle image (docs/hle-gaps/4.7.md 4.7.1)",
   "A-SCPUDEV-1": "the sub-CPU acts only at the MN's idle points, one action (a level change, or the handling of one event) per step and in zero lab time; a transfer's end is delivered first. The real sub-CPU answers within microseconds while PER_SCPU arms each wait before it blocks, so only the order is modelled",
   "A-LINKPINS-1": "pin 102's GIO interrupt is level-sensitive: type 0 its high level, type 1 its low level; a status bit stays set while its level holds, and a write clears only bits whose level has gone (PER_SCPU's callbacks disable the interrupt first, and the sub-CPU raises and drops the pin back to back, D)",
   "S-SCPUBOARD": "(OM_EMU_SCPU=native: the sub-CPU's own firmware on the STM32L4 machine in S-SCPUDEV's place, src/lab/scpum4.mjs) the sub-CPU's board: nothing attached but the MN's link (no battery pack answers on USART1 / USART2, no I2C device acknowledges: the chargers, the PBH IO expander, the USB PD controller; every ADC channel reads 0; LSE present, HSE absent; the hardware-phase straps on their pull-ups, phase 7) and the port scan's inputs PC13 and PC5 held low, S-SCPUDEV's levels: PC13 low keeps UI_IN's switch 0x0400 at the idle image's state and selects bkground at a power-off, where its pull-up would take the sub-CPU into standby 3 s after reset. What the camera's board answers is ?",
@@ -868,8 +885,11 @@ export class CamApp {
     this.play_exec = null;     // S-PLAYSEQ: the play request whose transaction runs next
     this.erased = 0;           // H-OBJDEL: the pictures erased
     this.tra_deleted = 0;      // S-TRAACK: the requests deleted after their exec
-    this.outdev = this.s.hdmi_port && MODEL === 'E143' ? [] : null;   // S-OUTDEV: TRA 588 requests to take after the step
+    this.outdev = null;        // S-OUTDEV (install, its rule): TRA 588 requests to take after the step
     this.outdev_done = [];     // S-OUTDEV: [device, second, CapIod's state after the event]
+    this.hdmi_aud = null;      // S-HDMIAUD (install): the replies kept for the read, reply queue -> message
+    this.hdmi_aud_answered = 0;   // S-HDMIAUD: the reply reads answered
+    this.calib_answered = 0;   // A-HDMICAL: the predicate's reads of the calibration word answered
     this.outdev_prop = undefined;   // S-OUTDEV: the output-device property CapIod writes in the event (null: none yet)
     this.prop_follow = false;       // camapp 3's display switch: S-PROP follows the property's writes (install)
     this.aflock = false;       // S-AFLOCK: installed (E143 with UI_OUT running); af_stage: null, 'ready' (S1 down),
@@ -1222,6 +1242,57 @@ export class CamApp {
       ?? (q === pcPdQueue() ? PC_PD_NAME : (MODEL_INFO.modack_queues ?? []).find(([id]) => id === q)?.[1]);
     return named ? `${named} (${q})` : `queue ${q}`;
   }
+  // S-HDMIAUD: installed with --hdmi on where AUD_MAIN does not run (no audio hardware): the driver's request is
+  // taken from the queue it would wait in for good, and its reply kept for the driver's read, which it answers
+  // (the read of an empty queue passes on to the kernel). Where the port does not place the three sites, or their
+  // bytes are not the calls of OlyQeWr and OlyQeRd, nothing is installed and the open blocks at the read as before
+  hdmi_aud_install() {
+    const lab = this.s.lab, sites = [...HDMI_AUD_POSTS.keys(), HDMI_AUD_READ];
+    if (sites.some((a) => isUnmapped(a))) return;
+    const callOf = (at) => { const b = lab.sim.read(runtime(at), 7); return b[0] === 0xdd ? (at + unpack('<i', b.subarray(1, 5))[0]) >>> 0 : null; };
+    const bad = [...[...HDMI_AUD_POSTS.keys()].map((ret) => [ret - 7, OLYQEWR]), [HDMI_AUD_READ, OLYQERD]].find(([at, to]) => callOf(at) !== to);
+    if (bad) throw new FirmwareError(`S-HDMIAUD: ${h8(bad[0])} is not a call of ${h8(bad[1])}`);
+    this.hdmi_aud = new Map();
+    lab.hook(HDMI_AUD_READ, (h, r) => {
+      const q = r.d0 & 0xFFFF, msg = this.hdmi_aud.get(q);
+      if (!msg) { lab.passthrough(r); return; }
+      const [buf, n] = unpack('<II', lab.sim.read(r.a0 >>> 0, 8));
+      if (n !== HDMI_AUD_REPLY) throw new FirmwareError(`S-HDMIAUD: the reply's read from ${where(r.pc)} takes ${n} bytes, not ${HDMI_AUD_REPLY}`);
+      this.hdmi_aud.delete(q);
+      lab.sim.write(buf, msg);
+      this.hdmi_aud_answered += 1;
+      this.log.push(['hdmiaud', `AUD_EXEC's reply [${[...msg].map((x) => x.toString(16).padStart(2, '0')).join('')}] read from queue ${q}`]);
+      h.skip_call({ ...r, d0: 0 });
+    }, 'S-HDMIAUD (reply)');
+  }
+  hdmi_aud_post(r, q) {
+    const lab = this.s.lab, fn = HDMI_AUD_POSTS.get(disasm(r.mdr)), [p, n] = unpack('<II', lab.sim.read(r.a0 >>> 0, 8));
+    const w = n === HDMI_AUD_MESSAGE ? unpack('<4I', lab.sim.read(p, n)) : null;
+    if (q !== apiQueues().AUD_EXEC || !w || w[1] !== fn || w[2] !== 1 || lab.sim.read(w[3], 1)[0] !== fn) {
+      throw new FirmwareError(`S-HDMIAUD: a post to queue ${q} from ${where(r.mdr)} (${n} bytes${w ? ` [${w.map(h8).join(' ')}]` : ''}): not AUD_EXEC function ${fn}`);
+    }
+    if (this.hdmi_aud.has(w[0])) throw new FirmwareError(`S-HDMIAUD: function ${fn} posted from ${where(r.mdr)} while the reply to queue ${w[0]} is not read`);
+    this.hdmi_aud.set(w[0], Uint8Array.from(pack('<III', 0, fn, w[3])));
+    this.log.push(['hdmiaud', `AUD_EXEC function ${fn} from ${where(r.mdr)}: taken, its reply kept for queue ${w[0]}`]);
+  }
+  // A-HDMICAL: where the build's predicate reads the calibration word (fact hdmi.calib), its value as the read
+  // returns it, when the store holds the image's template, is taken as a calibrated value (0); the predicate keeps the
+  // value only for its trace log (E146 0x504096df, E147 0x504177e6), so which calibrated value does not matter there
+  calib_install() {
+    const c = fact('hdmi.calib', null);
+    if (!c) return;
+    const lab = this.s.lab, ret = c.call + 7, b = lab.sim.read(runtime(c.call - 6), 13);
+    if (c.read !== SETTINGS_READ || b[0] !== 0x2c || unpack('<H', b.subarray(1, 3))[0] !== CALIB_KIND || b[6] !== 0xdd) {
+      throw new FirmwareError(`A-HDMICAL: the read at ${h8(c.call)} is not the settings read ${h8(SETTINGS_READ)}'s of kind 0x${CALIB_KIND.toString(16)}`);
+    }
+    lab.hook(ret, (h, r) => {
+      if ((r.d0 >>> 0) === CALIB_UNSET) {
+        this.calib_answered += 1;
+        if (lab.sim.packet('G' + packRegs({ ...r, d0: CALIB_ANSWER })) !== 'OK') throw new AssertionError('');
+      }
+      lab.passthrough(r);
+    }, 'A-HDMICAL');
+  }
   install() {
     this.module_queues = module_queues(this.s.lab.image);
     // with the file system native (storage.mjs) the file module's own task, FILECLBK, takes its queue's requests
@@ -1235,6 +1306,9 @@ export class CamApp {
     // H-AUDSTART)
     const audq = this.s.audio_hw ? this.s.audio_hw.exec_queue() : null;
     if (audq !== null) this.module_queues.delete(audq);
+    if (this.s.hdmi_port && audq === null) this.hdmi_aud_install();                // S-HDMIAUD: no AUD_MAIN to answer
+    if (this.s.hdmi_port && OUTDEV_SITES.every((a) => !isUnmapped(a)) && (audq !== null || this.hdmi_aud)) this.outdev = [];   // S-OUTDEV's rule
+    if (this.s.hdmi_port) this.calib_install();                                   // A-HDMICAL
     // with the native lens (lens.mjs) LENS_MAIN (E143's task 92) and LENS_COMMAND (task 91) wait on their queues
     // (X: the tasks in the queues' receive-wait lists after the bring-up), so S-MODACK, which takes the message,
     // would take it from them: the two queues leave it; a synchronous send to them still returns E_OK below, the
@@ -1303,6 +1377,7 @@ export class CamApp {
         h.finish(r, { d0: 0 });                                                    // taken: not left in the queue
         return;
       }
+      if (this.hdmi_aud && HDMI_AUD_POSTS.has(disasm(r.mdr))) { this.hdmi_aud_post(r, q); h.finish(r, { d0: 0 }); return; }   // S-HDMIAUD
       if (this.module_queues.has(q) && this.modpost(r, q)) { h.finish(r, { d0: 0 }); return; }   // S-MODPOST
       return prev(h, r);
     }, 'S-MODACK');
@@ -1336,14 +1411,9 @@ export class CamApp {
       if (calls) h.finish_calls_after(r, del, { a0: req }); else h.finish_after(r, del, { a0: req });
     };
     // (none on a build whose display sync the rule does not read, src/fw/facts.mjs displaySync)
-    const sync = fact('display.sync', DISPLAY_SYNC_E143), rec = sync?.record;
+    const sync = dispsyncFacts();                    // (src/lab/dispsync.mjs, shared with nav's bring-up)
     this.dispsync_fns = sync;
-    if (sync) {
-      lab.observe(sync.request, (l, r) => {
-        const [type, code] = rec ? [unpack('<H', l.sim.read(r.a0 + rec.type, 2))[0], l.sim.u32(r.a0 + rec.device)] : [r.d0 >>> 0, r.d1 >>> 0];
-        if (type === (rec?.synced ?? DISPSYNC_REQUEST)) this.dispsync.add(code);
-      }, 'S-DISPSYNC');
-    }
+    if (sync) observeDispsync(lab, sync, (code) => this.dispsync.add(code));
     lab.observe(SHOOTING_START, () => { this.shooting = true; }, 'S-RELSEQ (shooting service)');
     lab.observe(SHOOTING_END, () => { this.shooting = false; }, 'S-RELSEQ (shooting service end)');
     const fd = fact('func_direct.id', { sp: 28 });
@@ -1353,9 +1423,9 @@ export class CamApp {
     // camapp 3's display switch (play.mjs native_switch, which sets prop_follow for its step) CapIod runs the output
     // change itself (TRA 588 natively), and S-PROP's value follows its write as it is made, so that the application's
     // reads at S-PROP's sites see the device the firmware opened: with the value of the lab's last open the
-    // application sends the GUI 131 again and again (X; docs/hle-gaps/4.3.md 4.3.10). At camapp 3's HDMI plug S-PROP is
-    // left as it was (it keeps the panel's value; with the follow the GUI goes on to a vsync wait on channel 0 before
-    // the lab has set its line time, X: open, 4.3.10)
+    // application sends the GUI 131 again and again (X; docs/hle-gaps/4.3.md 4.3.10). The HDMI plug and unplug under
+    // camapp 3 follow it too (play.mjs hdmi_input): with the panel's value setOutputType found no HDMI output and laid
+    // nothing out on channel 0 (X; docs/hle-gaps/4.9.md 4.9.3)
     if (this.outdev !== null || this.native_tra) lab.observe(OUTDEV_PROP_SET, (l, r) => {
       if ((r.d0 & 0xFFFF) !== lab.prop_device) return;
       if (this.prop_follow) {
@@ -1476,14 +1546,8 @@ export class CamApp {
         const [code] = this.dispsync;
         this.dispsync.delete(code);
         this.dispsync_released += 1;
-        const { sync_set: set, image_sync: image, kind, panels, record: rec } = this.dispsync_fns;
-        this.log.push(['dispsync', `sync words cleared, image sync kind ${kind} for device ${code}`]);
-        for (const panel of panels) lab.call(set, { d0: DISPSYNC_OFF, d1: panel }, null, null, 2000);
-        if (rec) {
-          const b = new Uint8Array(DISPSYNC_RECORD), dv = new DataView(b.buffer);
-          dv.setUint16(rec.code_at, rec.code, true); dv.setUint32(rec.device_at, code, true);
-          lab.call(image, { a0: lab.alloc(b, 4) }, null, null, 2000000);
-        } else lab.call(image, { d0: kind, d1: code, a0: DISPSYNC_IMAGE }, null, null, 2000000);
+        this.log.push(['dispsync', `sync words cleared, image sync kind ${this.dispsync_fns.kind} for device ${code}`]);
+        releaseDispsync(lab, this.dispsync_fns, code);
         s.settle('S-DISPSYNC');
         continue;
       }
@@ -1508,11 +1572,8 @@ export class CamApp {
       this.play_finish(this.play_pending.shift());
     }
     while (this.outdev?.length) this.output_device(this.outdev.shift());           // S-OUTDEV
-    // camapp 3: the component's own TRA 588 opened the HDMI device (X); its channel then runs at the format table's
-    // timing (DisplayLab.hdmi_line), the harness rule S-OUTDEV's open follows too
-    if (this.native_tra && MODEL === 'E143' && !lab.line_ns.has('hdmi') && (lab.sim.u32(OPENED_WORD) & HDMI_MASK)) {
-      this.log.push(['outdev', `HDMI open (camapp 3): ${JSON.stringify(lab.hdmi_line(lab.sim.u32(OPENED_WORD) & HDMI_MASK))}`]);
-    }
+    // (camapp 3: the component's own TRA 588 opens the HDMI device, and the channel's line time is set at the end of
+    // the DISPLAY run that opened it, play.mjs _dispq_run, before the GUI waits on its vsync in the same step)
     if (this.media && this.media.busy()) {                                         // S-MDACTRL / S-MEDIA (media.mjs)
       this.media.tick();
       for (const [k, d] of this.media.take_log()) this.log.push([`media ${k}`, d]);
@@ -1590,7 +1651,8 @@ export class CamApp {
   // is not full has). Returns {drives: [the drives, Media's first; none where no slot has a mounted card], mode}. Dual
   // Independent (2, 3) names the cards as Dual Same does; whether REC_IMAGE then encodes once for both cards or once
   // for each follows the second slot's own image settings in the shot record, which TAKE's shot record fill writes
-  // natively (H-TAKEFILLS, 0x503bbb6f) and rec.mjs record checks (docs/hle-gaps/4.8.md 4.8.20). The arrow down (2, 4)
+  // natively (H-TAKEFILLS, 0x503bbb6f) and rec.mjs record reads (docs/hle-gaps/4.8.md 4.8.20; the settings different,
+  // two images, one on each card, 4.8.24). The arrow down (2, 4)
   // with one card stops the session: the application's card check refuses it
   // (checkMediaErrorSubAppMdlShootingCmn 0x5105c978, D; what the release then does is not read)
   record_cards() {

@@ -52,7 +52,7 @@ export const ACTIONS = [
   { opt: '--us-clock', type: 'str', choices: ['lab', 'reads'], default: 'lab' },
   { opt: '--hdmi', type: 'str', choices: ['off', 'on'], default: 'off' },
   { opt: '--audio', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
-  { opt: '--rotate', type: 'str', choices: ['off', 'on'], default: 'off' },
+  { opt: '--rotate', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--take', type: 'str', choices: ['stand-in', 'probe'], default: 'stand-in' },
   { opt: '--cpu2', type: 'str', choices: ['stand-in', 'native'], default: 'stand-in' },
   { opt: '--creative-dial', type: 'int', default: null, metavar: 'K' },

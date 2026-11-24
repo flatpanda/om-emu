@@ -35,7 +35,7 @@
 //               layout against STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
 //               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
 //               SIO_FOUND, the GUI canvas, OSD banks
-//               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
+//               and kind-3 area against GUI_FOUND, MM's bank 0 on the E143 family against MM_BANK0_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
 //               init task and OlyTaWu against RTOS_FOUND and A(), the DB init's and the application's flash saves
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
 //               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the frame plane's
@@ -48,10 +48,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, POWER_LATER_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileQueue, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
   TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot,
-  TAKE_FILLS_E143, takeFills } from '../src/fw/facts.mjs';
+  TAKE_FILLS_E143, takeFills, mmBank0 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -242,6 +242,17 @@ const POWER_SEQ_FOUND = {
     ioexp: null, poll: { at: 0x50059AA9, pin: 102 },
   },
   E144: null, E139: null, E134: null, E137: null, E142: null, E140: null,
+};
+// The power manager's later inits (power.later; src/fw/facts.mjs powerLater): E143's as H-PWRLATER ran them by hand
+// before the rule (D: 0x50044ed7 called at 0x50024d43, 0x50044f7d at 0x501e9943, the handler 0x5004408f, the setters
+// 0x50043c63 / 0x50043c6c writing 0xa32bfb58 / 0xa32bfb59), E146's and E147's as read by hand (D, 2026-11-23: E146
+// 0x50045ade called at 0x50024e10 and 0x50045b84 at 0x501eff40, the handler 0x50044c96; E147 0x50045a13 at
+// 0x50024d8f, which sends the check only, and 0x50045a40 at 0x501f7d10, the handler 0x50044c15, the setters
+// 0x500447e9 / 0x500447f2 writing the same bytes)
+const POWER_LATER_FOUND = {
+  E143: POWER_LATER_E143,
+  E146: { handler: 0x50044C96, early: 0x50045ADE, late: 0x50045B84, a: 0xA32BFB58, c: 0xA32BFB59 },
+  E147: { handler: 0x50044C15, early: 0x50045A13, late: 0x50045A40, a: 0xA32BFB58, c: 0xA32BFB59 },
 };
 // The touch task's command queue (touch_task; src/fw/facts.mjs touchQueue): E143's as the lab gives it
 // (src/fw/facts.mjs TOUCH_TASK_QUEUE_E143: the flag its loop waits on at 0x501e3ef2, the queue it receives from at
@@ -981,6 +992,15 @@ const GUI_FOUND = {
   E144: { stride: 1152, height: 768, banks: E144_BANKS, kind3: [0xAF3C3000, 1536] },
   E139: { stride: 1152, height: 768, banks: E144_BANKS, kind3: [0xAF270000, 1536] },
 };
+// MM's bank 0 pool construction (src/fw/facts.mjs mmBank0, the E143 family's dram_size rule mmDramSize: 512 MiB), as
+// read (D: E143 0x50533ba4 `mov 0xa31f4e9c,a0; mov 0xb8000000,d0; mov 0x1ffec00,d1; mov 0,a1; call 0x5053733b`, bank
+// 1's `mov 256,a1` at 0x50533bdc; X: the bank table 0x606dc498's entry 0 holds that pool, +8 0xb8000000, +12
+// 0x1ffec00, in a live-view session; E146's and E147's sites by the rule, X, 2026-11-23)
+const MM_BANK0_FOUND = {
+  E143: { pool: 0xA31F4E9C, base: 0xB8000000, block: 0x1FFEC00, at: 0x50533BA4 },
+  E146: { pool: 0xA31F4E58, base: 0xB8000000, block: 0x1FFEC00, at: 0x50510D83 },
+  E147: { pool: 0xA31F5208, base: 0xB8000000, block: 0x1FFEC00, at: 0x5051FF0C },
+};
 // The rec view component's state word and standby value (recview; D: E143 entryStandby 0x50c65ff2 -> 0x50c66a25 ->
 // 0x50ab5fe7, E142 0x508f1cee -> 0x508f2721 -> 0x5074b31c, whose word E142's getRecViewState gate 0x5074b283 reads)
 // and, read by form where the trace is not held, E120's (D: the standby entry 0x507913eb -> 0x50791b40 -> 0x50654c29,
@@ -1122,7 +1142,7 @@ const MOUNT_STATE_FOUND = { E143: MOUNT_STATE_E143, E130: 0x62399B24, E122: 0x61
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
-  board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
+  board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 512 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143, task: GUI_TASK_FOUND.E143 },
   kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
@@ -1134,6 +1154,7 @@ const E143_FACTS = {
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null, slots: SLOTS_FOUND.E143 },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
+  hdmi: { calib: null },
 };
 
 // The setting-name table in block 2 (src/fw/setnames.mjs nameTable): {offset in the body, count of MODE_ names}, as a
@@ -1326,6 +1347,7 @@ export function factsTests() {
     if (Object.hasOwn(TOUCH_REGS_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_regs, TOUCH_REGS_FOUND[code]), `${code}: touch_regs ${hx(placed?.touch_regs ?? placed)}, found ${hx(TOUCH_REGS_FOUND[code] ?? 'none')}`);
     // the power-off's facts, where the rule reads them
     if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.off, POWER_SEQ_FOUND[code]), `${code}: power.off ${hx(placed?.power ?? placed)}, found ${hx(POWER_SEQ_FOUND[code])}`);
+    if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.later, POWER_LATER_FOUND[code]), `${code}: power.later ${hx(placed?.power ?? placed)}, found ${hx(POWER_LATER_FOUND[code] ?? 'none')}`);
     if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);
     // the lens driver, and the port's places of E143's lens flags and LENS_EXEC's queue word (the map's, which S-LENS and
     // the camera application's module queues use) at the rule's
@@ -1534,6 +1556,10 @@ export function factsTests() {
     if (placed?.store?.db_save !== undefined && PORTS[code]) ok(PORTS[code][0x503C5537] === placed.store.db_save, `${code}: A() of the DB init's flash save return ${hx(PORTS[code][0x503C5537])}, the rule's ${hx(placed.store.db_save)}`);
     if (TOUCH_ARGS_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_args, TOUCH_ARGS_FOUND[code]), `${code}: touch_args ${hx(placed?.touch_args ?? placed)}, found ${hx(TOUCH_ARGS_FOUND[code])}`);
     if (GUI_FOUND[code]) ok(same(got.gui, GUI_FOUND[code]), `${code}: gui ${hx(got.gui ?? got)}, found ${hx(GUI_FOUND[code])}`);
+    if (MM_BANK0_FOUND[code]) {
+      let mm; try { mm = mmBank0(img); } catch (e) { mm = e.message; }
+      ok(same(mm, MM_BANK0_FOUND[code]) && got.board?.dram_size === 512 << 20, `${code}: MM's bank 0 ${hx(mm)}, found ${hx(MM_BANK0_FOUND[code])}; dram_size ${hx(got.board?.dram_size)}, want 512 MiB`);
+    }
     if (Object.hasOwn(TOUCH_INT_FOUND, code)) ok(same(got.touch_int, TOUCH_INT_FOUND[code]), `${code}: touch_int ${hx(got.touch_int ?? got)}, found ${hx(TOUCH_INT_FOUND[code] ?? 'none')}`);
     if (RECVIEW_FOUND[code]) ok(same(got.recview, RECVIEW_FOUND[code]), `${code}: recview ${hx(got.recview ?? got)}, found ${hx(RECVIEW_FOUND[code])}`);
     for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);

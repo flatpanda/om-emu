@@ -12,27 +12,28 @@
 //                     and Exif version as the first file's, the body's Model) before the lab's stream. Over all
 //                     pictures TAKE's lookups and MM's handle-to-address log no refusal for a missing buffer
 //                     (0x25000402, 0x08010004). The first and the last file decode (refs/jpeg.mjs)
-//                     S-RAWFRAME (src/lab/rawframe.mjs; docs/hle-gaps/4.3.md 4.3.14; E143, where the body's bytes have
-//                     its form; on E146 and E147 not in use, with the reason): each picture's fill is the shot's
-//                     Bayer buffer (the entry's +2 handle, MM's address of it) and, as rec_ImgProCtrl_Src_Bayer reads
-//                     it natively later in the picture, the source's address, format (1031: 12 bits), stride, frame
-//                     and developed size are the fill's; the frame's bytes (stride x 3 / 2 x height) lie inside
+//                     S-RAWFRAME (src/lab/rawframe.mjs; docs/hle-gaps/4.3.md 4.3.14, 4.3.17; in use on E143, E146
+//                     and E147 with the E143 family's 512 MiB of DRAM): each picture's fill is the shot's Bayer buffer
+//                     (the entry's +2 handle, MM's address of it) and, as rec_ImgProCtrl_Src_Bayer reads it natively
+//                     later in the picture (observed after its normal-still branch's last store, G.end, a2 the source
+//                     record), the source's address (+0, its high word +4 0), format (1031: 12 bits), stride, frame
+//                     and developed size (at the format's offset G.src: E143 +8, E146 and E147 +16) are the fill's;
+//                     the frame's bytes (stride x 3 / 2 x height) lie inside
 //                     MM's block of the handle (the pool's base + block x (n - 1), the block not smaller); the
 //                     buffer holds the pattern byte for byte after the first and the last picture; the bytes past
 //                     the frame in its block and the next block's (the kind-3 pair's first) are as before the first
 //                     picture
-//                     (X, 2026-11-22: on E143 MM's Bayer block 0xb8000000.. lies past the lab's 384 MiB of DRAM, so
-//                     S-RAWFRAME is not in use there and the check pins that reason; with --dram 512 the fill's checks
-//                     pass, 29 of 29 over 3 pictures)
-//   node emu/test/test_shotalloc.mjs [--session] [--dram 512] [--shots N]     (OM_EMU_MODEL=E143 | E146 | E147)
+//                     (X, 2026-11-22: with 384 MiB of DRAM MM's Bayer block 0xb8000000.. lay past the lab's DRAM and
+//                     S-RAWFRAME was not in use; --dram 384 keeps that as a control, the check then pinning the reason)
+//   node emu/test/test_shotalloc.mjs [--session] [--dram 384] [--shots N]     (OM_EMU_MODEL=E143 | E146 | E147)
 // Negative controls (X, 2026-11-14, E143): with the free taken out the second picture's shot is id 2 with other
 // handles and one entry stays in use (the checks of pictures 2.. fail); with H-SHOTALLOC taken out no picture has a
 // shot and each logs the sources' refusals.
-// --dram N: the lab's DRAM N MiB (src/fw/board.mjs dram_size, before the session; S-RAWFRAME's run on E143 with 512)
+// --dram N: the lab's DRAM N MiB (src/fw/board.mjs dram_size, before the session; with 384 S-RAWFRAME is not in use)
 const DRAM = process.argv.includes('--dram') ? Number(process.argv[process.argv.indexOf('--dram') + 1]) : null;
 const SHOTS = process.argv.includes('--shots') ? Number(process.argv[process.argv.indexOf('--shots') + 1]) : 20, NO_BUFFER = 0x25000402, NO_HANDLE = 0x08010004;
-// rec_ImgProCtrl_Src_Bayer (E143): its entry (a1 the source record) and its return; the format of 12 bits (0x50547b9a)
-const SRC_BAYER_E143 = 0x50549017, SRC_BAYER_RET_E143 = 0x505493BB, FORMAT_12 = 1031, SRC_SIZE = 28;
+// the format of 12 bits (0x50547b9a) in rec_ImgProCtrl_Src_Bayer's source record
+const FORMAT_12 = 1031;
 const tester = () => {
   const bad = [];
   let checks = 0;
@@ -51,7 +52,6 @@ export async function shotAllocSession(shots = SHOTS) {
   const { FatVolume, mbrPartition } = await import('../refs/fat.mjs');
   const { readExif } = await import('../refs/exif.mjs');
   const { decodeJpeg } = await import('../refs/jpeg.mjs');
-  const { ON_LAB_MODEL } = await import('../src/fw/model.mjs');
   const { pattern } = await import('../src/lab/rawframe.mjs');
   if (DRAM) (await import('../src/fw/board.mjs')).BOARD.dram_size = DRAM << 20;
   const card = new SdCard();
@@ -71,16 +71,14 @@ export async function shotAllocSession(shots = SHOTS) {
     ok(inUse().length === 0, `before the first picture no entry of TAKE's table ${h8(R.table)} (ids 1..${R.ids - 1}) is in use: ${JSON.stringify(inUse())}`);
     // S-RAWFRAME: in use where the body's bytes have its form (E143), Src_Bayer's source records observed
     const G = rec.raw_geometry(), srcs = [];
-    // (E143's MM bank 0 starts at 0xb8000000, where the lab's 384 MiB of DRAM end: there S-RAWFRAME is not in use and
-    // gives that reason; with --dram 512 it is, X)
-    const inUse0 = pl.stand_ins_in_use().includes('S-RAWFRAME');
-    ok(ON_LAB_MODEL ? (G ? inUse0 : !inUse0 && /outside the lab's DRAM/.test(rec.raw_skip) && !DRAM) : !G && !inUse0 && !!rec.raw_skip,
-      `S-RAWFRAME ${G ? 'in use' : `not in use (${rec.raw_skip})`} on ${MODEL}${DRAM ? ` with ${DRAM} MiB of DRAM` : ''} (want: on E143 in use where the lab's DRAM holds MM's Bayer block, elsewhere not in use)`);
+    // (MM's bank 0 starts at 0xb8000000, inside the E143 family's 512 MiB; with --dram 384 it lies past the lab's DRAM
+    // and S-RAWFRAME gives that reason)
+    const inUse0 = pl.stand_ins_in_use().includes('S-RAWFRAME'), small = DRAM !== null && DRAM < 512;
+    ok(small ? !G && !inUse0 && /outside the lab's DRAM/.test(rec.raw_skip) : !!G && inUse0,
+      `S-RAWFRAME ${G ? 'in use' : `not in use (${rec.raw_skip})`} on ${MODEL}${DRAM ? ` with ${DRAM} MiB of DRAM` : ''} (want: in use where the lab's DRAM holds MM's Bayer block, not in use with --dram 384)`);
     let around = null;
     if (G) {
-      let at = null;
-      lab.observe(SRC_BAYER_E143, (l, r) => { at = r.a1 >>> 0; }, 'obs-test-src-bayer');
-      lab.observe(SRC_BAYER_RET_E143, () => { srcs.push(at === null ? null : sim.read(at, SRC_SIZE)); at = null; }, 'obs-test-src-bayer-ret');
+      lab.observe(G.end, (l, r) => { srcs.push(sim.read(r.a2 >>> 0, G.src + 12)); }, 'obs-test-src-bayer');
       // MM's bank 0 (the Bayer's: MM kind 0) before any fill: the bytes past a frame in its first block, and its second
       const pool = sim.u32(G.banks + 4) >>> 0, base = sim.u32(pool + 8) >>> 0, block = sim.u32(pool + 12) >>> 0;
       around = [[base + G.stride * 3 / 2 * G.height, 4096], [base + block, 4096]].map(([a, len]) => [a, len, hex(sim.read(a, len))]);
@@ -101,12 +99,12 @@ export async function shotAllocSession(shots = SHOTS) {
         `picture ${k}: the shot's entry is the first picture's (id ${sh?.id} / ${first?.id}, record ${sh && h8(sh.record)} / ${first && h8(first.record)}, entry ${hex(e)} / ${first && hex(first.entry)}): the free gave the id and MM's handles back`);
       ok(inUse().length === 0, `picture ${k}: no entry of TAKE's table is in use after it: ${JSON.stringify(inUse())}`);
       if (G) {
-        const raw = im?.raw, src = srcs[k - 1], u16 = (o) => src[o] | src[o + 1] << 8, u32 = (o) => (src[o] | src[o + 1] << 8 | src[o + 2] << 16 | src[o + 3] << 24) >>> 0;
+        const raw = im?.raw, src = srcs[k - 1], u16 = (o) => src[G.src + o - 8] | src[G.src + o - 7] << 8, u32 = (o) => (src[o] | src[o + 1] << 8 | src[o + 2] << 16 | src[o + 3] << 24) >>> 0;
         const bytes = G.stride * 3 / 2 * G.height, n = (raw?.handle ?? 0) & 0xFF;
         ok(raw && raw.handle === h16(2) && raw.size === bytes && raw.size <= raw.block && n >= 1 && raw.address === (raw.base + raw.block * (n - 1)) >>> 0,
           `picture ${k}: S-RAWFRAME filled the shot's Bayer buffer (handle 0x${raw?.handle?.toString(16)}, the entry's +2 0x${h16(2).toString(16)}) at ${raw && h8(raw.address)}, ${raw?.size} bytes (want ${bytes}) inside MM's block (base ${raw && h8(raw.base)}, 0x${raw?.block?.toString(16)} bytes a block)`);
-        ok(src && raw && srcs.length === k && u32(0) === raw.address && u16(8) === FORMAT_12 && u16(10) === G.stride && u16(12) === G.width && u16(14) === G.height && u16(16) === G.crop[0] && u16(18) === G.crop[1],
-          `picture ${k}: rec_ImgProCtrl_Src_Bayer's source (${srcs.length} runs) reads the fill: address ${src && h8(u32(0))} / ${raw && h8(raw.address)}, format ${src && u16(8)} / ${FORMAT_12}, stride ${src && u16(10)}, frame ${src && `${u16(12)}x${u16(14)}`}, developed ${src && `${u16(16)}x${u16(18)}`} (the fill's ${G.stride}, ${G.width}x${G.height}, ${G.crop.join('x')})`);
+        ok(src && raw && srcs.length === k && u32(0) === raw.address && u32(4) === 0 && u16(8) === FORMAT_12 && u16(10) === G.stride && u16(12) === G.width && u16(14) === G.height && u16(16) === G.crop[0] && u16(18) === G.crop[1],
+          `picture ${k}: rec_ImgProCtrl_Src_Bayer's source (${srcs.length} runs, the format at +${G.src}) reads the fill: address ${src && h8(u32(0))} / ${raw && h8(raw.address)}, format ${src && u16(8)} / ${FORMAT_12}, stride ${src && u16(10)}, frame ${src && `${u16(12)}x${u16(14)}`}, developed ${src && `${u16(16)}x${u16(18)}`} (the fill's ${G.stride}, ${G.width}x${G.height}, ${G.crop.join('x')})`);
         if (raw && (k === 1 || k === shots)) {
           const want = pattern(G), got = sim.read(raw.address, raw.size);
           ok(Buffer.compare(Buffer.from(got.buffer, got.byteOffset, got.length), Buffer.from(want.buffer, want.byteOffset, want.length)) === 0, `picture ${k}: the Bayer buffer holds S-RAWFRAME's pattern byte for byte after the picture`);

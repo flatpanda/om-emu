@@ -1,9 +1,9 @@
 // The playback menu's Copy All with two cards, natively (src/lab/media.mjs S-MDACTRL's copy all; docs/hle-gaps/4.8.md
-// 4.8.21):
+// 4.8.21, 4.8.23):
 //   copyAllSession  (firmware, E143) a blank card formatted by the lab in slot 1 of a first session, then put in slot
 //                   2 of a second session with another blank card in slot 1; S1 and S2 twice (two pictures on card
-//                   1), MENU, the sub dial to the page that holds Copy All, the walker to Copy All and the confirm's
-//                   Yes: the media control's start with the copy all's command, the copy run by the file module
+//                   1), MENU, the sub dial to the page that holds Copy All, the walker to Copy All, OK on the copy
+//                   screen's choice and the walker to the confirm's Yes (its cursor starts there, X): the media control's start with the copy all's command, the copy run by the file module
 //                   natively, and card 2 read back by the independent reader (refs/volume.mjs, as bin/card.mjs ls
 //                   reads a card): the same DCF file names with the same bytes as card 1's.
 //   node emu/test/test_copyall.mjs   (exit 1 on a failure)
@@ -62,7 +62,18 @@ export async function copyAllSession() {
   walk.to([{ row: ['Copy All '] }]);
   const name = () => lab.state_names.get(lab.state());
   notes.push(`after Copy All: ${name()} ${JSON.stringify(texts())}`);
-  for (const k of ['ok', 'up', 'ok', 'down', 'ok']) { if (media.started) break; press(k); notes.push(`after ${k}: ${name()} ${JSON.stringify(texts())} ${JSON.stringify(media.started)}`); }
+  // OK on the copy screen's choice (drawn without strings: its default, slot 1's card to slot 2's), then the walker
+  // to Yes and OK: the confirm's cursor starts on Yes (X: the walker presses no UP or DOWN; erase all's starts on No)
+  press('ok');
+  notes.push(`after ok: ${name()} ${JSON.stringify(texts())}`);
+  // (the same walker: the menu's list taught it the unselected rows' bar colour, which the two rows alone do not give)
+  const from = walk.log.length;
+  let refused = null;
+  try { walk.to([{ row: ['Yes'] }]); } catch (e) { refused = e.message; }
+  const confirm = walk.log.slice(from);
+  notes.push(`the confirm: ${confirm.join('; ')} ${refused ?? ''}`);
+  ok(refused === null && !confirm.some((l) => /^(up|down):/.test(l)),
+    `${MODEL}: the confirm's cursor starts on Yes and the walker takes it (${refused ?? confirm.join('; ')})`);
   let stop = null;
   try {
     for (let i = 0; i < 400 && media.copies < 1; i++) s.idle_slice(lab.lab_time() + 50e6);
@@ -70,7 +81,7 @@ export async function copyAllSession() {
   } catch (e) { stop = e.message; }
   notes.push(`log: ${JSON.stringify(media.log.slice(-12))}`);
   ok(stop === null, `${MODEL}: the copy all ran: ${stop?.slice(0, 400)}`);
-  ok(media.started?.cmd === COPY_ALL_CMD, `${MODEL}: Copy All, Yes: the media control's start ${JSON.stringify(media.started)} (command ${COPY_ALL_CMD} expected)`);
+  ok(media.started?.cmd === COPY_ALL_CMD && media.started.media === 1, `${MODEL}: Copy All, Yes: the media control's start ${JSON.stringify(media.started)} (command ${COPY_ALL_CMD}, media 1, slot 2's card, expected)`);
   const dst = files(card2);
   ok(media.copies === 1 && dst.size === src.size && [...src].every(([n, h]) => dst.get(n) === h),
     `${MODEL}: card 2 holds card 1's DCF files with their bytes: ${[...dst.keys()].join(' ')} (card 1: ${[...src.keys()].join(' ')})`);

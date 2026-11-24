@@ -3117,7 +3117,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    ISR are not read), after which the family's Yes would be expected to send request 21 and ERASE_YES_UNTIMED to go;
    the place.mjs fallback that took a tied vote's data bytes as code, which can misplace other words (E122's re-port
    at `4e08ef9` also changed six other places, `0x50416123`, `0x5019868e` and `0x50c9d778` among them, X; not
-   checked here).
+   checked here). The fallback is closed (2026-11-23, `docs/hle-gaps/4.8.md` 4.8.25): a split vote in the copy moves
+   with its neighbours, which give `0x616022d8` and `0x615e04a4` without the rule; the six other places were not of
+   it (round 5's literals). 2026-11-23: the second timer unit is modelled (`src/dev/timer2.mjs`, docs/hle-gaps/4.7.md
+   4.7.14: IRQ 24, ISR `0x50064440`, clock 19 at the lab's 16384 Hz); E122's tick count advances, its Yes erases
+   through the dialog and its protect blink ends, E118's and E120's OK sends request 21 (refused, no erase fact), and
+   ERASE_YES_UNTIMED is retired (X).
 156. **REC_FILE natively on E145 and E132** (2026-11-16, `src/fw/facts.mjs` recFileQueue and recFileInline, fact
    `rec_file`; D unless tagged; finding 136's stop). *E145.* recFileQueue reads the family's version with the loop
    inlined where the image holds the packet dump's string and neither the start's nor the finish's one trace lies in a
@@ -3301,7 +3306,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    timed wait). On E137, E142, E140, E125, E130, E133 and E122 the frame stays blank: their GUI's updates are display
    requests of type 3 (E137's from `0x507d537c`, E122's from `0x502c076a`, X), which stay pending until an image sync
    that only the application sends (S-DISPSYNC in play, `src/lab/camapp.mjs`); nav runs no application. Open: that
-   release in nav; E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
+   release in nav (done 2026-11-23, finding 162's note); E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
    of E145, E129 and E132; nav's menu fields (`var226`, E143's viewer record, observed on E143 only).
 
 161. **The second card slot on E139, E134 and E125: the detect is UI_IN's level** (2026-11-22, `src/fw/facts.mjs`
@@ -3337,7 +3342,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      (`{0x9601, 0xfffe, 0, 2}`, X on E118). H-GUICONNECT posts it once after the bring-up (lOutput 2 on the TFT, 7 on
      the EVF). Controls (X): without H-GUISLEEP the three end at state 0, without the power module's start E129 and
      E132 do, and without H-GUICONNECT OPEN leaves E118 and E120 at POWER_ON.
-   Open: nav's release of the display sync on these and the seven other bodies; E145, E129 and E132 need `--time`.
+   Open: nav's release of the display sync on these and the seven other bodies (since 2026-11-23 released,
+   S-DISPSYNC in nav, `docs/hle-gaps/4.7.md` 4.7.15: the menu's frames follow OPEN and DOWN on the twelve, X); E145,
+   E129 and E132 need `--time`.
 
 
 

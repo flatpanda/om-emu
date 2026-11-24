@@ -8,7 +8,7 @@
 // with the A-VSCHIST-3 opt-in the histogram unit's registers in their writers' form (histForm). histMeasure: the
 // histogram unit's bins of a frame, counted from the IMG plane the unit's source field names, sampled as drawImg
 // samples it (imgRows).
-import { MODEL, MODEL_INFO } from '../fw/model.mjs';
+import { MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vsc.mjs';
 
@@ -36,10 +36,13 @@ const FEATURES = [[0x004, 0x1C0, 0x1C0], [0x008, 1, 1], [0x03C, 0x4000, 0x4000],
   [0x580, 0x2E, 0x2E], [0x584, 0x2E, 0x2E], [0x588, 0x2E, 0x2E], [0x58C, 0x2E, 0x2E], [0x590, 0x30, 0x30], [0x594, 0x32, 0x32],
   [0x598, 0x2E, 0x2E], [0x5A0, 0x100, 0x100], [0x5A8, 0x100, 0x100], [0x5AC, 0x100, 0x100], [0x5B0, 0x100, 0x100],
   [0x5B4, 0x100, 0x100]];
-// A13 on E143's HDMI channel 0: the A13 registers whose HDMI-open value differs from the TFT's (X: SRAM3 0x2000 where
-// both panels have 0x4000, VIDEOAREA3 0x29 as the EVF's), the others as the TFT's (docs/om1-vsc-spec.md A13)
+// A13 on the HDMI channel 0: the A13 registers whose HDMI-open value differs from the TFT's (X: SRAM3 0x2000 where
+// both panels have 0x4000, VIDEOAREA3 0x29 as the EVF's), the others as the TFT's (docs/om1-vsc-spec.md A13). On a
+// board of the E143 family's compositor (BOARD.vsc kind 1: the panels on channels 1 and 2, channel 0 the HDMI's
+// alone), where the HDMI open runs: E143, and since 2026-11-23 E146 and E147 (X: the same state after their open of
+// format 13, test_hdmi.mjs; docs/hle-gaps/4.9.md 4.9.2)
 const FEATURES_HDMI = new Map([[0x044, 0x2000], [0x428, 0x29]]);
-const HDMI_A13 = MODEL === 'E143';
+const HDMI_A13 = BOARD.vsc.kind === 1;
 // The class of channel register offset off in these tables: [class, [EVF value, TFT value] or null] with class
 // MODEL, STORED, FEATURES or UNWRITTEN (test_dev's vsc-classes compares it with check_display's parse of
 // checks/fixtures/om1-vsc-tables.c)

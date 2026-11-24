@@ -36,7 +36,7 @@ import { createHash } from '../src/util/sha256.mjs';
 import { rgbaOf, yccToRgb } from '../web/frame.mjs';
 import { Driver, IDLE_WAIT_MS } from '../web/driver.mjs';
 import { CONTROL_ROWS } from '../src/lab/playui.mjs';
-import { CONTROLS, Tables } from '../src/lab/play.mjs';
+import { CONTROLS, Tables, rotateOn } from '../src/lab/play.mjs';
 import { PlayApi, readBody } from '../src/lab/playapi.mjs';
 import { Player, ResultBox } from '../src/lab/player.mjs';
 import { PlayerProxy } from '../host/proxy.mjs';
@@ -564,7 +564,7 @@ export async function cardTests() {
     return { status: res.status, type: h.get('content-type'), h, body: res.body, doc: () => JSON.parse(new TextDecoder().decode(res.body)) };
   };
   const s = await get(api, '/api/session');
-  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'auto', rotate: 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
+  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'auto', rotate: rotateOn(undefined) ? 'on' : 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
   const c = await get(api, '/api/card'), cd = c.doc();
   ok(c.status === 200 && JSON.stringify(cd.slot) === JSON.stringify({ present: true, mounted: false, session: false, file: 'kept.omsd', kind: 'SDHC', sectors: 16777216 }) && cd.files?.length === 4 && cd.volume?.type === 'FAT16',
     `GET /api/card: ${c.status} ${JSON.stringify(cd).slice(0, 300)}`);

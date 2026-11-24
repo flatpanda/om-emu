@@ -65,6 +65,11 @@ export function deviceMask(device) {
 export const PERIODS_US = [16683, 20000, 10000, 8341];
 // E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps/4.9.md 4.9; D)
 export const HDMI_CHANNEL = 0, HDMI_MASK = 0xFF000004, HDMI_PERIOD_FN = A(0x501D5996), HDMI_VTOTAL_FN = A(0x501D5A67);
+// a getter's form: `and 0xff000000,d0; lsr 24,d0; mul 80,d0; add table,d0; mov d0,a0; mov (field,a0),d0` (fc e0 00 00 00
+// ff, f8 c4 18, f9 14 50, fc c0 imm32, f1 e0, f8 00 field), the period's field 4, the vertical total's 40 (E143; E146
+// 0x501dba41 / 0x501dbb12, E147 0x501e339e / 0x501e346f, the same form, D)
+const HDMI_GETTER = [0xfc, 0xe0, 0x00, 0x00, 0x00, 0xff, 0xf8, 0xc4, 0x18, 0xf9, 0x14, 0x50, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe0, 0xf8, 0x00];
+const HDMI_PERIOD_FIELD = 4, HDMI_VTOTAL_FIELD = 40;
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
 // the vsync event flag id word of each channel (E143 ch0 HDMI, ch1 EVF, ch2 TFT; kind 2 ch0 TFT and EVF, ch1 HDMI)
 const VSYNC_E143 = [A(0x6004305E), A(0x600430DE), A(0x60043178)];
@@ -974,14 +979,27 @@ export class DisplayLab extends OsdLab {
       else if (!K3) this.vsc.set_line_ns(d.channel, line);
     }
   }
-  // The HDMI channel's line time (E143, docs/hle-gaps/4.9.md 4.9): once the firmware has opened the HDMI device (mask, the
+  // The HDMI channel's line time (docs/hle-gaps/4.9.md 4.9): once the firmware has opened the HDMI device (mask, the
   // opened word's HDMI part), its frame period and vertical total are fields of the firmware's own format table (the
   // format in the mask's bits 24..31; getters HDMI_PERIOD_FN and HDMI_VTOTAL_FN, D), as the panels' period word and
-  // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above)
+  // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above). On
+  // a body whose two getters, as the port places them, have the form HDMI_GETTER with their fields (E143, E146, E147;
+  // until 2026-11-23 E143 only)
   hdmi_line(mask) {
-    if (MODEL !== 'E143') throw new FirmwareError(`hdmi_line: the HDMI channel's timing is read for E143 only, not ${MODEL}`);
+    for (const [fn, field] of [[HDMI_PERIOD_FN, HDMI_PERIOD_FIELD], [HDMI_VTOTAL_FN, HDMI_VTOTAL_FIELD]]) {
+      refuseUnmapped(fn, 'hdmi_line');
+      const b = this.sim.read(runtime(fn), HDMI_GETTER.length + 1);
+      if (!HDMI_GETTER.every((x, k) => x === null || b[k] === x) || b[HDMI_GETTER.length] !== field) {
+        throw new FirmwareError(`hdmi_line: ${h8(fn)} is not the HDMI format table's getter of field ${field} on ${MODEL}`);
+      }
+    }
     if (!(mask & HDMI_MASK)) throw new FirmwareError(`hdmi_line: mask 0x${(mask >>> 0).toString(16)} names no HDMI device`);
-    const period = this.call(HDMI_PERIOD_FN, { d0: mask }).d0 >>> 0, vtotal = this.call(HDMI_VTOTAL_FN, { d0: mask }).d0 >>> 0;
+    // inside another lab call (the DISPLAY run that opened the device ends inside one: play.mjs _dispq_run) the getters
+    // run on the free nested-run slot, not on the outer call's trampoline and stack
+    if (this.call_depth && this.depth >= TASK_STACKS.length) throw new IndexError('hdmi_line: no free nested-run slot');
+    const at = this.call_depth ? [TASK_CALLERS[this.depth], TASK_STACKS[this.depth]] : null;
+    const get = (fn) => this.call(fn, { d0: mask }, null, null, 5000, null, at).d0 >>> 0;
+    const period = get(HDMI_PERIOD_FN), vtotal = get(HDMI_VTOTAL_FN);
     if (!period || !vtotal) throw new FirmwareError(`hdmi_line: format ${mask >>> 24}: period ${period} us, vtotal ${vtotal}: no line time (no default)`);
     const line = Math.floor(period * 1000 / vtotal);
     this.line_ns.set('hdmi', { period_us: period, vtotal, line_ns: line, format: mask >>> 24 });

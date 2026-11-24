@@ -6,11 +6,12 @@
 //                  of PER_ROTATE's getter followed by the store of its code into the record's field (E143 +38156,
 //                  E146 and E147 +37808), and the EXIF set's read of that field, which keeps 6, 3 and 8 and writes 1
 //                  for anything else into the Exif block's Orientation (+18)
-//   orientSession  (firmware) on the body of OM_EMU_MODEL (E143 by default; bin/test.mjs runs E146 in a process of its
-//                  own): through host/session.mjs with --rotate on, a tilt to roll 52 then S2: takepic's store
-//                  carries 8, the EXIF set takes its keeping branch and the card's picture has Orientation 8; roll -52:
-//                  6; the control without --rotate: the getter's 11 (PER_ROTATE's init not run), the EXIF set's other
-//                  branch and Orientation 1. No poke
+//   orientSession  (firmware) on the body of OM_EMU_MODEL (E143 by default; bin/test.mjs runs E146 and E147 each in a
+//                  process of its own): through host/session.mjs with the default --rotate (auto: PER_ROTATE on these
+//                  bodies since 2026-11-23), a tilt to roll 52 then S2: takepic's store carries 8, the EXIF set takes
+//                  its keeping branch and the card's picture has Orientation 8; roll -52: 6; the control with
+//                  --rotate off: the getter's 11 (PER_ROTATE's init not run), the EXIF set's other branch and
+//                  Orientation 1. No poke
 //   node emu/test/test_orient.mjs [--session]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,12 +75,12 @@ export async function orientSession() {
   const s = ORIENT_SITES[MODEL];
   if (!s) return { checks: 1, bad: [`${MODEL}: no orientation sites read (ORIENT_SITES)`] };
   const store = s.call + 9, keep = s.read + KEEP, one = s.read + ONE;
-  // [roll, the getter's code takepic stores, the file's Orientation]: without --rotate PER_ROTATE's init has not run,
+  // [roll, the getter's code takepic stores, the file's Orientation]: with --rotate off PER_ROTATE's init has not run,
   // its index is 0 and the getter answers 11 (ROTATE_DISABLE), which the EXIF set writes as 1 (X)
   const runs = [[52, 8, 8], [-52, 6, 6], [null, 11, 1]];
   for (const [roll, code, want] of runs) {
-    const tag = roll === null ? 'no --rotate' : `--rotate on, roll ${roll}`;
-    const ses = await openSession(roll === null ? {} : { rotate: 'on' });
+    const tag = roll === null ? '--rotate off' : `the default --rotate, roll ${roll}`;
+    const ses = await openSession(roll === null ? { rotate: 'off' } : {});
     try {
       const step = (t) => { const r = ses.step(t); if (!r.ok) throw new Error(`${tag}: ${t}: ${r.error}`); return r; };
       step('wait:3000');
@@ -94,7 +95,7 @@ export async function orientSession() {
       ok(pcs(want === 1 ? one : keep).length === 1 && pcs(want === 1 ? keep : one).length === 0, `${tag}: the EXIF set's ${want === 1 ? 'other' : 'keeping'} branch (${h8(keep)} ${pcs(keep).length}, ${h8(one)} ${pcs(one).length})`);
       const x = step('exif:DCIM/100OMSYS/*.JPG').exif;
       ok(x?.Orientation === want, `${tag}: the picture's Orientation ${x?.Orientation}, want ${want}`);
-      ok(roll === null || ses.player.stand_ins_in_use().includes('H-ROTINIT'), `${tag}: H-ROTINIT in use`);
+      ok(ses.player.stand_ins_in_use().includes('H-ROTINIT') === (roll !== null), `${tag}: H-ROTINIT ${roll === null ? 'not ' : ''}in use`);
       ok(ses.pokes === undefined || ses.pokes.length === 0, `${tag}: no poke`);
     } finally { ses.close?.(); }
   }

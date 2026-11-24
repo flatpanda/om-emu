@@ -10,8 +10,10 @@
 //                  another kind, or an address range that misses: reported), a site on patched bytes reported despite
 //                  its entry, the cap and its count; strictOn's option and OM_STRICT; strictLine; the allowlist's
 //                  shape (kinds, ordered ranges, a reason)
-//   strictSession  (the stock blocks; each model in a child bin/session.mjs) STOCK_SESSIONS on E143, E147 and E142 with
-//                  --strict on: no new site, and accesses allowed (the allowlist is what keeps them quiet); a patch the
+//   strictSession  (the stock blocks; each model in a child bin/session.mjs, four at once) STOCK_SESSIONS on E143,
+//                  E146, E147, E142 and E139 and MORE_SESSIONS (movie mode and a recording; a walk over the menu's
+//                  pages) on E143, E146, E147 and E139 with --strict on: no new site, and accesses allowed (the
+//                  allowlist is what keeps them quiet); a patch the
 //                  test writes on E142 (routines in section 1's 0xFF tail called by the call op): issue #48's read of
 //                  the init word 0x6025aa98 (init-read, copied to 0x61fc27d8), a byte store into section 3's range
 //                  (image-store) and a misaligned word load (misaligned, the call faulting), each on patched bytes;
@@ -20,7 +22,7 @@
 //   node emu/test/test_strict.mjs [--session]
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -33,7 +35,25 @@ export const STOCK_SESSIONS = [
   'wait:1500 s1 wait:1200 s2:down wait:300 s2:up wait:5000 play wait:1500 right wait:800 play wait:1000 menu wait:1500 down wait:500 right wait:500 menu wait:1500',
   'wait:1500 info wait:600 info wait:600 main_dial:+2 sub_dial:-1 wait:800 ok wait:800 right wait:500 ok wait:800 menu wait:1500 down down down right wait:800 down wait:500 right wait:500 left left menu wait:1000 menu wait:800 eye wait:1500 s1 wait:1000 s2:down wait:300 s2:up wait:5000 power:off restart wait:1500 play wait:1500 delete wait:800 play wait:1000',
 ];
-const NO_EVF = new Set(['E142']);
+// E139: the display switch to the EVF stops the session with or without strict (H-RESEND: the EVF's DISPLAY send
+// differs from the one it expects, X 2026-11-23), so its scripts leave the EVF's tokens out too
+const NO_EVF = new Set(['E142', 'E139']);
+// Two more scripts (2026-11-23): movie mode by the body's own control (E143 and E146 the mode dial's position 7, E139
+// its position 2, where setting 44 MODE_MOVIE reads 1, X; E147 the still / movie switch at 1), REC twice (a recording
+// of 3 s: the application starts RECORDING_MOVIE, X by S-RELSEQ's status), INFO, the menu's movie tab, playback; and
+// a walk over the menu's pages, three pages right then OK on the item there and MENU back, twelve times, which
+// crosses every tab (X, the frames). MOVIE: the movie control's token per model
+export const MOVIE = { E143: 'switch:mode_dial=7', E146: 'switch:mode_dial=7', E147: 'switch:still_movie=1', E139: 'switch:mode_dial=2' };
+export const MORE_SESSIONS = [
+  'wait:1500 MOVIE wait:1500 rec wait:3000 rec wait:1500 info wait:600 menu wait:1500 right right right right wait:500 menu wait:1000 play wait:1500 play wait:1000',
+  ['wait:1500 menu wait:1500', ...Array(12).fill('right wait:300 right wait:300 right wait:300 ok wait:600 menu wait:600'), 'menu wait:1500'].join(' '),
+];
+// the models and the scripts each runs: all four, but E142 the first two (its movie control is not read)
+export const SESSION_MODELS = ['E143', 'E146', 'E147', 'E142', 'E139'];
+export function scriptsOf(model) {
+  const all = model === 'E142' ? STOCK_SESSIONS : [...STOCK_SESSIONS, ...MORE_SESSIONS.map((x) => x.replace('MOVIE', MOVIE[model]))];
+  return all.map((x) => x.split(' ').filter((t) => !(NO_EVF.has(model) && t === 'eye')));
+}
 
 export async function strictUnits() {
   const bad = [];
@@ -150,8 +170,24 @@ export async function strictUnits() {
   // the allowlist's shape
   const KINDS = new Set(['misaligned', 'image-store', 'init-read', 'unloaded-read']);
   const shape = Object.entries(STRICT_ALLOW).flatMap(([model, list]) => list.filter((e) => !KINDS.has(e.kind) || (!e.at && !e.addr) || (e.at && !(e.at[0] < e.at[1])) || (e.addr && !(e.addr[0] < e.addr[1])) || !(e.why?.length > 8)).map((e) => `${model} ${JSON.stringify(e)}`));
-  ok(shape.length === 0 && ['E143', 'E147', 'E142'].every((k) => STRICT_ALLOW[k]?.length), `the allowlist's entries: ${shape.join('; ')}`);
+  ok(shape.length === 0 && SESSION_MODELS.every((k) => STRICT_ALLOW[k]?.length), `the allowlist's entries: ${shape.join('; ')}`);
+  ok(SESSION_MODELS.every((m) => scriptsOf(m).length === (m === 'E142' ? 2 : 4) && scriptsOf(m).every((t) => !t.includes('MOVIE') && !(NO_EVF.has(m) && t.includes('eye'))))
+    && scriptsOf('E147')[2].includes('switch:still_movie=1') && scriptsOf('E139')[2].includes('switch:mode_dial=2'), 'the stock scripts per model');
   return { checks, bad };
+}
+
+// bin/session.mjs in a child, asynchronously: {rc, sum, err}
+function sessionAsync(model, args, tokens) {
+  return new Promise((done) => {
+    const c = spawn(process.execPath, [path.join(EMU, 'bin/session.mjs'), '--model', model, ...args, ...tokens], { env: process.env });
+    let o = '', e = '';
+    c.stdout.on('data', (d) => { o += d; }); c.stderr.on('data', (d) => { e += d; });
+    c.on('close', (rc) => {
+      let sum = null;
+      try { sum = JSON.parse(o.trim().split('\n').pop()); } catch { /* reported by the caller */ }
+      done({ rc, sum, err: e });
+    });
+  });
 }
 
 // bin/session.mjs in a child: the summary (the last stdout line) and stderr
@@ -167,16 +203,17 @@ export async function strictSession() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { MODELS, romPath } = await import('../src/fw/models.mjs');
-  // the stock sessions: no new site, some accesses allowed
-  for (const model of ['E143', 'E147', 'E142']) {
+  // the stock sessions: no new site, some accesses allowed (OM_STRICT_JOBS at once, default 4)
+  const runs = SESSION_MODELS.flatMap((model) => scriptsOf(model).map((tokens, i) => ({ model, i, tokens })));
+  const queue = [...runs], jobs = Math.max(1, Number(process.env.OM_STRICT_JOBS) || 4);
+  await Promise.all(Array.from({ length: jobs }, async () => { while (queue.length) { const r = queue.shift(); r.s = await sessionAsync(r.model, ['--strict', 'on'], r.tokens); } }));
+  for (const model of SESSION_MODELS) {
     let allowedN = 0;
-    STOCK_SESSIONS.forEach((script, i) => {
-      const tokens = script.split(' ').filter((t) => !(NO_EVF.has(model) && t === 'eye'));
-      const s = session(model, ['--strict', 'on'], tokens);
+    for (const { i, s } of runs.filter((r) => r.model === model)) {
       const st = s.sum?.strict;
       allowedN += st?.allowed?.reduce((x, e) => x + e.n, 0) ?? 0;
       ok(s.rc === 0 && st && st.findings.length === 0, `${model} stock session ${i + 1} with --strict on: rc ${s.rc}, ${st ? `${st.findings.length} new site(s) ${JSON.stringify(st.findings.slice(0, 4))}` : 'no strict in the summary'} ${s.rc ? s.err.slice(-300) : ''}`);
-    });
+    }
     ok(allowedN > 0, `${model}: the stock sessions' accesses at allowed sites: ${allowedN} (the allowlist keeps them quiet)`);
   }
   // a patch on E142: routines in section 1's 0xFF tail (0x602108ec..0x60211000, caduceus-ep7's section table; X here)

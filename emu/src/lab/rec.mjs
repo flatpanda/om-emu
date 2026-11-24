@@ -87,15 +87,15 @@
 //               their pixels gets what MM's memory holds (the lab's DRAM, zero unless something else wrote there).
 //               TAKE's lock of the entry for the take (its +26, TAKE_MAIN's on taking the request) is not set: TAKE_MAIN
 //               does not run. Since 2026-11-22 the Bayer buffer can hold S-RAWFRAME's pattern (below)
-//   S-RAWFRAME  (with H-SHOTALLOC's shot, where the body's bytes are E143's form: E143; src/lab/rawframe.mjs;
+//   S-RAWFRAME  (with H-SHOTALLOC's shot, where the body's bytes have the form rawframe.mjs reads: E143, E146, E147; src/lab/rawframe.mjs;
 //               docs/hle-gaps/4.3.md 4.3.14) the shot's Bayer buffer, which the sensor's DRAM capture fills on the
 //               camera, filled with a lab pattern right after the allocation: its handle by TAKE's Bayer lookup and
 //               its address by MM's, natively as rec_ImgProCtrl_Src_Bayer asks them, its geometry the one that
 //               reader gives a normal still (12 bits, stride 5360, 5208 x 3912) and the frame's 31,452,480 bytes
 //               inside MM's block of the handle (A-RAWFRAME-1: the packing). No other buffer of the shot is written.
-//               In use only where that block is memory of the lab's: E143's MM bank 0 starts at 0xb8000000, where the
-//               lab's 384 MiB of DRAM end, so by default S-RAWFRAME is not in use (rec.raw_skip says why; X: it runs
-//               with 512 MiB)
+//               In use only where that block is memory of the lab's (rec.raw_skip says why not): MM's bank 0 starts at
+//               0xb8000000, inside the E143 family's 512 MiB of DRAM since 2026-11-23 (src/fw/board.mjs dram_size;
+//               before, 384 MiB, it was not in use by default; docs/hle-gaps/4.3.md 4.3.17)
 //   H-TAKEFILLS (where the rule reads them, fact 'take_fills', src/fw/facts.mjs takeFills: E143, E146, E147, with
 //               H-SHOTALLOC's shot; docs/hle-gaps/4.3.md 4.3.13) TAKE's own fills of the shot natively, before the rest of
 //               S-EXIFPRM, in the still states' order on TAKE's context (0x62a4a358) and a take-picture packet of the
@@ -345,6 +345,12 @@ export const recImageFacts = () => fact('rec_image', REC_IMAGE_E143);
 // (S-RECIMAGE's below)
 const STILL = 4097;          // Mode: REC_MAIN's still (0x5053a349); REC_IMAGE makes its image
 const NO_MEDIA = 0xFFFF;     // Media2: no second slot (0x5053dd14)
+// Dual Independent's second image, E143's (D, docs/hle-gaps/4.8.md 4.8.24, with the sites): the packet's SlotNo (+313)
+// and BuffAddrDoubleSlot / BuffSizeDoubleSlot (+168, +172), as the packet dump 0x50541561 names them; rec_jpeg_exec
+// stores the image's Addr and Size there for SlotNo 1 where the double-slot test answers; the shot record's file types
+// of the two slots (+37896, +37898: TAKE's fill writes 0 for a JPEG quality; REC_IMAGE copies them to ExifFileType and
+// ExifFileTypeDoubleSlot)
+const DUAL_E143 = { slot: 313, addr: 168, size: 172, types: [37896, 37898], jpeg: 0 };
 const CARD = 1;              // RecordDevice bit 0: the card (0x50540392, 0x50540418)
 const JPEG = 1;              // FileType: the extension and DCF kind tables' index 1 (0x5053fee3; JPG, kind 1)
 const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117) where
@@ -500,7 +506,7 @@ export class RecFile {
     return { id, record, flags: entry[0] | entry[1] << 8, entry };
   }
   // S-RAWFRAME (src/lab/rawframe.mjs): the Bayer buffer's geometry by the firmware's own reader where H-SHOTALLOC
-  // allocates the shot and the body's bytes are E143's form, else null (raw_skip the reason)
+  // allocates the shot and the body's bytes have the form rawframe.mjs reads, else null (raw_skip the reason)
   raw_geometry() {
     if (this.raw === undefined) {
       const G = this.shot ? rawGeometry(this.lab.sim) : { skip: 'no shot of TAKE\'s (H-SHOTALLOC not in use)' };
@@ -669,13 +675,20 @@ export class RecFile {
     // makes a second image for the second slot where the shot record's second-slot image settings (+38000, +38016,
     // +38020; TAKE's shot record fill writes them for 2 and 3, 0x503bbb6f..0x503bbc23) differ from the first slot's
     // (+37998, +38014, +38018, which REC_IMAGE's task copies to REC's 0xa33232a2..a6 at 0x5053ddfa); with them alike
-    // it is one image recorded on both cards, as Dual Same. The second image's path is not read: that case stops
+    // it is one image recorded on both cards, as Dual Same. Different, REC_IMAGE's task runs the image twice, the
+    // second time with SlotNo 1 into BuffAddrDoubleSlot (docs/hle-gaps/4.8.md 4.8.24): image_native's second encode.
+    // The double-slot test also wants neither file RAW (ExifFileType +288, ExifFileTypeDoubleSlot +290, which
+    // REC_IMAGE copies from the shot record's +37896 and +37898); RAW on two cards is not read, so a slot whose file
+    // type is not JPEG (0) stops there
+    let second = false;
     if ((mode === 2 || mode === 3) && media2 !== NO_MEDIA) {
       if (!shot || !this.fills) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) on a body whose shot record TAKE's own fill does not write (H-TAKEFILLS, H-SHOTALLOC): the second slot's image settings are not made`);
       if (MODEL !== 'E143') throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) on ${MODEL}: the shot record's second-slot image settings are read on E143 alone (docs/hle-gaps/4.8.md 4.8.20)`);
       const h = (o) => { const b = sim.read(x + o, 2); return b[0] | b[1] << 8; }, one = [37998, 38014, 38018].map(h), two = [38000, 38016, 38020].map(h);
-      this.dual_settings = { one, two };
-      if (one.some((v, i) => v !== two[i])) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) with the second slot's image settings ${two.join(', ')} (the shot record's +38000, +38016, +38020) not the first slot's ${one.join(', ')} (+37998, +38014, +38018): REC_IMAGE makes a second image for the second slot (0x5053dd22, rec_jpeg_exec's SlotNo 1 into BuffAddrDoubleSlot), whose path is not read (docs/hle-gaps/4.8.md 4.8.20)`);
+      const types = DUAL_E143.types.map(h);
+      this.dual_settings = { one, two, types };
+      second = one.some((v, i) => v !== two[i]);
+      if (second && types.some((t) => t !== DUAL_E143.jpeg)) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) with the slots' file types ${types.join(', ')} (the shot record's +${DUAL_E143.types.join(', +')}; 0 JPEG): RAW or TIFF on two cards is not read (docs/hle-gaps/4.8.md 4.8.24)`);
     }
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
@@ -694,7 +707,7 @@ export class RecFile {
       if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
       put('FileType', '<B', JPEG);
     }
-    const { header, size } = this.image ? this.image_native(pk, stream, take, exposure, shot) : this.image_lab(pk, stream);
+    const { header, size, size2 = size } = this.image ? this.image_native(pk, stream, take, exposure, shot, second) : this.image_lab(pk, stream);
     if (raw) this.images[this.images.length - 1].raw = raw;
     if (shot) this.shot_free(shot);
     // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
@@ -707,9 +720,10 @@ export class RecFile {
     if (!this.frame && R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
     // the double-slot record fills the context of each drive (rec_file_record_DoubleSlot 0x5053f97d: Media's context
     // and the other, 0x5053fa3b..0x5053fa55, D) and records the same buffer on both where the second slot's own
-    // (BuffAddrDoubleSlot) is 0, as a single encode leaves it (0x5053e40f..0x5053e421, D)
+    // (BuffAddrDoubleSlot) is 0, as a single encode leaves it (0x5053e40f..0x5053e421, D); after a second image the
+    // second drive's file is that image's (BuffSizeDoubleSlot)
     const drives = media2 === NO_MEDIA ? [media] : [media, media2];
-    const files = drives.map((d) => {
+    const files = drives.map((d, k) => {
       const ctx = this.frame || kept ? null : R.contexts[d];
       if (!this.frame && !kept && ctx === undefined) throw new RecError(`REC_FILE: no file context of Media ${d} is read on this body (fact rec_file contexts)`);
       const file = {
@@ -718,7 +732,8 @@ export class RecFile {
             : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`, d)),
         clock, header, date,
       };
-      if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size} on drive ${d}, the packet's ${size}`);
+      const want = k ? size2 : size;
+      if (file.size !== want) throw new RecError(`REC_FILE: the fnode's size ${file.size} on drive ${d}, the packet's ${want}${k ? ' (BuffSizeDoubleSlot)' : ''}`);
       return file;
     });
     this.pictures += 1;
@@ -771,8 +786,12 @@ export class RecFile {
   // S-RECREQ's post of the packet pk to REC_IMAGE's queue (REC_PREPRO's post; on E146 and E147 REC_RAWNR's),
   // REC_IMAGE's task natively with S-JPEGENC's encode (the lab's stream), REC_FILE natively, S-RECREQ's reply taken;
   // lab time runs until the reply and both tasks wait again. Returns {header, size} as REC_FILE's packet has them at
-  // its reply
-  image_native(pk, stream, take, exposure, shot) {
+  // its reply. two: Dual Independent with the slots' settings different (record): REC_IMAGE's task makes the image a
+  // second time for the second slot (docs/hle-gaps/4.8.md 4.8.24: its switch sets SlotNo 1 and puts the second slot's
+  // settings in the shot record's first-slot fields, then the image's make and mode step run again), so S-JPEGENC
+  // encodes twice, the second time with SlotNo 1, and REC_FILE's packet has the second image at BuffAddrDoubleSlot /
+  // BuffSizeDoubleSlot (returned as size2)
+  image_native(pk, stream, take, exposure, shot, two = false) {
     const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, P = R.packet.fields, I = this.image, who = 'S-RECREQ';
     const imgpro = lab.sim.m.devices.imgpro, runs0 = imgpro?.runs ?? 0;
     const alive = lab.alloc(new Uint8Array(4), 4);
@@ -787,7 +806,7 @@ export class RecFile {
     const E = I.encode, M = J.image;
     const c = sim.read(runtime(E.set_call), 7);
     if (c[0] !== 0xDD || ((E.set_call + (c[1] | c[2] << 8 | c[3] << 16 | c[4] << 24)) >>> 0) !== E.set) throw new RecError(`S-JPEGENC: ${h8(E.set_call)} is not ImageParam's call of the parameter set ${h8(E.set)}`);
-    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, handle: 0, released: 0, addr: null, reply: null, errlog: null };
+    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, handle: 0, released: 0, addr: null, reply: null, errlog: null, encodes: [] };
     const ours = (at, what) => { if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: ${what} on a packet ${h8(at)} that is not S-RECREQ's`); };
     // the image: the packet, or REC_IMAGE's image record the packet points at
     const image = (at) => (M.record ? sim.u32(at + M.record.at) >>> 0 : at);
@@ -797,6 +816,8 @@ export class RecFile {
       sim.write(img + M.size, pack('<I', J.header + stream.length));
       run.encoded += 1; run.addr = addr;
       run.task = lab.lt.current() === lab.nk.tcb(I.task.id) ? I.task.id : null;
+      // (each encode's SlotNo, E143's offset: read only where a second image is made)
+      run.encodes.push({ addr, size: J.header + stream.length, slot: two ? sim.read(at + DUAL_E143.slot, 1)[0] : null, task: run.task });
     };
     const hooked = [I.reply.fn, E.set_call, E.run, E.result, E.release];
     // the firmware's error logs from the post to the parameter set's call (ImageParam's sources, docs/hle-gaps/4.3.md
@@ -816,7 +837,8 @@ export class RecFile {
     lab.hook(I.reply.fn, (h, r) => {
       if (disasm(r.mdr) !== I.reply.from) throw new RecError(`S-RECREQ: REC's reply ${h8(I.reply.fn)} from ${where(r.mdr)}: only REC_FILE's (return ${h8(I.reply.from)}) is taken`);
       const p = r.a0 >>> 0;
-      run.reply = { status: r.d0 & 0xFFFF, header: u32(p, 'HeaderSize'), addr: u32(p, 'BuffAddr1'), size: u32(p, 'BuffSize1'), aspect: sim.read(p + P.ImgAspect, 1)[0], free: sim.read(p + P.Free, 1)[0] };
+      run.reply = { status: r.d0 & 0xFFFF, header: u32(p, 'HeaderSize'), addr: u32(p, 'BuffAddr1'), size: u32(p, 'BuffSize1'), aspect: sim.read(p + P.ImgAspect, 1)[0], free: sim.read(p + P.Free, 1)[0],
+        ...(two && { addr2: sim.u32(p + DUAL_E143.addr) >>> 0, size2: sim.u32(p + DUAL_E143.size) >>> 0 }) };
       h.finish(r, { d0: 1 });
     }, 'S-RECREQ');
     try {
@@ -836,10 +858,15 @@ export class RecFile {
     const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take, exposure,
       shot: shot && { id: shot.id, record: shot.record, flags: shot.flags, entry: shot.entry } };
     this.images.push(record);
-    if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.id !== run.handle || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
-      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
+    // one encode, or two with SlotNo 0 then 1 (the second image's Addr and Size the packet's BuffAddrDoubleSlot and
+    // BuffSizeDoubleSlot at REC_FILE's reply), each in REC_IMAGE's task
+    const n = two ? 2 : 1, [e1, e2] = run.encodes;
+    record.encodes = run.encodes;
+    const second = !two || (e1?.slot === 0 && e2?.slot === 1 && y.addr2 === e2.addr && y.size2 === y.header + stream.length && e2.addr !== e1.addr);
+    if (run.encoded !== n || run.set !== n || run.run !== n || !run.id || run.id !== run.handle || run.released !== n || run.encodes.some((e) => e.task !== I.task.id) || y.status !== 0 || y.header !== J.header || y.addr !== e1?.addr || y.size !== y.header + stream.length || !second || record.alive !== 0) {
+      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times (want ${n})${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}, the encodes ${JSON.stringify(run.encodes)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)}, BuffSize1 ${y.size}${two ? `, BuffAddrDoubleSlot ${h8(y.addr2)}, BuffSizeDoubleSlot ${y.size2}` : ''} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
     }
-    return { header: y.header, size: y.size };
+    return { header: y.header, size: y.size, ...(two && { size2: y.size2 }) };
   }
   // The E144 family, and E130, E133, E129 and E132 (no REC_IMAGE task natively): S-RECIMAGE (rec_jpeg_exec in the
   // lab's call on the packet pk, S-JPEGENC's encode and the fill where the body has one), REC_IMAGE's post to REC_FILE's queue,

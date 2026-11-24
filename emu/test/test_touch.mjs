@@ -16,7 +16,8 @@
 //                 (EVF_PAD's mask) and HFW sees nothing; with the pad on (its store id set to 1 before the GUI exists,
 //                 S-PERSIST's seed, as the menu would set it) the mask is 0x1f1 and a tap inside the pad's area
 //                 reaches HFW (a press at the pixel and CLICK, on E120 the first one LIFTOFF: PAD_FIRST_END), one left
-//                 of the area (EVF_PAD's x0) nothing; no tap changes the frame or the GUI's state; a later tap inside
+//                 of the area (EVF_PAD's x0) nothing; no tap changes the frame (but EVF_BLINK's blinking item) or the
+//                 GUI's state; a later tap inside
 //                 the pad ends as CLICK on every body
 //   node emu/test/test_touch.mjs   (with OM_EMU_MODEL=E144 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
@@ -52,6 +53,9 @@ const PAD_IN = [360, 240], PAD_OUT = [40, 333], PAD_ON_MASK = 0x1f1;
 // point, so it ends as LIFTOFF at 0, 0, at any pixel and after any wait; its later taps end as CLICK (X,
 // docs/model-survey.md finding 116; why the first tap's derivation sees no end is not read)
 const PAD_FIRST_END = { E120: 'LIFTOFF' };
+// the box [x0, y0, x1, y1] of the EVF shooting screen's pixels that change without input: E120 blinks its ISO-A LOW
+// item (500 ms period) since the second timer unit runs the GUI's software timers (X; docs/hle-gaps/4.7.md 4.7.14)
+const EVF_BLINK = { E120: [35, 334, 108, 389] };
 
 async function labEnv() {
   const { loadImage, loadBlock, loadNand } = await import('../bin/run.mjs');
@@ -129,10 +133,19 @@ async function evfOnce(pad, ok) {
     ok(s.touch_on && s.device === 'evf', `${what}: a session on the EVF with touch on`);
     if (pad) ok(lab.store_log.persist.some((p) => p.id === sid && p.why === 'seed' && p.before === 0 && p.after === 1), `${what}: the pad's store id ${sid} set from 0 to 1 (${JSON.stringify(lab.store_log.persist)})`);
     s.idle_slice(lab.lab_time() + IDLE_MS * 1e6);
-    const digest = () => { const [, , words] = s.frame('boundary'); return createHash('sha256').update(words_to_rgb(words)).digest('hex'); };
-    const before = digest(), state0 = lab.state();
-    s.idle_slice(lab.lab_time() + 500e6);
-    ok(digest() === before, `${what}: the frame holds for 500 ms without a tap`);
+    // the frame before the taps: its pixels sampled every 100 ms for a second without input, those that change listed
+    // (EVF_BLINK's box, else none); a later frame is the same where they held
+    const words = () => s.frame('boundary');
+    const [fw, , f0] = words(), held = new Uint8Array(f0.length).fill(1), state0 = lab.state();
+    for (let k = 0; k < 10; k++) {
+      s.idle_slice(lab.lab_time() + 100e6);
+      const [, , f] = words();
+      for (let i = 0; i < f.length; i++) if (f[i] !== f0[i]) held[i] = 0;
+    }
+    let box = null;
+    for (let i = 0; i < held.length; i++) if (!held[i]) { const px = i % fw, py = (i - px) / fw; box = box ? [Math.min(box[0], px), Math.min(box[1], py), Math.max(box[2], px), Math.max(box[3], py)] : [px, py, px, py]; }
+    ok(JSON.stringify(box) === JSON.stringify(EVF_BLINK[MODEL] ?? null), `${what}: without a tap the frame changes only in ${JSON.stringify(EVF_BLINK[MODEL] ?? null)} (${JSON.stringify(box)})`);
+    const same = () => { const [, , f] = words(); return f.length === f0.length && f.every((v, i) => !held[i] || v === f0[i]); };
     const mask = lab.sim.u32(TP_MASK_WORD);
     if (sid !== null) ok(mask === (pad ? PAD_ON_MASK : offMask), `${what}: the GUI's gesture mask on the EVF is 0x${mask.toString(16)}, want 0x${(pad ? PAD_ON_MASK : offMask).toString(16)}`);
     const tap = ([x, y]) => {
@@ -162,7 +175,7 @@ async function evfOnce(pad, ok) {
         }
       }
     }
-    ok(lab.state() === state0 && digest() === before, `${what}: the GUI's state and the frame are unchanged (0x${state0.toString(16)} -> 0x${lab.state().toString(16)})`);
+    ok(lab.state() === state0 && same(), `${what}: the GUI's state and the frame are unchanged (0x${state0.toString(16)} -> 0x${lab.state().toString(16)})`);
     if (pad) {
       // a later tap inside the pad, more than the driver's 800 ms double-tap window after the first, ends as CLICK on
       // every body (E120's first one too, PAD_FIRST_END)

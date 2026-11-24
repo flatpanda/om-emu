@@ -18,15 +18,22 @@
 //                attached at level 5 (the HDMI init ran), the driver's EDID state reads 0xf0, UI_IN forwards the
 //                connect report 0x02020501 and the camera application sends DISPLAY cmd 18; on E143 the parse's fields
 //                as decoded (manufacturer, product, serial, date, version, the name, the extension count, the CTA-861
-//                header bits and the VIC list); on E143 the output switch (S-OUTDEV): TRA 588 for the HDMI output,
-//                DISPLAY cmd 45, the HDMI device alone open in format 13 with its timing, IRQ 239 a third time for the
-//                open's update, one SCDC write, S-PROP's property 16, VSC channel 0 latched for 1080p and its
-//                composite (the window, no plane drawn); a second plug and fw_0501 are refused; the unplug: IRQ 239
-//                alone, the disconnect report, no errlog, no output change (E143: HDMI stays open), a second unplug
-//                refused; a negative control with the base block's checksum off by one: six reads of block 0, the
-//                errlog 0x37009108 and 0x37008206, EDID state 0xff, the connect report still sent and (E143) CapIod
-//                opening nothing
-//   node emu/test/test_hdmi.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_hdmi.mjs --session: another body)
+//                header bits and the VIC list); on E143, E146 and E147 the output switch (S-OUTDEV): TRA 588 for the
+//                HDMI output, DISPLAY cmd 45, the HDMI device alone open in format 13 with its timing, IRQ 239 a third
+//                time for the open's update, one SCDC write, S-PROP's property 16, VSC channel 0 latched for 1080p and
+//                its composite (the window, no plane drawn), on E146 and E147 with S-HDMIAUD and A-HDMICAL listed; a
+//                second plug and fw_0501 are refused; the unplug: IRQ 239 alone, the disconnect report, no errlog, no
+//                output change (HDMI stays open), a second unplug refused; a negative control with the base block's
+//                checksum off by one: six reads of block 0, the errlog 0x37009108 and 0x37008206, EDID state 0xff, the
+//                connect report still sent and (E143, E146, E147) CapIod opening nothing
+//   hdmiCamapp3Session  (firmware, E143) control camapp 3 with --hdmi on: the plug's two TRA 588 (the HDMI output,
+//                then HDMI and the TFT) answered by the component, S-PROP following CapIod's 16 and 17, the first DISPLAY
+//                cmd 45 setting channel 0's line time at its end, the HDMI device and the TFT open, setOutputType's
+//                HDMI 1920 x 1080 layout twice, the errlog the palette set's three warnings alone; channel 0 refused
+//                without A15 (CTRL3 0x41) and, with it, the GUI's three OSD planes at 1920 x 1080 and its pixels; the
+//                unplug back to the TFT (TRA 588, property 1, cmd 45, no errlog) and the TFT's GUI; control: with
+//                S-PROP held at the panel's value setOutputType takes its other branch and channel 0 has no plane
+//   node emu/test/test_hdmi.mjs [--session] [--camapp3]   (OM_EMU_MODEL=E146 node emu/test/test_hdmi.mjs --session: another body)
 import { createMachine, HDMI_WINDOW, HDMI_DOORBELL } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
@@ -146,8 +153,9 @@ export async function hdmiSession() {
   const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
   const taken = intc.sync().slice(taken0).map((x) => x[0] ?? x).filter((n) => n === irq || n === hpd.irq);
   ok(rec.kind === 'hdmi' && rec.hdmi?.edid_state === '0xf0' && rec.hdmi?.ddc_reads === 2 && rec.hdmi?.cable === 'in', `${MODEL}: the plug ends with the EDID read and parsed: ${JSON.stringify(rec.hdmi)}`);
-  // E143 (S-OUTDEV): IRQ 239 a third time for the HDMI open's update (UPDCTRL, "Update Done")
-  const opens = MODEL === 'E143';
+  // E143, E146, E147 (S-OUTDEV): IRQ 239 a third time for the HDMI open's update (UPDCTRL, "Update Done"); E146 and
+  // E147 with the calibration word taken as set (A-HDMICAL) and AUD_EXEC's reply answered (S-HDMIAUD)
+  const opens = ['E143', 'E146', 'E147'].includes(MODEL), calib = MODEL !== 'E143';
   ok(JSON.stringify(taken) === JSON.stringify([hpd.irq, irq, irq, ...(opens ? [irq] : [])]), `${MODEL}: the CPU takes IRQ ${hpd.irq}, then IRQ ${irq} for each E-DDC read${opens ? ' and for the open\'s update' : ''}: ${JSON.stringify(taken)}`);
   ok(attached(irq)[0] === 1 << 5 && attached(irq)[1] !== 0, `${MODEL}: the HDMI init attached IRQ ${irq} at level 5: ${attached(irq)}`);
   ok(JSON.stringify(rec.uiin_codes) === '["0x02020501"]', `${MODEL}: UI_IN forwards the connect report: ${JSON.stringify(rec.uiin_codes)}`);
@@ -170,20 +178,20 @@ export async function hdmiSession() {
     // the output switch (S-OUTDEV): TRA 588 for the HDMI output, CapIod's open natively (DISPLAY cmd 45), the HDMI
     // device alone open in format 13 (VIC 16, 1080p at 59.94 Hz), the SCDC write, S-PROP following CapIod's 16
     const outdev = (rec.camapp ?? []).filter(([k]) => k === 'outdev').map(([, x]) => x);
-    ok(outdev.some((x) => /^TRA 588: event 224 \{8, 0, 0\}/.test(x)) && outdev.some((x) => /property 4513 = 16/.test(x)), `E143: S-OUTDEV took TRA 588 for the HDMI output: ${JSON.stringify(outdev)}`);
-    ok((rec.dispq ?? []).some((d) => d.cmd === 45) && lab.sim.u32(OPENED_WORD) === 0x0d000004, `E143: DISPLAY cmd 45 opened the HDMI device alone: ${JSON.stringify(rec.dispq)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+    ok(outdev.some((x) => /^TRA 588: event 224 \{8, 0, 0\}/.test(x)) && outdev.some((x) => /property 4513 = 16/.test(x)), `${MODEL}: S-OUTDEV took TRA 588 for the HDMI output: ${JSON.stringify(outdev)}`);
+    ok((rec.dispq ?? []).some((d) => d.cmd === 45) && lab.sim.u32(OPENED_WORD) === 0x0d000004, `${MODEL}: DISPLAY cmd 45 opened the HDMI device alone: ${JSON.stringify(rec.dispq)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
     // (S-OUTDEV runs at the step's end, after the step's record took the port's status)
     const st = s.hdmi_status();
-    ok(JSON.stringify(st.open) === JSON.stringify({ period_us: 16683, vtotal: 1125, line_ns: 14829, format: 13 }) && st.scdc_writes === 1, `E143: the open's format and timing, one SCDC write: ${JSON.stringify(st)}`);
-    ok(lab.props.get(lab.prop_device) === 16, `E143: S-PROP's output-device property follows CapIod's write: ${lab.props.get(lab.prop_device)}`);
-    ok(pl.stand_ins_in_use().includes('S-OUTDEV'), 'E143: the stand-ins list S-OUTDEV');
+    ok(JSON.stringify(st.open) === JSON.stringify({ period_us: 16683, vtotal: 1125, line_ns: 14829, format: 13 }) && st.scdc_writes === 1, `${MODEL}: the open's format and timing, one SCDC write: ${JSON.stringify(st)}`);
+    ok(lab.props.get(lab.prop_device) === 16, `${MODEL}: S-PROP's output-device property follows CapIod's write: ${lab.props.get(lab.prop_device)}`);
+    ok(['S-OUTDEV', ...(calib ? ['S-HDMIAUD', 'A-HDMICAL'] : [])].every((x) => pl.stand_ins_in_use().includes(x)), `${MODEL}: the stand-ins list S-OUTDEV${calib ? ', S-HDMIAUD and A-HDMICAL' : ''}: ${pl.stand_ins_in_use().filter((x) => /OUTDEV|HDMI/.test(x))}`);
     s.idle_slice(lab.lab_time() + 100e6);
     const b = lab.vsc.bank(0, true), x = (n) => b.get(n) >>> 0;
     ok(x('SYNC1') === 0x1000001 && x('SYNC2') === 1125 && x('SYNC3') === 5 && x('SYNC6') === ((44 << 16) | 2200) && x('VIDEOAREA1') === ((192 << 16) | 1920) && x('VIDEOAREA2') === ((41 << 16) | 1080) && x('DMAEN') === 0,
-      `E143: VSC channel 0 latched for 1080p: ${JSON.stringify(Object.fromEntries(['SYNC1', 'SYNC2', 'SYNC3', 'SYNC6', 'VIDEOAREA1', 'VIDEOAREA2', 'DMAEN'].map((n) => [n, '0x' + x(n).toString(16)])))}`);
+      `${MODEL}: VSC channel 0 latched for 1080p: ${JSON.stringify(Object.fromEntries(['SYNC1', 'SYNC2', 'SYNC3', 'SYNC6', 'VIDEOAREA1', 'VIDEOAREA2', 'DMAEN'].map((n) => [n, '0x' + x(n).toString(16)])))}`);
     const c = lab.compose('hdmi', true, true), hd = c.header;
     ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.ox === 192 && hd.oy === 41 && hd.drawn === 0 && c.errors.length === 1 && c.errors[0].name === 'UNWRITTEN' && c.errors[0].offset === 0x4e0,
-      `E143: channel 0 composes its 1920 x 1080 window at (192, 41), no plane drawn (OSDCP2 unwritten): ${c.status} ${JSON.stringify(hd)} ${JSON.stringify(c.errors)}`);
+      `${MODEL}: channel 0 composes its 1920 x 1080 window at (192, 41), no plane drawn (OSDCP2 unwritten): ${c.status} ${JSON.stringify(hd)} ${JSON.stringify(c.errors)}`);
   }
   for (const [inp, want] of [[{ type: 'hdmi', action: 'plug' }, /in already/], [{ type: 'switch', id: 'fw_0501', value: 1 }, /firmware's own/]]) {
     let e = null;
@@ -199,7 +207,7 @@ export async function hdmiSession() {
   ok(JSON.stringify(taken1) === JSON.stringify([irq]), `${MODEL}: the unplug's interrupt is IRQ ${irq} alone: ${JSON.stringify(taken1)}`);
   const own1 = lab.kernel.errors.slice(e1).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c]) => '0x' + c.toString(16));
   ok(own1.length === 0 && !(un.camapp ?? []).some(([k]) => k === 'outdev'), `${MODEL}: no errlog and no output change after the unplug: ${JSON.stringify(own1)}`);
-  if (opens) ok(lab.sim.u32(OPENED_WORD) === 0x0d000004, `E143: the HDMI device stays open: 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+  if (opens) ok(lab.sim.u32(OPENED_WORD) === 0x0d000004, `${MODEL}: the HDMI device stays open: 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
   {
     let e = null;
     try { pl.run_input({ type: 'hdmi', action: 'unplug' }); } catch (x) { e = x; }
@@ -217,9 +225,109 @@ export async function hdmiSession() {
   ok(s.hdmi_status().ddc_reads === 6 && s.hdmi_status().edid_state === '0xff', `${MODEL}: a bad checksum: six reads of block 0, EDID state 0xff: ${JSON.stringify(s.hdmi_status())}`);
   ok(JSON.stringify(errs) === JSON.stringify(['0x37009108', '0x37008206']), `${MODEL}: the errlog of the read and of the hot-plug handler: ${JSON.stringify(errs)}`);
   ok(lab.uiin_codes.slice(c0).some(([, c]) => c === 0x02020501), `${MODEL}: the connect report is still sent: ${JSON.stringify(lab.uiin_codes.slice(c0))}`);
-  // E143: the application still asks for the HDMI output (S-OUTDEV), and CapIod opens nothing (X)
-  if (MODEL === 'E143') ok(s.camapp.outdev_done.length === 1 && lab.sim.u32(OPENED_WORD) === 1, `E143: after a failed EDID read CapIod opens nothing: ${JSON.stringify(s.camapp.outdev_done)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+  // the application still asks for the HDMI output (S-OUTDEV), and CapIod opens nothing (X)
+  if (opens) ok(s.camapp.outdev_done.length === 1 && lab.sim.u32(OPENED_WORD) === 1, `${MODEL}: after a failed EDID read CapIod opens nothing: ${JSON.stringify(s.camapp.outdev_done)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
   pl.close_session();
+  return { checks, bad };
+}
+
+// Control camapp 3 (E143; docs/hle-gaps/4.9.md 4.9.3): setOutputType's branch for the device state 12, "HDMI&ANOTHER
+// HDMI_SIZE_HDMI_1920X1080" (D: the print's string 0x6132a9b0 at run time, loaded at this site), and the palette
+// set's warning for a palette already set (0x501dc789..0x501dc7a0: errlog 0x3700140c (3, 4171, device code, palette))
+const SET_OUTPUT_HDMI = 0x510C4F1D, PALETTE_AGAIN = 0x3700140C, HDMI_CODE = 0x0D000004;
+const nonBackground = (raw, bg) => {
+  const px = new Uint32Array(raw.buffer, raw.byteOffset, raw.length >> 2);
+  let n = 0;
+  for (const p of px) if ((p & 0xFFFFFF) !== bg) n++;
+  return [n, px.length];
+};
+export async function hdmiCamapp3Session() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { MODEL } = await import('../src/fw/model.mjs');
+  if (MODEL !== 'E143') return { checks, bad: [`control camapp 3's HDMI output is E143's here, not ${MODEL}'s`] };
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, hdmi: 'on' }, env);
+  pl.camapp_components = true; pl.camapp_native_tra = true;
+  pl.open_session();
+  const s = pl.session, lab = s.lab, ca = s.camapp;
+  const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+  const own = (e0) => lab.kernel.errors.slice(e0).filter(([c]) => !EXPECTED_ERRLOG.has(c));
+  let layouts = 0;
+  lab.observe(SET_OUTPUT_HDMI, () => { layouts++; }, 'test: setOutputType\'s HDMI layout');
+  ca.tra_native.splice(0);
+  const e0 = lab.kernel.errors.length;
+  // the plug; then 2 s, past the display's 1 s guard between two device changes (0x62a3541c, set by the open at
+  // 0x501c3d17, cleared by its 1000 ms timer's handler 0x501c5075, X), which a DISPLAY run in the lab waits out in
+  // vain (errlog 0x37003119, 0x501c3cc1)
+  const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
+  idle(2000);
+  const tra = ca.tra_native.splice(0).filter(([id]) => id === 588);
+  ok(tra.length === 2 && tra.every(([, , res]) => res === 0) && !ca.outdev_done.length && !pl.stand_ins_in_use().includes('S-OUTDEV'),
+    `the plug's two TRA 588 (the HDMI output, then HDMI and the TFT) answered 0 by the component, no S-OUTDEV: ${JSON.stringify(tra)}`);
+  const follow = (rec.camapp ?? []).filter(([k, x]) => k === 'outdev' && /^S-PROP: property \d+ = /.test(x)).map(([, x]) => +x.match(/= (\d+)/)[1]);
+  ok(JSON.stringify(follow) === '[16,17]' && lab.props.get(lab.prop_device) === 17, `S-PROP follows CapIod's writes 16, 17: ${JSON.stringify(follow)}, now ${lab.props.get(lab.prop_device)}`);
+  const opens = (rec.dispq ?? []).filter((d) => d.cmd === 45);
+  ok(opens.length === 2 && JSON.stringify(opens[0].hdmi_line) === JSON.stringify({ period_us: 16683, vtotal: 1125, line_ns: 14829, format: 13 }) && !opens[1].hdmi_line,
+    `two DISPLAY cmd 45, the first opening the HDMI device and setting channel 0's line time at its end: ${JSON.stringify(opens.map((d) => d.hdmi_line ?? null))}`);
+  ok(lab.sim.u32(OPENED_WORD) === (HDMI_CODE | 1) >>> 0, `the HDMI device and the TFT open: 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+  ok(layouts === 2, `setOutputType lays the GUI out for HDMI 1920 x 1080 at each change (${SET_OUTPUT_HDMI.toString(16)}): ${layouts}`);
+  // the second open re-sends the HDMI device's palettes while they are still marked set (X; whether the camera logs
+  // them too is open: docs/hle-gaps/4.9.md 4.9.3)
+  const errs = own(e0).map(([c, , a]) => [c, ...a.slice(0, 4)]);
+  ok(JSON.stringify(errs) === JSON.stringify([0, 1, 2].map((i) => [PALETTE_AGAIN, 3, 4171, HDMI_CODE, i])),
+    `the errlog: the palette set's warning for the HDMI device's palettes 0..2 alone: ${JSON.stringify(errs.map((x) => x.map((v) => '0x' + (v >>> 0).toString(16))))}`);
+  // channel 0: latched CTRL3 0x41, which A13 refuses; with A15 (the session's --a15 on) the GUI's three planes
+  const b = lab.vsc.bank(0, true), bg = b.get('BG') >>> 0;
+  const c0 = lab.compose('hdmi', true, true);
+  ok(c0.status === 'FEATURE_UNOBSERVED' && c0.errors.length === 1 && c0.errors[0].offset === 8 && c0.errors[0].value === 0x41,
+    `without A15 channel 0's CTRL3 0x41 is refused: ${c0.status} ${JSON.stringify(c0.errors)}`);
+  lab.vsc.set_assume(0, lab.vsc.assumed(0) | 1);
+  const c = lab.compose('hdmi', true, true), hd = c.header;
+  const planes = ['OSD1', 'OSD2', 'OSD3'].map((p) => c.planes[p]);
+  const [n, total] = c.raw.length ? nonBackground(c.raw, bg) : [0, 0];
+  ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.ox === 192 && hd.oy === 41 && (hd.assumed & 1) && hd.drawn > 0
+    && c.errors.every((e) => e.name === 'PAL_UNWRITTEN'),
+    `channel 0 composes its 1920 x 1080 window at (192, 41) under A15 with planes drawn: ${c.status} ${JSON.stringify(hd)} ${JSON.stringify(c.errors)}`);
+  ok(planes.every((p) => p?.result === 'drawn' && p.w === 1920 && p.h === 1080), `the GUI's three OSD planes at 1920 x 1080: ${JSON.stringify(c.planes)}`);
+  ok(n > total / 100 && n < total / 2, `the GUI's pixels on channel 0 (background 0x${bg.toString(16)}): ${n} of ${total}`);
+  // the unplug: the application's own change back to the TFT (TRA 588, CapIod's property 1, DISPLAY cmd 45)
+  const e1 = lab.kernel.errors.length;
+  const un = pl.run_input({ type: 'hdmi', action: 'unplug' });
+  idle(1000);
+  const tra1 = ca.tra_native.splice(0).filter(([id]) => id === 588);
+  const follow1 = (un.camapp ?? []).filter(([k, x]) => k === 'outdev' && /^S-PROP: property \d+ = /.test(x)).map(([, x]) => +x.match(/= (\d+)/)[1]);
+  ok(tra1.length === 1 && tra1[0][2] === 0 && JSON.stringify(follow1) === '[1]' && lab.sim.u32(OPENED_WORD) === 1 && (un.dispq ?? []).filter((d) => d.cmd === 45).length === 1,
+    `the unplug returns to the TFT: TRA 588 ${JSON.stringify(tra1)}, property ${JSON.stringify(follow1)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}, ${JSON.stringify((un.dispq ?? []).map((d) => d.cmd))}`);
+  ok(own(e1).length === 0, `no errlog at the unplug: ${JSON.stringify(own(e1).map(([x]) => '0x' + x.toString(16)))}`);
+  let tft = null;
+  try { tft = s.frame('next', true); } catch (e) { bad.push(`the TFT's frame after the unplug: ${e.message}`); }
+  if (tft) {
+    const [m, all] = nonBackground(tft[2], lab.vsc.bank(2, true).get('BG') >>> 0);
+    ok(tft[0] === 900 && tft[1] === 600 && m > all / 100, `the TFT shows the GUI again: ${tft[0]} x ${tft[1]}, ${m} of ${all} pixels not background`);
+  }
+  pl.close_session();
+  // the control: S-PROP held at the panel's value through the plug (its follow refused): getDisplayDeviceState reads
+  // 1, setOutputType takes the branch 0x510c5531 and lays nothing out on channel 0
+  const cl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, hdmi: 'on' }, env);
+  cl.camapp_components = true; cl.camapp_native_tra = true;
+  cl.open_session();
+  {
+    const s2 = cl.session, lab2 = s2.lab;
+    Object.defineProperty(s2.camapp, 'prop_follow', { get: () => false, set: () => {} });
+    let hdmi2 = 0, other2 = 0;
+    lab2.observe(SET_OUTPUT_HDMI, () => { hdmi2++; }, 'test: setOutputType\'s HDMI layout');
+    lab2.observe(0x510C5531, () => { other2++; }, 'test: setOutputType\'s other branch');
+    cl.run_input({ type: 'hdmi', action: 'plug' });
+    const c2 = lab2.compose('hdmi', true, true);
+    ok(hdmi2 === 0 && other2 === 1 && c2.status === 'NONE' && c2.header.drawn === 0,
+      `control, S-PROP not following: no HDMI layout (${hdmi2}, other branch ${other2}), channel 0 without planes: ${c2.status} ${JSON.stringify(c2.header)}`);
+  }
+  cl.close_session();
   return { checks, bad };
 }
 
@@ -231,6 +339,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv.includes('--session')) {
     const r = await hdmiSession();
     console.log(`HDMI plug in play: ${r.checks - r.bad.length}/${r.checks}`);
+    r.bad.forEach((x) => console.log('  ', x));
+    n += r.bad.length;
+  }
+  if (process.argv.includes('--camapp3')) {
+    const r = await hdmiCamapp3Session();
+    console.log(`HDMI under control camapp 3: ${r.checks - r.bad.length}/${r.checks}`);
     r.bad.forEach((x) => console.log('  ', x));
     n += r.bad.length;
   }

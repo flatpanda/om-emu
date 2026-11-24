@@ -138,6 +138,7 @@ The player (`emu/src/lab/player.mjs`) runs lab time in ELAPSE slices of at most 
 | Label | What | Evidence |
 |---|---|---|
 | H-UIINRING | the ring init `0x5014cb5f` before H-UIIN | section 2 (D, X) |
+| H-UIININIT | (E143, since 2026-11-23, in H-UIINRING's place) the module init `0x5014bf91` natively but for `0x5014d62e` and `0x5014d97a`, with S-WAKEFACTOR | hle-gaps/4.7.md 4.7.17 (D, X) |
 | H-UIIN | `act_tsk(84)` | buttons investigation (X) |
 | S-KEYBITS | group images of groups 0..3 (1..3 on a body with H-SCPUPORT) pushed with `0x5014cb74` + `set_flg`; group 4 once at bring-up (equal to the firmware's image) | section 3 |
 | H-SCPUIRQ | the idle port levels, 127 to the SCPU's event word `0x98` and IRQ 320's attach at level 5 to `0x5004e1fd`, in place of the SCPU init `0x5004dc55` | hle-gaps/4.7.md 4.7.2 (D) |

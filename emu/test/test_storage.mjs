@@ -77,7 +77,9 @@
 //                   save slot (read back independently on that card alone), each card goes out and in while the
 //                   camera runs; a blank card put into the empty slot stays unformatted (out and in again too) until
 //                   Card Formatting formats it from the menu, and the player keeps it for its next session; the
-//                   double-slot save modes stop the session; on E143 under control camapp 3 the firmware's own media
+//                   double-slot save modes record on both cards (Dual Same; Dual Independent on E143, with the
+//                   slots' settings alike one image, different two, each card its own: docs/hle-gaps/4.8.md 4.8.14,
+//                   4.8.20, 4.8.24); on E143 under control camapp 3 the firmware's own media
 //                   manager does the same: one card, its menu camapp 1's, a blank card in and out; two cards mounted
 //                   by it, S2 on the second, the second out and in
 //   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls] [--slot2]
@@ -1335,6 +1337,32 @@ const SAVE_GOALS = [{ row: ['@A030@Card Slot Settings'] }, { row: ['@A030@Save S
 // docs/hle-gaps/4.8.md 4.8.10, 4.8.12 and 4.8.14), and the auto switch's own setting (1134: 1 in the lab's store, X)
 const DOUBLE_SLOT_E143 = 0x5053F97D, AUTO_SWITCH_E143 = 0x5107DCF5, SLOT_FACTOR_E143 = 0x603661A8, AUTO_ON = 1134;
 const SAVE_NAMES = ['Standard', 'Auto Switch', 'Dual Independent@A032@', 'Dual Independent@A033@', 'Dual Same@A032@', 'Dual Same@A033@'];
+// Dual Independent with the slots' settings different (docs/hle-gaps/4.8.md 4.8.24, E143): MODE_QUALITY_SLOT2 (1096,
+// the firmware's name table), a group of itself and MODE_RAW_SLOT2 (1097), set through the store's group setter with
+// one of its descriptor's allowed records: (0, 0), the quality SQ2 (MODE_SQ2_S / MODE_SQ2_Q are the quality data's
+// index 0), whose value-table entry the getter then reads (13, X); (1, 0), HQ, the store's default of both slots (the
+// getter's 11, X). The maker notes' AspectFrame (ImageProcessing 0x1113) and CompressionFactor (CameraSettings
+// 0x050d) of each card's file as the firmware's header maker writes them for HQ and SQ2 (X, exiftool and
+// olympusNote below)
+const QUALITY_SLOT2 = 1096, SQ2 = 0, SQ2_VALUE = 13, HQ = 1;
+const SLOT_FRAMES = [[0, 0, 5183, 3887], [0, 0, 3199, 2399]], SLOT_COMPRESSION = [[4, 1], [8, 1]];
+// An independent reader of an OM / Olympus maker note (the published layout: the 12-byte "OM SYSTEM" name, II, the
+// version, then an IFD at 16 whose offsets, and its sub-IFDs', count from the maker note's start; CameraSettings at
+// tag 0x2020, ImageProcessing at 0x2040): {frame: ImageProcessing's AspectFrame 0x1113, compression: CameraSettings'
+// CompressionFactor 0x050d [num, den]}, or null
+function olympusNote(jpeg) {
+  const x = readExif(jpeg), mn = x?.exif?.get(0x927C);
+  if (!mn || String.fromCharCode(...mn.subarray(0, 9)) !== 'OM SYSTEM' || mn[12] !== 0x49 || mn[13] !== 0x49) return null;
+  const u16 = (o) => mn[o] | mn[o + 1] << 8, u32 = (o) => (u16(o) | u16(o + 2) << 16) >>> 0;
+  const entry = (ifd, tag) => { for (let k = 0, n = u16(ifd); k < n; k++) { const e = ifd + 2 + 12 * k; if (u16(e) === tag) return { type: u16(e + 2), count: u32(e + 4), e }; } return null; };
+  const sub = (tag) => { const t = entry(16, tag); return t ? u32(t.e + 8) : null; };
+  const cs = sub(0x2020), ip = sub(0x2040);
+  const fr = ip !== null ? entry(ip, 0x1113) : null, cf = cs !== null ? entry(cs, 0x050d) : null;
+  return {
+    frame: fr && fr.type === 3 && fr.count === 4 ? [0, 1, 2, 3].map((i) => u16(u32(fr.e + 8) + 2 * i)) : null,
+    compression: cf && cf.type === 5 && cf.count === 1 ? [u32(u32(cf.e + 8)), u32(u32(cf.e + 8) + 4)] : null,
+  };
+}
 export async function storageSlots() {
   const bad = [], notes = [];
   let checks = 0;
@@ -1512,7 +1540,8 @@ export async function storageSlots() {
     const names = [], t4 = choose(s, 4, names);
     ok(J(names) === J(SAVE_NAMES) && t4 === SAVE_NAMES[4] && s.lab.get(MODE) === 4,
       `Save Settings: the panel's six settings ${J(names)} (want ${J(SAVE_NAMES)}); the fifth (${t4}) taken with OK sets ${MODE} = ${s.lab.get(MODE)} (want 4)`);
-    const two = (mode, before) => {
+    // (alike false: two images, one per card, whose bytes the caller checks)
+    const two = (mode, before, alike = true) => {
       const seen = [];
       if (ON_LAB_MODEL) s.lab.observe(DOUBLE_SLOT_E143, () => seen.push(s.lab.lab_time()), 'obs-test-double');
       shoot(s);
@@ -1521,8 +1550,8 @@ export async function storageSlots() {
       const v0 = vol(cardB), v1 = vol(cardA), e0 = f0 && v0?.find(file(f0.number)), e1 = f1 && v1?.find(file(f1.number));
       const d0 = e0 && v0.data(e0), d1 = e1 && v1.data(e1);
       ok(st.files.length === before + 2 && f0.path.startsWith(`${names0.drive}:`) && f1.path.startsWith(`${String.fromCharCode(names0.drive.charCodeAt(0) + 1)}:`) && d0 && d1
-        && d0.length === f0.size && d0.length === d1.length && d0.every((b, i) => b === d1[i]) && (!ON_LAB_MODEL || seen.length === 1),
-        `Dual Same (${MODE} = ${mode}): S2's picture on both cards, ${f0?.path} and ${f1?.path}, ${d0?.length} and ${d1?.length} bytes read back independently, the same bytes${ON_LAB_MODEL ? `; REC_FILE's double-slot record ran ${seen.length} time(s)` : ''}`);
+        && d0.length === f0.size && d1.length === f1.size && (!alike || (d0.length === d1.length && d0.every((b, i) => b === d1[i]))) && (!ON_LAB_MODEL || seen.length === 1),
+        `${alike ? 'Dual Same' : 'Dual Independent'} (${MODE} = ${mode}): S2's picture on both cards, ${f0?.path} and ${f1?.path}, ${d0?.length} and ${d1?.length} bytes read back independently${alike ? ', the same bytes' : ''}${ON_LAB_MODEL ? `; REC_FILE's double-slot record ran ${seen.length} time(s)` : ''}`);
       return [f0, f1];
     };
     const n0 = [s.camapp.card_images(0), s.camapp.card_images(1)];
@@ -1543,13 +1572,37 @@ export async function storageSlots() {
       two(3, 4);
       const ds = st.rec?.dual_settings ?? null;
       ok(ds && ds.one.join() === ds.two.join(), `Dual Independent (${MODE} = 3): the shot record's first- and second-slot image settings ${J(ds)}, alike`);
+      // the slots' settings different (docs/hle-gaps/4.8.md 4.8.24): the second slot's quality SQ2 through the store's
+      // group setter (MODE_QUALITY_SLOT2 and MODE_RAW_SLOT2 the record (0, 0)), the first slot's left HQ: TAKE's fill
+      // writes the second slot's quality, size and compression, REC_IMAGE makes the image twice (SlotNo 0, then 1
+      // into BuffAddrDoubleSlot) and REC_FILE's double-slot record writes each on its own card under one DCF number.
+      // Read back independently: the encoder's stream (the lab's, S-JPEGENC) the same on both, the header the
+      // firmware's own for each slot, its maker notes' AspectFrame and CompressionFactor the slot's (X)
+      const set = s.set_group(QUALITY_SLOT2, [SQ2, 0]).set;
+      idle(s, 300);
+      const [g0, g1] = two(3, 6, false);
+      const d2 = st.rec?.dual_settings ?? null, enc = st.rec?.images?.at(-1)?.encodes ?? [];
+      ok(set.read_back === SQ2_VALUE && d2 && d2.two[0] === SQ2 && d2.one.join() === ds?.one.join() && d2.one.join() !== d2.two.join() && J(d2.types) === '[0,0]',
+        `Dual Independent, the second slot's quality set to SQ2 (${J(set)}): the shot record's first-slot settings ${J(d2?.one)} (as before), the second slot's ${J(d2?.two)}, both JPEG (${J(d2?.types)})`);
+      ok(enc.length === 2 && J(enc.map((e) => e.slot)) === '[0,1]' && enc[0].addr !== enc[1].addr,
+        `Dual Independent with the settings different: REC_IMAGE made the image twice, SlotNo ${J(enc.map((e) => e.slot))}, into two buffers: ${J(enc)}`);
+      const rd = (card, f) => { const v = vol(card), e = f && v?.find(file(f.number)); return e ? v.data(e) : null; };
+      const b0 = rd(cardB, g0), b1 = rd(cardA, g1), H = g0?.header ?? 0;
+      const m0 = b0 && olympusNote(b0), m1 = b1 && olympusNote(b1);
+      const same = b0 && b1 && b0.length === b1.length && b0.subarray(H).every((v, i) => v === b1[H + i]);
+      ok(b0?.length === g0?.size && b1?.length === g1?.size && g0?.number === g1?.number && same && !b0.every((v, i) => v === b1[i]),
+        `Dual Independent with the settings different: ${g0?.path} (${b0?.length} bytes) and ${g1?.path} (${b1?.length} bytes) read back independently, one DCF number (${g0?.number}, ${g1?.number}), the encoder's stream past the ${H}-byte header the same, the headers different`);
+      ok(J(m0?.frame) === J(SLOT_FRAMES[0]) && J(m1?.frame) === J(SLOT_FRAMES[1]) && J(m0?.compression) === J(SLOT_COMPRESSION[0]) && J(m1?.compression) === J(SLOT_COMPRESSION[1]),
+        `Dual Independent with the settings different: each card's maker notes hold its slot's size and compression: AspectFrame ${J(m0?.frame)} and ${J(m1?.frame)} (want ${J(SLOT_FRAMES)}), CompressionFactor ${J(m0?.compression)} and ${J(m1?.compression)} (want ${J(SLOT_COMPRESSION)})`);
+      notes.push(`Dual Independent with the settings different: ${g0?.path} and ${g1?.path}, ${b0?.length} bytes each; maker notes ${J(m0)} and ${J(m1)}`);
+      s.set_group(QUALITY_SLOT2, [HQ, 0]); idle(s, 300);
     }
     // the arrow up with the second card out: the record controller names the first card alone (Media 0, Media2 none)
     pl.run_input({ type: 'card', action: 'remove', slot: 2 });
     idle(s, 1000);
     const k1 = s.camapp.card_images(0);
     shoot(s);
-    const nf = indep ? 7 : 5, f = st.files[nf - 1], e = f && vol(cardB)?.find(file(f.number));
+    const nf = indep ? 9 : 5, f = st.files[nf - 1], e = f && vol(cardB)?.find(file(f.number));
     ok(st.files.length === nf && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
       `Dual Same with the arrow up, the second card out: S2's picture ${f?.path} on the first card alone (${e?.size} bytes), its count ${s.camapp.card_images(0)}`);
     s.set(MODE, 4); idle(s, 300);
@@ -1717,6 +1770,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv.includes('--slot2')) {
     const x = await storageSlots();
     console.log(`the second card slot in play: ${x.checks - x.bad.length}/${x.checks}`);
+    x.notes.forEach((t) => console.log('   note:', t));
     x.bad.forEach((t) => console.log('  ', t));
     n += x.bad.length;
   }

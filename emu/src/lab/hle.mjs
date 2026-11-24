@@ -207,13 +207,16 @@ export class HLE {
   }
   // ends: null, or a Set of run-time pcs at which the call also ends, before the instruction there runs (before a
   // hook there answers): it returns the registers at that pc, unchecked (src/debug/call.mjs's mid-function calls)
-  call(fn, regs = null, stack = null, frame = null, limit = 5000, ends = null) {
+  // at: [trampoline, sp] in place of CALLER and SP, for a call made while another lab call runs on those (a nested
+  // display run's free slot, display.mjs TASK_CALLERS / TASK_STACKS)
+  call(fn, regs = null, stack = null, frame = null, limit = 5000, ends = null, at = null) {
     refuseUnmapped(fn, 'call');
     const [mask, size] = frame ?? this.frame(fn);
-    this.sim.write(CALLER, cat(bytes(0xdd), u32le(runtime(fn) - CALLER), bytes(mask, size, 0xff)));
-    if (stack && stack.length) this.sim.write(SP + 4, stack);
-    this.sim.reset({ pc: CALLER, sp: SP, ...SAVED, ...(regs ?? {}) });
-    return this._loop(CALLER + 7, SP, limit, regs, ends);
+    const [caller, sp] = at ?? [CALLER, SP];
+    this.sim.write(caller, cat(bytes(0xdd), u32le(runtime(fn) - caller), bytes(mask, size, 0xff)));
+    if (stack && stack.length) this.sim.write(sp + 4, stack);
+    this.sim.reset({ pc: caller, sp, ...SAVED, ...(regs ?? {}) });
+    return this._loop(caller + 7, sp, limit, regs, ends);
   }
   calls(fn, regs = null, sp = SP, trampoline = CALLER, limit = 5000) {
     refuseUnmapped(fn, 'calls');

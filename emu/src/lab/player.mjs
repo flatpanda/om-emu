@@ -409,7 +409,7 @@ export class Player {
   opts() {
     const a = this.a;
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
-      ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
+      ...((a.rotate ?? 'auto') !== 'auto' ? { rotate: a.rotate } : {}),   // absent when auto (the default since 2026-11-23)
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
@@ -504,18 +504,19 @@ export class Player {
   }
   stand_ins_in_use() {
     const a = this.a;
-    const used = ['H-UIINRING', 'H-UIIN', 'S-KEYBITS', 'H-G4SET', 'H-DIALSTEP', 'H-JSINJECT', 'SWITCH', 'H-POWER', 'S-HEAP',
+    const used = [this.session?.uiin_init ? 'H-UIININIT' : 'H-UIINRING', 'H-UIIN', 'S-KEYBITS', 'H-G4SET', 'H-DIALSTEP', 'H-JSINJECT', 'SWITCH', 'H-POWER', 'S-HEAP',
       'S-TAKEOVER', 'H-CONNECT', 'H-EYESTATE', 'H-IPIINIT', 'A-IPI', ...(this.session?.cpu2 ? CPU2_STAND_INS : ['S-CPU2'])];
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', ...(this.session?.camapp?.play_native ? PLAY_NATIVE_STAND_INS : ['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW']), ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', ...(this.session?.lab?.store_chain ? [] : ['H-STOREINIT']), 'S-OUTDISP', 'S-THROUGH', ...(this.session?.camapp?.play_native ? PLAY_NATIVE_STAND_INS : ['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW']), ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');
     if (a.touch !== 'off') used.push('H-TPINIT', ...(this.session?.tp_start === false ? [] : ['H-TPSTART']), 'S-TPREG', 'S-TPINT', 'S-GPIO-TP', 'H-TOUCHGAP');
     if (a.touch === 'gui' && !this.session?.app_touch) used.push('S-CAFWD', 'S-TOUCHMAP');   // not where the application forwards them (play.mjs app_touch)
     used.push(a.us_clock === 'reads' ? 'H-USCOUNT' : 'A-USLAB');                              // the us clock from the reset
+    if (this.session?.lab?.sim?.m?.devices?.timer2) used.push('A-TMR2');                    // the E118 family's second timer unit
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view
     if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
     if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started
@@ -533,6 +534,7 @@ export class Player {
     if (this.session?.camapp?.modpost_taken) used.push('S-MODPOST');                         // a direct module post taken (E143)
     if (this.session?.camapp?.takerdy_events) used.push('S-TAKERDY');                        // a take-ready finished (E143, camapp 3)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
+    if (this.session?.uiin_init) used.push('S-WAKEFACTOR');                                  // the power button's wake factor (play.mjs H-UIININIT)
     if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
     if (this.session?.lab?.sections_copied) used.push('S-SECLOADED');                      // the boot's sections copied (menu.mjs)
     if (this.session?.lab?.sim?.loads) used.push('S-STALERAM');                            // the loaded-ranges mode (sim.mjs)
@@ -558,11 +560,14 @@ export class Player {
     // the power manager natively, its IO expanders' stand-in where the body has them, and the power-off at the lever's
     // off (power.mjs)
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
+    if (this.session?.power_manager?.later) used.push('H-PWRLATER');                    // the power manager's later inits (power.mjs, opt-in)
     if (this.session?.lab?.pwr_sends?.length) used.push('H-PWRSEND');                      // the menu entry's queue 10 send to the power manager (menu.mjs)
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.usb_used) used.push('S-USBCABLE');                                   // a usb input ran
     if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
+    if (this.session?.camapp?.hdmi_aud_answered) used.push('S-HDMIAUD');                  // the HDMI driver's AUD_EXEC reply answered (camapp.mjs)
+    if (this.session?.camapp?.calib_answered) used.push('A-HDMICAL');                      // the calibration word taken as set (camapp.mjs)
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
     if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() > vsc.histKeptReads() ? ['A-VSCHIST-2'] : []));

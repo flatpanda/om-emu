@@ -44,7 +44,8 @@
 //               at each poll the sub-CPU acts as at an idle point (A-SCPUDEV-1, A-SCPUM4-1), until the pin is low.
 //               On the camera it runs beside the MN; the lab gives it the MN's poll as its point to act (I)
 import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
-import { POWER_OFF_E143, POWER_OFF_LIB } from '../fw/facts.mjs';
+import { POWER_OFF_E143, POWER_OFF_LIB, POWER_LATER_E143 } from '../fw/facts.mjs';
+import * as IRQ from './irq.mjs';
 import { FirmwareError, ISR_CALLER, ISR_SP, disasm, runtime, where } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { STEP_HOOKS, STORM, WAIT_HOOKS_PER_MS, WAIT_STORM_PER_MS } from './nav.mjs';
@@ -140,30 +141,38 @@ export function startPowerManager(session, f) {
     throw new PowerError(`H-PWRSTART: after the power manager's start: task ${tid} state 0x${lab.nk.state(tid).toString(16)}, frames ${JSON.stringify(frames)}, errlog ${JSON.stringify(errlog)}: not waiting with its requests answered`);
   }
   lab.pwr_main_tid = tid;                                                         // H-PWRSEND (menu.mjs): its queue's sends go to it
-  const later = (session.opts?.power_later ?? globalThis.process?.env?.OM_POWER_LATER) === 'on' ? laterInits(session, tid) : null;
-  return { tid, frames, later };
+  return { tid, frames, later: null };
 }
 
-// H-PWRLATER (opt-in, power_later 'on'; docs/hle-gaps/4.7.md 4.7.6 and its entry of 2026-11-22): the boot's two later
-// inits of the power manager, E143's 0x50044ed7 (called from 0x50024d43: the source check {0x10, 2} through the
-// task's handler, then UI_IN's and the timer API's calls) and 0x50044f7d (from 0x501e9943: {0x10, 2} again, event 9
-// posted to queue 10, then the setters of C 0x50043c6c(1) and A 0x50043c63(1)), on the lab task after H-PWRSTART.
-// E143 only: the addresses are E143's, read from its image, not yet in src/fw/facts.mjs
-export const LATER_INITS_E143 = [0x50044ED7, 0x50044F7D];
-function laterInits(session, tid) {
-  const lab = session.lab, dev = lab.scpu_dev;
-  if (MODEL !== 'E143') throw new PowerError(`H-PWRLATER: the later inits' addresses are E143's, not ${MODEL}'s`);
-  const out = [];
-  for (const init of LATER_INITS_E143) {
+// H-PWRLATER (opt-in, power_later 'on' or OM_POWER_LATER=on; docs/hle-gaps/4.7.md 4.7.6, 4.7.10 and 4.7.16): the
+// boot's two later inits of the power manager (fact 'power.later', src/fw/facts.mjs powerLater; E143's 0x50044ed7,
+// called from 0x50024d43: the source check {0x10, 2} through the task's handler, then UI_IN's and the timer API's
+// calls; and 0x50044f7d, from 0x501e9943: {0x10, 2} again, event 9 posted to queue 10, 0x5002cdb7(0x61125841), then
+// the setters of C and A) on the lab task. The play bring-up runs them after H-DPCINIT (with the native lens, after
+// the lens's bring-up), as the boot runs them after its head's deferred-call init and the lens init (4.6.5's table,
+// 1_J): the source check reads the body's temperature through the A/D driver, whose request for a channel it does not
+// know (its init 0x5004d3c3 is not among the lab's bring-ups) completes through a deferred call (0x500503d4, IRQ
+// 53), so without the deferred calls' handlers the lab task waits for good (4.7.16, X). The second init's battery
+// check sends the sub-CPU 0x11, which S-SCPUDEV refuses and the sub-CPU's own firmware (OM_EMU_SCPU=native) answers.
+// Checked: each init returns, PWR_MAIN waits again, no errlog in the inits' window, and after the second A and C are 1.
+// tid: PWR_MAIN's task
+export function laterInits(session, tid) {
+  const lab = session.lab, dev = lab.scpu_dev, dpc = lab.sim.m.devices.dpc, f = fact('power.later', POWER_LATER_E143), out = [];
+  if (!dpc || !dpc.cfg.irqs.every((n) => lab.sim.u32(IRQ.HANDLER_TABLE + 4 * n))) {
+    throw new PowerError('H-PWRLATER: the deferred calls\' handlers are not attached (H-DPCINIT): the source check\'s A/D request would complete through a deferred call nothing runs');
+  }
+  for (const init of [f.early, f.late]) {
     const f0 = dev.frames.length, e0 = lab.kernel.errors.length;
-    let error = null;
     try {
       lab.step(`H-PWRLATER the power manager's later init ${h8(init)}`, () => lab.call(init, null, null, null, 2000000));
       session.settle('H-PWRLATER');
-    } catch (e) { error = e.message.split('\n')[0]; }
-    out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog: lab.kernel.errors.slice(e0).map(([c, , , w]) => `${h8(c)} from ${w}`), state: lab.nk.state(tid), error });
-    if (error) break;
+    } catch (e) { throw new PowerError(`H-PWRLATER: ${h8(init)}: ${e.message.split('\n')[0].replace(/^H-PWRLATER: /, '')}`); }
+    const errlog = lab.kernel.errors.slice(e0).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c, , , w]) => `${h8(c)} from ${w}`);
+    out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog, state: lab.nk.state(tid) });
+    if (lab.nk.state(tid) !== 0x4 || errlog.length) throw new PowerError(`H-PWRLATER: after ${h8(init)}: PWR_MAIN (task ${tid}) state 0x${lab.nk.state(tid).toString(16)}, errlog ${JSON.stringify(errlog)}: not waiting with no errlog`);
   }
+  const a = lab.sim.read(f.a, 1)[0], c = lab.sim.read(f.c, 1)[0];
+  if (a !== 1 || c !== 1) throw new PowerError(`H-PWRLATER: after ${h8(f.late)}: A (${h8(f.a)}) ${a}, C (${h8(f.c)}) ${c}, not both 1`);
   if (globalThis.process?.env?.OM_POWER_LATER_LOG) console.error('H-PWRLATER', JSON.stringify(out));
   return out;
 }

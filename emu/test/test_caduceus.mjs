@@ -29,7 +29,13 @@
 // contrast) power:off, restart, the card taken out (card:out), the SD medium word (S-MEDIA's NOT_PRESENT), S1 and the
 // title; then power:off and restart with the slot still empty (a power-on without a card), the word, S1 and the
 // title. No poke. No frame hash is pinned.
-//   OM_CADUCEUS=DIR node emu/test/test_caduceus.mjs [--units] [--session]   (OM_EMU_MODEL=E147 for --session)
+//   caduceusSession with strict (--strict; emu/FIDELITY-NOTES.md 7.21): each flow under the strict mode with a menu
+//                   open after it, its observations against the same pins, and its strict findings against
+//                   test/fixtures/caduceus-strict.json (strictPin: per release the sites by class, how many lie on
+//                   patched bytes, their address span, the sites not on patched bytes in full and a digest of the
+//                   whole list); the folders without a flow pin run too, on their default flow, their strict
+//                   findings alone checked
+//   OM_CADUCEUS=DIR node emu/test/test_caduceus.mjs [--units] [--session [--strict]]   (OM_EMU_MODEL=E147 for --session)
 //   OM_CADUCEUS=DIR OM_EMU_MODEL=E147 node emu/test/test_caduceus.mjs --pin VERSION [--flow JSON]
 //     prints the release's row for the pins file: its digests, the reader's result, the flow (defaults from the
 //     folder: every .BIN of it on the card under OM3MOD, films when it has LOOKS.BIN) and what the run observed; read
@@ -41,6 +47,7 @@ import { createHash } from 'node:crypto';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 export const PINS = path.join(EMU, 'test/fixtures/caduceus-releases.json');
+export const STRICT_PINS = path.join(EMU, 'test/fixtures/caduceus-strict.json');
 const SELF = new URL(import.meta.url).pathname;
 const tester = () => {
   const bad = [], notes = [];
@@ -108,6 +115,18 @@ export function caduceusUnits() {
   ok(o1.length === 1 && o1[0] === 'v1: title "Portra 400", pinned "Gold 200"', `observationFindings: one field changed: ${JSON.stringify(o1)}`);
   const o2 = observationFindings('v1', want, { state: want.state });
   ok(o2.length === 1 && o2[0].startsWith('v1: title undefined'), `observationFindings: a field missing: ${JSON.stringify(o2)}`);
+  // strictPin: the counts, the span in the cached view, the sites not on patched bytes without their counts, a digest blind to n
+  const doc = { findings: [
+    { class: 'image-store', disasm: '0x50f2ad08', addr: '0xa0f4b984', size: 4, dir: 'w', n: 3, patched: true },
+    { class: 'image-store', disasm: '0x5001095c', addr: '0x60f98264', size: 2, dir: 'w', n: 7 },
+    { class: 'init-read', disasm: '0x50f2ad10', addr: '0x60f4b000', size: 4, dir: 'r', n: 1, patched: true, where: 'copied to 0x61000000 at the boot' },
+  ], allowed: [{ n: 5 }], dropped: 0 };
+  const sp = strictPin(strictSites(doc));
+  ok(sp.sites === 3 && same(sp.classes, { 'image-store': 2, 'init-read': 1 }) && sp.on_patched === 2 && same(sp.span, ['0x60f4b000', '0x60f98264'])
+    && same(sp.not_patched, [{ class: 'image-store', at: '0x5001095c', addr: '0x60f98264', size: 2, dir: 'w' }]) && sp.allowed === true && sp.dropped === 0, `strictPin: ${JSON.stringify(sp)}`);
+  const recount = strictPin(strictSites({ ...doc, findings: doc.findings.map((f) => ({ ...f, n: f.n + 1 })) }));
+  const moved = strictPin(strictSites({ ...doc, findings: doc.findings.map((f, i) => (i ? f : { ...f, addr: '0xa0f4b988' })) }));
+  ok(recount.digest === sp.digest && moved.digest !== sp.digest, `strictPin's digest: counts left out (${recount.digest}), an address moved told apart (${moved.digest} vs ${sp.digest})`);
   return t;
 }
 
@@ -133,7 +152,9 @@ async function readerResult(file) {
 }
 
 // The flow's run: {observed, seconds, error?}
-async function flowRun(dir, version, flow, tmp) {
+// With strict (--strict, emu/FIDELITY-NOTES.md 7.21) the session runs under the strict mode and, after the flow's last
+// observation, opens the menu and closes it; the result's strict is strictSites of its log
+async function flowRun(dir, version, flow, tmp, strict = false) {
   const { openSession } = await import('../host/session.mjs');
   const { A, fact } = await import('../src/fw/model.mjs');
   const GET_STRING = A(0x510BB079), TITLE = 203, FILM_NAME = 0x7f10;   // E143's GET_STRING ported; their ids (D, their source)
@@ -145,7 +166,7 @@ async function flowRun(dir, version, flow, tmp) {
   fs.copyFileSync(blank, path.join(out, 'blank.omsd'));
   const o = {};
   const s = await openSession({ model: 'E147', patch: [path.join(dir, version, 'patch.json')], card: path.join(out, 'card.omsd'),
-    cardPut: Object.entries(flow.card).map(([dos, rel]) => `${dos}=${path.join(dir, rel)}`), nvram: path.join(out, 'nv.json'), out });
+    cardPut: Object.entries(flow.card).map(([dos, rel]) => `${dos}=${path.join(dir, rel)}`), nvram: path.join(out, 'nv.json'), out, ...(strict ? { strict: 'on' } : {}) });
   let failed = null;
   const step = (tok) => {
     if (failed) throw failed;
@@ -221,6 +242,7 @@ async function flowRun(dir, version, flow, tmp) {
       run('ok', 'ok');
       o.nocard.start.title = string(TITLE);
     }
+    if (strict) run('menu', 'wait:1500', 'menu', 'wait:1000');
   } catch (e) {
     if (e instanceof TypeError || e instanceof ReferenceError || e instanceof SyntaxError) throw e;     // a bug here
     o.error = e.message;                                                                                 // a step that failed
@@ -229,7 +251,30 @@ async function flowRun(dir, version, flow, tmp) {
   const a = sum.patch_audit;
   o.audit = a && { hooks: a.hooks?.map((h) => h.at ?? h) ?? null, ported: a.ported?.map((p) => p.at) ?? null, unloaded: a.unloaded?.length ?? null, tasks: a.tasks };
   o.pokes = sum.pokes.map((p) => p.addr);
-  return { observed: o, seconds: (Date.now() - t0) / 1000 };
+  return { observed: o, seconds: (Date.now() - t0) / 1000, ...(strict ? { strict: strictSites(sum.strict) } : {}) };
+}
+
+// A strict log's findings as pinned (test/fixtures/caduceus-strict.json): per site its class, instruction (disassembly
+// notation), first address, size, direction, count and whether it lies on patched bytes; the allowed stock accesses
+// as their count
+export function strictSites(doc) {
+  return { findings: doc.findings.map((f) => ({ class: f.class, at: f.disasm, addr: f.addr, size: f.size, dir: f.dir, n: f.n, ...(f.patched ? { patched: true } : {}), ...(f.where ? { where: f.where } : {}) })),
+    allowed: doc.allowed.reduce((x, e) => x + e.n, 0) > 0, dropped: doc.dropped };
+}
+
+// The pinned form of strictSites' result: {sites, classes: {class: n}, on_patched, span: [lo, hi] of the addresses in
+// the cached view, not_patched: the sites whose instruction is not on bytes a patch changed (a stock routine, or code
+// run from outside the image, which the patch ranges do not map), digest: sha256 of the sorted lines "class at addr
+// size dir" (the counts n left out), allowed, dropped (sites past the log's cap, src/lab/strict.mjs STRICT_SITES_MAX)}
+export function strictPin(st) {
+  const c = (a) => { const v = parseInt(a, 16); return v >= 0xA0000000 && v < 0xC0000000 ? v - 0x40000000 : v; };
+  const classes = {};
+  for (const f of st.findings) classes[f.class] = (classes[f.class] ?? 0) + 1;
+  const addrs = st.findings.map((f) => c(f.addr)).sort((a, b) => a - b);
+  const hx = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
+  const lines = st.findings.map((f) => `${f.class} ${f.at} ${f.addr} ${f.size} ${f.dir}`).sort();
+  return { sites: st.findings.length, classes, on_patched: st.findings.filter((f) => f.patched).length, span: addrs.length ? [hx(addrs[0]), hx(addrs.at(-1))] : null,
+    not_patched: st.findings.filter((f) => !f.patched).map(({ n, ...f }) => f), digest: sha(lines.join('\n')).slice(0, 16), allowed: st.allowed, dropped: st.dropped };
 }
 
 // The control: v0.29's block with section 6's end word put back to stock, as --main (made here, then removed)
@@ -251,7 +296,7 @@ async function brokenSec6(dir, tmp) {
 }
 
 // ---- the matrix (E147) ------------------------------------------------------------------------------------------
-export async function caduceusSession() {
+export async function caduceusSession({ strict = false } = {}) {
   const t = tester(), { ok, notes } = t;
   const root = process.env.OM_CADUCEUS;
   if (!root) { t.skipped = 'set OM_CADUCEUS to a caduceus-om3 checkout'; return t; }
@@ -290,8 +335,11 @@ export async function caduceusSession() {
     const r = spawnSync(process.execPath, [path.join(EMU, 'bin/card.mjs'), 'new', path.join(tmp, 'blank.omsd'), '--model', 'E147'], { encoding: 'utf8', timeout: 120000 });
     ok(r.status === 0, `card.mjs new: rc ${r.status} ${r.stderr.slice(0, 300)}`);
     const jobs = Math.max(1, Number(process.env.OM_CADUCEUS_JOBS) || 3);
+    // with strict, the folders without a pin too (their default flow; the strict findings alone are checked)
+    const strictPins = strict ? JSON.parse(fs.readFileSync(STRICT_PINS, 'utf8')).releases : null;
+    if (strict) runnable.push(...plan.unpinned.filter((v) => fs.existsSync(path.join(dir, v, 'patch.json'))));
     const one = (v) => new Promise((done) => {
-      const c = spawn(process.execPath, [SELF, '--release', v, '--tmp', tmp], { env: { ...process.env, OM_EMU_MODEL: 'E147' } });
+      const c = spawn(process.execPath, [SELF, '--release', v, '--tmp', tmp, ...(strict ? ['--strict'] : [])], { env: { ...process.env, OM_EMU_MODEL: 'E147' } });
       let o = '', e = '';
       c.stdout.on('data', (d) => { o += d; }); c.stderr.on('data', (d) => { e += d; });
       c.on('close', (rc) => done([v, rc, o, e]));
@@ -303,10 +351,16 @@ export async function caduceusSession() {
       let res = null;
       try { res = JSON.parse(o.trim().split('\n').at(-1)); } catch { /* reported below */ }
       if (rc !== 0 || !res) { ok(false, `${v}: the flow's process exited ${rc}: ${(o + e).trim().split('\n').slice(-5).join(' | ')}`); continue; }
-      const f = observationFindings(v, pins[v].expect, res.observed);
+      const f = pins[v] ? observationFindings(v, pins[v].expect, res.observed) : [];
+      if (strict) {
+        const got = strictPin(res.strict), want = strictPins[v];
+        if (!want) f.push(`${v} strict: no pin in ${path.basename(STRICT_PINS)}; the run's: ${JSON.stringify(got)}`);
+        else f.push(...observationFindings(`${v} strict`, want, got));
+      }
       f.forEach((x) => ok(false, x));
       ok(true, `${v} flow`);
-      notes.push(`${v}: ${f.length ? 'FAILED' : 'as pinned'} (${res.seconds.toFixed(1)} s${pins[v].expect.open === 'ok' ? '' : `; ${pins[v].expect.open}`})`);
+      const st = strict && res.strict ? `; strict ${strictPin(res.strict).sites} site(s)` : '';
+      notes.push(`${v}: ${f.length ? 'FAILED' : 'as pinned'} (${res.seconds.toFixed(1)} s${pins[v] ? (pins[v].expect.open === 'ok' ? '' : `; ${pins[v].expect.open}`) : '; no flow pin, default flow'}${st})`);
     }
     // the control on the lab: v0.29 with section 6's end word put back stops at the open, naming section 6
     if (fs.existsSync(path.join(dir, 'v0.29', 'patch.json')) && runnable.includes('v0.29')) {
@@ -325,8 +379,8 @@ export async function caduceusSession() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const argv = process.argv.slice(2), arg = (k) => (argv.includes(k) ? argv[argv.indexOf(k) + 1] : null);
   if (arg('--release')) {                    // one flow, for caduceusSession: one JSON line
-    const v = arg('--release'), pins = JSON.parse(fs.readFileSync(PINS, 'utf8')).releases;
-    const res = await flowRun(path.join(process.env.OM_CADUCEUS, 'releases'), v, pins[v].flow, arg('--tmp'));
+    const v = arg('--release'), pins = JSON.parse(fs.readFileSync(PINS, 'utf8')).releases, dir = path.join(process.env.OM_CADUCEUS, 'releases');
+    const res = await flowRun(dir, v, pins[v]?.flow ?? defaultFlow(dir, v), arg('--tmp'), argv.includes('--strict'));
     console.log(JSON.stringify(res));
     process.exit(0);
   }
@@ -356,7 +410,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     fail += u.bad.length;
   }
   if (all || argv.includes('--session')) {
-    const s = await caduceusSession();
+    const s = await caduceusSession({ strict: argv.includes('--strict') });
     if (s.skipped) console.log(`caduceus-om3 releases: SKIPPED (${s.skipped})`);
     else {
       console.log(`caduceus-om3 releases: ${s.checks - s.bad.length}/${s.checks}`);

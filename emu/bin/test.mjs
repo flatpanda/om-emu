@@ -4,12 +4,13 @@
 // tools and the regression net's permanent controls (test_cli.mjs: mutants golden.mjs must report), infrastructure
 // (test_infra.mjs), the VSC register tables, class tables, blend table and histogram unit (test_dev.mjs), the kind-3
 // VSC's COMPOSE
-// on E122's board (test_vsc3.mjs), the kick model's TB-layout
+// on E122's board (test_vsc3.mjs), the E118 family's second timer unit (test_timer2.mjs), the kick model's TB-layout
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
 // (test_debug.mjs) and its live route to a play session (test_live.mjs) with its call op (test_call.mjs: mid-function
 // calls with stop pcs too, and through bin/session.mjs on E143 and E147), the firmware's setting names and the setting
-// op and tokens on E143, E146 and E147 (test_setnames.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// op and tokens on E143, E146 and E147 (test_setnames.mjs), the settings init chain's rule and its sessions against the off switch on
+// E143, E146 and E147 (test_setchain.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
@@ -33,17 +34,19 @@
 // E147 and E142 with no new site, and patched routines of each class with their controls on E142 and E143), the hidden
 // service screens with MENU held at power-on on E143 and the MS count (H-MECCOUNT) on E143, E146 and E147
 // (test_hidemode.mjs), the HDMI
-// port and a plug in play on E143,
-// E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and E147 and its PER_ROTATE groups
-// (--rotate on) on E143, E146 and E147 (test_acc.mjs), the picture's orientation tag with --rotate on E143 and E146
-// (test_orient.mjs), the card and the
+// port and a plug in play with the output switch to HDMI on E143,
+// E146 and E147 and the GUI on it under control camapp 3 on E143 (test_hdmi.mjs), the accelerometer's sample, check_level
+// on E146 and E147 and its PER_ROTATE groups
+// (PER_ROTATE by default since 2026-11-23) on E143, E146 and E147 (test_acc.mjs), the picture's orientation tag by
+// default and with --rotate off on E143, E146 and E147 (test_orient.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129, E132, E145 and the E118
 // family (S2's file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
 // firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), a power-on with no card and the media status
 // around a removal on E143 and E147 (test_nocard.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
-// (test_erase.mjs), the playback menu's Erase All natively on E143, E146, E147 and E148 (test_eraseall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
+// (test_erase.mjs), the playback menu's Erase All natively on E143, E146, E147 and E148 (test_eraseall.mjs), its Copy All to
+// the second card natively on E143 (test_copyall.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the still / movie switch
 // refused on E143 and moved on E147 (test_smswitch.mjs), the E-P7's Shortcut button refused on E143 and opening the
 // Colour Profile page on E142 (test_shortcut.mjs), the display switch both ways with a shot on each display and
 // the TFT's frame at idle on E146 and E147, LV in S2's rec view on all three (test_dispswitch.mjs), the scripted session through
@@ -74,7 +77,7 @@
 // and E146 (test_scpum4.mjs), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
-// OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
+// OM_COVERAGE), and the port's placement of a tied vote (test_place.mjs). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
 // Also: the memory map's rules at addRegion (test_mem.mjs).
 // What a firmware file is, on made-up bodies and on the .BINs and blocks at hand, and --main with a .BIN container on
@@ -95,6 +98,7 @@ import { cache } from '../test/test_regress.mjs';
 import { cli, cli2, cli3, cli4, cli5, cli6 } from '../test/test_cli.mjs';
 import { vscClasses, vscRegsHeader, blendTable, vscHistUnits } from '../test/test_dev.mjs';
 import { vsc3Units } from '../test/test_vsc3.mjs';
+import { timer2Units } from '../test/test_timer2.mjs';
 import { kickRefusals, refusalControl } from '../test/test_irq.mjs';
 import { infra } from '../test/test_infra.mjs';
 import { labTests, trimTests } from '../test/test_lab.mjs';
@@ -135,6 +139,13 @@ const inf = infra(), hd = vscRegsHeader(), bl = blendTable(), vc = vscClasses(),
 console.log(`infrastructure: ${inf.checks - inf.bad.length}/${inf.checks}; vsc register tables vs header: ${hd.bad.length ? 'DIFFERENT' : 'identical'}; blend table: ${bl.inputs - bl.bad.length}/${bl.inputs}; vsc-classes: ${vc.names} names, ${vc.bad.length} differences; kind-3 VSC compose: ${v3.checks - v3.bad.length}/${v3.checks}; Stage 1 tooling checks: ${c3.checks - c3.bad.length}/${c3.checks}; vsc histogram unit: ${vh.checks - vh.bad.length}/${vh.checks}`);
 [...inf.bad, ...hd.bad, ...bl.bad, ...vc.bad, ...v3.bad, ...c3.bad, ...vh.bad].forEach((x) => console.log('  ', x));
 bad += inf.bad.length + hd.bad.length + bl.bad.length + vc.bad.length + v3.bad.length + c3.bad.length + vh.bad.length;
+// the E118 family's second timer unit on the lab clock, without firmware (test_timer2.mjs)
+{
+  const t2 = timer2Units();
+  console.log(`the second timer unit: ${t2.checks - t2.bad.length}/${t2.checks}`);
+  t2.bad.forEach((x) => console.log('  ', x));
+  bad += t2.bad.length;
+}
 const c4 = cli4(), c5 = cli5();
 console.log(`Stage 2 tooling checks (J1 included): ${c4.checks - c4.bad.length}/${c4.checks}; Player-boundary replay checks: ${c5.checks - c5.bad.length}/${c5.checks}`);
 [...c4.bad, ...c5.bad].forEach((x) => console.log('  ', x));
@@ -272,8 +283,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
   bad += pn.bad.length + pd.bad.length;
 }
-// the play module native per body (test_playmod.mjs, docs/hle-gaps/4.8.md 4.8.18): E143's view decoded after one shot;
-// E146 and E147, each in a process of its own, to the decode's go, refused at the play buffer outside om1.bus
+// the play module native per body (test_playmod.mjs, docs/hle-gaps/4.8.md 4.8.18, 4.8.22): the view decoded after one
+// shot on E143, and on E146 and E147, each in a process of its own, with the play buffer in the 512 MiB of bus DRAM
 {
   const { playBodySession } = await import('../test/test_playmod.mjs');
   const { spawnSync } = await import('node:child_process');
@@ -586,6 +597,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// the HDMI plug under control camapp 3 on E143: the GUI's planes on channel 0, the unplug back to the TFT
+{
+  const { hdmiCamapp3Session } = await import('../test/test_hdmi.mjs');
+  const r = await hdmiCamapp3Session();
+  console.log(`HDMI under control camapp 3 (E143): ${r.checks - r.bad.length}/${r.checks}`);
+  r.bad.forEach((x) => console.log('  ', x));
+  bad += r.bad.length;
+}
 // the USB cable at the event level (S-USBCABLE): plug and unplug through the sub-CPU's PC13 on E143
 {
   const { usbSession } = await import('../test/test_usbcable.mjs');
@@ -595,7 +614,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += r.bad.length;
 }
 // the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and E147 and its PER_ROTATE
-// groups R1 and R2 (--rotate on, with their mutant on E143) on E143, E146 and E147, each in a process of its own
+// groups R1 and R2 (PER_ROTATE by default, with their mutant on E143) on E143, E146 and E147, each in a process of
+// its own
 // (E143's default runs are checks/runs.json's; the model is fixed when the lab is imported)
 {
   const { accUnits } = await import('../test/test_acc.mjs');
@@ -611,16 +631,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += au.bad.length + runs.filter(([, r]) => r.status !== 0).length;
 }
 // the picture's orientation tag (test_orient.mjs): the tilt token, the sites on E143, E146 and E147 by their bytes,
-// then S2 in portrait with --rotate on and the control without it on E143 here, E146 in a process of its own
+// then S2 in portrait with the default --rotate (PER_ROTATE) and the control with --rotate off on E143 here, E146 and
+// E147 each in a process of its own
 {
   const { orientUnits, orientSites, orientSession } = await import('../test/test_orient.mjs');
   const { spawnSync } = await import('node:child_process');
   const ou = await orientUnits(), oi = await orientSites(), os = await orientSession();
-  const r = spawnSync(process.execPath, [new URL('../test/test_orient.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
-  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
-  console.log(`the orientation tag: units ${ou.checks - ou.bad.length}/${ou.checks}; sites ${oi.checks - oi.bad.length}/${oi.checks}; E143 ${os.checks - os.bad.length}/${os.checks}; E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
-  [...ou.bad, ...oi.bad, ...os.bad, ...(r.status === 0 ? [] : lines.map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
-  bad += ou.bad.length + oi.bad.length + os.bad.length + (r.status === 0 ? 0 : 1);
+  const runs = ['E146', 'E147'].map((m) => [m, spawnSync(process.execPath, [new URL('../test/test_orient.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' })]);
+  const lines = (r) => (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`the orientation tag: units ${ou.checks - ou.bad.length}/${ou.checks}; sites ${oi.checks - oi.bad.length}/${oi.checks}; E143 ${os.checks - os.bad.length}/${os.checks}; ${runs.map(([m, r]) => `${m} ${r.status === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...ou.bad, ...oi.bad, ...os.bad, ...runs.flatMap(([m, r]) => (r.status === 0 ? [] : lines(r).map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += ou.bad.length + oi.bad.length + os.bad.length + runs.filter(([, r]) => r.status !== 0).length;
 }
 // the card and the file system (storage.mjs): the card model and the FAT and exFAT readers without firmware, then play
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB
@@ -767,6 +788,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the menu's erase all: E143 ${r.checks - r.bad.length}/${r.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
   [...r.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += r.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the playback menu's Copy All (S-MDACTRL's copy all, the picture file API's call natively, FILECLBK's code 38): two
+// pictures on card 1, Copy All, the copy screen's choice and Yes, card 2 read back with card 1's files: E143 alone
+{
+  const { copyAllSession } = await import('../test/test_copyall.mjs');
+  const r = await copyAllSession();
+  console.log(`the menu's copy all: ${r.checks - r.bad.length}/${r.checks}`);
+  r.bad.forEach((x) => console.log('  ', x));
+  bad += r.bad.length;
 }
 // touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here, E146, E147 and
 // the E144 and E118 families' bodies with a touch panel each in a process of its own, four at a time (on the
@@ -935,6 +965,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...nu.bad, ...ns.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += nu.bad.length + ns.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// the settings init chain run whole by default (test_setchain.mjs): the rule's units on synthetic and unpacked bodies,
+// then a session with the chain against one with its off switch on E143 here and on E146 and E147 in processes of
+// their own (every setting, the frame and the lab time the same at the start and after a mode change)
+{
+  const { setchainUnits, setchainSession } = await import('../test/test_setchain.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const cu = setchainUnits(), cs = await setchainSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_setchain.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`settings init chain: units ${cu.checks - cu.bad.length}/${cu.checks}; E143 ${cs.checks - cs.bad.length}/${cs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...cu.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += cu.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
 // the scripted session's traces, breakpoints and watchpoints (test_trace.mjs): its units, then whole runs through the
 // command line on E143 here and on E147 in a process of its own
 {
@@ -1018,14 +1063,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
     if (r.status !== 0) { lines.filter((l) => l.startsWith('   ') || !/^H-SHOTALLOC over/.test(l)).forEach((l) => console.log('  ', `${m}: ${l.trim()}`)); bad += 1; }
   }
 }
-// S-RAWFRAME's fill (test_shotalloc.mjs --dram 512): on E143 MM's Bayer block lies past the lab's 384 MiB of DRAM, so
-// the fill runs only with 512; three pictures, each checked against rec_ImgProCtrl_Src_Bayer's source and MM's block
+// S-RAWFRAME's control (test_shotalloc.mjs --dram 384): the fill runs in the runs above with the E143 family's 512 MiB
+// of DRAM (src/fw/facts.mjs mmDramSize); with the 384 MiB before, MM's Bayer block lies past the lab's DRAM and
+// S-RAWFRAME is not in use, giving that reason
 {
   const { spawnSync } = await import('node:child_process');
-  const r = spawnSync(process.execPath, [new URL('../test/test_shotalloc.mjs', import.meta.url).pathname, '--session', '--dram', '512', '--shots', '3'], { env: { ...process.env, OM_EMU_MODEL: 'E143' }, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [new URL('../test/test_shotalloc.mjs', import.meta.url).pathname, '--session', '--dram', '384', '--shots', '2'], { env: { ...process.env, OM_EMU_MODEL: 'E143' }, encoding: 'utf8' });
   const lines = (r.stdout + r.stderr).trim().split('\n');
-  console.log(lines.find((l) => /^H-SHOTALLOC over/.test(l)) ?? 'H-SHOTALLOC over 3 pictures (E143, 512 MiB): FAILED');
-  if (r.status !== 0) { lines.filter((l) => l.startsWith('   ')).forEach((l) => console.log('  ', `E143 512 MiB: ${l.trim()}`)); bad += 1; }
+  console.log(lines.find((l) => /^H-SHOTALLOC over/.test(l)) ?? 'H-SHOTALLOC over 2 pictures (E143, 384 MiB): FAILED');
+  if (r.status !== 0) { lines.filter((l) => l.startsWith('   ')).forEach((l) => console.log('  ', `E143 384 MiB: ${l.trim()}`)); bad += 1; }
 }
 // H-TAKEFILLS (test_takefills.mjs): TAKE's own fills of the shot natively against S-EXIFPRM's copies, the record
 // compared byte for byte, on E143, E146 and E147, each in a process of its own (takepic, the lens fill and the third
@@ -1057,14 +1103,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += su.bad.length + failed;
 }
 // the caduceus-om3 releases (test_caduceus.mjs): the pins' units; with OM_CADUCEUS naming a caduceus-om3 checkout, each
-// release folder's files against its pins and its flow on E147 in processes of their own; without it SKIPPED
+// release folder's files against its pins and its flow on E147 in processes of their own, under the strict mode with
+// its findings against test/fixtures/caduceus-strict.json (the folders without a flow pin too); without it SKIPPED
 {
   const { caduceusUnits } = await import('../test/test_caduceus.mjs');
   const cu = caduceusUnits();
   let rc = 0, lines = ['SKIPPED (set OM_CADUCEUS to a caduceus-om3 checkout)'];
   if (process.env.OM_CADUCEUS) {
     const { spawnSync } = await import('node:child_process');
-    const r = spawnSync(process.execPath, [new URL('../test/test_caduceus.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [new URL('../test/test_caduceus.mjs', import.meta.url).pathname, '--session', '--strict'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
     rc = r.status;
     lines = (r.stdout + r.stderr).trim().split('\n').map((l) => l.replace(/^caduceus-om3 releases: /, ''));
   }
@@ -1110,6 +1157,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`idle key image: ${ki.bodies.length} bodies, ${ki.bad.length ? 'FAILED' : 'ok'}`);
   ki.bad.forEach((x) => console.log('  ', x));
   bad += ki.bad.length;
+}
+// UI_IN's module init natively (H-UIININIT, S-WAKEFACTOR; test_uiininit.mjs, E143): its calls from its bytes, the key
+// table at the power button's factor; a start and MENU, down, OK, MENU the same as with S-BOOTKEY's path
+{
+  const { uiinInitUnits, uiinInitSession } = await import('../test/test_uiininit.mjs');
+  const uu = await uiinInitUnits(), us = await uiinInitSession();
+  console.log(`UI_IN's module init: units ${uu.checks - uu.bad.length}/${uu.checks}; in play ${us.checks - us.bad.length}/${us.checks}`);
+  [...uu.bad, ...us.bad].forEach((x) => console.log('  ', x));
+  bad += uu.bad.length + us.bad.length;
 }
 // the 12-40 on the mount (S-LENS, or natively with S-LENSMCU) and the camera's own exposure plan (S-EXPOSE)
 {
@@ -1280,6 +1336,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...mu.bad, ...ms.bad, ...ms.skipped.map((x) => `SKIPPED ${x}`), ...e146].forEach((x) => console.log('  ', x));
   bad += mu.bad.length + ms.bad.length + ms.skipped.length + (r.status === 0 ? 0 : 1);
 }
+// the power manager's later inits at the bring-up (H-PWRLATER, opt-in; test_pwrlater.mjs), E143 with the SCPU's own
+// firmware
+{
+  const { pwrLaterSession } = await import('../test/test_pwrlater.mjs');
+  const pw = await pwrLaterSession();
+  console.log(`the power manager's later inits (H-PWRLATER): ${pw.checks - pw.bad.length}/${pw.checks}${pw.skipped.length ? `, ${pw.skipped.length} SKIPPED` : ''}`);
+  [...pw.bad, ...pw.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+  bad += pw.bad.length;
+}
 // the firmware map (bin/fwmap.mjs) and the machine's coverage option
 {
   const { fwmapUnits, fwmapFirmware } = await import('../test/test_fwmap.mjs');
@@ -1287,6 +1352,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`firmware map: units ${fu.checks - fu.bad.length}/${fu.checks}; static map, labels and OM_COVERAGE ${ff.checks - ff.bad.length}/${ff.checks}${ff.skipped.length ? `, ${ff.skipped.length} SKIPPED (no E143 main block)` : ''}`);
   [...fu.bad, ...ff.bad, ...ff.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
   bad += fu.bad.length + ff.bad.length + ff.skipped.length;
+}
+// the port's placement (src/fw/place.mjs) on a synthetic map: a vote in the image copy with no majority
+{
+  const { placeUnits } = await import('../test/test_place.mjs');
+  const pl = placeUnits();
+  console.log(`port placement (place.mjs): ${pl.checks - pl.bad.length}/${pl.checks}`);
+  pl.bad.forEach((x) => console.log('  ', x));
+  bad += pl.bad.length;
 }
 const fa = factsTests();
 console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);

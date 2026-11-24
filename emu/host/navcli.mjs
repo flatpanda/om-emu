@@ -42,6 +42,7 @@ const M8_TEXTS = {
   "H-CONNECT": "M8, evf_layout only: sendEvent(0x83, 7) in POWER_ON, then settle: GUI message 0x9601, lOutput 7, the INTERNAL_EVF row of the sender 0x5105053c (its EVF row is lOutput 3); which row the camera takes is not traced",
   "H-RESEND": "M8 (the SWITCH token): 0x503e52c7(kind 1 TFT / 32 EVF, {1, 1, 1}) natively, the request openDevice 0x50d83338 makes after its open (0x50d8350d..0x50d83535); openDevice's caller is not traced",
   "H-UPDATE": "M8 (the SWITCH token): the GUI's re-display wrapper 0x510bd84b (gpiUpdateDisplay(1)) from the lab task after the switch; which code updates the display after a switch on the camera is not traced",
+  "S-DISPSYNC": "(nav, the lab's own creation of the GUI: a body whose GUI asks for the application's display sync at its start: E137, E142, E140, E125, E130, E133, E145, E129, E132 and the E118 family) the GUI's synced display requests (type 3; E120's record form type 5) leave the device's buffers pending until an image sync only the application's stopRecView sends, so nav's frames stayed the start's (X; docs/model-survey.md findings 160, 162). The session observes the request from before the GUI's creation and, at the bring-up's end and each step's end, releases each device with such a request as play's S-DISPSYNC does (src/lab/dispsync.mjs, src/lab/camapp.mjs): both panels' sync words cleared through the application's setter, then the image sync of the fact's kind (src/fw/facts.mjs displaySync). The camera releases it with the image's next update, which nav does not run (I)",
   "S-MODACK": "(a body whose src/fw/models.mjs modack_queues names module queues: E132) a synchronous send to one of those queues, whose tasks do not run in the lab, returns E_OK with nothing written back, as a play session's S-MODACK answers it (src/lab/menu.mjs _sync_send; E132's menu open asks CATEGORY_MAIN)",
 };
 export const ACTIONS = [
@@ -176,10 +177,12 @@ function run(a) {
       doc.stand_ins = {};
       for (const [[, n, w], v] of hits) doc.stand_ins[`${n} (${w})`] = v;
       // the bring-up's body steps (src/lab/menu.mjs power_start and gui_sleep, src/lab/nav.mjs gui_connect; their
-      // texts the play session's, src/lab/playui.mjs STAND_INS) and S-MODACK's synchronous sends where they ran
+      // texts the play session's, src/lab/playui.mjs STAND_INS), nav's S-DISPSYNC releases (dispsync_release) and
+      // S-MODACK's synchronous sends where they ran
       const ps = lab.power_started;
       const body = [...(ps?.dpc ? ['H-DPCINIT', 'A-DPC-1'] : []), ...(ps?.sio ? ['H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...ps.sio.labels] : []),
         ...(ps ? ['H-PWRTASK'] : []), ...(lab.gui_sleep_ms ? ['H-GUISLEEP'] : []), ...(nav.gui_connected ? ['H-GUICONNECT'] : []),
+        ...(nav.dispsync_released.length ? ['S-DISPSYNC'] : []),
         ...(lab.modack_sends.length ? ['S-MODACK'] : [])];
       const used = [...(a.time ? ['H-BOOTTIME', 'H-DEFER', 'ELAPSE'] : ['H-TIMER']), ...(a.store_first ? ['store-first'] : []),
         ...(a.evf_layout ? ['S-TAKEOVER', 'H-CONNECT'] : []), ...(tokens.some((t) => t.startsWith('SWITCH')) ? ['H-RESEND', 'H-UPDATE'] : []), ...body];

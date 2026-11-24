@@ -84,7 +84,7 @@ const B2_SCRIPTS = ['N7', 'N7C'], SWITCH_SCRIPTS = ['N8'];
 const LEVEL_STEP = 0x501C67AA, LEVEL_APPLY = 0x501C69E5, EDGE_PAD_COPY = 0x501DB7D8, STATE_GET = 0x500417DA;
 const DISPLAY_KINDS = new Map([[0xE831, 587], [0x4671, 1947], [0xD7F9, 449], [0x8279, 31]]);
 const KIND_TABLE = 0x606217E4, TIMER_ERRLOG = 0x19001807, AWAITED = 0x603710F8, EV_10MS_WIZARD_MENU = 0x9AC6;
-const SCPU_OFFSETS = new Set([0x00, 0xE8, 0xEC, 0xF4, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)]);
+const SCPU_OFFSETS = new Set([0x00, 0x04, 0xE8, 0xEC, 0xF4, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)]);
 const DESC_IDS = 16384;
 const OUT = process.env.OM_CHECK_OUT ? path.resolve(process.env.OM_CHECK_OUT) : path.join(REPO, 'emu/out/checks/js/manual');
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -484,7 +484,7 @@ function device_group() {
       sim.reset({ pc: LAND, a0: addr, d0 });
       return sim.run([], true);
     };
-    for (const off of [0x00, 0x08, 0x3C, 0xE8]) {
+    for (const off of [0x00, 0x04, 0x08, 0x3C, 0xE8]) {
       const v = (0x5A000000 | off << 8 | 0xA5) >>> 0;
       const w = access(new Uint8Array([0x60]), MM.SCPU + off, v);
       const r = access(new Uint8Array([0x70]), MM.SCPU + off);
@@ -511,14 +511,14 @@ function device_group() {
     if (!eq(!(w.fault || r.fault || r.d0 !== 0 || sim.u32(MM.SCPU + 0xF4) !== 0x20041001), true)) {
       problems.push(`0xf4: write fault ${w.fault}, read ${hx(r.d0)} fault ${r.fault}, stored 0x${sim.u32(MM.SCPU + 0xF4).toString(16).padStart(8, '0')}`);
     }
-    for (const [label, code, off] of [['byte load 0x00', [0xF0, 0x40], 0x00], ['byte store 0x00', [0xF0, 0x50], 0x00], ['load 0x04', [0x70], 0x04],
+    for (const [label, code, off] of [['byte load 0x00', [0xF0, 0x40], 0x00], ['byte store 0x00', [0xF0, 0x50], 0x00],
       ['store 0xf0', [0x60], 0xF0], ['load 0xf8', [0x70], 0xF8], ['load 0x80', [0x70], 0x80]]) {
       const rr = access(new Uint8Array(code), MM.SCPU + off);
       if (!eq(rr.fault, 2)) problems.push(`${label}: fault ${rr.fault}, expected a bus error (2)`);
     }
     const err = sim.stderrLines().join('\n') + '\n';
     const count = (s, sub) => s.split(sub).length - 1;
-    if (!eq([count(err, 'scpu UNKNOWN'), count(err, 'om-emu: scpu command 0x20041001'), err.includes('#1 ')], [7, 1, true])) problems.push(`stderr: ${err.slice(-600)}`);
+    if (!eq([count(err, 'scpu UNKNOWN'), count(err, 'om-emu: scpu command 0x20041001'), err.includes('#1 ')], [6, 1, true])) problems.push(`stderr: ${err.slice(-600)}`);
   } finally { sim.close(); }
   return problems;
 }
@@ -1005,7 +1005,7 @@ export async function check(mode = 'default', write_notes = false) {
   group(`0 offline: refs/settings.mjs self-test (2529-id default table digest, investigation spot values, allowed lists, region rows); ${rows} getter-backed Setup rows: descriptor list == value-list keys; SCPU immediates: `
     + `${modelled.length} offsets modelled ${show(modelled.map((o) => '0x' + o.toString(16)))}, ${unknown.length} UNKNOWN; Nav rules and refusals`, p0);
   notes.push('SCPU-IMMEDIATES ' + sortNum(offs.keys()).map((o) => `0x${o.toString(16).padStart(2, '0')}:${offs.get(o)}`).join(' '));
-  group('1 device: om1.scpu 32-bit storage at 0x00/0x08/0x3c, the clock 0xe8/0xec ticks with the lab clock (0xec takes 0 only), 0xf4 stores and counts a command and reads 0, byte accesses and offsets 0x04/0x80/0xf0/0xf8 are bus errors printed as scpu UNKNOWN', p1,
+  group('1 device: om1.scpu 32-bit storage at 0x00/0x04/0x08/0x3c (0x04 the key code word of UI_IN on the E143 family board), the clock 0xe8/0xec ticks with the lab clock (0xec takes 0 only), 0xf4 stores and counts a command and reads 0, byte accesses and offsets 0x80/0xf0/0xf8 are bus errors printed as scpu UNKNOWN', p1,
     !(mode === 'quick' && MUTANT), 'not in a mutant run');
 
   // ---- 2. store init

@@ -16,7 +16,7 @@ import { Storage, STORAGE, SECOND } from './storage.mjs';
 import { SdCard, cardSectors } from './sdcard.mjs';
 import { NativeLens } from './lens.mjs';
 import { ResNand } from './resnand.mjs';
-import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
+import { IoExpanders, PowerOff, POWER_OFF, startPowerManager, laterInits } from './power.mjs';
 import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
 import { imageView } from '../fw/image.mjs';
@@ -93,6 +93,38 @@ export const SCPU_PORT_GROUP = 0;
 // sub-CPU's message 0x08, which PER_SCPU's poll takes and its handler 0x5005d43e gives the same producer (D)
 export const UIIN_PORT_SCAN = A(0x5005D36A);
 const uiinScan = () => fact('scpu.port_scan', true);
+// H-UIININIT (src/fw/models.mjs uiin_init; docs/hle-gaps/4.7.md 4.7.17): on a body that gives it, UI_IN's module init
+// runs natively at the bring-up in place of H-UIINRING, S-BOOTKEY and H-UIINSCAN: its calls, read from its bytes, in its
+// order, but for the ones the body's entry leaves out (E143: the GIO keys' init 0x5014d62e and 0x5014d97a). Its key
+// step (E143 0x5014e3ab) stores the boot key from the key table at the wake factor, configures the SCPU's ports from
+// its bit table (0x5004e3fc, A-SCPU-4), clears the SCPU interface's word 0x04 and registers UI_IN's IRQ 320 callback
+// (H-UIINPORT's registration); 0x5014d49e sets group 4's image and old state; the port scan is H-UIINSCAN's request.
+// S-WAKEFACTOR: the SCPU init, which stores the wake factor, does not run (the halfword stays 0, the factor of a start
+// with the interface's bit 1 of word 0x00 clear, E143 0x5004ddbe..ca, D), so the lab sets it to the power button's,
+// 1: the factor the init stores for bit 0 of the interface's word 0x90 (0x5004ddda..e2, D), whose key table entry is
+// the power switch's code (E143 0x60224094[1] = 0x000c, X), as S-BOOTKEY set the key. Set after PER_SCPU's start,
+// which took the factor 0 and reset the sub-CPU ("SCPU RST!", 4.7.1): the lab's link start stays a cold start (I)
+const uiinInit = () => MODEL_INFO.uiin_init ?? null;
+export const WAKE_POWER_BUTTON = 1;
+// The module init's calls, from its bytes (E143 0x5014bf91..0x5014bfc5, D): `clr d0; movbu d0,(B); mov d0,(W)`, then
+// calls, `cd rel16 regs size` or `dd rel32 regs size`, up to `ret [],4`. {stores: [B, W], calls: [disassembly
+// notation]}; throws for any other shape
+export function uiinInitCalls(image, init) {
+  const v = imageView(image, IMAGE_BASE, MODEL), at = runtime(init);
+  if (v.u8(at) !== 0x00 || v.u8(at + 1) !== 0xFC || v.u8(at + 2) !== 0x82 || v.u8(at + 7) !== 0xFC || v.u8(at + 8) !== 0x81) {
+    throw new PlayError(`H-UIININIT: UI_IN's module init ${h8(init)} does not open with clr d0; movbu d0,(abs32); mov d0,(abs32)`);
+  }
+  const stores = [v.u32(at + 3), v.u32(at + 9)], calls = [];
+  for (let p = at + 13; ; ) {
+    const op = v.u8(p);
+    if (op === 0xCD) { calls.push(disasm((p + ((v.u16(p + 1) << 16) >> 16)) >>> 0)); p += 5; }
+    else if (op === 0xDD) { calls.push(disasm((p + v.u32(p + 1)) >>> 0)); p += 7; }
+    else if (op === 0xDF && v.u8(p + 1) === 0x00 && v.u8(p + 2) === 0x04) break;
+    else throw new PlayError(`H-UIININIT: UI_IN's module init ${h8(init)} has 0x${fx(op, 2)} at ${where(p)}, not a call or its ret [],4`);
+    if (calls.length > 16) throw new PlayError(`H-UIININIT: UI_IN's module init ${h8(init)} makes more than 16 calls`);
+  }
+  return { stores, calls };
+}
 // The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps/4.9.md 4.9): the machine
 // gets the transmitter, the hot-plug pin and the sink, the lab runs H-GIOSLOTS, and the input hdmi plug puts the sink
 // (S-HDMISINK, src/lab/edid.mjs) on the port and lets HDMI_PLUG_MS of lab time run, in which the firmware takes the
@@ -107,6 +139,8 @@ export const TILT_MS = 250;
 // turns the orientation changed 40 to 160 ms after the input and the gauge's body followed 50 to 230 ms after it; a
 // 250 ms wait once read the old body)
 export const ROTATE_TILT_MS = 500;
+// --rotate's value (off, on, auto; absent: auto) as whether PER_ROTATE runs: auto on a body whose fact acc gives rotate
+export const rotateOn = (v) => { const r = v ?? 'auto'; return r === 'on' || (r === 'auto' && !!MODEL_INFO.acc?.rotate); };
 // a card input's wait (src/lab/media.mjs S-MEDIA, src/lab/storage.mjs): the card's change runs in the step (the
 // insertion's requests take about 0.8 s of lab time, logsec's 740 ms wait after the card switch's change included,
 // X), then CARD_MS more for the application's redraw
@@ -139,7 +173,7 @@ export const GPIO_TP = [[48, 0x9B880E00], [49, 0x9B880E40], [108, 0x9B883E80]], 
 export const GESTURES = new Map([[1, 'LIFTOFF'], [16, 'PRESS'], [32, 'CLICK'], [64, 'DCLICK'], [128, 'LONGPRESS'], [256, 'SLIDE'], [4096, 'FLICK']]);
 export const BGDRAW = A(0x50B3DCCA), BGDRAW_CALLERS = [A(0x510C9A07), A(0x510C9CF5)];
 export const CA_CALL = A(0x51084994), CA_TOUCH_EVENT = 35, CAFWD_CALLERS = [A(0x5124F6AE), A(0x5124F5CC)];
-export const B7_GATE = A(0x603710F8), STATE_SHOOTING = 0x0108, SHOOT_PANEL = 10;
+export const B7_GATE = A(0x603710F8), STATE_SHOOTING = 0x0108, SHOOT_PANEL = 10, DATE_PROMPT_PANEL = 324;
 export const CONNECT_INDEX = MM.CONNECT_EVENT;
 export const LOUTPUT = { tft: 2, evf: 7 }, CONNECT_STATE = { tft: 2, evf: 5 };
 export const CTRL_OR = A(0x501E04B7);
@@ -420,7 +454,8 @@ export const POSITION_SWITCHES = [];
 // pushes from its own image (H-G4SET; the HDMI plug's report, a lens or grip input): there the USB connection is the
 // SCPU port scan's, reported through that producer (docs/hle-gaps/4.7.md 4.7, the 0x88 reply), which does not run, and the
 // lab's level would be undone by the producer's next push (X: E146, E147). So the E143 family keeps 0x0400 at state
-// 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I). The
+// 0, as E143's own idle image above does; its starts publish no USB connection (X). State 0 is a cable in there too
+// (the sub-CPU's PC13 low, D: docs/hle-gaps/4.10.md 4.10.2), kept because the lever's off depends on it (X). The
 // composite video cable 0x0500 (the E118 family's; its switch-table names EV_CONPOSITE_CONNECTED for state 0 and
 // _DISCONNECTED, D) with no cable (state 1): at state 0 E122's application took the composite output as connected
 // (getCompositeState: the switch query on 0x0500, docs/model-survey.md finding 31, D), so its output choice answered
@@ -731,6 +766,14 @@ export class PlayLab extends N.NavLab {
     const outer = this.dispq_open;
     this.dispq_open = rec;
     try { this.task_message(D.DISPLAY_LOOP, D.DISPLAY_QUEUE, m.msg, `S-DISPQ DISPLAY cmd ${m.words[2]}`); } finally { this.dispq_open = outer; }
+    // the run opened the HDMI device (E143, cmd 45; the opened word's HDMI part): its channel runs from here on at the
+    // format table's timing (DisplayLab.hdmi_line), before anything waits on its vsync (X: under control camapp 3 the
+    // GUI's setOutputType waits on channel 0's vsync, 0x501de81d, in the step that opened it; docs/hle-gaps/4.9.md 4.9.3).
+    // The run ends inside a lab call (S-MODACK's reply, S-OUTDEV's dispatch): hdmi_line's getters take the free
+    // nested-run slot then
+    if (this.hdmi && MODEL === 'E143' && !this.line_ns.has('hdmi') && (this.sim.u32(D.OPENED_WORD) & D.HDMI_MASK)) {
+      rec.hdmi_line = this.hdmi_line(this.sim.u32(D.OPENED_WORD) & D.HDMI_MASK);
+    }
   }
   _s_dispq(hle, r) {
     const q = r.d0 & 0xFFFF, ra = disasm(r.mdr);
@@ -1095,9 +1138,11 @@ export class PlaySession extends N.NavSession {
     if (audio === 'on' && !MODEL_INFO.audio) throw new ValueError(`--audio on: ${MODEL} has no audio hardware in the lab (src/fw/models.mjs audio)`);
     const audioOn = audio === 'on' || (audio === 'auto' && !!MODEL_INFO.audio);
     if (audioOn) env = { ...env, machine: { ...(env.machine ?? {}), audio: true } };
-    // PER_ROTATE natively (--rotate on, a body whose fact acc gives rotate; src/lab/acc.mjs H-ROTINIT); off by default
-    const rotate = opts.rotate ?? 'off';
-    if (!['off', 'on'].includes(rotate)) throw new ValueError(`rotate ${show(rotate)}: off or on`);
+    // PER_ROTATE natively (a body whose fact acc gives rotate: E143, E146, E147; src/lab/acc.mjs H-ROTINIT). auto, the
+    // default since 2026-11-23, is on for those bodies and off for the others; off keeps the orientation at 0
+    // (A-ACC-2's range)
+    const rotate = opts.rotate ?? 'auto';
+    if (!['off', 'on', 'auto'].includes(rotate)) throw new ValueError(`rotate ${show(rotate)}: off, on or auto`);
     if (rotate === 'on' && !MODEL_INFO.acc?.rotate) throw new ValueError(`--rotate on: ${MODEL} has no PER_ROTATE in the lab (src/fw/models.mjs acc.rotate)`);
     // the TAKE probe (--take probe, E143 only; src/lab/take.mjs): TAKE_FUNC and TAKE_FUNC_CP natively with S-TAKEREQ;
     // off by default
@@ -1274,7 +1319,7 @@ export class PlaySession extends N.NavSession {
     this.step_no += 1;
     const lab = this.lab;
     if (lab.dispq && lab.dispq.length) {
-      rec.dispq = lab.dispq.map((d) => ({ cmd: d.cmd, words: d.words, replies: d.replies.length, ...(d.kept ? { kept: d.kept } : {}) }));
+      rec.dispq = lab.dispq.map((d) => ({ cmd: d.cmd, words: d.words, replies: d.replies.length, ...(d.kept ? { kept: d.kept } : {}), ...(d.hdmi_line ? { hdmi_line: d.hdmi_line } : {}) }));
       this.dispq_total += lab.dispq.length;
       lab.dispq.length = 0;
       lab.dispq_replies.length = 0;
@@ -1330,9 +1375,13 @@ export class PlaySession extends N.NavSession {
     this.uiin_tid = tid[0];
     const [wp, rp, start] = UI_IN_RING;
     if (lab.sim.u32(wp) || lab.sim.u32(rp)) throw new PlayError(`UI_IN ring pointers already set: ${h8(lab.sim.u32(wp))} ${h8(lab.sim.u32(rp))}`);
-    lab.call(UI_IN_RING_INIT, null, null, null, 10);
-    if (lab.sim.u32(wp) !== start || lab.sim.u32(rp) !== start) throw new PlayError('H-UIINRING: the ring init did not set the ring pointers');
-    this.boot_key_bring_up();
+    const native = uiinInit() !== null && o.mutant !== 'no-uiininit';
+    if (native) this.uiin_init_bring_up(uiinInit());   // H-UIININIT, S-WAKEFACTOR
+    else {
+      lab.call(UI_IN_RING_INIT, null, null, null, 10);
+      if (lab.sim.u32(wp) !== start || lab.sim.u32(rp) !== start) throw new PlayError('H-UIINRING: the ring init did not set the ring pointers');
+      this.boot_key_bring_up();
+    }
     lab.lt.allow.add(UI_IN);
     const [rc] = lab.nk.svc('act_tsk', { d0: this.uiin_tid });
     if (rc !== K.E_OK) throw new PlayError(`H-UIIN: act_tsk(${this.uiin_tid}) = ${rc}`);
@@ -1345,7 +1394,7 @@ export class PlaySession extends N.NavSession {
     }
     if (this.scpu_port) this.scpu_port_bring_up();
     for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
-    if (lab.scpu_link && uiinScan()) this.uiin_scan_bring_up();
+    if (lab.scpu_link && uiinScan() && !this.uiin_init) this.uiin_scan_bring_up();
     if (lab.scpu_link && POWER_OFF) this.power_manager_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
@@ -1361,8 +1410,11 @@ export class PlaySession extends N.NavSession {
     if (this.resnand_runs()) this.resnand_bring_up();      // USTART_L's loader, before its lens data cache load
     const resnandSkipped = MODEL_INFO.res_nand && !this.resnand ? 'H-RESINIT not run: the host gives no env.nand, the resource tables stay 0' : null;
     if (this.lens) this.lens.bring_up();
+    // H-PWRLATER (opt-in): the power manager's later inits once the deferred calls' handlers are attached (H-DPCINIT,
+    // with the native lens in its bring-up just above), as the boot runs them after the lens init (power.mjs)
+    if (this.power_manager && (o.power_later ?? globalThis.process?.env?.OM_POWER_LATER) === 'on') this.power_manager.later = laterInits(this, this.power_manager.tid);
     if (this.audio_on) { this.audio_hw = new AudioHw(this); this.audio_hw.bring_up(); }
-    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
+    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.uiin_init && { uiin_init: this.uiin_init }), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
       ...(this.resnand && { resnand: { ...this.resnand.status(), log: this.resnand.take_log() } }), ...(resnandSkipped && { resnand: { skipped: resnandSkipped } }),
       ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }),
       ...(this.audio_hw && { audio: { ...this.audio_hw.status(), log: this.audio_hw.take_log() } }) });
@@ -1465,6 +1517,60 @@ export class PlaySession extends N.NavSession {
     lab.sim.write(word, pack('<I', key));
     this.boot_key = key;
   }
+  // H-UIININIT and S-WAKEFACTOR (above, uiinInit): before UI_IN's start, as the boot runs the init before it starts the
+  // task. Checked: the init's two stores find their words at 0 (the BSS value they store, not run), the wake factor
+  // getter's bytes name the word, which is 0 before; then the ring set after the ring init, the boot key the power switch's
+  // code (S-BOOTKEY's), one registration of an IRQ 320 callback, UI_IN's; one 0x88 frame, its reply not busy (H-UIINSCAN's
+  // check); and the error log the A/D channel open's alone. Group 4's image is the firmware's from here on (the keys
+  // held at power-on set on it); the codes UI_IN decodes at its start then come from that image and old state (X, E143:
+  // the scan's 0x0400 at 0, the init's old state at 1)
+  uiin_init_bring_up(f) {
+    const lab = this.lab, sim = lab.sim, { stores, calls } = uiinInitCalls(lab.image, f.init), [wp, rp, start] = UI_IN_RING;
+    const [code, adCall] = f.ad_errlog, scan = lab.scpu_link && uiinScan();
+    if (calls[0] !== UI_IN_RING_INIT || !f.left.every((c) => calls.includes(c)) || !calls.includes(adCall) || calls.includes(UIIN_PORT_SCAN) !== !!scan) {
+      throw new PlayError(`H-UIININIT: UI_IN's module init ${h8(f.init)} calls ${calls.map(h8).join(' ')}: not the ring init ${h8(UI_IN_RING_INIT)} first with ${f.left.map(h8).join(', ')}, ${h8(adCall)}${scan ? ` and the port scan ${h8(UIIN_PORT_SCAN)}` : ' and no port scan (no sub-CPU link)'}`);
+    }
+    if (sim.read(stores[0], 1)[0] !== 0 || sim.u32(stores[1]) !== 0) throw new PlayError(`H-UIININIT: the init's words ${h8(stores[0])} / ${h8(stores[1])} are not 0 before it`);
+    // S-WAKEFACTOR
+    const [word, getter] = f.wake, g = sim.read(runtime(getter), 9);
+    if (g[0] !== 0xFC || g[1] !== 0xAC || unpack('<I', g.subarray(2, 6))[0] !== word || g[6] !== 0xDE || g[7] !== 0x00 || g[8] !== 0x00) {
+      throw new PlayError(`S-WAKEFACTOR: ${h8(getter)} is ${bytesHex(g)}, not movhu (${h8(word)}),d0; retf`);
+    }
+    const w0 = unpack('<H', sim.read(word, 2))[0];
+    if (w0 !== 0) throw new PlayError(`S-WAKEFACTOR: the wake factor ${h8(word)} is ${w0} before UI_IN's module init`);
+    sim.write(word, pack('<H', WAKE_POWER_BUTTON));
+    const { register, callback } = this.scpu_port ?? {}, regs = [];
+    if (register) lab.observe(register, (l, r) => { regs.push(r.a0 >>> 0); this.scpu_callback_check(r); }, 'obs-scpu-callback');
+    const e0 = lab.kernel.errors.length, f0 = lab.scpu_dev?.frames.length ?? 0, errlog = [], run = [];
+    for (const fn of calls) {
+      if (f.left.includes(fn)) continue;
+      const k0 = lab.kernel.errors.length;
+      lab.call(fn, null, null, null, 2000000);
+      if (fn === UI_IN_RING_INIT && (sim.u32(wp) !== start || sim.u32(rp) !== start)) throw new PlayError('H-UIININIT: the ring init did not set the ring pointers');
+      for (const [c] of lab.kernel.errors.slice(k0)) errlog.push([c, fn]);
+      run.push(fn);
+    }
+    this.settle('H-UIININIT');
+    for (const [c] of lab.kernel.errors.slice(e0 + errlog.length)) errlog.push([c, null]);
+    const key = sim.u32(MM.bootFacts().key), power = BY_ID.get('power').uiin[3];
+    if (key !== power) throw new PlayError(`H-UIININIT: UI_IN's boot key ${h8(MM.bootFacts().key)} is 0x${key.toString(16)} after its init with the wake factor ${WAKE_POWER_BUTTON}, not the power switch's 0x${power.toString(16)}`);
+    if (register && (regs.length !== 1 || regs[0] !== runtime(callback))) throw new PlayError(`H-UIININIT: IRQ 320 callbacks registered ${regs.map(h8).join(' ') || 'none'}, not UI_IN's ${h8(callback)} once`);
+    if (errlog.length !== 1 || errlog[0][0] !== code || errlog[0][1] !== adCall) {
+      throw new PlayError(`H-UIININIT: error log ${errlog.map(([c, fn]) => `${h8(c)} in ${fn === null ? 'the settle' : h8(fn)}`).join('; ') || 'none'}, not ${h8(code)} in ${h8(adCall)} alone`);
+    }
+    const frames = lab.scpu_dev?.frames.slice(f0) ?? [];
+    if (scan ? frames.length !== 1 || frames[0].cmd !== '0x88' || frames[0].reply?.slice(6, 8) !== '00' : frames.length) {
+      throw new PlayError(`H-UIININIT: frames to the sub-CPU ${show(frames)}, not ${scan ? 'one 0x88 answered not busy' : 'none'}`);
+    }
+    const g4 = sim.read(G4_IMAGE, 2);
+    this.images[4].set(g4);
+    for (const id of this.held) {
+      const [gg, b, bit, , , pol] = BY_ID.get(id).uiin;
+      if (gg === 4) set_bit(this.images[4], b, bit, pol);
+    }
+    this.uiin_init = { calls: run.map(h8), left: f.left.map(h8), wake: WAKE_POWER_BUTTON, key: h8(key), group4: bytesHex(g4),
+      errlog: errlog.map(([c, fn]) => [h8(c), h8(fn)]), ...(scan && { scan: { reply: frames[0].reply, report: lab.scpu_dev.scanReport } }) };
+  }
   // H-SCPUIRQ: what the SCPU init (not run) does for the event word: the ports at the idle image's levels, their
   // events cleared as the init clears them (127 to the event word), IRQ 320 attached to its handler at the init's level
   // through the firmware's attach (checked as H-IPIINIT's). H-UIINPORT: UI_IN's callback registered through the
@@ -1485,13 +1591,18 @@ export class PlaySession extends N.NavSession {
     if (r.d0 !== 0 || lv !== 1 << level || table !== runtime(handler)) {
       throw new PlayError(`H-SCPUIRQ: attach(${ev.irq}, ${level}, ${h8(handler)}) = ${r.d0}, level register 0x${lv.toString(16)}, handler ${h8(table)}`);
     }
-    lab.observe(register, (l, r2) => {
-      if (r2.a0 !== runtime(callback)) throw new PlayError(`IRQ ${ev.irq} callback ${h8(disasm(r2.a0))} registered from ${where(r2.mdr)}: only UI_IN's (${h8(callback)}) is modelled`);
-    }, 'obs-scpu-callback');
-    lab.call(register, { a0: runtime(callback) }, null, null, 20000);
+    if (!this.uiin_init) {                          // (H-UIININIT: UI_IN's init registered it, its observer stays)
+      lab.observe(register, (l, r2) => this.scpu_callback_check(r2), 'obs-scpu-callback');
+      lab.call(register, { a0: runtime(callback) }, null, null, 20000);
+    }
     lab.call(old_state, null, null, null, 2000);
     const old = lab.sim.read(g0.old, 1)[0];
     if (old !== port) throw new PlayError(`H-UIINPORT: group ${SCPU_PORT_GROUP}'s old state (${h8(g0.old)}) is 0x${fx(old, 2)} after ${h8(old_state)}, not the port byte 0x${fx(port, 2)}`);
+  }
+  // a registration of an IRQ 320 callback: only UI_IN's is modelled
+  scpu_callback_check(r) {
+    const { callback } = this.scpu_port;
+    if (r.a0 !== runtime(callback)) throw new PlayError(`IRQ ${BOARD.scpu.events.irq} callback ${h8(disasm(r.a0))} registered from ${where(r.mdr)}: only UI_IN's (${h8(callback)}) is modelled`);
   }
   // H-UIINSCAN (UIIN_PORT_SCAN): the request natively from the lab task, then a settle; checked: one 0x88 frame, its
   // reply's busy byte 0, no errlog of PER_SCPU's, group 4's image (UI_IN's, through the producer) still the idle image,
@@ -1520,10 +1631,10 @@ export class PlaySession extends N.NavSession {
   }
   // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
   // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the
-  // application's start, X); with --rotate on also PER_ROTATE's (H-ROTINIT); the settle runs ACC_MAIN's probe, whose
+  // application's start, X); with PER_ROTATE (--rotate auto or on) also its init (H-ROTINIT); the settle runs ACC_MAIN's probe, whose
   // accesses are then checked
   acc_bring_up() {
-    this.acc = new Accelerometer(this.lab, MODEL_INFO.acc, this.opts.mutant, (this.opts.rotate ?? 'off') === 'on');
+    this.acc = new Accelerometer(this.lab, MODEL_INFO.acc, this.opts.mutant, rotateOn(this.opts.rotate));
     this.acc.bring_up();
     this.settle('H-ACCINIT');
     const why = this.acc.probe_problem();
@@ -1884,6 +1995,11 @@ export class PlaySession extends N.NavSession {
     this._post_hooks = PlaySession.SET_HOOKS;
     try { return super.set(sid, value, tag); } finally { this._post_hooks = saved; }
   }
+  set_group(sid, values, tag = null) {
+    const saved = this._post_hooks;
+    this._post_hooks = PlaySession.SET_HOOKS;
+    try { return super.set_group(sid, values, tag); } finally { this._post_hooks = saved; }
+  }
   post_touch(kind, x, y) {
     const lab = this.lab;
     lab.harvest();
@@ -1960,30 +2076,34 @@ export class PlaySession extends N.NavSession {
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
   }
-  // S-USBCABLE (docs/hle-gaps/4.10.md 4.10.1): the USB cable at the event level. The producer of EV_USB_CONNECTED is the
-  // sub-CPU's port scan: PC13 (GIO port 45) high posts the MN the message 0x08 {1} (scpudev.mjs port, D), PER_SCPU's
-  // dispatch 0x5005d43e gives it to UI_IN's group-4 producer as the switch 0x0400 (H-UIINSCAN's path, X), and the
-  // application's filter of the code 0x02020400 reads module 9 (0x50abb01d, then 0x50b7a2de, X 2026-10-25). Those
-  // two readers are let through S-TAKEOVER's guard from the first cable step on (I: what module 9's state 2 means to them is
-  // not read). The unplug drops PC13 again. Refused: a session without the sub-CPU's model, a scan report not yet
-  // enabled (no 0x88 read), a second plug, an unplug without the cable
+  // S-USBCABLE (docs/hle-gaps/4.10.md 4.10.1, 4.10.2): the USB cable at the event level. The producer of EV_USB_CONNECTED
+  // is the sub-CPU's port scan: PC13 (GIO port 45) is active low, and its change posts the MN the message 0x08 {level}
+  // (scpudev.mjs port, D), PER_SCPU's dispatch 0x5005d43e gives it to UI_IN's group-4 producer as the switch 0x0400
+  // (H-UIINSCAN's path, X), whose state 0 the application's USB test 0x50abb032 takes as connected (D). The plug drops
+  // PC13, the unplug raises it. The cable's state starts at the sub-CPU's PC13 level: S-SCPUDEV's SCAN_IDLE is low, a
+  // cable in, so a session's first cable step is an unplug. The application's code filter 0x50abafce reads module 9
+  // (0x50abb01d) and drops the code at S-TAKEOVER's state 2 (X 2026-11-23); the readers USB_MODULE9_READERS are let
+  // through S-TAKEOVER's guard from the first cable step on. Refused: a session without the sub-CPU's model, a scan
+  // report not yet enabled (no 0x88 read), a plug with the cable in, an unplug with it out
   usb_input(action) {
     const lab = this.lab, dev = lab.scpu_dev;
     if (!lab.scpu_link || typeof dev?.port !== 'function') throw new ValueError(`usb: ${MODEL} has no sub-CPU model here (S-SCPUDEV)`);
     if (action !== 'plug' && action !== 'unplug') throw new ValueError(`usb: action ${show(action)} (plug, unplug)`);
     const plug = action === 'plug';
-    if (plug === !!this.usb_plugged) throw new ValueError(`usb ${action}: the cable is ${plug ? 'in' : 'out'} already`);
+    const cable = this.usb_plugged ?? dev.scan?.PC13 === 0;      // the sub-CPU's level: PC13 low, a cable in
+    if (plug === cable) throw new ValueError(`usb ${action}: the cable is ${plug ? 'in' : 'out'} already (the sub-CPU's PC13 ${plug ? 'low' : 'high'})`);
     if (!dev.scanReport) throw new PlayError('usb: the port scan\'s report is not enabled (no 0x88 read, H-UIINSCAN)');
     const tag = `usb ${action}`;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     for (const x of USB_MODULE9_READERS) lab.takeover_allowed.add(x);   // the unplug's code reads 0x50abb01d too (X)
-    const c0 = lab.uiin_codes.length, f0 = dev.frames.length, state0 = lab.state();
-    dev.port('PC13', plug ? 1 : 0);
+    const c0 = lab.uiin_codes.length, f0 = dev.frames.length, m0 = lab.module9_reads?.length ?? 0, state0 = lab.state();
+    dev.port('PC13', plug ? 0 : 1);
     this.usb_plugged = plug;
     this.usb_used = true;
     return this.wait_until(lab.lab_time() + USB_SETTLE_MS * 1000000, tag, true,
       { kind: 'usb', extra: () => ({ usb: { cable: plug ? 'in' : 'out', state_before: '0x' + state0.toString(16), state: '0x' + lab.state().toString(16),
-        frames: dev.frames.slice(f0).map((f) => f.cmd), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => '0x' + (x >>> 0).toString(16)) } }) });
+        frames: dev.frames.slice(f0).map((f) => f.cmd), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => '0x' + (x >>> 0).toString(16)),
+        module9: (lab.module9_reads ?? []).slice(m0).map(([, x]) => h8(x)) } }) });
   }
   // The HDMI cable (see HDMI_PLUG_MS): plug, and unplug once it is in (the transmitter's side A-HDMI-1, the device
   // model's header). A second plug and an unplug without the cable are refused.
@@ -1997,8 +2117,12 @@ export class PlaySession extends N.NavSession {
       const c0 = lab.uiin_codes.length;
       lab.cpu_store(HDMI_DOORBELL, (UNPLUG << 24) >>> 0);
       this.hdmi_plugged = false;
-      return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
-        { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+      const follow = !!this.camapp?.native_tra;                    // as at the plug (below)
+      if (follow) this.camapp.prop_follow = true;
+      try {
+        return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
+          { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+      } finally { if (follow) this.camapp.prop_follow = false; }
     }
     if (this.hdmi_plugged) throw new ValueError('hdmi plug: the cable is in already');
     const lab = this.lab, tag = 'hdmi plug', edid = sinkEdid();
@@ -2008,8 +2132,16 @@ export class PlaySession extends N.NavSession {
     const c0 = lab.uiin_codes.length;
     lab.cpu_store(HDMI_DOORBELL, (PLUG << 24) >>> 0);
     this.hdmi_plugged = true;
-    return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
-      { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+    // under control camapp 3 the component's TRA 588 opens the device and CapIod writes the output-device property
+    // (16): S-PROP follows its write for the step, as in the display switch (native_switch), so that setOutputType's
+    // read (0x50abd8aa through 0x50ab651a) sees the HDMI output and lays the GUI out for it (X: with the panel's value
+    // it prints "not connected to HDMI"; docs/hle-gaps/4.9.md 4.9.3)
+    const follow = !!this.camapp?.native_tra;
+    if (follow) this.camapp.prop_follow = true;
+    try {
+      return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
+        { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+    } finally { if (follow) this.camapp.prop_follow = false; }
   }
   // The camera's tilt (acc.mjs): roll and pitch in degrees, level (0, 0) at the start. ACC_MAIN takes the new sample at
   // its next cycle; the step waits TILT_MS of lab time (ROTATE_TILT_MS with --rotate on) and records the sample, the
@@ -2230,9 +2362,17 @@ export class PlaySession extends N.NavSession {
     // switch holds it to the shooting screen, not the rec view. The mutant recview-unheld leaves the rule out
     // (test/test_dispswitch.mjs's control).
     const recview = state0 === STATE_SHOOTING && panel0 === 0 && this.camapp?.in_recview === true && this.opts.mutant !== 'recview-unheld';
+    // From the start's date prompt (0x0108 panel 324, the unset clock's prompt over the shooting screen) the re-entry
+    // builds the prompt again (ShowPanelEx(324) at 0x5124357f), and the prompt's own end, the application's event that
+    // gives it way to the shooting screen at the first idle (GESetEvent 0xf001 from the event object's dispatch
+    // through 0x50ab8974, then panel 10 by 0x511eb186), may come within the step: under the settings init chain it is
+    // dispatched at the re-entry (X, E143, E146, E147; the narrow store path dispatched it 78 ms later, after the
+    // step). The switch then holds the re-entry to the prompt rebuilt and the shooting screen after it.
+    const prompt = state0 === STATE_SHOOTING && panel0 === DATE_PROMPT_PANEL && lab.state() === STATE_SHOOTING && panel1 === SHOOT_PANEL
+      && on_connect.lastIndexOf(DATE_PROMPT_PANEL) === on_connect.length - 2 && on_connect.lastIndexOf(0) === on_connect.length - 3;
     const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state())
       : recview ? lab.state() === STATE_SHOOTING && panel1 === SHOOT_PANEL
-        : lab.state() === state0 && panel1 === panel0;
+        : prompt || (lab.state() === state0 && panel1 === panel0);
     if (!same) {
       const left = recview ? `the shooting screen the application re-enters from S2's rec view (${h4(STATE_SHOOTING)} panel ${SHOOT_PANEL})` : `the screen the switch left (${h4(state0)} panel ${panel0})`;
       problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not ${left}` +
@@ -2257,7 +2397,7 @@ export class PlaySession extends N.NavSession {
     for (const d of Object.keys(D.DEVICE)) ctrl3[d] = lab.vsc.bank(D.DEVICE[d].channel, true).get('CTRL3') ?? null;
     const rec = { cause, connect: info, layout_before: layout0, layout_after: layout, module9_reads: reads.map(h8), eye, engine, problems,
       panels_on_connect: on_connect, ctrl3, resend: sends.map(([c, d, r]) => [c, bytesHex(d), h8(r)]),
-      ...(chain.slices ? { chain_rest: chain } : {}), ...(recview ? { from_recview: true } : {}) };
+      ...(chain.slices ? { chain_rest: chain } : {}), ...(recview ? { from_recview: true } : {}), ...(prompt ? { prompt_ended: true } : {}) };
     const indices = [CONNECT_INDEX];
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
   }

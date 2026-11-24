@@ -58,7 +58,7 @@
 import { controlsDoc, screensDoc, STAND_INS } from './playui.mjs';
 import { CAMAPP_STAND_INS } from './camapp.mjs';
 import { jsonType } from './player.mjs';
-import { CONTROLS, apply_uiin_layout } from './play.mjs';
+import { CONTROLS, apply_uiin_layout, rotateOn } from './play.mjs';
 import { decimalInt, decimalNumber } from '../util/parse.mjs';
 import { base64Bytes } from '../util/bytes.mjs';
 import { MODEL, MODEL_INFO } from '../fw/model.mjs';
@@ -225,7 +225,7 @@ export class PlayApi {
   }
   sessionDoc() {
     const a = this.player.a;
-    return { host: null, lens: 'native', nvram: null, card: null, card_size: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto', rotate: a.rotate ?? 'off', debug_api: !!a.debug_api,
+    return { host: null, lens: 'native', nvram: null, card: null, card_size: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto', rotate: rotateOn(a.rotate) ? 'on' : 'off', debug_api: !!a.debug_api,
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}), card_image: !!this.opts.cardImage };
   }
   // /api/controls' position switches (play.mjs creative_dial) as the model's UI_IN tables wire them: E143's rows are

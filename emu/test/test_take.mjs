@@ -6,7 +6,7 @@
 //                sequence in TAKE_FUNC_CP (the camera driver's requests 148 and 6, BC_EXEC, the native LENS_EXEC,
 //                STB_EXTERNAL twice and the dust filter, each answered where TAKE waits, then TAKE's reply to the
 //                application), commands 13, 18 and 22 (with the components 29 before 22); then a live view, S1, S2,
-//                MENU in and out reach TAKE with nothing, a mode change P -> A is MODE_CHANGE, and the through start
+//                MENU in and out reach TAKE with nothing but S1's key callback token 75 (H-UIININIT), a mode change P -> A is MODE_CHANGE, and the through start
 //                (command 25) is never taken: the shooting component that would start the through image does not
 //                get TRA 991 while S-TRAACK answers it (docs/hle-gaps/4.1.md 4.1.2). Round 2 (H-TAKENBINIT,
 //                docs/hle-gaps/4.1.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 // the record in a canonical form: '<task> <= <command>' for a message TAKE takes, '<task> -> <target> <command>
 // [sync] (<answer kind>)' for a request
 export function canon(r) {
-  if (r.dir === 'in') return `${r.task} <= ${r.command}`;
+  if (r.dir === 'in') return r.command === null && r.queue === 'mailbox' ? `${r.task} <= mailbox token ${r.token}` : `${r.task} <= ${r.command}`;
   const kind = /^native: \S+ reply to the requester/.test(r.answer) ? 'reply' : r.answer.startsWith('native') ? 'native' : r.answer.startsWith('none') ? 'unanswered' : 'answered';
   if (kind === 'reply') return `${r.task} -> reply`;
   const what = r.queue === null ? r.name.replace(/ \(.*$/, '') : `${r.name} ${r.command}`;
@@ -131,7 +131,8 @@ export async function takeSession() {
       s.key('s2', 'down'); s.camapp.pump(); idle(700);
       s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(800);
       for (let k = 0; k < 2; k++) { s.key('menu', 'down'); s.camapp.pump(); idle(100); s.key('menu', 'up'); s.camapp.pump(); idle(800); }
-      same(since(), [], 'a live view, S1, S2, MENU in and out');
+      // S1's key callback posts token 75 to TAKE_MAIN's mailbox (test_take_release.mjs S1_KEY; H-UIININIT)
+      same(since(), ['TAKE_MAIN <= mailbox token 75'], 'a live view, S1, S2, MENU in and out');
       const names = s.status().mode_dial_positions.map((p) => p.name);
       s.switch_input('mode_dial', names.indexOf('A')); s.camapp.pump(); idle(2000);
       same(since(), MODE_CHANGE, 'the mode change P -> A');

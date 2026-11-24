@@ -1138,6 +1138,27 @@ export function modeDial(img) {
 // 0x503eeba1, docs/om1-settings-spec.md section 2.2; D). One such run on each of the 18 unpacked bodies, preceded by a
 // called entry (X, a byte scan of each). Returns {init, objects}: the init's entry (disassembly notation) and P (run
 // time), or undefined where the build holds no such run; throws for two runs or a run with no entry.
+// The read of the factory calibration word 2164 in the HDMI connect check's predicate (fact 'hdmi.calib';
+// docs/hle-gaps/4.9.md 4.9.1, 4.9.2): E146's and E147's predicate (E146 0x50409695, E147 0x5041779c; E143's
+// 0x5040dad7 has no such read, D) reads data object kind 0x874 through a wrapper of the settings read and answers 0
+// when the value is above 0xfe000000: `mov 2164,d0; mov 0,a0; clr d1` (2c 74 08 90 00 04), the call of the wrapper
+// (dd rel32 00 04), `mov d0,d2` (82), `cmp -33554432,d2` (fc ca 00 00 00 fe), `bls +3` (c7 03), `clr d3` (0c) (E146
+// 0x504096c5..0x504096db, E147 0x504177cc..0x504177e2, D). The wrapper is `exthu d0; exthu d1; call read,[d2,d3],12;
+// ret [],4` (1c 1d dd rel32 c0 0c df 00 04; E146 0x503eb4a0, E147 0x503f91d9). {call, read}: the wrapper call's
+// address and the settings read's (disassembly notation), or null where the build has no such run (E143); throws for
+// two runs or a wrapper of another shape.
+const CALIB_READ = [0x2c, 0x74, 0x08, 0x90, 0x00, 0x04, 0xdd, null, null, null, null, 0x00, 0x04, 0x82, 0xfc, 0xca, 0x00, 0x00, 0x00, 0xfe, 0xc7, 0x03, 0x0c];
+const CALIB_WRAPPER = [0x1c, 0x1d, 0xdd, null, null, null, null, 0xc0, 0x0c, 0xdf, 0x00, 0x04];
+export function hdmiCalib(img) {
+  const at = [];
+  for (let o = img.indexOf(0x2c); o >= 0 && o + CALIB_READ.length <= img.length; o = img.indexOf(0x2c, o + 1)) if (bytesAt(img, o, CALIB_READ)) at.push(o);
+  if (!at.length) return null;
+  if (at.length > 1) throw new Error(`hdmiCalib: ${at.length} reads of the calibration word 2164 compared with 0xfe000000 (${at.map((o) => h8(0x50000000 + o)).join(', ')}), want one`);
+  const call = at[0] + 6, wrapper = callAt(img, call).to;
+  if (!bytesAt(img, wrapper, CALIB_WRAPPER)) throw new Error(`hdmiCalib: the callee ${h8(0x50000000 + wrapper)} of ${h8(0x50000000 + call)} is not the settings read's wrapper`);
+  return { call: 0x50000000 + call, read: 0x50000000 + callAt(img, wrapper + 2).to };
+}
+
 export const PROP_STORE_E143 = { init: 0x503EE2D6, objects: 0x62A65E0C };
 const PROP_STORE_UNIT = 19, PROP_STORE_SPAN = 0x100;
 export function propStore(img) {
@@ -1155,6 +1176,69 @@ export function propStore(img) {
   const [[at, objects]] = found, e = entryOf(img, at, PROP_STORE_SPAN);
   if (e === undefined) throw new Error(`propStore: no called entry within ${PROP_STORE_SPAN} bytes before the run at ${h8(0x50000000 + at)}`);
   return { init: 0x50000000 + e, objects };
+}
+
+// The settings init chain (src/lab/menu.mjs settingsChainOf; docs/hle-gaps/4.6.md 4.6.8, 4.6.9), read from the
+// property store's init (propStore's `init`, disassembly notation), the chain's sixth call. The chain is a flat run of
+// calls: the first `call S1; mov d0,d2; exthu d0; cmp 0,d0; bne` (call, 82 1c a0 00 c9 nn), each next one behind the
+// guard `mov d2,d0; exthu d0; cmp 0,d0; bne` (88 1c a0 00 c9 nn) and followed by `mov d0,d2`, every bne skipping its
+// call and that mov; then `call T1; clr d0; call T2; call T3; mov d2,d0; exthu d0; ret` (00 between the first two,
+// 88 1c df after the third). It has no prologue of its own (the boot's `call` saves d2) and follows a return. E143
+// 0x503dae30: 14 steps (the init the sixth, at 0x503dae75), T 0x503e8e8f, 0x50421080, 0x503ed455; E146 0x503d6f01
+// and E147 0x503e4c08 in the same form, 14 steps, the init the sixth (D, their disassembly); the rule reads one on
+// E144, E148 and E139 too (0x502bdb43, 0x502c0f11, 0x502bb7d1, 14 steps each) and none on the other 12 unpacked bodies
+// (X). Returns {entry, steps, tail} (disassembly notation), or undefined where no call to the init sits in that form;
+// throws for two such calls.
+export const SETTINGS_CHAIN_E143 = { entry: 0x503DAE30, steps: [0x503EB7F4, 0x50424AB5, 0x504221BA, 0x5041F937, 0x503EDEEA, 0x503EE2D6, 0x503F0304,
+  0x5040E420, 0x5042539D, 0x503EA27E, 0x504219FA, 0x503DE4FB, 0x503ED252, 0x503F55CA], tail: [0x503E8E8F, 0x50421080, 0x503ED455] };
+const CHAIN_FIRST = [0x82, 0x1c, 0xa0, 0x00, 0xc9], CHAIN_GUARD = [0x88, 0x1c, 0xa0, 0x00, 0xc9], CHAIN_MAX = 64;
+export function settingsChain(img, init) {
+  const callOf = (p) => { const c = callAt(img, p); return c && (c.len === 7 || c.len === 5) ? c : null; };
+  // the chain from entry e, or null where its bytes leave the form
+  const parse = (e) => {
+    if (!isRet(img, e - 3)) return null;
+    const steps = [];
+    let p = e, c = callOf(p);
+    if (!c || !bytesAt(img, p + c.len, CHAIN_FIRST)) return null;
+    steps.push(c.to);
+    p += c.len + 4;                                      // at the first bne (c9)
+    for (;;) {
+      const bne = p, q = bne + 2;                        // q: the call the bne skips
+      const k = callOf(q);
+      if (!k || img[q + k.len] !== 0x82 || bne + ((img[bne + 1] << 24) >> 24) !== q + k.len + 1) return null;
+      steps.push(k.to);
+      p = q + k.len + 1;
+      if (!bytesAt(img, p, CHAIN_GUARD)) break;
+      p += 4;
+      if (steps.length > CHAIN_MAX) return null;
+    }
+    const t1 = callOf(p);
+    if (!t1 || img[p + t1.len] !== 0x00) return null;
+    const t2 = callOf(p + t1.len + 1), t3 = t2 && callOf(p + t1.len + 1 + t2.len);
+    if (!t3 || !bytesAt(img, p + t1.len + 1 + t2.len + t3.len, [0x88, 0x1c, 0xdf])) return null;
+    return { entry: 0x50000000 + e, steps: steps.map((s) => 0x50000000 + s), tail: [t1.to, t2.to, t3.to].map((s) => 0x50000000 + s) };
+  };
+  const target = init - 0x50000000, found = new Map();
+  for (const at of callsTo(img, target)) {
+    // back from the init's call over the guarded steps to the first, then the whole chain read forward from there
+    let u = at, e = null;
+    for (let n = 0; n <= CHAIN_MAX && e === null; n++) {
+      const back = (end) => [7, 5].filter((l) => callOf(end - l)?.len === l).map((l) => end - l);
+      if (bytesAt(img, u - 6, CHAIN_GUARD) && img[u - 7] === 0x82) {
+        const prev = back(u - 7);
+        if (prev.length !== 1) break;
+        u = prev[0];
+      } else if (bytesAt(img, u - 6, CHAIN_FIRST)) {
+        const first = back(u - 6);
+        if (first.length === 1) e = first[0];
+        break;
+      } else break;
+    }
+    const chain = e === null ? null : parse(e);
+    if (chain && chain.steps.includes(init)) found.set(chain.entry, chain);
+  }
+  if (found.size > 1) throw new Error(`settingsChain: ${found.size} chains call the property store's init ${h8(init)}, at ${[...found.keys()].map(h8).join(', ')}; want one`);
+  return found.size ? [...found.values()][0] : undefined;
 }
 
 // The modules' static constructor tables (fact 'ctors', src/lab/osd.mjs MM_CTOR_TABLE and src/lab/menu.mjs
@@ -1679,6 +1763,66 @@ function powerOff(img, save) {
     flash_save: saves[0], log: logs[0], end: 0x50000000 + lastCall + len,
     ioexp: ex.length ? { body: ex[0], pbh: ex[1] } : null, poll: polls[0],
   };
+}
+
+// The power manager's two later inits at the bring-up (fact 'power.later', src/lab/power.mjs H-PWRLATER;
+// docs/hle-gaps/4.7.md 4.7.6, 4.7.10 and 4.7.16), read from power.off's init (pwr.init). E143's values
+// (POWER_LATER_E143), D unless tagged:
+// - handler: the task's message handler, the call that ends the init after it builds the start-up message {0x100,
+//   0x20} on its stack, `mov 256,d0; movhu d0,(4,sp); mov 32,d0; movbu d0,(6,sp); mov a2,a0; call handler; ret`
+//   (0x50044ec3..0x50044ed4: 0x5004408f)
+// - early, late: the two functions that build the source check {0x10, 2} the same way, `mov 16,d0; movhu d0,(4,sp);
+//   mov 2,d0; movbu d0,(6,sp)` with `mov a2,a0` before or after it, and call the handler (E143 0x50044ef5 in
+//   0x50044ed7, called by the boot at 0x50024d43; 0x50044f8b in 0x50044f7d, called at 0x501e9943). late is the one
+//   that ends `mov 1,d0; call c_set; mov 1,d0; call a_set; ret` (0x50044fcf..0x50044fdd), after it posts event 9 to
+//   the power manager's queue (`mov 9,d0; mov d0,(24,sp)`, 0x50044fa2); early is the other (E143's also asks UI_IN
+//   and the timer API, E147's sends the check only, D)
+// - a, c: the bytes the setters write, each `movbu d0,(abs); retf` (A 0x50043c63 -> 0xa32bfb58, C 0x50043c6c ->
+//   0xa32bfb59), which the task's tick reads (4.7.6)
+// Read the same on E146 and E147 (test/test_facts.mjs POWER_LATER_FOUND). Throws where a part is missing or found
+// twice.
+export const POWER_LATER_E143 = { handler: 0x5004408F, early: 0x50044ED7, late: 0x50044F7D, a: 0xA32BFB58, c: 0xA32BFB59 };
+const START_MSG = [0x2c, 0x00, 0x01, 0xf8, 0x93, 0x04, 0x80, 0x20, 0xf8, 0x92, 0x06, 0x98];
+const SOURCE_CHECK_MSG = [0x80, 0x10, 0xf8, 0x93, 0x04, 0x80, 0x02, 0xf8, 0x92, 0x06];
+const LATER_SPAN = 0x100, EVENT9 = [0x80, 0x09, 0x42, 0x18];
+function powerLater(img, init) {
+  const rule = 'powerLater', D = (o) => h8(0x50000000 + o), i = init - 0x50000000;
+  // handler, at the end of the init
+  let handler;
+  for (let p = i; p < i + LATER_SPAN && !isRet(img, p);) {
+    const c = callAt(img, p);
+    if (bytesAt(img, p, START_MSG) && (c === null)) {
+      const h = callAt(img, p + START_MSG.length);
+      if (h && isRet(img, p + START_MSG.length + h.len)) handler = h.to;
+    }
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  if (handler === undefined) throw new Error(`${rule}: the power init ${h8(init)} does not end calling a handler with {0x100, 0x20}`);
+  // the {0x10, 2} senders
+  const fns = new Set();
+  for (let o = img.indexOf(SOURCE_CHECK_MSG[0]); o >= 0; o = img.indexOf(SOURCE_CHECK_MSG[0], o + 1)) {
+    if (!bytesAt(img, o, SOURCE_CHECK_MSG)) continue;
+    const q = o + SOURCE_CHECK_MSG.length, after = img[q] === 0x98, c = callAt(img, after ? q + 1 : q);
+    if (c?.to !== handler || (!after && img[o - 1] !== 0x98)) continue;
+    const e = entryOf(img, o, LATER_SPAN);
+    if (e === undefined) throw new Error(`${rule}: the source check {0x10, 2} at ${D(o)} is in no called function`);
+    fns.add(e);
+  }
+  if (fns.size !== 2) throw new Error(`${rule}: ${fns.size} functions send the handler ${D(handler)} the source check {0x10, 2}, want two`);
+  // late: the one that posts event 9 and ends with the two setters
+  const setter = (t) => (img[t] === 0xfc && img[t + 1] === 0x82 && isRet(img, t + 6) ? u32(img, t + 2) : null);
+  const ends = [...fns].map((e) => {
+    let p = e, ev9 = false;
+    while (p < e + LATER_SPAN && !isRet(img, p)) { ev9 ||= bytesAt(img, p, EVENT9); p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]); }
+    const c1 = callAt(img, p - 5), c0 = callAt(img, p - 12), one = (q) => img[q] === 0x80 && img[q + 1] === 0x01;
+    const ok = ev9 && c1?.len === 5 && c0?.len === 5 && one(p - 7) && one(p - 14);
+    return { e, set: ok ? { c: setter(c0.to), a: setter(c1.to) } : null };
+  });
+  const late = ends.filter((x) => x.set && x.set.a !== null && x.set.c !== null);
+  if (late.length !== 1) throw new Error(`${rule}: ${late.length} of the senders ${[...fns].map(D).join(', ')} post event 9 and end setting C and A, want one`);
+  const early = ends.find((x) => x !== late[0]).e;
+  if (!callsTo(img, early).length || !callsTo(img, late[0].e).length) throw new Error(`${rule}: ${D(early)} or ${D(late[0].e)} is called by nothing`);
+  return { handler: 0x50000000 + handler, early: 0x50000000 + early, late: 0x50000000 + late[0].e, a: late[0].set.a, c: late[0].set.c };
 }
 
 // The touch task's start in the boot (fact 'touch_start', and through bin/port.mjs the places of E143's touch init
@@ -5660,8 +5804,53 @@ export function guiCanvas(img) {
 // 0xb0000000 or, on E133, E130, E129, E132, E118 and E120, 0xc0000000 (X, the facts of the 17 ported bodies), whose
 // GUIs use DRAM above 384 MiB (E130's application start, with 384 MiB mapped, faulted in a word copy at 0x50b0c026
 // whose last destination was 0xbfc59440, and runs on with 512 MiB, X). The banks sit below it, the first one ending
-// there, on all 18 expanded images (X). Returns the size in bytes.
+// there, on all 18 expanded images (X). Returns the size in bytes. On the E143 family (board dram_rule 'mm-bank0')
+// the lab's DRAM is read from MM's bank 0 instead (mmBank0, mmDramSize, below).
 export const dramSize = ({ banks: [[base, size, count]] }) => cached(base) + size * count - 0x60000000;
+
+// MM's bank 0 (the memory manager's first pool: MM kind 0, the still's Bayer and its kind-3 pair, docs/hle-gaps/4.3.md
+// 4.3.14): MM's init constructs each bank's pool with `mov POOL,a0; mov BASE,d0; mov BLOCK,d1; mov HANDLE,a1; call`
+// (fc dc imm32, fc cc imm32, fc cd imm32, then `mov 0,a1` 95 00 for bank 0 and `mov 256,a1` 25 00 01 for bank 1, the
+// handle the bank << 8; E143 0x50533ba4: pool 0xa31f4e9c, base 0xb8000000, block 0x1ffec00, bank 1 at 0x50533bdc, D).
+// X (E143, live view): the bank table 0x606dc498's entry 0 holds that pool (+4), whose +8 is the base and +12 the
+// block, as rawframe.mjs reads them. The rule takes the one such site whose base lies in the DRAM's uncached view
+// (0xa0000000..0xc0000000) with bank 1's `mov 256,a1` within 0x40 bytes after it (E143 0x50533ba4, E146 0x50510d83,
+// E147 0x5051ff0c: each base 0xb8000000, block 0x1ffec00, X). Returns {pool, base, block, at}; throws for none or
+// several.
+const MM_BANK0_CALL = [0xfc, 0xcc, null, null, null, null, 0xfc, 0xcd, null, null, null, null, 0x95, 0x00, 0xcd];
+export function mmBank0(img) {
+  const hits = [];
+  for (let p = img.indexOf(0xfc); p >= 0 && p + 6 + MM_BANK0_CALL.length <= img.length; p = img.indexOf(0xfc, p + 1)) {
+    if (img[p + 1] !== 0xdc || !bytesAt(img, p + 6, MM_BANK0_CALL)) continue;
+    const base = u32(img, p + 8), block = u32(img, p + 14);
+    if (base < 0xA0000000 || base >= 0xC0000000 || !block) continue;
+    const next = img.subarray(p + 6 + MM_BANK0_CALL.length, p + 6 + MM_BANK0_CALL.length + 0x40);
+    if (!next.some((_, k) => bytesAt(next, k, [0x25, 0x00, 0x01]))) continue;
+    hits.push({ pool: u32(img, p + 2), base, block, at: 0x50000000 + p });
+  }
+  if (hits.length !== 1) throw new Error(`mmBank0: ${hits.length} pool constructions of MM's bank 0 in the DRAM's uncached view, want 1${hits.length ? `: ${hits.map((h) => h8(h.at)).join(', ')}` : ''}`);
+  return hits[0];
+}
+
+// The lab's DRAM on the E143 family (board fact 'dram_size' where the family's dram_rule is 'mm-bank0'): the bus DRAM
+// from 0xa0000000 to the end of the 128 MiB bus segment holding MM's bank 0's first block. The CPU reaches bus
+// 0xb8000000.. through its window, which shows one segment of 2^27 bytes (src/dev/bus.mjs, A17), at reset segment 0x17
+// (bus 0xb8000000..0xc0000000); MM's own address classifier splits the bus at the same places (0x50533a98: below
+// 0xb8000000 class 0, below 0xc0000000 class 1, then one class per 0x08000000 up to 0xf0000000, D). E143, E146 and E147:
+// bank 0 at 0xb8000000, so 0xa0000000..0xc0000000, 512 MiB, the end of the DRAM's uncached view (cached(), the lab's
+// largest DRAM, src/core/mem.mjs DRAM_MAX). It holds bank 0's first four blocks (the shot's handles 1..3 end at
+// 0xbdffc400, X) and the play module's buffer 0xbc857f00 on E146 and E147 (X, docs/hle-gaps/4.8.md 4.8.18). MM's banks
+// reach much further (bus 0x08000000.. and 0xc0000000..0xff0d9c00, X: 4.3.14), so the camera's DRAM is larger (I):
+// this is the part the CPU's uncached view and the window's reset segment show, not the camera's size. Throws where
+// bank 0 lies below the GUI's banks' end (dramSize; E143 family: both 0xb8000000) or its first block crosses the
+// segment's end. Returns the size in bytes.
+const BUS_SEGMENT = 2 ** 27;
+export function mmDramSize({ base, block }, gui) {
+  const end = (Math.floor(base / BUS_SEGMENT) + 1) * BUS_SEGMENT;
+  if (0x60000000 + dramSize(gui) > cached(base)) throw new Error(`mmDramSize: MM's bank 0 at ${h8(base)} lies below the GUI's banks' end ${h8(0xa0000000 + dramSize(gui))}`);
+  if (base + block > end || end > 0xC0000000) throw new Error(`mmDramSize: MM's bank 0 block ${h8(base)}+0x${block.toString(16)} past its bus segment's end ${h8(end)} or the uncached view's`);
+  return end - 0xA0000000;
+}
 
 // The application's module-9 state reads (fact 'app.module9_readers', src/lab/camapp.mjs S-TAKEOVER): the return
 // addresses of the calls of MODULE_STATE_GET (E143's 0x50ab5780, at its place in the build) that `mov 9,d0` (80 09)
@@ -6374,7 +6563,10 @@ export function readPlacedFacts({ img, at }) {
   const uiPost = at(UI_IN_POST_E143), uiSink = at(UI_IN_SINK_E143);
   const uiIn = { ...(kcb !== null && uiFlag !== null && { task: uiInTask(img, kcb, uiFlag) }), ...(uiPost !== null && uiSink !== null && { forward: uiInForward(img, uiPost, uiSink) }) };
   if (Object.keys(uiIn).length) facts.ui_in = uiIn;
-  if (kcb !== null) facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off: powerOff(img, flashSave) }) };
+  if (kcb !== null) {
+    const off = flashSave !== null ? powerOff(img, flashSave) : undefined;
+    facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off }), ...(off && { later: powerLater(img, off.pwr.init) }) };
+  }
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
   const tpMask = touchDriver(img) ? at(TP_MASK_E143) : null;
@@ -6503,7 +6695,8 @@ export function readFacts({ img, family, resLoad }) {
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);
-  facts.board.dram_size = dramSize(facts.gui);
+  if (family.dram_rule !== 'mm-bank0' && family.dram_rule !== 'gui') throw new Error(`readFacts: board dram_rule ${JSON.stringify(family.dram_rule)} has no rule here`);
+  facts.board.dram_size = family.dram_rule === 'mm-bank0' ? mmDramSize(mmBank0(img), facts.gui) : dramSize(facts.gui);
   const recview = recViewStandby(img);
   facts.recview = recview ?? null;
   facts.touch_int = touchIntWait(img) ?? null;
@@ -6513,6 +6706,7 @@ export function readFacts({ img, family, resLoad }) {
   const propStoreInit = propStore(img);
   if (propStoreInit !== undefined) facts.prop_store = propStoreInit;
   facts.ctors = ctorTables(img);
+  facts.hdmi = { calib: hdmiCalib(img) };
   return facts;
 }
 

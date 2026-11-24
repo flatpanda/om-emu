@@ -6,8 +6,9 @@
 // whose white-balance step and the image library's run are its readers on the camera). Addresses are E143's (D unless
 // tagged); each is taken through A() and its bytes are checked on the body before use: a body whose bytes differ keeps
 // the buffer unwritten, with the reason (geometry() returns {skip}). So does a body whose MM block for the Bayer is no
-// memory of the lab's: E143's bank 0 starts at 0xb8000000, where the lab's 384 MiB of DRAM end (src/fw/board.mjs
-// dram_size), so by default S-RAWFRAME is not in use there; with 512 MiB it runs (X, docs/hle-gaps/4.3.md 4.3.14).
+// memory of the lab's: E143's bank 0 starts at 0xb8000000, where the lab's DRAM ended at 384 MiB until 2026-11-23;
+// since then the E143 family's DRAM is 512 MiB (src/fw/board.mjs dram_size, src/fw/facts.mjs mmDramSize) and the fill
+// runs by default on E143, E146 and E147 (X, docs/hle-gaps/4.3.md 4.3.14 and 4.3.17).
 //
 // Where each value comes from (E143):
 //   the buffer    the shot entry's +2, the handle TAKE's Bayer lookup gives (0x503af9de: the entry's flag 1, `movhu
@@ -25,9 +26,12 @@
 //   the geometry  rec_ImgProCtrl_Src_Bayer's normal-still branch (GEOMETRY, 0x505492e6..0x50549317: the record's
 //                 +38764 not 19, Mode not 8193 / 8198, the high-resolution and +7626 modes not taken): bits 12
 //                 (`mov 12,d0; call 0x50547b9a`, the format 1031 at the source's +8), the source's +10 5360, +12
-//                 5208, +14 3912 (the stride and the frame) and +16 5184, +18 3888 (the developed size); E146 writes the
-//                 same values at other offsets (`0x5052704d`, its source record 8 bytes longer), so its bytes differ
-//                 and it is skipped until a rule reads its form
+//                 5208, +14 3912 (the stride and the frame) and +16 5184, +18 3888 (the developed size). E146 and
+//                 E147 write the same values 8 bytes on (E146 0x5052733b, E147 0x50536549, the port's places of the
+//                 branch: the format at +16, the stride +18, the frame +20 / +22, the developed size +24 / +26; the
+//                 address before them a doubleword, `mov d0,(a2); mov d1,(4,a2)` from rec_misc_select_bayer, E146
+//                 0x50527017, D), and keep the flag in (20,sp) where E143 has (24,sp): the form reads the format's
+//                 offset F from its store and wants the five stores after it at F + 2 .. F + 10 (G.src = F)
 //   A-RAWFRAME-1  (I) the layout the pipeline unit reads is not read: the fill takes the stride in pixels, two
 //                 12-bit pixels packed little-endian in three bytes (8040 bytes a row, 31,452,480 bytes, inside
 //                 MM's block; 16 bits a pixel would not fit it: 41,940,480), the colour filter RGGB from the first
@@ -44,17 +48,31 @@ export const RAWFRAME_E143 = {
   pool_addr: 0x505379BC,    // bank 0's pool class: its handle-to-address method
   bayer: 0x503AF9DE,        // TAKE's lookup of a shot's Bayer handle (d0 the id)
 };
-// the branch's bytes (null: a call's displacement): clr d0; mov d0,(24,sp); mov BITS,d0; call FORMAT; movhu d0,(8,a2);
-// mov STRIDE,d0; movhu d0,(10,a2); mov WIDTH,d0; movhu d0,(12,a2); mov HEIGHT,d0; movhu d0,(14,a2); mov CROPW,d0;
-// movhu d0,(16,a2); mov CROPH,d0; movhu d0,(18,a2)
-const GEOMETRY_FORM = [0x00, 0x42, 0x18, 0x80, null, 0xcd, null, null, 0x80, 0x10, 0xf8, 0x72, 0x08,
-  0x2c, null, null, 0xf8, 0x72, 0x0a, 0x2c, null, null, 0xf8, 0x72, 0x0c, 0x2c, null, null, 0xf8, 0x72, 0x0e,
-  0x2c, null, null, 0xf8, 0x72, 0x10, 0x2c, null, null, 0xf8, 0x72, 0x12];
-// asl 3,d0; add BANKS,d0; mov d0,a2; inc4 a2; mov (a2),d0
-const BANKS_FORM = [0xf8, 0xc0, 0x03, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe2, 0x52, 0x72];
-// the pool method's base and block loads: mov (8,a2),d3 at +0x28, mov (12,a2),d0 at +0x45
-const POOL_FORM = [[0x28, [0xf8, 0x0e, 0x08]], [0x45, [0xf8, 0x02, 0x0c]], [0x1e, [0x24, 0x32, 0x01]]];
-const POOL_BASE = 8, POOL_BLOCK = 12, POOL_COUNT = 306;
+// the branch's bytes (null: a call's displacement, the flag's stack slot): clr d0; mov d0,(N,sp); mov BITS,d0; call
+// FORMAT; movhu d0,(F,a2); mov STRIDE,d0; movhu d0,(F+2,a2); mov WIDTH,d0; movhu d0,(F+4,a2); mov HEIGHT,d0; movhu
+// d0,(F+6,a2); mov CROPW,d0; movhu d0,(F+8,a2); mov CROPH,d0; movhu d0,(F+10,a2) (F 8 on E143, 16 on E146 and E147)
+const GEOMETRY_FORM = (F) => [0x00, 0x42, null, 0x80, null, 0xcd, null, null, 0x80, 0x10, 0xf8, 0x72, F,
+  0x2c, null, null, 0xf8, 0x72, F + 2, 0x2c, null, null, 0xf8, 0x72, F + 4, 0x2c, null, null, 0xf8, 0x72, F + 6,
+  0x2c, null, null, 0xf8, 0x72, F + 8, 0x2c, null, null, 0xf8, 0x72, F + 10];
+const GEOMETRY_LENGTH = GEOMETRY_FORM(0).length, GEOMETRY_F = 12;
+// asl 3,d0; add BANKS,d0; mov d0,a2; inc4 a2; mov (a2),d0 (E143), or asl 3,d0; mov BANKS,a3; add a3,d0; mov d0,a0;
+// inc4 a0; mov (a0),d0 (E146 0x50511b1d, BANKS 0x606c1410; E147 0x50520ca1, 0x606e21a0; D): BANKS at bytes 5..8
+const BANKS_FORMS = [[0xf8, 0xc0, 0x03, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe2, 0x52, 0x72],
+  [0xf8, 0xc0, 0x03, 0xfc, 0xdf, null, null, null, null, 0xf1, 0x5c, 0xf1, 0xe0, 0x50, 0x70]];
+// the pool method's loads, in its first POOL_SPAN bytes: the first region's count, `mov COUNT,aN; add aP,aN; movhu
+// (aN),Dk` (24 / 25 imm16, f1 7x, f0 6x: E143 306 at +0x1e, E146 0x50514c89 and E147 0x50523db7 386, D); after it the
+// base, `mov (8,aP),Rn` (f8 0x / 2x 08: E143 +0x28 d3, E146 +0x2a a2, E147 +0x2c d3); the block, `mov (12,aP),Dn` (f8 0x
+// 0c) with the multiply `f6 12` within the next four bytes (E143 +0x45, E146 +0x62, E147 +0x59). E146's and E147's
+// class has up to 256 handles and a third region (+388, +396), E143's 192 and two; the first region's address is
+// (12,pool) x (n - 1) + (8,pool) on all three (D)
+const POOL_BASE = 8, POOL_BLOCK = 12, POOL_SPAN = 0x80;
+function poolCount(b) {
+  const c = b.findIndex((x, i) => (x === 0x24 || x === 0x25) && b[i + 3] === 0xf1 && (b[i + 4] & 0xf0) === 0x70 && b[i + 5] === 0xf0 && (b[i + 6] & 0xf0) === 0x60);
+  if (c < 0) return null;
+  const base = b.findIndex((x, i) => i > c && x === 0xf8 && ((b[i + 1] & 0xf0) === 0x00 || (b[i + 1] & 0xf0) === 0x20) && b[i + 2] === POOL_BASE);
+  const block = b.findIndex((x, i) => i > c && x === 0xf8 && (b[i + 1] & 0xf0) === 0x00 && b[i + 2] === POOL_BLOCK && [3, 4, 5, 6].some((k) => b[i + k] === 0xf6 && b[i + k + 1] === 0x12));
+  return base > c && block > base ? b[c + 1] | b[c + 2] << 8 : null;
+}
 
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
 const matches = (b, form) => form.every((v, i) => v === null || b[i] === v);
@@ -65,17 +83,20 @@ const u16 = (b, o) => b[o] | b[o + 1] << 8;
 export function geometry(sim, R = RAWFRAME_E143) {
   const none = Object.entries(R).find(([, a]) => isUnmapped(A(a)));
   if (none) return { skip: `the port places no ${none[0]} (E143 ${h8(none[1])}) on this body` };
-  const at = A(R.geometry), b = sim.read(runtime(at), GEOMETRY_FORM.length);
-  if (!matches(b, GEOMETRY_FORM)) return { skip: `rec_ImgProCtrl_Src_Bayer's normal-still geometry ${h8(at)} has another form on this body` };
-  const bk = sim.read(runtime(A(R.banks)), BANKS_FORM.length);
-  if (!matches(bk, BANKS_FORM)) return { skip: `MM's bank table read ${h8(A(R.banks))} has another form on this body` };
+  const at = A(R.geometry), b = sim.read(runtime(at), GEOMETRY_LENGTH), F = b[GEOMETRY_F];
+  if (F + 10 > 0x7f || !matches(b, GEOMETRY_FORM(F))) return { skip: `rec_ImgProCtrl_Src_Bayer's normal-still geometry ${h8(at)} has another form on this body` };
+  const bk = sim.read(runtime(A(R.banks)), Math.max(...BANKS_FORMS.map((f) => f.length)));
+  if (!BANKS_FORMS.some((f) => matches(bk, f))) return { skip: `MM's bank table read ${h8(A(R.banks))} has another form on this body` };
   const pm = A(R.pool_addr);
-  for (const [o, f] of POOL_FORM) if (!matches(sim.read(runtime(pm) + o, f.length), f)) return { skip: `MM's pool address method ${h8(pm)} has another form on this body` };
-  const G = { bits: b[4], stride: u16(b, 14), width: u16(b, 20), height: u16(b, 26), crop: [u16(b, 32), u16(b, 38)],
-    banks: (bk[5] | bk[6] << 8 | bk[7] << 16 | bk[8] << 24) >>> 0, mm_addr: A(R.mm_addr), pool_addr: runtime(pm), bayer: A(R.bayer) };
+  const poolN = poolCount(sim.read(runtime(pm), POOL_SPAN));
+  if (poolN === null) return { skip: `MM's pool address method ${h8(pm)} has another form on this body` };
+  // at / end: the branch and the instruction after its last store (the source record a2 holds every field there)
+  const G = { at, end: at + GEOMETRY_LENGTH, src: F, bits: b[4], stride: u16(b, 14), width: u16(b, 20), height: u16(b, 26), crop: [u16(b, 32), u16(b, 38)],
+    banks: (bk[5] | bk[6] << 8 | bk[7] << 16 | bk[8] << 24) >>> 0, pool_count: poolN, mm_addr: A(R.mm_addr), pool_addr: runtime(pm), bayer: A(R.bayer) };
   // the frame in MM's first block of the Bayer's bank (MM kind 0, bank 0: the kind TAKE's allocation asks for the
-  // still's kinds 0 and 3 without setting 59729) must be memory of the lab's: E143's bank 0 starts at 0xb8000000, where
-  // the lab's DRAM ends (src/fw/board.mjs dram_size, 384 MiB; X), so there the fill is skipped with the reason
+  // still's kinds 0 and 3 without setting 59729) must be memory of the lab's (E143's bank 0 starts at 0xb8000000, inside
+  // the E143 family's 512 MiB since 2026-11-23, src/fw/board.mjs dram_size); where it is not, the fill is skipped with
+  // the reason
   const pool = sim.u32(G.banks + 4) >>> 0;
   if (!pool || sim.u32(sim.u32(pool) + 8) >>> 0 !== G.pool_addr) return { skip: `MM's bank 0 has no pool of the class ${h8(G.pool_addr)} (pool ${h8(pool)}; MM's init not run yet?)`, again: true };
   const base = sim.u32(pool + POOL_BASE) >>> 0, bytes = frameBytes(G);
@@ -122,11 +143,11 @@ export function rawFrame(lab, shot, G) {
   if (!handle || !address || lab.kernel.errors.length !== e0) throw new Error(`S-RAWFRAME: the shot ${shot.id}'s Bayer handle 0x${handle.toString(16)}, MM's address ${h8(address)} (error logs: ${lab.kernel.errors.slice(e0).map(([c]) => h8(c)).join(' ') || 'none'})`);
   const pool = sim.u32(G.banks + 8 * (handle >>> 8) + 4) >>> 0, method = pool ? sim.u32(sim.u32(pool) + 8) >>> 0 : 0;
   if (!pool || method !== G.pool_addr) throw new Error(`S-RAWFRAME: the Bayer handle 0x${handle.toString(16)}'s pool ${h8(pool)} has the address method ${h8(method)}, not bank 0's class's ${h8(G.pool_addr)}`);
-  const n = handle & 0xFF, count = sim.read(pool + POOL_COUNT, 2), block = sim.u32(pool + POOL_BLOCK) >>> 0, base = sim.u32(pool + POOL_BASE) >>> 0;
+  const n = handle & 0xFF, count = sim.read(pool + G.pool_count, 2), block = sim.u32(pool + POOL_BLOCK) >>> 0, base = sim.u32(pool + POOL_BASE) >>> 0;
   if (n > u16(count, 0) || address !== (base + block * (n - 1)) >>> 0) throw new Error(`S-RAWFRAME: MM's address ${h8(address)} of the handle 0x${handle.toString(16)} is not block ${n} of its pool's first region (base ${h8(base)}, block 0x${block.toString(16)}, ${u16(count, 0)} blocks)`);
   const data = pattern(G);
   if (!mapped(sim, address) || !mapped(sim, address + data.length - 1)) throw new Error(`S-RAWFRAME: MM's block ${h8(address)}..${h8(address + data.length)} of the handle 0x${handle.toString(16)} lies outside the lab's DRAM`);
   if (data.length > block) throw new Error(`S-RAWFRAME: the frame's ${data.length} bytes do not fit MM's block of 0x${block.toString(16)}`);
   sim.write(address, data);
-  return { handle, address, size: data.length, block, base, geometry: { bits: G.bits, stride: G.stride, width: G.width, height: G.height, crop: G.crop } };
+  return { handle, address, size: data.length, block, base, geometry: { src: G.src, bits: G.bits, stride: G.stride, width: G.width, height: G.height, crop: G.crop } };
 }

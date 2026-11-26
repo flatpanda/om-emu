@@ -157,6 +157,38 @@ export function nvramUnsupported() {
 // 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); the sub-CPU's RTC keeps it (src/lab/scpudev.mjs
 // ScpuMemory), in S-NVRAM's file when there is one
 export const PANEL_FLAG = A(0x60043188);                                   // the panel driver's serial completion flag id (E143's EVF panel; S-PANELDONE)
+// uITRON event-flag wait modes (OlyEvWt's a1, low byte; D: wai_flg / twai_flg, as in mdet.mjs and scenarios/kernel.mjs)
+export const TWF_ANDW = 0, TWF_ORW = 1;
+// Whether a uITRON event-flag wait (waiptn, wfmode) is already satisfied by flgptn and returns without blocking.
+// A zero wait pattern or an unknown wait mode is never satisfied (wai_flg returns E_PAR).
+export function flagSatisfied(flgptn, waiptn, wfmode) {
+  const cur = flgptn >>> 0, want = waiptn >>> 0;
+  if (want === 0) return false;
+  if (wfmode === TWF_ORW) return ((cur & want) >>> 0) !== 0;
+  if (wfmode === TWF_ANDW) return ((cur & want) >>> 0) === want;
+  return false;
+}
+// Read an event flag's current flgptn from the native kernel's FLGCB table (kcb[212][idx - 1] + 20, allocated when
+// u16 at +0 is non-zero; kcb[60] + 10 holds the CPU's flag-id bound; D: wai_flg). Returns null when the native kernel
+// is absent, the flag belongs to another CPU, the id is out of range, or the slot is unallocated.
+export const KCB_LIMITS = 60, KCB_FLGCB = 212, FLG_LIMIT_OFF = 10, FLGCB_PTN = 20;
+export function readFlagPattern(nk, sim, flgid) {
+  if (!nk || !sim || typeof nk.kcb !== 'function') return null;
+  const id = flgid & 0xFFFF;
+  const cpu = (id >> 12) & 7, idx = id & 0xFFF;
+  if (cpu !== nk.cpu || idx < 1) return null;
+  const limits = nk.kcb(KCB_LIMITS);
+  if (!limits) return null;
+  const lim = sim.read(limits + FLG_LIMIT_OFF, 2);
+  if (idx > (lim[0] | lim[1] << 8)) return null;
+  const table = nk.kcb(KCB_FLGCB);
+  if (!table) return null;
+  const flgcb = sim.u32(table + 4 * (idx - 1));
+  if (!flgcb) return null;
+  const hdr = sim.read(flgcb, 2);
+  if ((hdr[0] | hdr[1] << 8) === 0) return null;
+  return sim.u32(flgcb + FLGCB_PTN);
+}
 export const NATIVE_HOOK_LIMIT = 2000000;
 // the static constructor tables the lab runs after the memory managers' (src/lab/osd.mjs mm_ctors), as [table, count]
 // (src/fw/facts.mjs ctorTables): the modules' tables after the first and before the last, E143's modules 6 and 7 (the
@@ -382,6 +414,11 @@ export class MenuLab extends T.TextDisplayLab {
             return;
           }
           if ((r.d0 & 0xFFFF) === panel && this.in_display_run() && (standIns || (this.panel_done && this.call_depth >= 2))) {
+            const cur = readFlagPattern(this.nk, this.sim, panel);
+            if (cur !== null && flagSatisfied(cur, r.d1 >>> 0, r.a1 & 0xFF)) {
+              inner(hle, r);
+              return;
+            }
             this.route_log.add([name, 'S-PANELDONE']);
             this.panel_answered += 1;
             if (r.a0) this.sim.write(r.a0, pack('<I', r.d1 >>> 0));

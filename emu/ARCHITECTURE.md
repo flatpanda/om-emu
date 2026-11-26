@@ -155,7 +155,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F02 the lab drives the machine through gdbstub text, and the harness digests hash that traffic | open: a typed machine port is roadmap phase 2 |
 | F03 interrupt delivery follows a TB-layout look model, not instruction boundaries | defect fixed (an undecidable case no longer kills the machine); the look model itself is phase 3 |
 | F04 harness device commands travel through a single-stepped guest store | open, phase 2 |
-| F05 device configuration lives in debug-window bytes without write notification | open: rebase a running VSC channel when `LINE_NS` changes |
+| F05 device configuration lives in debug-window bytes without write notification | fixed (2026-11-26): `src/dev/vsc.mjs` tracks `curLineNs` per channel and rebases `frameStart` in `chanSync` when `LINE_NS` or `LINE_NS_EVF` changes on a running channel (`test/test_vsc_rebase.mjs`) |
 | F06 the machine owns no simulated time; the lab clock moves only through VSC doorbells | open, phase 4 |
 | F07 the product runtime reproduces CPython, glibc and http.server behaviour | fixed: plain JS values throughout (`src/util/py*` is gone, `test/test_pure.mjs` keeps it so), plain JSON on the HTTP API and in the session logs, node's own errors and stacks |
 | F08 the checks report bare boolean predicates (`checks/lib/pred.mjs`) | fixed: every comparison is `eq(got, want)` (`checks/lib/eq.mjs`); per site results with the first failing pairs, beside the RNG tape, in each run's output directory (`bin/checks.mjs`) |

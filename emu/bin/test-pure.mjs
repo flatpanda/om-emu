@@ -137,6 +137,12 @@ import { memprobeTests } from '../test/test_memprobe.mjs';
 import { vscRebaseUnits } from '../test/test_vsc_rebase.mjs';
 import { sessionLangUnits } from '../test/test_session_lang.mjs';
 import { pacingUnits } from '../test/test_pacing.mjs';
+import { checksTimeUnits } from '../test/test_checks_time.mjs';
+import { memSnapshotUnits } from '../test/test_mem_snapshot.mjs';
+import { webSelftestUnits } from '../test/test_web_selftest.mjs';
+import { slot2StatusUnits } from '../test/test_slot2_status.mjs';
+import { panelDoneUnits } from '../test/test_paneldone.mjs';
+import { debugInspectUnits } from '../test/test_debug_inspect.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -226,6 +232,12 @@ report('host memory probe: main and worker isolate sampling (OM_HOST_MEM)', awai
 report('VSC channel LINE_NS rebase on running channel (F05)', vscRebaseUnits());
 report('scripted session --lang option units (bin/session.mjs, host/session.mjs)', sessionLangUnits());
 report('Player pacing and timing paths (BEHIND_NS re-anchor, 20 ms queue wait, --idle wall)', pacingUnits());
+report('checks.mjs portable /usr/bin/time RSS parsing and command selection (F40)', checksTimeUnits());
+report('memSnapshot skipping unmutated read-only ROM pages (F25)', memSnapshotUnits());
+report('web pages ?selftest=1 Card panel coverage (web/play.html, web/index.html)', await webSelftestUnits());
+report('second card slot HLS media status word under camapp 1 (units)', slot2StatusUnits());
+report('S-PANELDONE gate flag-satisfaction checks (src/lab/menu.mjs)', panelDoneUnits());
+report('debug API non-mutating breakpoints and watchpoints inspection ops', debugInspectUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

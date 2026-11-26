@@ -21,7 +21,7 @@
 // (A-ADC-1, I: the converter ready at once). +0x28, +0x34 and +0x1c read 0: the lab's converter runs no scan and
 // no channel >= 10 (the driver's other paths, 0x5004cd21 and 0x5004d00b, write words the model refuses). A channel's
 // value comes from the lab (values(k), src/lab/play.mjs H-ADINIT); a channel the lab gives none is UNKNOWN at its start.
-// Any other offset, width or value, a mode-0 (single sample) or channel >= 8 start, and a debugger access, are UNKNOWN.
+// Any other offset, width or value, a mode-0 (single sample) or channel >= 10 start, and a debugger access, are UNKNOWN.
 // Built by the machine on a board that gives adc (src/machine.mjs), passive until the firmware starts a conversion.
 import { BUS, K_MMIO, addRegion, ctx } from '../core/mem.mjs';
 
@@ -31,7 +31,7 @@ const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 export const SAMPLE_NS = 10000;
 export const ADC_SIZE = 0x78;
 const CTL = 0x00, START = 0x04, DIV = 0x08, IE = 0x10, STATUS = 0x14, CH10_STATUS = 0x1c, SCAN = 0x28, SCAN_STATUS = 0x34,
-  READY = 0x38, DATA = 0x3c, CHANNELS = 8;
+  READY = 0x38, DATA = 0x3c, DATA8 = 0x70, DATA9 = 0x74, CHANNELS = 10;
 
 export class Adc {
   // cfg: the board's adc {base, irq}
@@ -86,8 +86,10 @@ export class Adc {
       case STATUS: return this.status;
       case SCAN: case SCAN_STATUS: case CH10_STATUS: return 0;
       case READY: return 1;                        // A-ADC-1
+      case DATA8: return this.data[8];
+      case DATA9: return this.data[9];
       default:
-        if (off >= DATA && off < DATA + 4 * CHANNELS) return this.data[(off - DATA) >> 2];
+        if (off >= DATA && off < DATA + 4 * 8) return this.data[(off - DATA) >> 2];
         return this.unknown('read', off, size, 0, dbg);
     }
   }

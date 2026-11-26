@@ -1023,6 +1023,60 @@ async function modeDialSteps(step, nd) {
   step('every camera control is what its centre hits', covered.length === 0, { covered });
   return k;
 }
+// The Card panel: open it, wait for the initial read (refs/volume.mjs), exercise Read the card and Take out / Put in
+// (leaving the card back in the slot), and restore the panel and tab state.
+async function cardPanelSteps(step) {
+  const wasOpen = $('cardpanel').open;
+  const prevTab = document.querySelector('#tabs button.sel')?.dataset.tab || null;
+  try {
+    $('cardpanel').open = true;
+    const loaded = await until(() => CARD && (CARD.volume || CARD.error) && cardReading === null, 30000);
+    step('Card panel: the card read (refs/volume.mjs)', loaded && $('cardpanel').open && !!(CARD.volume && CARD.volume.type) && !CARD.error,
+      { open: $('cardpanel').open, state: $('card-state').textContent, card: CARD && { slot: CARD.slot, volume: CARD.volume, error: CARD.error, files: (CARD.files || []).length } });
+    const removeBtn = $('card-remove'), insertBtn = $('card-insert'), readBtn = $('card-read');
+    const wired = !!(removeBtn && insertBtn && readBtn && typeof removeBtn.onclick === 'function' && typeof insertBtn.onclick === 'function' && typeof readBtn.onclick === 'function');
+    const prevCard = CARD;
+    if (readBtn) readBtn.click();
+    const refreshed = await until(() => CARD !== prevCard && cardReading === null && !!(CARD && (CARD.volume || CARD.error)), 30000);
+    step('Card panel: controls wired and Read the card refreshes', wired && refreshed && !!(CARD && CARD.volume && CARD.volume.type) && !CARD.error && $('card-files').innerHTML.length > 0,
+      { wired, refreshed, state: $('card-state').textContent, remove_disabled: removeBtn?.disabled, insert_disabled: insertBtn?.disabled });
+    if (removeBtn && !removeBtn.disabled && CARD && CARD.slot && CARD.slot.present) {
+      const cardBeforeOut = CARD;
+      removeBtn.click();
+      const afterOut = await until(() => CARD !== cardBeforeOut && cardReading === null && !!(CARD && CARD.slot), 60000);
+      const removed = afterOut && CARD.slot.present === false && removeBtn.disabled && !insertBtn.disabled && $('card-state').textContent.startsWith('out of the slot');
+      const refused = afterOut && CARD.slot.present === true && $('eventlog').textContent.includes('refused:');
+      if (removed) {
+        const cardBeforeIn = CARD;
+        insertBtn.click();
+        const afterIn = await until(() => CARD !== cardBeforeIn && cardReading === null && !!(CARD && CARD.slot && CARD.slot.present) && !removeBtn.disabled, 60000);
+        const reinserted = afterIn && CARD.slot.present === true && !!(CARD.volume && CARD.volume.type) && !CARD.error && $('card-state').textContent.startsWith('in the slot');
+        step('Card panel: Take out and Put in (S-MEDIA)', reinserted,
+          { removed, reinserted, state: $('card-state').textContent, present: CARD.slot.present, mounted: CARD.slot.mounted });
+      } else {
+        step('Card panel: Take out and Put in (S-MEDIA)', refused,
+          { removed, refused, state: $('card-state').textContent, present: CARD?.slot?.present });
+      }
+    } else {
+      step('Card panel: Take out and Put in (S-MEDIA)', false,
+        { remove_disabled: removeBtn?.disabled, insert_disabled: insertBtn?.disabled, slot: CARD?.slot || null });
+    }
+  } finally {
+    if (CARD && CARD.slot && CARD.slot.present === false && $('card-insert') && !$('card-insert').disabled) {
+      const cardBeforeFix = CARD;
+      $('card-insert').click();
+      await until(() => CARD !== cardBeforeFix && cardReading === null && !!(CARD && CARD.slot && CARD.slot.present), 60000);
+    }
+    $('cardpanel').open = wasOpen;
+    if (prevTab && document.querySelector('#tabs button.sel')?.dataset.tab !== prevTab) {
+      const btn = document.querySelector(`#tabs button[data-tab="${prevTab}"]`);
+      if (btn) btn.click();
+    }
+  }
+  const activeTab = document.querySelector('#tabs button.sel')?.dataset.tab || null;
+  step('Card panel: state restored', $('cardpanel').open === wasOpen && activeTab === prevTab && !!(CARD && CARD.slot && CARD.slot.present),
+    { open: $('cardpanel').open, wasOpen, activeTab, prevTab, present: CARD?.slot?.present ?? null });
+}
 async function selftest() {
   const R = { steps: [] };
   const step = (name, ok, extra) => R.steps.push({ name, ok, ...(extra || {}) });
@@ -1071,9 +1125,7 @@ async function selftest() {
   // with refs/volume.mjs, and the HDMI control's state (no port without --hdmi on)
   const sess = await (await api('/api/session')).json();
   step('session options (GET /api/session)', typeof sess.lens === 'string' && (sess.hdmi === 'on' || sess.hdmi === 'off'), { session: sess });
-  $('cardpanel').open = true;
-  step('Card panel: the card read (refs/volume.mjs)', await until(() => CARD && (CARD.volume || CARD.error), 30000) && !!(CARD.volume && CARD.volume.type),
-    { card: CARD && { slot: CARD.slot, volume: CARD.volume, error: CARD.error, files: (CARD.files || []).length } });
+  await cardPanelSteps(step);
   step('HDMI control', sess.hdmi === 'on' ? !!STATUS.hdmi : $('hdmi-plug').disabled && $('hdmi-state').textContent.startsWith('no HDMI port'),
     { hdmi: STATUS.hdmi || null, text: $('hdmi-state').textContent });
   R.buttons = { wired: document.querySelectorAll('[data-ctl].b.wired').length, decoded: document.querySelectorAll('[data-ctl].b.decoded').length, none: document.querySelectorAll('[data-ctl].b.none').length };

@@ -34,7 +34,29 @@ export let TOTAL = 0, DRAM_SIZE = 0;
 export const RP = new Int32Array(65536), WP = new Int32Array(65536);   // 64 KiB page -> physical offset or -1
 const WPL = new Int32Array(65536);                                      // RAM page -> its WP offset, enabled lazily
 let DIRTY = null;                                                        // 64 KiB physical page possibly written
+let ROM_PG = null, WRIT_PG = null, ROM_MUT = null;                       // read-only K_ROM pages, writable pages, mutated K_ROM pages
+const romOrig = new Map();                                               // physical page -> pre-mutation 64 KiB ROM image (lazy on dbgWrite)
 export function markDirty(o, len) { if (len > 0) for (let p = o >>> 16; p <= (o + len - 1) >>> 16; p++) DIRTY[p] = 1; }
+function markWritable(o, len) {
+  if (len <= 0) return;
+  for (let p = o >>> 16; p <= (o + len - 1) >>> 16; p++) {
+    WRIT_PG[p] = 1;
+    if (ROM_PG[p] !== 0) {
+      if (DIRTY[p] !== 0 && !romOrig.has(p)) romOrig.set(p, U8.slice(p << 16, (p + 1) << 16));
+      ROM_PG[p] = 0;
+      ROM_MUT[p] = 1;
+    }
+  }
+}
+function touchRomMut(o, len) {
+  if (len <= 0) return;
+  for (let p = o >>> 16; p <= (o + len - 1) >>> 16; p++) {
+    if (ROM_PG[p] !== 0 && ROM_MUT[p] === 0) {
+      if (DIRTY[p] !== 0 && !romOrig.has(p)) romOrig.set(p, U8.slice(p << 16, (p + 1) << 16));
+      ROM_MUT[p] = 1;
+    }
+  }
+}
 let PAGES = new Array(65536).fill(null);                                // 64 KiB page -> regions overlapping it
 export let CODEPG = null;                                                // 4 KiB physical page holds decoded code
 let winNext = 0;
@@ -149,9 +171,14 @@ export function initMemory(dramBytes) {
     buf = new ArrayBuffer(BUF_SIZE);
     U8 = new Uint8Array(buf); U16 = new Uint16Array(buf); I32 = new Int32Array(buf);
     DIRTY = new Uint8Array(BUF_SIZE >>> 16);
+    ROM_PG = new Uint8Array(BUF_SIZE >>> 16);
+    WRIT_PG = new Uint8Array(BUF_SIZE >>> 16);
+    ROM_MUT = new Uint8Array(BUF_SIZE >>> 16);
   } else {
     for (let p = 0; p < DIRTY.length; p++) if (DIRTY[p] !== 0) { U8.fill(0, p << 16, (p + 1) << 16); DIRTY[p] = 0; }
+    ROM_PG.fill(0); WRIT_PG.fill(0); ROM_MUT.fill(0);
   }
+  romOrig.clear();
   RP.fill(-1); WP.fill(-1); WPL.fill(-1);
   PAGES = new Array(65536).fill(null);
   MT = null; WON = false; WL = []; WPG.fill(0); WHIT = null; WHOOK = { stop() {}, log() {} };
@@ -166,6 +193,7 @@ export function allocWindow(size) {
   const off = winNext;
   winNext += (size + 0xffff) & ~0xffff;
   if (winNext > TOTAL) throw new Error('window space exhausted');
+  markWritable(off, size);
   markDirty(off, size);                 // device views write here at any time
   return off;
 }
@@ -198,6 +226,13 @@ export function addRegion(r) {
       RP[p] = r.off + (p * 0x10000 - r.base);
       if (r.kind === K_RAM) WPL[p] = RP[p];           // enabled by the first CPU store (slowSt)
       if (WPG[p] !== 0 || SPR[p] !== 0) RP[p] = -1;   // a watched or strict read page keeps its fast entries off (maskWatchedPages)
+    }
+  }
+  if (r.kind !== K_MMIO && r.size > 0) {
+    if (r.kind === K_ROM) {
+      for (let p = r.off >>> 16; p <= (r.off + r.size - 1) >>> 16; p++) if (WRIT_PG[p] === 0) ROM_PG[p] = 1;
+    } else {
+      markWritable(r.off, r.size);
     }
   }
   return r;
@@ -429,6 +464,7 @@ export function dbgWrite(a, bytes) {
     const r = findRegion(pos);
     if (r !== null && r.kind !== K_MMIO) {
       const len = Math.min(n - i, r.end - pos), o = r.off + (pos - r.base);
+      touchRomMut(o, len);
       U8.set(bytes.subarray(i, i + len), o);
       markDirty(o, len);
       invalidateRange(o, len);
@@ -452,26 +488,52 @@ export function invalidateRange(o, len) {
 export function phys(a) { return codePhys(a); }
 
 // ---- snapshot and restore (machine.mjs snapshot(); taken at a stop) -------------------------------------------------
-// Memory: every 64 KiB physical page marked DIRTY is copied; restore copies those back, zeroes every page dirtied since
-// (dirty now, absent from the snapshot) and sets DIRTY to the snapshot's set. The page tables (RP, WP, WPL, PAGES, a
-// shallow copy: the region objects are shared), the code-page marks (CODEPG), the I/O and store records of the kick
-// refusals (IO, CST) and the window allocator go with it. Watched pages keep their fast entries off after a restore.
+// Memory: every 64 KiB physical page marked DIRTY is copied, except unmutated read-only K_ROM pages (ROM_PG && !ROM_MUT),
+// which are tracked by index in romClean and skipped on both snapshot and restore unless mutated after the snapshot (in
+// which case their pre-mutation bytes are restored from romOrig). Restore copies the snapshot's pages back, restores any
+// ROM page mutated since, zeroes every page dirtied since (dirty now, absent from the snapshot) and sets DIRTY to the
+// snapshot's set. The page tables (RP, WP, WPL, PAGES, a shallow copy: the region objects are shared), the code-page
+// marks (CODEPG), the I/O and store records of the kick refusals (IO, CST) and the window allocator go with it. Watched
+// pages keep their fast entries off after a restore.
 export function memSnapshot() {
-  const pages = [];
-  for (let p = 0; p < DIRTY.length; p++) if (DIRTY[p] !== 0) pages.push(p);
+  const pages = [], romClean = [];
+  for (let p = 0; p < DIRTY.length; p++) {
+    if (DIRTY[p] === 0) continue;
+    if (ROM_PG[p] !== 0 && ROM_MUT[p] === 0) romClean.push(p);
+    else pages.push(p);
+  }
   const data = new Uint8Array(pages.length << 16);
   pages.forEach((p, i) => data.set(U8.subarray(p << 16, (p + 1) << 16), i << 16));
-  return { pages: Int32Array.from(pages), data, RP: RP.slice(), WP: WP.slice(), WPL: WPL.slice(), PAGES: PAGES.map((l) => l === null ? null : l.slice()),
+  return { pages: Int32Array.from(pages), romClean: Int32Array.from(romClean), data,
+    ROM_PG: ROM_PG.slice(), WRIT_PG: WRIT_PG.slice(),
+    RP: RP.slice(), WP: WP.slice(), WPL: WPL.slice(), PAGES: PAGES.map((l) => l === null ? null : l.slice()),
     CODEPG: CODEPG.slice(), IO: { ...IO }, CST: { n: CST.n.slice(), o: CST.o.slice(), k: CST.k }, winNext, stub, TOTAL, DRAM_SIZE };
 }
 export function memRestore(s) {
   if (s.TOTAL !== TOTAL || s.DRAM_SIZE !== DRAM_SIZE) throw new Error('memRestore: a snapshot of another memory layout');
   const keep = new Uint8Array(DIRTY.length);
-  s.pages.forEach((p, i) => { keep[p] = 1; U8.set(s.data.subarray(i << 16, (i + 1) << 16), p << 16); });
+  s.pages.forEach((p, i) => {
+    keep[p] = 1;
+    U8.set(s.data.subarray(i << 16, (i + 1) << 16), p << 16);
+    ROM_MUT[p] = s.ROM_PG[p];
+  });
+  for (let i = 0; i < s.romClean.length; i++) {
+    const p = s.romClean[i];
+    keep[p] = 1;
+    if (ROM_MUT[p] !== 0 || DIRTY[p] === 0) {
+      U8.set(romOrig.get(p), p << 16);
+      ROM_MUT[p] = 0;
+    }
+  }
   for (let p = 0; p < DIRTY.length; p++) {
-    if (DIRTY[p] !== 0 && keep[p] === 0) U8.fill(0, p << 16, (p + 1) << 16);
+    if (DIRTY[p] !== 0 && keep[p] === 0) {
+      if (ROM_PG[p] !== 0 && !romOrig.has(p)) romOrig.set(p, U8.slice(p << 16, (p + 1) << 16));
+      U8.fill(0, p << 16, (p + 1) << 16);
+      ROM_MUT[p] = 0;
+    }
     DIRTY[p] = keep[p];
   }
+  ROM_PG.set(s.ROM_PG); WRIT_PG.set(s.WRIT_PG);
   RP.set(s.RP); WP.set(s.WP); WPL.set(s.WPL);
   PAGES = s.PAGES.map((l) => l === null ? null : l.slice());
   CODEPG.set(s.CODEPG);

@@ -88,16 +88,17 @@ const SLOT = 0, SECOND = 1;         // the first slot, drive 0, and the second, 
 // the media status bits the manager's slot update tests (flags(), D): mounted, the two error bits, and the bit that
 // keeps the flag
 const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
-// S-MEDIA's media status of the first slot (S-CARD's word, camapp.mjs card_status; the setter's names: 0 NO_MOUNT,
-// 0x1001 NOT_PRESENT, 0xf000 OK): NOT_PRESENT after a removal and with the slot empty at the start; NO_MOUNT from an
-// insertion's change to its mount's end, then OK. These are the values the firmware's own media manager leaves in the
-// second slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a
-// removal; NO_MOUNT at an insertion, then its device's status after the mount), written at a change first by the
-// sequence parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and
-// then by the manager's status update of every slot from its device, after its notification of the change (D on E143
-// and E147, both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes
-// NOT_PRESENT so, X; the addresses are in docs/hle-gaps/4.8.md 4.8.3). The second slot's word is not placed in the lab (no
-// rule reads the setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
+// S-MEDIA's media status of a slot (S-CARD's words, camapp.mjs card_status: slot 0 at CARD_STATUS, slot 1 at
+// CARD_STATUS - 8; the setter's names: 0 NO_MOUNT, 0x1001 NOT_PRESENT, 0xf000 OK): NOT_PRESENT after a removal and
+// with the slot empty at the start; NO_MOUNT from an insertion's change to its mount's end, then OK (or NO_MOUNT if
+// slot 2's card is unformatted/unmounted). These are the values the firmware's own media manager leaves in the second
+// slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a removal;
+// NO_MOUNT at an insertion, then its device's status after the mount), written at a change first by the sequence
+// parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and then by
+// the manager's status update of every slot from its device, after its notification of the change (D on E143 and E147,
+// both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes NOT_PRESENT
+// so, X; the addresses are in docs/hle-gaps/4.8.md 4.8.3). Under control camapp 3 the second slot's word is left to
+// the firmware's own media manager (X)
 export const MEDIA_NO_MOUNT = 0, MEDIA_NOT_PRESENT = 0x1001, MEDIA_OK = 0xF000;
 // S-MDACTRL's commands, by their key in f.ctrl (src/fw/models.mjs card_fs.hls.ctrl: the command each sends), and the
 // picture file API's call of each in the fact 'erase' (src/fw/facts.mjs pictureErase)
@@ -225,10 +226,10 @@ export class HlsMedia {
     this.log.push(['mount state', `kind ${kind}: ${value}`]);
   }
   mount_state(kind) { return this.lab.call(this.f.mount.get, { d0: kind }, null, null, LIMIT).d0 >>> 0; }
-  // the first slot's media status (MEDIA_NOT_PRESENT's evidence), through S-CARD's word
-  _status(value) {
-    const at = this.s.camapp.card_status(value);
-    this.log.push(['media status', `${h8(at)}: 0x${value.toString(16)}`]);
+  // a slot's media status (MEDIA_NOT_PRESENT's evidence), through S-CARD's word (slot 0: CARD_STATUS, slot 1: CARD_STATUS - 8)
+  _status(value, i = SLOT) {
+    const at = this.s.camapp.card_status(value, i);
+    this.log.push(['media status', `${i === SLOT ? '' : 'slot 2: '}${h8(at)}: 0x${value.toString(16)}`]);
   }
   // ---- S-MDACTRL
   // S-TRAACK's exec of TRA 1511: the request's command, media and option, while the request lives
@@ -337,7 +338,11 @@ export class HlsMedia {
     // (the second slot's card, where the lab models it: its own drive's mount, and its state and flag after it)
     const second = this.storage.f.slots && c.media === SECOND;
     this.storage.renumber('S-MDACTRL', second ? SECOND : SLOT);
-    if (second) { this.storage.refresh(SECOND); this.flags(); }
+    if (second) {
+      const st2 = this.storage.refresh(SECOND);
+      if (!this.manager()) this._status(st2.mounted ? MEDIA_OK : MEDIA_NO_MOUNT, SECOND);
+      this.flags();
+    }
     this.ctrl = null;
     this.formats += 1;
     this.s.camapp?.card_formatted?.();
@@ -364,7 +369,7 @@ export class HlsMedia {
       // control camapp 3 the manager unmounts it, sends 711 {8, 0, 0} and clears its flag the same way, X)
       if (!st.held(i)) { this.log.push(['switch', `${of}no card was mounted: nothing to unmount`]); return; }
       this._mount_state(kind, m.unmounted);
-      if (i === SLOT) this._status(MEDIA_NOT_PRESENT);
+      this._status(MEDIA_NOT_PRESENT, i);
       st.remove('S-MEDIA', i);
       this._mount(kind, 0, 0);
       this.flags();
@@ -372,12 +377,12 @@ export class HlsMedia {
     }
     if (one.mounted) { this.log.push(['switch', `${of}the card is mounted already`]); return; }
     if (!card?.present) { this.log.push(['switch', `${of}no card in the slot: no mount (I: what the media manager does then is not read)`]); return; }
-    if (i === SLOT) this._status(MEDIA_NO_MOUNT);
+    this._status(MEDIA_NO_MOUNT, i);
     this._mount(kind, 1, 0);
     st.insert('S-MEDIA', i);
     one.insertions += 1;
     this._mount_state(kind, m.mounted);
-    if (i === SLOT) this._status(MEDIA_OK);           // (insert() refuses a card it leaves unmounted)
+    this._status(one.mounted ? MEDIA_OK : MEDIA_NO_MOUNT, i);
     this._mount(kind, 1, m.rec_end);
     this._mount(kind, 1, m.end);
     this.flags();

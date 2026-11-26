@@ -148,7 +148,7 @@ import { pack, unpack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
-import { HlsMedia, MEDIA_NOT_PRESENT } from './media.mjs';
+import { HlsMedia, MEDIA_NO_MOUNT, MEDIA_NOT_PRESENT, MEDIA_OK } from './media.mjs';
 import { SubjectFrames } from './subject.mjs';
 import { MdetDl } from './mdet.mjs';
 import { ShutterSound } from './shuttersnd.mjs';
@@ -516,6 +516,18 @@ const CARD_STATE = [A(0x60360BFC), A(0x60360C08)], CARD_MOUNTED = 8, SHOTS_QUERY
 // E143's Delete opened no dialog (docs/model-survey.md finding 138). The port places the word by the rule
 // (src/fw/facts.mjs mediaStatus: the setter's medium 4)
 const CARD_STATUS = A(0x60360BEC), CARD_STATUS_OK = 0xF000;
+// The second slot's media status word lies 8 bytes below the first's (D on E143 and E130; src/fw/facts.mjs mediaStatus,
+// docs/hle-gaps/4.8.md 4.8.3)
+export const CARD_STATUS_SLOT2_OFFSET = -8;
+export function cardStatusAddr(base, slot = 0) {
+  if (slot === 0) return base;
+  if (slot === 1) return (base + CARD_STATUS_SLOT2_OFFSET) >>> 0;
+  throw new AssertionError(`cardStatusAddr: unexpected slot ${slot}`);
+}
+export function slotMediaStatus(present, mounted) {
+  if (!present) return MEDIA_NOT_PRESENT;
+  return mounted ? MEDIA_OK : MEDIA_NO_MOUNT;
+}
 export const CARD_SHOTS = 999, CARD_MOVIE_S = 3600;
 // S-CARD's slot: the card driver's detect state of drive 0 (the first slot) is 2, inserted (src/fw/facts.mjs
 // cardDetect: the file layer's drive status reports the card present for 2 and 3, the driver's insertion handler
@@ -941,6 +953,11 @@ export class CamApp {
     for (const a of CARD_STATE) lab.sim.write(a, pack('<I', CARD_MOUNTED));       // S-CARD
     // S-CARD: the media status (NOT_PRESENT where the first slot is empty at the start, storage.mjs; media.mjs)
     lab.sim.write(CARD_STATUS, pack('<I', s.storage && !s.storage.card.present ? MEDIA_NOT_PRESENT : CARD_STATUS_OK));
+    // S-CARD: the second slot's media status on dual-slot bodies where no media manager runs (camapp 1 / 2);
+    // under control camapp 3 the firmware's own media manager writes it (docs/hle-gaps/4.8.md 4.8.3)
+    if (s.storage?.second && !this.native_tra) {
+      this.card_status(slotMediaStatus(!!s.storage.second.card?.present, s.storage.second.mounted), 1);
+    }
     this.media?.flags();                                                            // and the media flags (media.mjs)
     if (!s.storage) lab.sim.write(CARD_DETECT.table, pack('<H', CARD_INSERTED));    // natively: the DCF card-in (storage.mjs)
     if (this.slens()) {                                                             // S-LENS
@@ -1685,11 +1702,12 @@ export class CamApp {
     const p = this.play_cur === null ? null : this.play_list[this.play_cur] ?? null;
     return p && (this.images.find((im) => im.folder === p.folder && im.number === p.number) ?? p);
   }
-  // S-CARD's media status of the first slot, as S-MEDIA's change leaves it (media.mjs MEDIA_NOT_PRESENT's evidence):
-  // the word the setter's medium 4 stores (src/fw/facts.mjs mediaStatus)
-  card_status(value) {
-    this.s.lab.sim.write(CARD_STATUS, pack('<I', value));
-    return CARD_STATUS;
+  // S-CARD's media status of a slot (slot 0: first slot, CARD_STATUS; slot 1: second slot, CARD_STATUS - 8),
+  // as S-MEDIA's change leaves it (media.mjs MEDIA_NOT_PRESENT's evidence; src/fw/facts.mjs mediaStatus)
+  card_status(value, slot = 0) {
+    const at = cardStatusAddr(CARD_STATUS, slot);
+    this.s.lab.sim.write(at, pack('<I', value));
+    return at;
   }
   // S-CARD, after a format from the menu (media.mjs S-MDACTRL): the card's pictures are gone
   card_formatted() {

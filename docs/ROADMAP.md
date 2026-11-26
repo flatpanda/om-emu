@@ -142,9 +142,11 @@ not reconciled.
    live: `isc_start` passes, the port-27 start completion arrives, sccore (26 / 27) and hhhr (30 / 31) answer an
    MN-side peer, and since 2026-11-08 isc_socket (3 / 4: a TCP server round trip) and isc_cgi (11 / 12 / 13 / 16: a
    GET and a POST) run end to end against a client inside the guest (spec 9.1). S-A53ISC (`emu/src/lab/a53isc.mjs`,
-   not wired) answers those records as the A53 does, tested against the recorded exchanges. Next: the socket ops and
-   CGI cases not yet exercised (connect, sendto, select, sockopts, multi-chunk bodies), the other daemons' ports
-   (isc_olnet 19..21, isc_file 5 / 6 / 8, wifi_* 1 / 2 / 24 / 25, blebridge 28 / 29), and wiring S-A53ISC once a CPU 1
+   not wired) answers those records as the A53 does, tested against the recorded exchanges; since 2026-11-26 it also
+   handles multi-chunk CGI requests/replies and the five D-evidenced socket ops (`connect`, `sendto`, `shutdown`,
+   `getsockopt`, `setsockopt`; `test/test_a53isc.mjs`). Next: the unverified socket ops (`recvfrom`, `select`), the
+   other daemons' ports (isc_olnet 19..21, isc_file 5 / 6 / 8, wifi_* 1 / 2 / 24 / 25, blebridge 28 / 29), and wiring
+   S-A53ISC once a CPU 1
    exists; an in-JS AArch64 core stays optional. Answering CPU 1 natively waits on the multi-core and ISC transport
    work.
 8. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
@@ -423,7 +425,7 @@ the survey table.
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;
-  E144's hand override of it, in `src/fw/overrides-E144.mjs`, now agrees with the rule and can go).
+  E144's redundant `0x500257ce` override was removed from `src/fw/overrides-E144.mjs` on 2026-11-26).
   Open: what draws the TG-7's AF result (S1's frame shows the GUI's target brackets only, X); the E144 family's
   S-TAKEFRAME mode 4, which their clamp stores as 0, still drops S-AFOSD's upload there (frameModeSet, open).
 - **The touch task's power-up wait:** before the play bring-up sets the lab microsecond clock, the touch panel's 40 ms
@@ -556,8 +558,8 @@ the survey table.
   E139, E134, E125 and E130, whose waits ran natively before with the same results (X). Read which of those waits find
   the flag already set, and answer at once only the waits that would otherwise block, as the TG-5's completion wait
   does.
-- **E134's dial-init override** (`0x5014b7c7`): `dialStore` reads the select it holds, so the rule could place the init
-  too where no map does (E134; E125's is carried from that override).
+- **E134's dial-init override** (`0x5014b7c7`): done (2026-11-26): `dialStore` places `0x5014b7c7` via
+  `placedRulePlaces`, retiring E134's hand override in `src/fw/models.mjs` (and covering E125 by the same rule).
 
 Naming: the tools dropped the model from their names (`bin/play.mjs`, `bin/nav.mjs`, `bin/debug.mjs`, `web/play.html`);
 the specs of E143's firmware (`docs/om1-*-spec.md`), the machine's memory-region names (`om1.dram`, ... in
@@ -871,18 +873,17 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   time (its patterns' only), so the panel offers none; a list read while the firmware writes can show a file as it was
   before (the card out of the slot is the settled view). Since 2026-10-29 the panel reads an exFAT card too
   (`refs/volume.mjs`) and the browser takes the card's size as a start option (`card_size`, hle-gaps/4.8.md 4.8.6).
-- The host memory probe covers the main isolate only: `host/memprobe.mjs` (`OM_HOST_MEM`) samples node's main isolate
-  after a forced GC, which holds the HTTP front and the proxy. The harness (PlaySession, the Player and the lab's lists)
-  runs in the lab worker, whose heap grew 16-20 MB in a 60 s window (X) and is bounded by nothing, and external memory
-  (Buffers, ArrayBuffers) is logged, not bounded. The worker's live heap after a full GC, sampled from the loop's tick,
-  would close it.
-- The play client's start-up wait accepts a power cycle's `off`: `checks/lib/playhttp.mjs` waits for a phase other
-  than `starting` or `replaying`, so during a replay across a power cycle it can return at the `off` published between
-  the power lever's key and the power-on control (X: one replay in two on node). A fix waits for the replay's end.
-- Ungated timing paths: the Player's 20 ms queue wait and the `BEHIND_NS` re-anchor (`src/lab/player.mjs`) have no
-  gate; there is no `--idle wall` cadence gate, and `pace-wall` never lags 250 ms. HTTP and Worker message latencies
-  are not checked at all: the pacing logic is checked under a frozen clock (`pace-wall`), and the checks mask the
-  remaining wall-clock figures.
+- Host memory probe (`OM_HOST_MEM`): since 2026-11-26 `host/memprobe.mjs` (`createMemSampler`) and `host/labworker.mjs`
+  sample both `'main'` and `'worker'` isolates after forced GC (`test/test_memprobe.mjs`), covering the lab worker's
+  heap and external memory alongside the HTTP main isolate. Open: external memory (Buffers, ArrayBuffers) is logged, not
+  bounded.
+- The play client's start-up wait during a power-cycle replay: fixed (2026-11-26): `Player.set_phase` maps `'off'` to
+  `'replaying'` while a replay is running, `publish_status` exposes `replaying`, and `Play.init`
+  (`checks/lib/playhttp.mjs`) uses `startupReady` to wait for the replay's end (`test/test_replay_phase.mjs`).
+- Ungated timing paths: since 2026-11-26 `test/test_pacing.mjs` adds deterministic gates for the Player's 20 ms queue
+  wait, the `BEHIND_NS` (250 ms) re-anchor (`src/lab/player.mjs`) and the `--idle wall` cadence (with negative controls).
+  Open: HTTP and Worker message latencies are not checked; the pacing logic is checked under a frozen clock
+  (`pace-wall`), and the checks mask the remaining wall-clock figures.
 
 **Exposure.** The plan runs at the application's start and after each input on the shooting screen, not continuously
 (the camera's LV AE task with its 18 x 18 grids does not run; the live-view statistics seam, hle-gaps/4.2.md §4.2, would run
@@ -918,8 +919,8 @@ follow-ups):
   ranges not shown loaded are guarded as unloaded with a `?` (FIDELITY 4.8); a camera probe of E147's
   `0x60129000..0x60134000` would settle the class.
 - Scripted sessions (`bin/session.mjs`): no free `sp` or `mdr` for a call (the harness's frame); a call at a stop
-  reaching a lab hook other than memset, memcpy and `prop_get` ends as `CallHooked` (Debug API follow-ups 9); no
-  language option.
+  reaching a lab hook other than memset, memcpy and `prop_get` ends as `CallHooked` (Debug API follow-ups 9). `--lang
+  CODE` added 2026-11-26 (`bin/session.mjs`, `host/session.mjs`, `test/test_session_lang.mjs`).
 - Waits: the camera application's stand-ins deliver at a Player input's end (FIDELITY 1.5). `bin/session.mjs` sends
   waits in 50 ms slices; play's own `WAIT:MS` token is still one input, and whether the other paths that take a long
   wait as one input (`bin/nav.mjs`, the replayed scenarios) show the effect is not checked.
@@ -933,7 +934,9 @@ follow-ups):
 - `bin/nav.mjs` on the other bodies (Next stops above, model-survey findings 160 and 161): no frame on the twelve
   bodies whose GUI waits for the application's display sync, nav's menu fields (E143's viewer record only); E146's and
   E147's menu open needs `--time` and a WAIT, and E145's, E129's and E132's bring-up `--time`.
-- The exFAT case of the card writer's "S2 leaves the writer's files intact" check has no negative control.
+- The exFAT case of the card writer's "S2 leaves the writer's files intact" check: negative control done (2026-11-26,
+  `test/test_cardfs.mjs` clears the put-back picture's cluster bits in the exFAT allocation bitmap on a copy and
+  verifies `refs/exfat.mjs` and S2 catch it).
 
 ## Open unknowns and assumptions
 

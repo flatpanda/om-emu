@@ -5,9 +5,10 @@
 //               0x5004d09c and its 0x5004d0d3, the stop 0x5004cfc0): +0x38 ready (A-ADC-1); the start with the control
 //               word 0x7102 (channel 7, mode 2) samples every SAMPLE_NS (A-ADC-2), latching the lab's value into
 //               +0x58 and setting +0x14, the IRQ high only with +0x10 (A-ADC-3); +0x14 written 1 clears it; +0x04
-//               written 0 stops the conversions. UNKNOWN, a bus error counted: a mode-0 start, a channel the lab gives
-//               no value, a channel >= 8, a control word while converting, +0x00's and +0x08's reads, an offset the
-//               driver does not use, a halfword, a debugger access
+//               written 0 stops the conversions; channels 8 (+0x70) and 9 (+0x74) likewise. UNKNOWN, a bus error
+//               counted: a mode-0 start, a channel the lab gives no value, a channel >= 10, a control word while
+//               converting, +0x00's and +0x08's reads, the unmapped gap +0x5c..+0x6c and other unused offsets, a
+//               halfword, a debugger access
 //   adcFacts    (firmware: E143's image) the rule finds E143's init, its configuration records, table, count and IRQ
 //               (AD_E143); control: an image whose init has another byte where the table's load is finds none
 //   adcSession  a play session's start (E143) with H-ADINIT (the default) and with the mutant no-adinit (the path
@@ -68,9 +69,30 @@ export function adcUnits() {
     ok(x.a.errors.length === 0 && x.errs.length === 0, `no UNKNOWN on the driver's path: ${x.errs.join('; ')}`);
   }
   {
+    // channels 8 (+0x70) and 9 (+0x74) from the D jump table 0x601186ac (0x5004d270), plus negative controls for the
+    // unmapped gap 0x5c..0x6c and channel 10 (even with a lab value provided)
+    const x = rig(0x8F120000, (k) => (k === 8 ? 0x8a5 : k === 9 ? 0x9b6 : k === 10 ? 0xac7 : null));
+    const start8 = [x.w(0x08, 4), x.r(0x38), x.w(0x14, 1), x.w(0x10, 1), x.w(0x00, 0x8102), x.w(0x04, 1)];
+    x.clock.advance(SAMPLE_NS, false);
+    const d8 = x.r(0x70);
+    x.w(0x10, 0); x.w(0x14, 1); x.w(0x04, 0); x.w(0x00, 0);
+    ok(start8.join(' ') === 'ok 1 ok ok ok ok' && d8 === 0x8a5 && x.a.data[8] === 0x8a5 && x.a.samples[8] === 1,
+      `channel 8 (+0x70): start ${start8.join(' ')}, +0x70 ${h8(d8)}, data[8] ${h8(x.a.data[8])}, samples[8] ${x.a.samples[8]}`);
+    const start9 = [x.w(0x14, 1), x.w(0x10, 1), x.w(0x00, 0x9102), x.w(0x04, 1)];
+    x.clock.advance(2 * SAMPLE_NS, false);
+    const d9 = x.r(0x74);
+    x.w(0x10, 0); x.w(0x14, 1); x.w(0x04, 0); x.w(0x00, 0);
+    ok(start9.join(' ') === 'ok ok ok ok' && d9 === 0x9b6 && x.a.data[9] === 0x9b6 && x.a.samples[9] === 1 && x.a.errors.length === 0,
+      `channel 9 (+0x74): start ${start9.join(' ')}, +0x74 ${h8(d9)}, data[9] ${h8(x.a.data[9])}, samples[9] ${x.a.samples[9]}, errors ${x.a.errors.length}`);
+    const gap = [0x5c, 0x60, 0x64, 0x68, 0x6c].map((off) => [off, x.r(off)]);
+    const ch10 = (x.w(0x00, 0xa102), x.w(0x04, 1));
+    ok(gap.every(([, s]) => s === 'BUS') && ch10 === 'BUS' && x.a.errors.length === gap.length + 1,
+      `gap 0x5c..0x6c and channel 10 refused: ${gap.map(([o, s]) => `+0x${o.toString(16)} ${s}`).join(', ')}, ch10 ${ch10}, errors ${x.a.errors.length}`);
+  }
+  {
     const x = rig(0x8F110000, (k) => (k === DIAL_CONV ? 0xab5 : null)), e0 = x.a.errors.length;
     const refused = [['a mode-0 start', (x.w(0x00, 0x7100), x.w(0x04, 1))], ['a channel with no value', (x.w(0x00, 0x1102), x.w(0x04, 1))],
-      ['channel 8', (x.w(0x00, 0x8102), x.w(0x04, 1))], ['+0x00 read', x.r(0x00)], ['+0x08 read', x.r(0x08)], ['+0x60 written', x.w(0x60, 0)],
+      ['channel 10', (x.w(0x00, 0xa102), x.w(0x04, 1))], ['+0x00 read', x.r(0x00)], ['+0x08 read', x.r(0x08)], ['+0x60 written', x.w(0x60, 0)],
       ['+0x2c read', x.r(0x2c)], ['a halfword', x.r(0x14, 2)], ['a debugger read', x.r(0x38, 4, true)], ['+0x14 written 2', x.w(0x14, 2)]];
     x.w(0x00, 0x7102); x.w(0x04, 1);
     refused.push(['a control word while converting', x.w(0x00, 0x1102)]);

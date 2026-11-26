@@ -1480,6 +1480,28 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
     bad += r.bad.length;
   }
 }
+// checks portable time (F40), memSnapshot ROM skip (F25), web selftest Card panel, slot 2 media status, S-PANELDONE gate, debug inspect ops
+{
+  const { checksTimeUnits } = await import('../test/test_checks_time.mjs');
+  const { memSnapshotUnits } = await import('../test/test_mem_snapshot.mjs');
+  const { webSelftestUnits } = await import('../test/test_web_selftest.mjs');
+  const { slot2StatusUnits, slot2StatusSession } = await import('../test/test_slot2_status.mjs');
+  const { panelDoneUnits } = await import('../test/test_paneldone.mjs');
+  const { debugInspectUnits } = await import('../test/test_debug_inspect.mjs');
+  for (const [label, r] of [
+    ['checks portable time (F40)', checksTimeUnits()],
+    ['memSnapshot ROM skip (F25)', memSnapshotUnits()],
+    ['web ?selftest=1 Card panel', await webSelftestUnits()],
+    ['slot 2 media status units', slot2StatusUnits()],
+    ['slot 2 media status in play (E143)', await slot2StatusSession()],
+    ['S-PANELDONE gate units', panelDoneUnits()],
+    ['debug API breakpoints/watchpoints inspect', debugInspectUnits()],
+  ]) {
+    console.log(`${label}: ${r.checks - r.bad.length}/${r.checks}`);
+    r.bad.forEach((x) => console.log('  ', x));
+    bad += r.bad.length;
+  }
+}
 const fa = factsTests();
 console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);
 fa.bad.forEach((x) => console.log('  ', x));

@@ -14,7 +14,7 @@
 // first); after abort every op fails with Aborted until the next load; while a budget / maxMs continue is paused, every
 // op that changes the machine or its run is refused until resume, halt or abort (break, step, cont, watch, snapshot,
 // restore, reset, setRegs, setReg, write, cpuStore, lab but lab {time}, an exec trace and trace {off}); the reads
-// (regs, reg, read, stack, stderr, watchLog, stats, disasm, lab {time}) and mmio and irq traces are allowed. Requests
+// (regs, reg, read, stack, stderr, watchLog, breakpoints, watchpoints, stats, disasm, lab {time}) and mmio and irq traces are allowed. Requests
 // are handled one at a time: a cont or resume without budget or maxMs runs until a stop, a fault or the insn limit, and
 // no later request (abort included) is read meanwhile, so give maxMs (or a budget) to keep control; halt and abort end
 // a paused continue between slices, they cannot interrupt a running one.
@@ -26,11 +26,11 @@
 //   load {image?, insnLimit?, mutant?, oneInsn?}      a fresh standalone machine (the image: the host's default)
 //   reset {regs?}  regs  setRegs {regs}  reg {name}  setReg {name, value}
 //   read {addr, size} -> {hex}   write {addr, hex}   cpuStore {addr, value, stub?} -> {regs}
-//   break {pcs}   cont {stops?, budget?, maxMs?}   resume {budget?, maxMs?}   halt   abort   step {n?}
+//   break {pcs}   breakpoints -> {pcs}   cont {stops?, budget?, maxMs?}   resume {budget?, maxMs?}   halt   abort   step {n?}
 //     cont, resume, halt and step answer {stop: break|watch|fault|limit|paused|halt, regs, fault?, watch?, stderr,
 //     stderrDropped?} (stderr: the lines the run wrote, the last 1,000 of them; stderrDropped: how many it wrote
 //     before those); halt ends a paused continue where it paused (stop 'halt'), the machine runnable
-//   watch {list: [{id?, addr|lo, len|hi, kind: r|w|rw, action: stop|log}]}
+//   watch {list: [{id?, addr|lo, len|hi, kind: r|w|rw, action: stop|log}]}   watchpoints -> {list}
 //   watchLog {limit?} -> {entries, more, dropped}   the oldest logged hits, at most limit (default 100,000), taken
 //     off the log; more: the entries still in it; dropped: the hits lost since the last watchLog (the log keeps at
 //     least the newest 100,000: at 200,000 it drops the oldest half); on a lab session each entry also has lab_ns (the
@@ -175,6 +175,7 @@ export class Protocol {
         return { regs: regsHex(this._need().cpuStore(a, v, stub)) };
       }
       case 'break': { const pcs = pcList(q.pcs ?? [], 'pcs'); return { pcs: this._need().breakpoints(pcs).map(hex8) }; }
+      case 'breakpoints': return { pcs: this._need().getBreakpoints().map(hex8) };
       case 'cont': {
         const stops = absent(q.stops) ? undefined : pcList(q.stops, 'stops'), run = runLimits(q);
         return outcome(this._need().cont({ ...(stops ? { stops } : {}), ...run }));
@@ -184,6 +185,7 @@ export class Protocol {
       case 'abort': this._need().abort(); return {};
       case 'step': { const n = optCount(q.n, 'n', 1, 1); return outcome(this._need().step(n)); }
       case 'watch': { const ws = watchList(q.list ?? []); this._need().watch(ws); return { count: ws.length }; }
+      case 'watchpoints': return { list: this._need().getWatchpoints().map((w) => ({ id: w.id, addr: hex8(w.lo), len: w.len, kind: w.kind, action: w.action })) };
       case 'watchLog': {
         const d = this._need(), entries = d.watchLog(optCount(q.limit, 'limit', WATCH_LOG_LIMIT)), st = d.watchLogState();
         return { entries: entries.map((r) => ({ ...r, addr: hex8(r.addr), hit: hex8(r.hit), value: hex8(r.value), pc: hex8(r.pc) })), more: st.kept, dropped: st.dropped };

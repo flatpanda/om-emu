@@ -132,6 +132,11 @@ import { lookcodeUnits } from '../test/test_lookcode.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
 import { nocardUnits } from '../test/test_nocard.mjs';
 import { stagesUnits } from '../test/test_stages.mjs';
+import { replayPhaseTests } from '../test/test_replay_phase.mjs';
+import { memprobeTests } from '../test/test_memprobe.mjs';
+import { vscRebaseUnits } from '../test/test_vsc_rebase.mjs';
+import { sessionLangUnits } from '../test/test_session_lang.mjs';
+import { pacingUnits } from '../test/test_pacing.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -216,6 +221,11 @@ report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units()
 { const v = m4Vectors(); report(`Cortex-M4 core against QEMU's recorded vectors (${v.cases} cases)`, v); }
 report('SCPU STM32L4 peripheral models (RCC, FLASH, GPIO / EXTI, U(S)ART, DMA, I2C, SPI, timers, RTC, ADC)', stm32Units());
 report('the SCPU\'s own firmware behind the link: clock, frame log from the wire, byte mover', scpuM4Units());
+report('replay across power cycle: Player phase transitions and Play.init wait predicate', replayPhaseTests());
+report('host memory probe: main and worker isolate sampling (OM_HOST_MEM)', await memprobeTests());
+report('VSC channel LINE_NS rebase on running channel (F05)', vscRebaseUnits());
+report('scripted session --lang option units (bin/session.mjs, host/session.mjs)', sessionLangUnits());
+report('Player pacing and timing paths (BEHIND_NS re-anchor, 20 ms queue wait, --idle wall)', pacingUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

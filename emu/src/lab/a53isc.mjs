@@ -18,8 +18,7 @@
 //
 // Evidence (X: tools/a53-oracle run-isc.sh with iscpeer.mjs's scenarios, the recorded exchanges in
 // test/test_a53isc.mjs; D: the daemons' armhf code at the offsets given). What the A53 does that is not listed here
-// throws: an unknown port, sccore's kind 2, the socket ops not exercised live (connect, sendto, recvfrom, shutdown,
-// select, getsockopt, setsockopt) and a CGI body over one chunk.
+// throws: an unknown port, sccore's kind 2, and the socket ops whose layouts are not fully read (recvfrom, select).
 
 export const PORT = {
   SOCK_REQ: 3, SOCK_REP: 4, CGI_DATA: 11, CGI_HANDLE: 12, CGI_RESULT: 13, CGI_ACK: 16, PWR_REQ: 26, PWR_REP: 27,
@@ -40,23 +39,29 @@ export const PWR = { WIFI_START: 1, WIFI_STOP: 2, SURVIVAL: 3 };
 // sets it to 1, 0x10f64, so every reply carries 1 there; X), then per op (all u32 unless said):
 //   1 socket    +0x10 domain, +0x14 type, +0x18 protocol           -> +0x1c fd                       (X)
 //   2 bind      +0x10 fd, +0x14 sockaddr[16], +0x24 length         -> +0x28                          (X)
+//   3 connect   +0x10 fd, +0x14 sockaddr[16], +0x24 length         -> +0x28                          (D)
 //   4 listen    +0x10 fd, +0x14 backlog                            -> +0x18                          (X)
 //   5 accept    +0x10 fd, +0x24 length in                          -> +0x14 sockaddr[16], +0x24 length, +0x28 fd (X)
 //   6 send      +0x10 fd, +0x14 MN buffer, +0x18 length, +0x1c flags -> +0x20: the length once all is sent, in
 //               chunks of at most 128 KiB (0x130d4), or the failing send's return                     (X; D)
+//   7 sendto    +0x10 fd, +0x14 MN buffer, +0x18 length, +0x1c flags, +0x20 sockaddr[16], +0x30 addrlen -> +0x34 (D)
 //   8 recv      +0x10 fd, +0x14 MN buffer, +0x18 length, +0x1c flags -> +0x20: it loops until the whole length
 //               has come (0x11c2c), so the result is the length, or less at end of stream, or the failing
 //               recv's return                                                                         (X; D)
+//  10 shutdown  +0x10 fd, +0x14 how                                -> +0x18                          (D)
 //  11 close     +0x10 fd                                           -> +0x14                          (X)
+//  13 getsockopt +0x10 fd, +0x14 level, +0x18 name, +0x1c MN buffer, +0x20 length -> +0x20 length, +0x24 ret (D)
+//  14 setsockopt +0x10 fd, +0x14 level, +0x18 name, +0x1c MN buffer, +0x20 length -> +0x24 ret       (D)
 //  15 getsockerr  "NOT SUPPORTED": +0x10 the errno of the op's own new thread, 0                      (X 0; D)
 //  16 setsockerr  "NOT SUPPORTED": the record comes back unchanged but for +0xc                       (X)
 // A request that finds all 12 slots busy is dropped with no reply (0x10f1c, D). The MN's buffers are its own
 // addresses; the A53 reaches them through /dev/mem (D), here mem.read / mem.write.
 export const SOCK = {
-  socket: 1, bind: 2, listen: 4, accept: 5, send: 6, recv: 8, close: 11, getsockerr: 15, setsockerr: 16,
+  socket: 1, bind: 2, connect: 3, listen: 4, accept: 5, send: 6, sendto: 7, recv: 8,
+  shutdown: 10, close: 11, getsockopt: 13, setsockopt: 14, getsockerr: 15, setsockerr: 16,
 };
 const SOCK_UNVERIFIED = {
-  3: 'connect', 7: 'sendto', 9: 'recvfrom', 10: 'shutdown', 12: 'select', 13: 'getsockopt', 14: 'setsockopt',
+  9: 'recvfrom', 12: 'select',
 };
 export const SLOTS = 12;
 // What a back-end call returns when its answer comes later (a blocking accept or recv): the back end calls
@@ -139,6 +144,7 @@ export class A53Isc {
     switch (op) {
       case SOCK.socket: v = this.net.socket(i32(r, 0x10), i32(r, 0x14), i32(r, 0x18), slot); break;
       case SOCK.bind: v = this.net.bind(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
+      case SOCK.connect: v = this.net.connect(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
       case SOCK.listen: v = this.net.listen(fd, i32(r, 0x14), slot); break;
       case SOCK.accept: v = this.net.accept(fd, i32(r, 0x24), slot); break;
       case SOCK.send: {
@@ -147,13 +153,31 @@ export class A53Isc {
         v = this.net.send(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), slot);
         break;
       }
+      case SOCK.sendto: {
+        const n = i32(r, 0x18);
+        if (!this.mem) fail('sendto without memory');
+        v = this.net.sendto(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), r.slice(0x20, 0x30), i32(r, 0x30), slot);
+        break;
+      }
       case SOCK.recv: v = this.net.recv(fd, i32(r, 0x18), i32(r, 0x1c), slot); break;
+      case SOCK.shutdown: v = this.net.shutdown(fd, i32(r, 0x14), slot); break;
       case SOCK.close: v = this.net.close(fd, slot); break;
+      case SOCK.getsockopt: {
+        if (!this.mem) fail('getsockopt without memory');
+        v = this.net.getsockopt(fd, i32(r, 0x14), i32(r, 0x18), i32(r, 0x20), slot);
+        break;
+      }
+      case SOCK.setsockopt: {
+        const n = i32(r, 0x20);
+        if (!this.mem) fail('setsockopt without memory');
+        v = this.net.setsockopt(fd, i32(r, 0x14), i32(r, 0x18), this.mem.read(u32(r, 0x1c), n), slot);
+        break;
+      }
     }
     if (v !== PENDING) this.finish(slot, v);
   }
 
-  // A socket op's result: an integer, accept's { fd, addr, len } or recv's bytes.
+  // A socket op's result: an integer, accept's { fd, addr, len }, or recv/getsockopt's bytes.
   finish(slot, v) {
     const s = this.slots[slot];
     if (!s) fail(`no socket op in flight in slot ${slot}`);
@@ -161,10 +185,14 @@ export class A53Isc {
     const int = (o) => { if (!Number.isInteger(v)) fail(`socket op ${op}: result ${v}`); put32(r, o, v); };
     switch (op) {
       case SOCK.socket: int(0x1c); break;
-      case SOCK.bind: int(0x28); break;
-      case SOCK.listen: int(0x18); break;
+      case SOCK.bind:
+      case SOCK.connect: int(0x28); break;
+      case SOCK.listen:
+      case SOCK.shutdown: int(0x18); break;
       case SOCK.close: int(0x14); break;
       case SOCK.send: int(0x20); break;
+      case SOCK.sendto: int(0x34); break;
+      case SOCK.setsockopt: int(0x24); break;
       case SOCK.accept:
         if (Number.isInteger(v)) put32(r, 0x28, v);
         else { r.set(v.addr.subarray(0, 16), 0x14); put32(r, 0x24, v.len); put32(r, 0x28, v.fd); }
@@ -174,6 +202,13 @@ export class A53Isc {
         else {
           if (v.length > i32(r, 0x18)) fail(`recv returned ${v.length} of ${i32(r, 0x18)}`);
           this.mem.write(u32(r, 0x14), v); put32(r, 0x20, v.length);
+        }
+        break;
+      case SOCK.getsockopt:
+        if (Number.isInteger(v)) put32(r, 0x24, v);
+        else {
+          if (v.length > i32(r, 0x20)) fail(`getsockopt returned ${v.length} of ${i32(r, 0x20)}`);
+          this.mem.write(u32(r, 0x1c), v); put32(r, 0x20, v.length); put32(r, 0x24, 0);
         }
         break;
       default: fail(`socket op ${op} has no result`);
@@ -200,11 +235,10 @@ export class A53Isc {
     const method = CGI_METHOD[req.method];
     if (!method) fail(`CGI method ${req.method}`);
     const body = req.body ? (typeof req.body === 'string' ? ascii(req.body) : Uint8Array.from(req.body)) : null;
-    if (body && body.length > CGI_CHUNK) fail(`CGI body of ${body.length} bytes (over one chunk: not observed live)`);
     if (!this.pool || !this.mem) fail('CGI without a pool or memory');
     const h = this.pool.alloc(CGI_BUF);
     if (!h) fail('CGI: the pool has no 16 KiB');
-    this.cgi = { ...job, method, body, h, state: 'ack', got: [], total: -1 };
+    this.cgi = { ...job, method, body, h, state: 'ack', sent: 0, chunkLen: 0, got: [], total: -1 };
     const rec = new Uint8Array(32); rec.set(this.handle(false));
     this.send(NODE_CPU1, PORT.CGI_HANDLE, rec);
   }
@@ -219,11 +253,24 @@ export class A53Isc {
   }
 
   info() {
-    const { req, method, body } = this.cgi, b = new Uint8Array(CGI_INFO);
-    const uri = ascii(req.uri).subarray(0, 0x3ff);
-    put32(b, 0, 1);
-    if (body) { put32(b, 4, body.length); put32(b, 8, body.length); b.set(body, 0x414); }
-    put32(b, 0xc, method); put32(b, 0x10, uri.length); b.set(uri, 0x14);
+    const { req, method, body, sent } = this.cgi, b = new Uint8Array(CGI_INFO);
+    const first = sent === 0;
+    put32(b, 0, first ? 1 : 2);
+    if (body) {
+      const chunk = body.subarray(sent, sent + CGI_CHUNK);
+      put32(b, 4, body.length);
+      put32(b, 8, chunk.length);
+      b.set(chunk, 0x414);
+      this.cgi.chunkLen = chunk.length;
+    } else {
+      this.cgi.chunkLen = 0;
+    }
+    put32(b, 0xc, method);
+    if (first) {
+      const uri = ascii(req.uri).subarray(0, 0x3ff);
+      put32(b, 0x10, uri.length);
+      b.set(uri, 0x14);
+    }
     if (req.remote) b.set(ascii(req.remote).subarray(0, 16), 0x3414);
     if (req.log) b.set(ascii(req.log).subarray(0, 32), 0x3424);
     return b;
@@ -235,13 +282,31 @@ export class A53Isc {
     const want = { ack: PORT.CGI_ACK, accepted: PORT.CGI_RESULT, chunk: PORT.CGI_HANDLE, data: PORT.CGI_DATA }[c.state];
     if (port !== want) fail(`CGI port ${port} in state ${c.state} (expected ${want})`);
     if (c.state === 'ack') {                       // the MN took the inquiry
-      if (d.length !== 32 || u32(d, 0x18) !== 0) fail(`CGI inquiry refused: ${u32(d, 0x18)}`);
+      if (d.length !== 32) fail(`CGI p16 of ${d.length} bytes`);
+      if (u32(d, 0x18) !== 0) {
+        const err = u32(d, 0x18);
+        this.pool.free(c.h);
+        this.cgiNext();
+        fail(`CGI inquiry refused: ${err}`);
+      }
       this.mem.write(c.h.addr, this.info());
       c.state = 'accepted';
       return this.send(NODE_CPU1, PORT.CGI_DATA, this.handle(true).subarray(0, 16));
     }
-    if (c.state === 'accepted') {                  // the MN accepted the request
-      if (d.length !== 32 || u32(d, 4) !== 0) fail(`CGI request refused: ${u32(d, 4)}`);
+    if (c.state === 'accepted') {                  // the MN accepted the request chunk
+      if (d.length !== 32) fail(`CGI p13 of ${d.length} bytes`);
+      if (u32(d, 4) !== 0) {
+        const err = u32(d, 4);
+        this.pool.free(c.h);
+        this.cgiNext();
+        fail(`CGI request refused: ${err}`);
+      }
+      c.sent += c.chunkLen;
+      if (c.body && c.sent < c.body.length) {
+        c.state = 'ack';
+        const rec = new Uint8Array(32); rec.set(this.handle(false));
+        return this.send(NODE_CPU1, PORT.CGI_HANDLE, rec);
+      }
       c.state = 'chunk';
       return;
     }

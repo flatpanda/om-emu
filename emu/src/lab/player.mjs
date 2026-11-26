@@ -463,7 +463,7 @@ export class Player {
   }
   // ---- publishing
   set_phase(phase, error = null) {
-    if (this.replaying && ['running', 'busy', 'waiting-gui'].includes(phase)) phase = 'replaying';
+    if (this.replaying && ['running', 'busy', 'waiting-gui', 'off'].includes(phase)) phase = 'replaying';
     this.phase = phase;
     if (error !== null) this.error = error;
     this.publish_status();
@@ -472,7 +472,7 @@ export class Player {
     const s = this.session, a = this.a;
     const idle_taken = {};
     for (const [k, v] of this.idle_taken) idle_taken[typeof k === 'number' ? '0x' + k.toString(16).padStart(4, '0') : String(k)] = v;
-    const doc = { phase: this.phase, error: this.error, queue: this.q.qsize() + this.held.length, idle: this.idle, last: this.last,
+    const doc = { phase: this.phase, ...(this.replaying ? { replaying: true } : {}), error: this.error, queue: this.q.qsize() + this.held.length, idle: this.idle, last: this.last,
       dropped: this.dropped.toObject(), frame_seq: this.frame_seq, pace: this.pace_ratio(), stand_ins: this.stand_ins_in_use(),
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
       idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
@@ -879,6 +879,8 @@ export class Player {
       this.set_phase('replaying');
       try { this.run_replay(replay); } finally { this.publish_audio(); this.replaying = false; }   // the replay's sound dropped
       if (this.session !== null) this.set_phase('running');
+      else if (this.phase !== 'error') this.set_phase('off');
+      else this.publish_status();
     }
     while (!this.stopping()) {
       if (!this.q.canBlock && !this.q.qsize() && !this.held.length && this.current === null) throw new Error('Player.run: no input queued and not stopping (headless)');

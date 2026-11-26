@@ -26,9 +26,10 @@
 //                   next number after the writer's and its own image count finds the picture; the host saves the
 //                   card at the close with the hook's file; after a power cycle S2 adds the next picture and leaves
 //                   the writer's files intact (its allocation took the writer's FAT and FSInfo, or bitmap); a
-//                   negative control: the FAT32 card with the put-back picture's clusters left free in the FAT (a
-//                   writer that did not mark them) is reported by the reader's check, and the firmware's S2 on it
-//                   stops or writes over the picture; bin/card.mjs new (a blank card the model's firmware formats,
+//                   negative control on both FAT32 (the put-back picture's clusters left free in the FAT) and exFAT
+//                   (cleared in the allocation bitmap) (a writer that did not mark them) is reported by the reader's
+//                   check, and the firmware's S2 on it stops or writes over the picture; bin/card.mjs new (a blank
+//                   card the model's firmware formats,
 //                   saved FAT32 and empty), and bin/play.mjs --card-put on it (the file listed while the session runs
 //                   and on the card it saved; its refusals before the server starts)
 //   node emu/test/test_cardfs.mjs [--session]
@@ -364,7 +365,7 @@ export async function cardfsSession() {
     notes.push(`${MODEL} ${tag}: ${v2.type}, the pictures ${after.join(', ')}`);
     return { kept, putName, pic };
   };
-  round(64);
+  const r64 = round(64);
   const r8 = round(8);
   if (!r8) return { checks, bad, notes };
   const { kept, putName, pic } = r8;
@@ -396,6 +397,39 @@ export async function cardfsSession() {
   const overwritten = !first || !same(first, pic.subarray(0, first.length));
   ok(stopped !== null || overwritten, `negative control: the firmware's S2 on that card stops or writes over the picture: ${stopped ? `stopped (${stopped.slice(0, 160)})` : overwritten ? 'overwritten' : 'neither'}`);
   notes.push(`${MODEL}: the negative control's S2: ${stopped ? `stopped: ${stopped.slice(0, 200)}` : overwritten ? 'the picture written over' : 'neither'}`);
+  // exFAT negative control: the 64 GiB card with the put-back picture's clusters cleared in the allocation bitmap
+  // (a writer that did not mark them): the reader reports it, and the firmware's S2 stops or writes over the picture
+  if (r64 && volOf(cardFromImage(r64.kept)).type === 'exFAT') {
+    const bad64 = cardFromImage(r64.kept), bv64 = volOf(bad64), pe64 = bv64.find(`${DIR}/${r64.putName}`);
+    const clusters64 = bv64.clustersOf(pe64), bmChain = bv64.chain(bv64.bitmapEntry.cluster), bpc64 = bv64.spc * SECTOR;
+    for (const c of clusters64) {
+      const i = c - 2, byteOff = i >> 3, inCluster = byteOff % bpc64;
+      const lba = bv64.sectorOf(bmChain[Math.floor(byteOff / bpc64)]) + Math.floor(inCluster / SECTOR);
+      const s = bad64.read(lba, 1);
+      s[byteOff % SECTOR] &= ~(1 << (i & 7));
+      bad64.data.set(lba, s);
+    }
+    const p64 = volOf(bad64).check();
+    ok(p64.length > 0, `negative control (exFAT): the picture's clusters left free in the bitmap are reported by the reader: ${p64.slice(0, 2).join('; ')}`);
+    let stopped64 = null;
+    pl = player(bad64);
+    try {
+      pl.open_session();
+      for (const inp of SHOT) pl.run_input(inp);
+    } catch (e) { stopped64 = e.message; }
+    try { pl.close_session(); } catch { /* closed */ }
+    let overwritten64 = false;
+    try {
+      const v64 = volOf(bad64), e64 = v64.find(`${DIR}/${r64.putName}`);
+      if (!e64) overwritten64 = true;
+      else overwritten64 = clusters64.some((c, idx) => {
+        const want = r64.pic.subarray(idx * bpc64, Math.min((idx + 1) * bpc64, r64.pic.length));
+        return !same(bad64.read(v64.sectorOf(c), v64.spc).subarray(0, want.length), want);
+      });
+    } catch { overwritten64 = true; }
+    ok(stopped64 !== null || overwritten64, `negative control (exFAT): the firmware's S2 on that card stops or writes over the picture: ${stopped64 ? `stopped (${stopped64.slice(0, 160)})` : overwritten64 ? 'overwritten' : 'neither'}`);
+    notes.push(`${MODEL}: the exFAT negative control's S2: ${stopped64 ? `stopped: ${stopped64.slice(0, 200)}` : overwritten64 ? 'the picture written over' : 'neither'}`);
+  }
   // 5. bin/card.mjs new: a blank card the model's firmware formats in a headless session, saved, its volume FAT32
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'om-emu-cardfs-'));
   try {

@@ -48,6 +48,9 @@ const text = (b) => Buffer.from(b).toString('utf8');
 const SIGNUM = { SIGHUP: 1, SIGINT: 2, SIGKILL: 9, SIGUSR2: 12, SIGTERM: 15, SIGABRT: 6, SIGSEGV: 11 };
 function rcOf(code, signal) { return code !== null ? code : signal ? -(SIGNUM[signal] ?? 0) : null; }
 
+// Start-up wait predicate for Play.init: stays false while booting or replaying (including across a power cycle).
+export const startupReady = (s) => !s.replaying && !['starting', 'replaying'].includes(s.phase);
+
 // play.mjs as a subprocess; inputs over HTTP. Play.open(tag, args, {wait, env, nvramFromEnv}) starts one;
 // withPlay(tag, args, fn) runs fn with it and closes it in finally. The child keeps no state between sessions
 // (--nvram off: a blank camera, whatever the host's own kept state, host/nvram.mjs) unless args name --nvram or
@@ -80,7 +83,7 @@ export class Play {
       throw new RuntimeError(`${this.tag}: play printed no URL: ${show(this.lines.slice(-10))}`);
     }
     [this.base, this.port, this.token] = [url[1], Number(url[2]), url[3]];
-    if (wait) await this.wait_phase((s) => !['starting', 'replaying'].includes(s.phase), 300);
+    if (wait) await this.wait_phase(startupReady, 300);
   }
   start(cmd) {
     this.p = spawn(cmd[0], cmd.slice(1), { cwd: REPO, env: this.env ?? process.env, stdio: ['ignore', 'pipe', 'pipe'] });

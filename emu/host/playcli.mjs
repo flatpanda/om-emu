@@ -281,7 +281,7 @@ export async function main(argv) {
     : `play: --replay: the log kept no state, a blank camera at each start (S-SETSAVE)${nv.envIgnored ? '; OM_EMU_NVRAM ignored' : ''}`);
   say('Ctrl+C to quit');
   let worker = null, second = false;
-  const probe = installMemProbe();            // OM_HOST_MEM: the main isolate's memory (host/memprobe.mjs)
+  const probe = installMemProbe(process.env.OM_HOST_MEM, wallClock, { isolate: 'main' });   // OM_HOST_MEM: main isolate (worker sampled in host/labworker.mjs)
   const finish = (rc, { log = true } = {}) => {
     clearInterval(probe);                     // null (no OM_HOST_MEM): a no-op
     proxy.stopped();

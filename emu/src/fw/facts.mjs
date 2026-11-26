@@ -2014,7 +2014,8 @@ export function dialSelect(img) {
   return { select: 0x50000000 + o, select_end: end - o, table_ptr: ptr, table0 };
 }
 
-// The dial-table select of the forms dialSelect does not read (fact 'dial' where it reads none), found by its store to
+// The dial-table select of the forms dialSelect does not read (fact 'dial' where it reads none, and through
+// bin/port.mjs the place of E143's DIAL_INIT_E143, src/lab/menu.mjs DIAL_INIT), found by its store to
 // the port's place of E143's dial table pointer DIAL_TABLE_PTR_E143 (src/lab/menu.mjs DIAL_TABLE_PTR): a function that
 // opens as dialSelect's, `call getter,[],0`, after a ret or retf, and runs to a `mov Dn,(ptr)` within DIAL_STORE_SPAN
 // bytes. Its board index is either the core byte itself, `extbu d0; asl2 d0`, a board table of one word per board
@@ -2025,12 +2026,14 @@ export function dialSelect(img) {
 // at 0x601c521a, every one with index 0; `mov 0x61f8c914,a0; asl2 d0; mov (d0,a0),d1` into 0xa2764308, the table in
 // its preloaded data, D). After the index, the walk takes the `mov imm32,a0` before the indexed load `mov (d0,a0),Dn`
 // and the store of that Dn, within DIAL_WALK instructions and before any call or return. On both bodies the select is
-// the dial init itself (E134's override of E143's 0x5014b7c7; E125's carried from it, D) and board 0's id table holds
+// the dial init itself (E143's 0x5014b7c7: E134 0x501092da, E125 0x500fec8d, D) and board 0's id table holds
 // slot id and index pairs as E143's 0x60223dbc does (E134 0x601bcb8c, E125 0x601c523c: 0x2032105, 0; 0x2032104, 1, D).
-// Returns {select, select_end, table_ptr, table0} as dialSelect does (table0 the word board 0 selects; img must hold
-// the preloaded data, as bin/port.mjs's run-time image does), or undefined where no store has such an opening or its
-// select has dialSelect's form (`asl 3,d0`, read there). Throws for two selects, or a table0 outside the image.
-export const DIAL_TABLE_PTR_E143 = 0xA32DAAB0;
+// Returns {select, select_end, table_ptr, table0, init} as dialSelect does plus init (the dial init entry, equal to
+// select here; dialSelect omits init because E139 folds its select into its encoder init, not its dial init; table0 the
+// word board 0 selects; img must hold the preloaded data, as bin/port.mjs's run-time image does), or undefined where no
+// store has such an opening or its select has dialSelect's form (`asl 3,d0`, read there). Throws for two selects, or a
+// table0 outside the image.
+export const DIAL_INIT_E143 = 0x5014B7C7, DIAL_TABLE_PTR_E143 = 0xA32DAAB0;
 const DIAL_STORE_SPAN = 0x60;
 const DIAL_SEARCH = [0x04, 0xfc, 0x85, null, null, null, null, 0x08, 0x14, 0xdb, 0x1d, 0xe5, 0xf1, 0xe4, 0xfc, 0xd0, null, null, null, null,
   0xf0, 0x44, 0xa1, 0xc9, 0x0d, 0xf8, 0x40, 0x01, 0xfc, 0x81, null, null, null, null, 0xca, 0x08, 0x48, 0x89, 0x1e, 0xaa, null, 0xd0,
@@ -2066,7 +2069,7 @@ export function dialStore(img, ptr) {
       if (table0 === null || table0 < base || table0 >= base + img.length) {
         throw new Error(`dialStore: the select at ${h8(0x50000000 + e)} indexes ${h8(load.table)}, whose board-0 word is not an image address`);
       }
-      found.set(e, { select: 0x50000000 + e, select_end: s + 4 - e, table_ptr: ptr, table0 });
+      found.set(e, { select: 0x50000000 + e, select_end: s + 4 - e, table_ptr: ptr, table0, init: 0x50000000 + e });
       break;
     }
   }
@@ -6620,7 +6623,7 @@ export function playDecode(img, issue) {
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
 // start, replies}}, {play: {wrappers, still}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
-// {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
+// {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0, init}}, {ui_in: {task,
 // forward}}, {touch_start: {init, id_word}}, {touch_mask: {word}},
 // {touch_regs}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} and {rec_file: {exif, init,
@@ -6897,7 +6900,7 @@ export function rulePlaces(facts) {
 // 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
 // (crtClockRead, 'call-target'); the frame display mode set at the one the TAKE request's clamp calls (frameModeSet,
 // 'take-clamp'); the AF upload at the frame plane's mode-3 upload, unplaced where the plane has none (framePlane,
-// 'plane-mode').
+// 'plane-mode'); the dial init at the dial-table store's select where dialStore reads it (dialStore, 'dial-store').
 export function placedRulePlaces(facts, e143, place) {
   const out = new Map();
   if (facts.store?.db_save !== undefined) out.set(DB_SAVE_RETURN_E143, { to: facts.store.db_save, how: 'db-save' });
@@ -6918,6 +6921,7 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.crt) out.set(K_CRT_134D_E143, { to: facts.crt.clock_read, how: 'call-target' });
   if (facts.frame_mode) out.set(FRAME_MODE_SET_E143, { to: facts.frame_mode.set, how: 'take-clamp' });
   if (facts.frame_plane) out.set(AF_UPLOAD_E143, { to: facts.frame_plane.uploads[2], how: 'plane-mode' });
+  if (facts.dial?.init !== undefined) out.set(DIAL_INIT_E143, { to: facts.dial.init, how: 'dial-store' });
   if (facts.icons) {
     out.set(ICON_TABLE_E143, { to: facts.icons.table, how: 'icon-store' });
     out.set(ICON_AUX_E143, { to: facts.icons.aux, how: 'icon-store' });

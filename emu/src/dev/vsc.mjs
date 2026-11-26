@@ -101,7 +101,7 @@ export class Vsc {
     this.ch = [];
     for (let c = 0; c < CHANNELS; c++) {
       this.ch.push({ w: new Uint32Array(REG_WORDS), m: new Uint32Array(REG_WORDS), pal: new Uint32Array(PAL_WORDS),
-        lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, frames: 0, frameStart: 0,
+        lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, curLineNs: 0, frames: 0, frameStart: 0,
         bank: 0, lineFrame: -1, hist: HIST_IDLE, histRuns: 0, histMeasured: 0, histColour: 0,
         // the last ended run's bins (BINS_*): their count and values, or why they are not known (HIST_WHY, two words)
         bins: BINS_NONE, binCount: 0, binValues: new Uint16Array(2 * HIST_BIN_WORDS), binWhy: 0, binA0: 0, binA1: 0 });
@@ -184,8 +184,8 @@ export class Vsc {
   lineNs(c) { return this.dget(chanDbg(c, GEN2 && this.ch[c].bank === 1 ? CH.LINE_NS_EVF : CH.LINE_NS)); }
   moni3(c) {
     const ch = this.ch[c];
-    if (!ch.running || !this.lineNs(c)) return 0;
-    const lines = udiv(this.clock.t - ch.frameStart, this.lineNs(c)) % 4294967296;
+    if (!ch.running || !this.lineNs(c) || !ch.curLineNs) return 0;
+    const lines = udiv(this.clock.t - ch.frameStart, ch.curLineNs) % 4294967296;
     if (GEN2) return ((lines & 0x3FFF) | (lines & 0x3FFF) << 16) >>> 0;   // the TFT/HDMI and the EVF counter
     if (K3) return (lines & LINE_MASK) >>> 0;                           // every reader masks the count (src/fw/board.mjs)
     return ((lines & 0x7FFF) | (ch.field === 0 ? 1 << 16 : 0)) >>> 0;
@@ -212,21 +212,31 @@ export class Vsc {
     }
   }
   // A channel starts running at the current lab time once it has a line time (harness) and a written vertical total.
+  // If LINE_NS (or LINE_NS_EVF) changes while running, rebase frameStart to preserve the current line progress under
+  // the new line time so nextBoundary never lands in the past and MONI3 stays continuous.
   chanSync(c) {
-    const vr = this.vreg(c), ch = this.ch[c], lines = ch.w[vr / 4] & LINE_MASK;
-    if (ch.running && !this.lineNs(c)) ch.running = false;
-    if (!ch.running && this.lineNs(c) && this.dbg[this.wFlags(c) + vr / 4] && lines) {
-      ch.running = true; ch.frameStart = this.clock.t; ch.field = 0; ch.curLen = lines;
+    const vr = this.vreg(c), ch = this.ch[c], ln = this.lineNs(c), lines = ch.w[vr / 4] & LINE_MASK;
+    if (ch.running) {
+      if (!ln) { ch.running = false; ch.curLineNs = 0; return; }
+      if (ln !== ch.curLineNs) {
+        const elapsed = this.clock.t <= ch.frameStart ? 0 : Math.min(ch.curLen, udiv(this.clock.t - ch.frameStart, ch.curLineNs));
+        ch.frameStart = this.clock.t - elapsed * ln;
+        ch.curLineNs = ln;
+      }
+      return;
+    }
+    if (ln && this.dbg[this.wFlags(c) + vr / 4] && lines) {
+      ch.running = true; ch.frameStart = this.clock.t; ch.field = 0; ch.curLen = lines; ch.curLineNs = ln;
     }
   }
-  nextBoundary(c) { const ch = this.ch[c]; return ch.frameStart + ch.curLen * this.lineNs(c); }
+  nextBoundary(c) { const ch = this.ch[c]; return ch.frameStart + ch.curLen * ch.curLineNs; }
   // the line compare's next event on channel c (LINE_IRQ): the time the scan reaches the compare line in this frame,
   // while the bit is enabled, the line is within the frame and still ahead, and it has not been raised in this frame;
   // else CLOCK_NONE (a line already passed waits for the next frame, which the boundary starts)
   nextLine(c) {
     const ch = this.ch[c];
-    if (!LINE_IRQ || !ch.running || !(ch.w[R.INTEN1 / 4] & LINE_IRQ.bit) || ch.lineFrame === ch.frames) return CLOCK_NONE;
-    const line = ch.w[LINE_IRQ.reg / 4] & LINE_MASK, at = ch.frameStart + line * this.lineNs(c);
+    if (!LINE_IRQ || !ch.running || !ch.curLineNs || !(ch.w[R.INTEN1 / 4] & LINE_IRQ.bit) || ch.lineFrame === ch.frames) return CLOCK_NONE;
+    const line = ch.w[LINE_IRQ.reg / 4] & LINE_MASK, at = ch.frameStart + line * ch.curLineNs;
     return line < ch.curLen && at >= this.clock.t ? at : CLOCK_NONE;
   }
   boundary(c, at) {
@@ -244,7 +254,8 @@ export class Vsc {
     // kind 2 has no second-field register (progressive, I)
     const f1 = ch.w[this.vreg(c) / 4] & LINE_MASK, f2 = LATER ? 0 : ch.w[R.SYNC4 / 4] & 0x7FFF;
     if (f2) { ch.field ^= 1; ch.curLen = ch.field ? f2 : f1; } else { ch.field = 0; ch.curLen = f1; }
-    if (!ch.curLen || !this.lineNs(c)) ch.running = false;
+    const ln = this.lineNs(c);
+    if (!ch.curLen || !ln) { ch.running = false; ch.curLineNs = 0; } else ch.curLineNs = ln;
   }
   // the histogram unit's runs ended on every channel, those whose bins were counted (A-VSCHIST-4), and its bin reads
   // answered 0 for a run without a source (A-VSCHIST-2; those the firmware kept: A-VSCHIST-5) (the player's list)
@@ -282,15 +293,16 @@ export class Vsc {
   clockNext() {
     let at = CLOCK_NONE;
     for (let c = 0; c < CHANNELS; c++) {
-      if (this.ch[c].running && this.lineNs(c) && this.nextBoundary(c) < at) at = this.nextBoundary(c);
-      if (this.ch[c].running && this.lineNs(c)) at = Math.min(at, this.nextLine(c));
+      this.chanSync(c);
+      if (this.ch[c].running && this.ch[c].curLineNs && this.nextBoundary(c) < at) at = this.nextBoundary(c);
+      if (this.ch[c].running && this.ch[c].curLineNs) at = Math.min(at, this.nextLine(c));
     }
     return at;
   }
   clockFire(at) {
     for (let c = 0; c < CHANNELS; c++) {
       const ch = this.ch[c];
-      if (!ch.running || !this.lineNs(c)) continue;
+      if (!ch.running || !ch.curLineNs) continue;
       if (this.nextLine(c) === at) { ch.w[R.INTST1 / 4] |= LINE_IRQ.bit; ch.lineFrame = ch.frames; }
       if (this.nextBoundary(c) === at) this.boundary(c, at);
     }
@@ -448,7 +460,7 @@ export class Vsc {
       this.dbg[this.wFlags(c) + local / 4] = 1;
       if (histStart) ch.hist = HIST_ARMED;
       if (GEN2 && (local === R.SYNC2 || local === R.SYNC8) && ch.bank !== +(local === R.SYNC8)) {
-        ch.bank = +(local === R.SYNC8); ch.running = false;                  // the other bank: a new frame (see above)
+        ch.bank = +(local === R.SYNC8); ch.running = false; ch.curLineNs = 0; // the other bank: a new frame (see above)
       }
       this.chanSync(c);
       this.publish();

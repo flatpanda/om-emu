@@ -1460,6 +1460,26 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   pl.bad.forEach((x) => console.log('  ', x));
   bad += pl.bad.length;
 }
+// replay across power cycle phase race, host worker memory probe, VSC LINE_NS rebase (F05), session --lang, Player pacing gates
+{
+  const { replayPhaseTests } = await import('../test/test_replay_phase.mjs');
+  const { memprobeTests } = await import('../test/test_memprobe.mjs');
+  const { vscRebaseUnits } = await import('../test/test_vsc_rebase.mjs');
+  const { sessionLangUnits, sessionLangSession } = await import('../test/test_session_lang.mjs');
+  const { pacingUnits } = await import('../test/test_pacing.mjs');
+  for (const [label, r] of [
+    ['replay phase race', replayPhaseTests()],
+    ['host memory probe (main + worker)', await memprobeTests()],
+    ['VSC LINE_NS rebase (F05)', vscRebaseUnits()],
+    ['session --lang units', sessionLangUnits()],
+    ['session --lang in play (E143)', await sessionLangSession()],
+    ['Player pacing and timing gates', pacingUnits()],
+  ]) {
+    console.log(`${label}: ${r.checks - r.bad.length}/${r.checks}`);
+    r.bad.forEach((x) => console.log('  ', x));
+    bad += r.bad.length;
+  }
+}
 const fa = factsTests();
 console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);
 fa.bad.forEach((x) => console.log('  ', x));

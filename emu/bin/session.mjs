@@ -6,7 +6,7 @@
 //   node emu/bin/session.mjs [--model CODE] [--patch FILE... | --main FILE] [--card FILE] [--no-card]
 //                            [--card-put DOS/PATH=LOCAL]... [--card-get DOS/PATH=LOCAL]... [--nvram off|FILE]
 //                            [--loaded auto|on|off] [--sec-ready] [--strict on|off] [--creative-dial K] [--held KEY]... [--a15 auto|off|on] [--device tft|evf]
-//                            [--rotate auto|off|on]
+//                            [--rotate auto|off|on] [--lang CODE]
 //                            [--osd-errors fail|report] [--settle MS] [--out DIR] [--script FILE]... [TOKEN...]
 // --rotate runs PER_ROTATE natively (play's --rotate, H-ROTINIT; auto by default: on where the body has it, E143,
 // E146 and E147; off keeps the orientation at 0), and tilt:roll=R[,pitch=P] is the
@@ -64,6 +64,7 @@ const SPEC = [
   { opt: '--a15', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--device', type: 'str', choices: ['tft', 'evf'], default: 'tft' },
   { opt: '--rotate', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
+  { opt: '--lang', type: 'str', default: 'en', metavar: 'CODE' },
   { opt: '--osd-errors', type: 'str', choices: ['fail', 'report'] },       // the default: openSession's, per body
   { opt: '--settle', type: 'int', metavar: 'MS' },
   { opt: '--out', type: 'path', metavar: 'DIR' },
@@ -75,6 +76,7 @@ const err = (s) => process.stderr.write(`${PROG}: ${s}\n`);
 async function main(argv) {
   const a = parseArgs(PROG, argv, SPEC);
   if (a.settle !== undefined && a.settle < 0) a.error(`--settle ${a.settle}: not a lab time in ms`);
+  if (!a.lang) a.error('--lang: language code must not be empty');
   const tokens = [];
   for (const f of a.script) {
     let text;
@@ -91,7 +93,7 @@ async function main(argv) {
   let s;
   try {
     s = await openSession({ patch: a.patch, main: a.main, card: a.card, noCard: a.no_card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded, secReady: a.sec_ready, strict: a.strict ?? undefined,
-      creativeDial: a.creative_dial, held: a.held, a15: a.a15, device: a.device, rotate: a.rotate, osdErrors: a.osd_errors, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
+      creativeDial: a.creative_dial, held: a.held, a15: a.a15, device: a.device, rotate: a.rotate, lang: a.lang, osdErrors: a.osd_errors, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
   } catch (e) {
     if (!(e instanceof SessionRefused)) throw e;
     err(e.message);

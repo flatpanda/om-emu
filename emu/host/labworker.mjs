@@ -18,6 +18,7 @@ import { fileCard, secondCard } from './card.mjs';
 import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { withCardFiles } from '../src/lab/cardfs.mjs';
 import { debugHost } from './debughost.mjs';
+import { createMemSampler } from './memprobe.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
 
 const { args: a, flags, port, out, argv, patches, nvram: nvramFile, cardFiles, loaded, secReady } = workerData;
@@ -79,9 +80,15 @@ const env = {
   ...scpuEnv(),
   cardView: CARD_VIEW,               // the Card panel's reads of the card's files (web/cardfiles.mjs, refs/fat.mjs)
 };
+const memSample = createMemSampler(process.env.OM_HOST_MEM, wallClock, { isolate: 'worker' });
 let pl = null;
 try {
   pl = new Player(a, env);
+  if (memSample) {
+    memSample(true);
+    const tick = pl.tick.bind(pl);
+    pl.tick = () => { tick(); memSample(); };
+  }
   pl.run();
   post({ type: 'done', rc: 0 });
 } catch (e) {
@@ -89,5 +96,6 @@ try {
   // and exits 1
   post({ type: 'crash', stack: stackOf(e) });
 } finally {
+  memSample?.(true);
   trace?.finish();
 }

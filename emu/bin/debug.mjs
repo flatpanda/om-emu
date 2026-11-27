@@ -134,7 +134,7 @@ function items(args) {
 }
 
 function main(argv) {
-  const serve = argv.includes('--serve') || argv.includes('--attach');
+  const serve = argv.some((x) => x === '--serve' || x === '--attach' || x.startsWith('--attach='));
   const actions = serve ? ACTIONS.map((a) => a.opt === '--entry' ? { ...a, required: false } : a) : ACTIONS;
   const args = parseArgs(PROG, argv, actions);
   if (args.attach !== undefined) {

@@ -73,14 +73,14 @@ Other bodies, through ports (as of 2026-11-19; `emu/bin/modelcheck.mjs` passes o
 
 On all 18 the card's file system runs natively: the firmware formats and mounts the card, counts the remaining shots
 from it, and its own REC_FILE task writes S2's picture to it (2026-11-16 on the last of them). Card Setup's Format and taking the card out and putting it back run the firmware's own media control
-too. Scripted menu sessions (`emu/bin/nav.mjs`) run on 13 of them (2026-11-16).
+too. Scripted menu sessions (`emu/bin/nav.mjs`) run on all 18 of them (2026-11-22).
 
 [docs/model-survey.md](docs/model-survey.md) has the evidence per body; [docs/ROADMAP.md](docs/ROADMAP.md) has the
 plan.
 
 ## Quick start
 
-You need node 26 or newer. There are no npm packages to install and no Python is needed.
+You need node 22 or newer. There are no npm packages to install and no Python is needed.
 
 ```sh
 node emu/bin/fetch-fw.mjs              # download the OM-1 firmware, verify it against BLOBS.sha256, unpack it
@@ -111,8 +111,8 @@ and the other tools.
 node emu/bin/test-pure.mjs             # or: npm --prefix emu run test:pure
 ```
 
-This runs on any checkout: the ISA vectors, the CPU's two execution tiers in lockstep, the pure units, and the
-firmware rules on every body that is unpacked. The full suite (`node emu/bin/test.mjs`, emu's regression reference
+This runs on any checkout: the ISA vectors, the CPU's two execution tiers in lockstep, and the pure units (pass
+`--facts` to also run the firmware rules on every body that is unpacked). The full suite (`node emu/bin/test.mjs`, emu's regression reference
 `node emu/bin/golden.mjs check`, the checks, `node emu/bin/modelcheck.mjs`) needs the firmware you fetched;
 [emu/README.md](emu/README.md) "Tests" says what each command covers and what else it needs.
 
@@ -124,7 +124,7 @@ firmware rules on every body that is unpacked. The full suite (`node emu/bin/tes
 | `docs/` | the firmware and hardware specs, the roadmap, the model survey and the firmware container format |
 | `analysis/` | firmware-patch investigations: [the OM-1 to OM-1 Mark II feature gap](analysis/feature-gap/README.md), [lens-gated features](analysis/lens-gates/README.md), [ND128](analysis/nd128/README.md), [a study of fishcu/oly_fw_analysis](analysis/oly-fw-analysis/README.md), [a study of azqeurio/om-c-firmware](analysis/om-c-firmware/README.md), [a study of androidfanman/caduceus-om3](analysis/caduceus-om3/README.md), [a study of SmilingChaosCloud/olyom-isp-bench](analysis/olyom-isp-bench/README.md) |
 | `artifacts/nd128/` | the ND128 candidate's manifest (patch sites and digests; the image itself is built locally) |
-| `tools/` | `olyfw.py` (a Python container unpacker), `om1_nd128.py` (builds the ND128 candidate), `mn10300dis.sh` (spot disassembly with a locally built `mn10300-objdump`), `omfw_download.sh` (the updater request with curl) |
+| `tools/` | `olyfw.py` (a Python container unpacker), `om1_nd128.py` (builds the ND128 candidate), `mn10300dis.sh` (spot disassembly with a locally built `mn10300-objdump`), `omfw_download.sh` (the updater request with curl), `a53-oracle/` (QEMU A53 ISC oracle harness), `m4-oracle/` (QEMU Cortex-M4 vector generator) |
 | `BLOBS.md`, `BLOBS.sha256` | every large file the lab uses, where it comes from, how to make it, and its digest |
 
 ## Documentation

@@ -141,8 +141,8 @@ function prefilter(s, w, h, [c0, c1, c2], along_x) {
   for (let l = 0; l < lines; l++) {
     const o = l * line;
     for (let i = 0; i < n; i++) {
-      const a = (k) => s[o + (k < 0 ? 0 : k >= n ? n - 1 : k) * step];
-      out[o + i * step] = clamp8((c2 * (a(i - 2) + a(i + 2)) + c1 * (a(i - 1) + a(i + 1)) + c0 * a(i) + 64) >> 7);
+      const m2 = i < 2 ? 0 : i - 2, m1 = i < 1 ? 0 : i - 1, p1 = i + 1 >= n ? n - 1 : i + 1, p2 = i + 2 >= n ? n - 1 : i + 2;
+      out[o + i * step] = clamp8((c2 * (s[o + m2 * step] + s[o + p2 * step]) + c1 * (s[o + m1 * step] + s[o + p1 * step]) + c0 * s[o + i * step] + 64) >> 7);
     }
   }
   return out;

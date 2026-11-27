@@ -260,7 +260,8 @@ export class Cpu2 {
     m.setMmioTrace((dir, a, v, w, name, cpu, err) => {
       if (cores.cur !== 2 || cpu !== 0) return;
       const sim = lab.sim, nest = sim.read(sim.u32(KCB2 + 28), 1)[0];
-      const key = nest ? 'interrupt' : '0x' + (sim.read(sim.u32(KCB2 + 96) + 16, 2).reduce((x, y, k) => x | y << 8 * k, 0)).toString(16);
+      const tcb = nest ? 0 : sim.u32(sim.u32(KCB2 + 96));
+      const key = nest ? 'interrupt' : tcb ? '0x' + (sim.read(tcb + 16, 2).reduce((x, y, k) => x | y << 8 * k, 0)).toString(16) : '0x0';
       let e = this.run_devices.get(key);
       if (!e) this.run_devices.set(key, e = { n: 0, first: [] });
       e.n += 1;

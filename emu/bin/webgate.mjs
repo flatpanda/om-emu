@@ -156,7 +156,7 @@ if (!PAGE_ONLY) {
 }
 
 // ---- the static server: emu/ (not out/), and the calls files of --calls on a test-only route for 127.0.0.1
-const TYPES = { '.mjs': 'text/javascript', '.js': 'text/javascript', '.html': 'text/html; charset=utf-8', '.json': 'application/json' };
+const TYPES = { '.mjs': 'text/javascript', '.js': 'text/javascript', '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
 const served = [];
 const server = http.createServer((q, s) => {
   const url = new URL(q.url, 'http://x');

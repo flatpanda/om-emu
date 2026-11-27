@@ -135,7 +135,7 @@ export function stagedUnloadedRanges(layout, stageMask = 0) {
 export class StagedLoadSchedule {
   constructor(layout, { initialMask = 0 } = {}) {
     this.layout = layout;
-    this.fullMask = layout.sections.reduce((m, s) => (m | (1 << (s.n - 1))) >>> 0, 0);
+    this.fullMask = layout.sections.reduce((m, s) => { const bit = s.n - 1; return bit >= 0 && bit < 32 ? (m | (1 << bit)) >>> 0 : m; }, 0);
     this.mask = (initialMask >>> 0) & this.fullMask;
   }
   isReady(section) {

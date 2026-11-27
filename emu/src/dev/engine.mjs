@@ -63,10 +63,10 @@ export class Engine {
   }
   recordExec(source, w, n, result) {
     const total = this.dget(D.EXEC_TOTAL), slot = D.EXEC_LOG + (total % D.EXEC_SLOTS) * 64;
-    const rec = new Uint32Array(16);
-    rec[0] = total; rec[1] = source; rec[2] = n; rec[3] = result;
-    for (let i = 0; i < 9 && i < n; i++) rec[4 + i] = w[i];
-    for (let i = 0; i < 16; i++) this.dset(slot + 4 * i, rec[i]);
+    this.dset(slot, total); this.dset(slot + 4, source); this.dset(slot + 8, n); this.dset(slot + 12, result);
+    const k = n < 9 ? n : 9;
+    for (let i = 0; i < k; i++) this.dset(slot + 16 + 4 * i, w[i]);
+    for (let i = 4 + k; i < 16; i++) this.dset(slot + 4 * i, 0);
     this.dset(D.EXEC_TOTAL, total + 1);
   }
   fail(code, arg, value) { this.failArg = arg >>> 0; this.failValue = value >>> 0; return code; }

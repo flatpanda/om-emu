@@ -6758,7 +6758,7 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.rtos?.ta_wu !== undefined) out.set(OLYTAWU_E143, { to: facts.rtos.ta_wu, how: 'wup-opening' });
   if (facts.dispq?.loop !== undefined) out.set(DISPLAY_LOOP_E143, { to: facts.dispq.loop, how: 'queue-receive' });
   for (const [k, to] of (facts.dispq?.replies ?? []).entries()) out.set(DISPLAY_REPLIES_E143[k], { to, how: 'reply-pair' });
-  if (facts.ui_in) out.set(UI_IN_E143, { to: facts.ui_in.task, how: 'flag-wait' });
+  if (facts.ui_in?.task !== undefined) out.set(UI_IN_E143, { to: facts.ui_in.task, how: 'flag-wait' });
   if (facts.touch_start) {
     out.set(TOUCH_INIT_E143, { to: facts.touch_start.init, how: 'task-start' });
     out.set(TOUCH_TASK_ID_E143, { to: facts.touch_start.id_word, how: 'task-start' });

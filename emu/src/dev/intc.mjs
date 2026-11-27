@@ -101,7 +101,7 @@ export class Intc {
     this.mask2 = mask;
     if (this.setIrq2) this.setIrq2(mask !== 0);
   }
-  enableSecond(b, setIrq2) { this.b2 = b; this.setIrq2 = setIrq2; this.driven[IRQ_KICK] = 1; this.recompute2(); }
+  enableSecond(b, setIrq2) { this.b2 = b; this.setIrq2 = setIrq2; this.driven[IRQ_KICK] = 1; this.dbg[D.LINES + IRQ_KICK] |= 0x80; this.recompute2(); }
   // A-KICK: bank 0's kick drives IRQ 325's line as bank 0's pending bits drive IRQ 324's; the second core's, its bank
   kickUpdate(b) { if (b === 0) this.setLine(IRQ_KICK, this.kick[0] !== 0); else if (b === this.b2) this.recompute2(); }
   recompute() {
@@ -248,7 +248,8 @@ export class Intc {
       this.dset(D.DOORBELL_RESULT, 0);
       return;
     }
-    if (dbg || size !== 4 || off || data !== 1) {
+    if (dbg) throw BUS;
+    if (size !== 4 || off || data !== 1) {
       this.recordError(ERR_DOORBELL, DOORBELL_BASE + off, data, 'doorbell command');
       this.dset(D.DOORBELL_RESULT, ERR_DOORBELL);
       throw BUS;

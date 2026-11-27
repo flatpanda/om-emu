@@ -105,7 +105,7 @@ const SEC_READY = { opt: '--sec-ready', type: 'flag', default: false };
 export function parsePlayArgs(argv) {
   const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT, LOADED, SEC_READY]);
   if (r.sec_ready && r.main === undefined && !r.patch.length) r.error('--sec-ready needs --patch or --main (the overlay it watches)');
-  if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
+  if ((r.x_mutant || r.x_trim_keep !== null) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   if (r.main !== undefined && r.patch.length) r.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   const a = {};
   Object.defineProperty(a, 'patch', { value: r.patch });

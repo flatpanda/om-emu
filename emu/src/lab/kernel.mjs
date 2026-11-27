@@ -377,7 +377,7 @@ export function in_interrupt(lab, body) {
   try { return body(); }
   finally {
     sim.write(nest, bytes(n));
-    sim.write(flags, bytes(sim.read(flags, 1)[0] & ~1 & 0xFF));
+    if (n === 0) sim.write(flags, bytes(sim.read(flags, 1)[0] & ~1 & 0xFF));
   }
 }
 export function isr_call(lab, fn, regs = null) {

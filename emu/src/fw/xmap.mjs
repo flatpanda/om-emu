@@ -111,7 +111,6 @@ export function buildMap(a, b, { baseA, baseB, seeds = [], K = 12, Kmax = 48, lo
         }
       }
       else if ((op === 0xfc || op === 0xfd) && L === 6) vote(u32(a, oa + 2), u32(b, ob + 2), ta.tok[oa] === tb.tok[ob] ? 4 : 1);
-      else if (op === 0xdc || op === 0xdd) { /* handled above */ }
       oa += L; ob += L;
     }
   }
@@ -129,7 +128,7 @@ export function buildMap(a, b, { baseA, baseB, seeds = [], K = 12, Kmax = 48, lo
   let anchored = 0, ambiguous = 0;
   for (const s of seeds) {
     let cand = hits.get(s) ?? [];
-    for (let k = K; cand.length > 1 && k <= Kmax; k += 12) { const h = windowHash(ta, s, k); cand = cand.filter((o) => windowHash(tb, o, k) === h); }
+    for (let k = K + 12; cand.length > 1 && k <= Kmax; k += 12) { const h = windowHash(ta, s, k); cand = cand.filter((o) => windowHash(tb, o, k) === h); }
     if (cand.length === 1) { anchored++; if (code[s] === -1) { walk(s, cand[0]); drain(); } }
     else if (cand.length > 1) ambiguous++;
   }

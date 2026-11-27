@@ -5,6 +5,7 @@
 // MT19937. Nothing compares the tapes; a tape shows which draws a check made.
 import fs from 'node:fs';
 import path from 'node:path';
+import { isMainThread } from 'node:worker_threads';
 import { MT19937 } from '../../refs/mt19937.mjs';
 import { sha256 } from './env.mjs';
 
@@ -45,7 +46,7 @@ class TapedRandom extends MT19937 {
 }
 
 const TAPE = process.env.OM_RNG_TAPE ?? null;
-if (TAPE) {
+if (TAPE && isMainThread) {
   process.on('exit', () => {
     fs.mkdirSync(path.dirname(TAPE), { recursive: true });
     fs.writeFileSync(TAPE, JSON.stringify({ format: FORMAT, node: process.version, tapes: TAPES }));

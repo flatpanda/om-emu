@@ -72,8 +72,13 @@ export class PagePlayer {
       }
       return;
     }
-    if (m.type === 'res') { const r = this.pending.get(m.id); this.pending.delete(m.id); if (r) r(response(m.status, m.headers, m.body)); return; }
-    if (m.type === 'stopped') { this.stopped = true; this.wakeAll(); }
+    if (m.type === 'res') { const r = this.pending.get(m.id); this.pending.delete(m.id); if (r) r[0](response(m.status, m.headers, m.body)); return; }
+    if (m.type === 'stopped') {
+      this.stopped = true;
+      for (const [, rej] of this.pending.values()) rej(new Error('the session has stopped'));
+      this.pending.clear();
+      this.wakeAll();
+    }
     if (m.type === 'boot-failed') { this.bootFailed = m; this.wakeAll(); }
     this.events.push(m);
     if (this.onEvent) this.onEvent(m);
@@ -126,7 +131,7 @@ export class PagePlayer {
     if (!this.worker) throw new Error(`${path}: no Worker`);
     if (p === '/api/input' && body !== undefined) this.sent.push(body);
     const id = this.nextId++;
-    const res = new Promise((resolve) => this.pending.set(id, resolve));
+    const res = new Promise((resolve, reject) => this.pending.set(id, [resolve, reject]));
     this.worker.postMessage({ type: 'req', id, method: body === undefined ? 'GET' : 'POST', path, body: body === undefined ? undefined : JSON.stringify(body), t_page: now() });
     return res;
   }

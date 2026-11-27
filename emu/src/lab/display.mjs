@@ -753,8 +753,8 @@ export class DisplayLab extends OsdLab {
       if (!(e instanceof TaskDone)) throw e;
     } finally {
       this.depth -= 1;
-      this.hooks.set(key, saved);
-      if (wait !== null) this.hooks.set(evKey, evSaved);
+      if (saved === undefined) this.hooks.delete(key); else this.hooks.set(key, saved);
+      if (wait !== null) { if (evSaved === undefined) this.hooks.delete(evKey); else this.hooks.set(evKey, evSaved); }
     }
   }
   display_cmd(cmd, param) {

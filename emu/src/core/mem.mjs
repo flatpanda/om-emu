@@ -192,7 +192,7 @@ export function initMemory(dramBytes) {
   RP.fill(-1); WP.fill(-1); WPL.fill(-1);
   PAGES = new Array(65536).fill(null);
   MT = null; WON = false; WL = []; WPG.fill(0); WHIT = null; WHOOK = { stop() {}, log() {} };
-  SON = false; SSTORE = []; SREAD = []; SREP = null; SPW.fill(0); SPR.fill(0);
+  SON = false; SSTORE = []; SREAD = []; SREP = null; SPW.fill(0); SPR.fill(0); SDC = null;
   CODEPG = new Uint8Array((TOTAL >>> 12) + 1);
   winNext = DRAM_OFF + dramBytes;
   stub = null;
@@ -489,6 +489,7 @@ export function dbgWrite(a, bytes) {
   }
 }
 export function invalidateRange(o, len) {
+  if (len <= 0) return;
   for (let p = o >>> 12; p <= (o + len - 1) >>> 12; p++) {
     if (CODEPG[p] !== 0) {
       const lo = Math.max(o, p << 12), hi = Math.min(o + len, (p + 1) << 12);

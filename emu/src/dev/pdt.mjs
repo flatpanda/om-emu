@@ -69,7 +69,7 @@ export class Pdt {
     for (const { page } of Object.values(ENGINES)) this.regs[page >> 2] = 1;
     addRegion({ base: cfg.base, size: PDT_SIZE, kind: K_MMIO, name: 'om1.pdt',
       dev: { read: (a, w, dbg) => this.read(a - cfg.base, w, dbg), write: (a, v, w, dbg) => this.write(a - cfg.base, v, w, dbg) } });
-    clock.add({ next: () => Math.min(...Object.values(this.e).map((x) => x.due)), fire: (at) => this.complete(at) });
+    clock.add({ next: () => Math.min(this.e.pdt.due, this.e.trc.due), fire: (at) => this.complete(at) });
   }
   unknown(kind, off, size, value, dbg, why = '') {
     if (!dbg) this.m.stderr(`om-emu: om1.pdt UNKNOWN ${kind} ${hex8(this.cfg.base + off)} size ${size} value ${hex8(value)} pc ${hex8(ctx.pc())}${why ? ` (${why})` : ''}`);

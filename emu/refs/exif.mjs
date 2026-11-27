@@ -43,10 +43,10 @@ export function readExif(b) {
       if (type === 2) v = String.fromCharCode(...b.subarray(base + at, base + at + count)).replace(/\0[\s\S]*$/, '');
       else if (type === 1 || type === 7) v = b.slice(base + at, base + at + count);
       else {
-        const one = (i) => type === 3 ? u16(at + 2 * i) : type === 4 || type === 9 ? u32(at + 4 * i) : [u32(at + 8 * i), u32(at + 8 * i + 4)];
+        const one = (i) => type === 3 ? u16(at + 2 * i) : type === 4 ? u32(at + 4 * i) : type === 9 ? (u32(at + 4 * i) | 0) : type === 10 ? [u32(at + 8 * i) | 0, u32(at + 8 * i + 4) | 0] : [u32(at + 8 * i), u32(at + 8 * i + 4)];
         v = count === 1 ? one(0) : Array.from({ length: count }, (_, i) => one(i));
       }
-      tags.set(tag, type === 7 || type === 1 ? v : v);
+      tags.set(tag, v);
       if (tag === MAKER_NOTE) tags.set('makernote_at', at);
     }
     return { tags, next: u32(o + 2 + 12 * n) };

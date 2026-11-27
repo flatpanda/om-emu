@@ -1238,8 +1238,11 @@ export class Player {
     try {
       const value = has(inp, 'value') ? inp.value : 1;
       if (op === 'camapp') {                         // a new session with (2; 3: their transactions native) or without the components
-        this.camapp_components = Number(value) === 2 || Number(value) === 3;
-        this.camapp_native_tra = Number(value) === 3;
+        const cm = Number(value);
+        this.camapp_components = cm === 2 || cm === 3;
+        this.camapp_native_tra = cm === 3;
+        const pn = this.a.play_native ?? (cm === 3 ? 'auto' : 'off');
+        this.camapp_play_native = pn === 'on' || (pn === 'auto' && cm === 3 && PLAY_NATIVE);
         this.close_session();
         this.error = null;
         this.off_positions = null;

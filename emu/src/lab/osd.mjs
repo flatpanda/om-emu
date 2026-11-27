@@ -284,18 +284,19 @@ export class OsdLab extends HLE {
       ...errlog.map(([code, , , caller]) => `error log 0x${fx(code, 8)} from ${caller}`)].join('; '));
   }
   _abandon(error, errors_before, delivered) {
+    const note = (s) => { if (typeof error?.addNote === 'function') error.addNote(s); };
     try {
       const result = this.call(EXEC_END).d0 & 0xFFFF;
-      error.addNote(`drawing() body raised; exec_end returned 0x${result.toString(16)}, driver ${show(this.driver())}`);
+      note(`drawing() body raised; exec_end returned 0x${result.toString(16)}, driver ${show(this.driver())}`);
     } catch (closeError) {
       if (!(closeError instanceof LabError)) throw closeError;
-      error.addNote(`drawing() body raised; exec_end then failed too: ${closeError.message}`);
+      note(`drawing() body raised; exec_end then failed too: ${closeError.message}`);
     }
     this.isr_runs += this.kernel.delivered.length - delivered;
     const errors = this.engine.errors(), total = this.engine.error_total();
-    if (total) error.addNote(`engine errors in the abandoned frame (${total}): ` + errors.map(format_error).join('; '));
+    if (total) note(`engine errors in the abandoned frame (${total}): ` + errors.map(format_error).join('; '));
     const errlog = this.kernel.errors.slice(errors_before);
-    if (errlog.length) error.addNote('firmware error log in the abandoned frame: ' + errlog.map(([code, , , caller]) => `0x${fx(code, 8)} from ${caller}`).join('; '));
+    if (errlog.length) note('firmware error log in the abandoned frame: ' + errlog.map(([code, , , caller]) => `0x${fx(code, 8)} from ${caller}`).join('; '));
     this.engine.clear();
     this.errlog_seen = this.kernel.errors.length;
   }

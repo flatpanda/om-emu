@@ -47,7 +47,7 @@ export function parseArgs(prog, argv, spec) {
   for (let i = 0; i < argv.length; i++) {
     const s = argv[i];
     if (s === '--') { rest.push(...argv.slice(i + 1)); break; }
-    if (!s.startsWith('-')) { rest.push(s); continue; }
+    if (s === '-' || !s.startsWith('-')) { rest.push(s); continue; }
     const eq = s.indexOf('='), name = eq < 0 ? s : s.slice(0, eq), a = options.get(name);
     if (!a) fail(`unknown option ${name}`);
     if (a.type === 'flag') {

@@ -5,7 +5,7 @@
 // calls refuse it, so a missing address fails where it is first used instead of hooking nothing.
 import { MODELS } from './models.mjs';
 import { PORTS, FACTS, KNOBS } from './ports.mjs';
-import { valueAt } from './facts.mjs';
+import { valueAt } from './facts-const.mjs';
 
 const envModel = globalThis.OM_EMU_MODEL ?? Reflect.get(globalThis, 'process')?.env?.OM_EMU_MODEL
   ?? (typeof location !== 'undefined' ? new URLSearchParams(location.search).get('model') : null);

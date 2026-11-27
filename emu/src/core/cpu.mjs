@@ -21,7 +21,7 @@ export function resetCpu(limit) {
   R[PC] = 0x50000000; R[SP] = 0xA33FF000 | 0;           // reset
   S.insns = 0; S.irqReq = false; S.irqWait = false; S.kick = false; S.exitReq = false; S.limit = limit; S.intc = null; S.fault = null; S.mutant = 0;
   S.vectorPage = VECTOR_PAGE;
-  XT = null;
+  XT = null; CV = null; FG = null;
 }
 export function cv(a, w) {
   let v = 0;

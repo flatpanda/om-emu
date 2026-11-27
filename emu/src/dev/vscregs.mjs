@@ -25,11 +25,12 @@ export function readTable(image, offset, expected) {
     if (out.length > expected || pointer < IMAGE_BASE || pointer - IMAGE_BASE >= image.length) throw new Error(`vsc regs: table 0x${offset.toString(16)}: no end after ${out.length} entries (entry 0x${pointer.toString(16)})`);
     const start = pointer - IMAGE_BASE;
     let end = start, name = '';
-    while (image[end] !== 0) {
+    while (end < image.length && image[end] !== 0) {
       // an ASCII decode: a byte past 0x7f is an error, never a Latin-1 character
       if (image[end] > 0x7f) throw new Error(`vsc regs: table 0x${offset.toString(16)} entry ${out.length}: name byte 0x${image[end].toString(16)} is not ASCII`);
       name += String.fromCharCode(image[end++]);
     }
+    if (end >= image.length) throw new Error(`vsc regs: table 0x${offset.toString(16)} entry ${out.length}: unterminated name`);
     if (!name.endsWith(':')) throw new Error(`vsc regs: table 0x${offset.toString(16)} entry ${out.length}: name ${JSON.stringify(name)} is not ":"-terminated`);
     out.push([4 * index, name.slice(0, -1).trim()]);
   }

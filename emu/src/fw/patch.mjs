@@ -248,7 +248,7 @@ export function readPatchText(text, source, { mods = null } = {}) {
   try { doc = JSON.parse(text); } catch (e) { throw new PatchRefused(`${source}: not JSON (${e.message})`); }
   const obj = doc && typeof doc === 'object' && !Array.isArray(doc);
   if (obj && doc.format === 1 && 'mods' in doc) return readMods(doc, source, mods);
-  if (mods) throw new PatchRefused(`${source}: mods named (${mods.join(', ')}), but not a mods.json pack`);
+  if (mods?.length) throw new PatchRefused(`${source}: mods named (${mods.join(', ')}), but not a mods.json pack`);
   if (obj && Array.isArray(doc.edits) && 'components' in doc && !('patches' in doc)) return readEdits(doc, source);
   if (obj && 'format' in doc && !('patches' in doc)) return readAnchored(doc, source);
   const list = Array.isArray(doc) ? doc : doc && typeof doc === 'object' && Array.isArray(doc.patches) ? doc.patches : null;

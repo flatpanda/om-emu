@@ -154,10 +154,12 @@ export class FatVolume {
   // the entry at a path ('DCIM/100OMSYS/P1010001.JPG', names compared without case), or null
   find(path) {
     let cluster = this.rootCluster, entry = null;
-    for (const part of path.split('/').filter(Boolean)) {
-      const want = fold(part);
+    const parts = path.split('/').filter(Boolean);
+    for (let i = 0; i < parts.length; i++) {
+      const want = fold(parts[i]);
       entry = this.list(cluster).find((e) => fold(e.name) === want || fold(e.short) === want) ?? null;
       if (!entry) return null;
+      if (i < parts.length - 1 && !entry.dir) return null;
       cluster = entry.cluster;
     }
     return entry;

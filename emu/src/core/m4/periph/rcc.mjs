@@ -98,7 +98,7 @@ export class Rcc extends PlainRegs {
       this.set(CSR, nv);
       return;
     }
-    if (off === CRRCR) { const nv = merge(this.get(CRRCR), v, mask, 1); this.set(CRRCR, nv | ((nv & 1) << 1)); return; }
+    if (off === CRRCR) { const nv = merge(this.get(CRRCR), v, mask, 1); this.set(CRRCR, (nv & ~2) | ((nv & 1) << 1)); return; }
     super.wr(off, v, mask);
   }
   writeCr(nv) {

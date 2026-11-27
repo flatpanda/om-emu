@@ -100,7 +100,7 @@ import { BASE, runtime, disasm } from '../lab/hle.mjs';
 import { GETTER } from '../lab/menu.mjs';
 import { SettingNameError } from '../fw/setnames.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'cpu2', 'call', 'setting', 'probe', 'hits']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'breakpoints', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'cpu2', 'call', 'setting', 'probe', 'hits']);
 export const HITS_MAX = 10000;           // the probes' log: the first this many hits since the last take, the rest counted
 export const STACK_WORDS_MAX = 256;      // a probed pc's stack capture: at most this many words per hit
 const KIND_NAMES = { r: 'r', w: 'w', rw: 'rw' };
@@ -247,6 +247,7 @@ export class LiveDebug {
         return null;
       }
       case 'resume': this._run(); return { state: 'running' };
+      case 'breakpoints': return { pcs: [...this.pcs].sort((a, b) => a - b).map(hex8) };
       case 'detach': {
         this.pcs = new Set(); this.watches = [];
         this.dbg.watch([]);

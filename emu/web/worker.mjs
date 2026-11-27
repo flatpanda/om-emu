@@ -225,7 +225,7 @@ onmessage = (e) => {
   const fail = (err) => post({ type: 'error', message: String(err?.message ?? err), stack: String(err?.stack ?? '') });
   try {
     if (msg.type === 'boot') boot(msg).catch(fail);
-    else if (msg.type === 'req') request(msg).catch(fail);
+    else if (msg.type === 'req') request(msg).catch((err) => { post({ type: 'res', id: msg.id, status: 500, headers: [['Content-Type', 'application/json']], body: JSON.stringify({ error: String(err?.message ?? err) }) }); fail(err); });
     else if (msg.type === 'frame-ack') { if (msg.seq !== undefined) framePending = false; sendFrame(); }
     else if (msg.type === 'gate') gate(msg).catch(fail);
     else if (msg.type === 'clear-cache') OPFS.clear().then(() => post({ type: 'progress', stage: 'cache-cleared' }), fail);

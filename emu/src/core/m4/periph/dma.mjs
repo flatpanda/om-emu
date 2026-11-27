@@ -23,6 +23,7 @@ export class Dma extends Regs {
     this.reset();
   }
   reset() {
+    if (this.ch) for (const c of this.ch) if (c.ev) this.sched.cancel(c.ev);
     this.isr = 0; this.cselr = 0;
     this.ch = [];
     for (let i = 0; i <= 7; i++) this.ch.push({ ccr: 0, cndtr: 0, cpar: 0, cmar: 0, reload: 0, pa: 0, ma: 0, req: new Set(), ev: null, done: 0 });

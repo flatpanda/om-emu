@@ -71,17 +71,15 @@ export async function provision(prog, { make = true, verify = false, bin = null 
     if (got !== pin.sha256) throw new Error(`${file}: sha256 ${got.slice(0, 16)}..., BLOBS.sha256 pins ${pin.sha256.slice(0, 16)}... for ${MODEL_INFO.bin} (not ${MODEL}'s v${MODEL_INFO.version} release): this file is ${identifyBytes(whole, createHash).reason}`);
     const rel = path.relative(REPO, file);
     say(`unpacking ${rel.startsWith('..') ? file : rel} into ${dir}/`);
-    const fd = fs.openSync(file, 'r'), size = fs.fstatSync(fd).size;
-    const read = (off, len) => { const b = new Uint8Array(len); const n = fs.readSync(fd, b, 0, len, off); return n === len ? b : b.subarray(0, n); };
-    let blocks, extract = null;
-    try {
-      blocks = await labBlocks(read, size);
-      for (const [blk, f] of [[blocks.rom, rom], [blocks.res, res]]) {
-        if (blockName(MODEL_INFO.bin, blk.block) !== path.basename(f)) throw new Error(`${MODEL_INFO.bin}: block ${blockName(MODEL_INFO.bin, blk.block)}, src/fw/models.mjs names ${path.basename(f)}`);
-      }
-      checkFirmware(sha(blocks.rom.data), sha(resPrefix(blocks.res.data, { load: blocks.res.block.load })));
-      if (nand) extract = (await labNand(read, blocks.blocks, createHash, blocks.res.block.load)).bytes;
-    } finally { fs.closeSync(fd); }
+    const size = whole.length;
+    const read = (off, len) => whole.subarray(off, Math.min(size, off + len));
+    const blocks = await labBlocks(read, size);
+    let extract = null;
+    for (const [blk, f] of [[blocks.rom, rom], [blocks.res, res]]) {
+      if (blockName(MODEL_INFO.bin, blk.block) !== path.basename(f)) throw new Error(`${MODEL_INFO.bin}: block ${blockName(MODEL_INFO.bin, blk.block)}, src/fw/models.mjs names ${path.basename(f)}`);
+    }
+    checkFirmware(sha(blocks.rom.data), sha(resPrefix(blocks.res.data, { load: blocks.res.block.load })));
+    if (nand) extract = (await labNand(read, blocks.blocks, createHash, blocks.res.block.load)).bytes;
     // a file already there with these bytes is left as it is (another process may be reading it)
     const put = (f, b) => { if (!fs.existsSync(f) || !Buffer.from(b.buffer, b.byteOffset, b.length).equals(fs.readFileSync(f))) fs.writeFileSync(f, b); };
     fs.mkdirSync(path.dirname(rom), { recursive: true });

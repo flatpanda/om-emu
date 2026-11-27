@@ -192,8 +192,10 @@ export function compose2(v, c) {
           const cr = ((((r << 15) - 27440 * g - 5328 * b) >> 16) + 128) & 0xFF;
           const dst = out[d0 + i];
           if (a === 255) { out[d0 + i] = cr << 16 | cb << 8 | y; continue; }
-          const k = 255 - a, mixc = (s, d) => ((s * a + d * k + 127) / 255) | 0;
-          out[d0 + i] = mixc(cr, dst >>> 16 & 0xFF) << 16 | mixc(cb, dst >>> 8 & 0xFF) << 8 | mixc(y, dst & 0xFF);
+          const k = 255 - a;
+          out[d0 + i] = (((cr * a + ((dst >>> 16) & 0xFF) * k + 127) / 255) | 0) << 16 |
+            (((cb * a + ((dst >>> 8) & 0xFF) * k + 127) / 255) | 0) << 8 |
+            (((y * a + (dst & 0xFF) * k + 127) / 255) | 0);
         }
       }
       return 0;
@@ -203,7 +205,8 @@ export function compose2(v, c) {
       if (!(dmaen & (0x20 >>> p)) || !(view & (1 << p))) continue;
       if (p < P_OSD1 && IMG_KIND2) {                                    // kind 2's IMG planes (drawImg2)
         const code = drawImg2(p, info);
-        if (code) { v.dset(info, code); hdr[HDR.SKIPPED] |= 1 << p; } else hdr[HDR.DRAWN] |= 1 << p;
+        if (code === 0x101) v.dset(info, code);
+        else if (code) { v.dset(info, code); hdr[HDR.SKIPPED] |= 1 << p; } else hdr[HDR.DRAWN] |= 1 << p;
         continue;
       }
       if (p < P_OSD1) { cerror(E.FMT_UNMODELLED, 0, p, 0, 0, 0); v.dset(info, E.FMT_UNMODELLED); hdr[HDR.SKIPPED] |= 1 << p; continue; }

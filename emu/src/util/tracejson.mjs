@@ -55,7 +55,7 @@ export function canonJson(v) {
 }
 // The digests' JSON text: ASCII only (U+007F and above as \uXXXX escapes), keys in the object's order; spacedJson puts
 // ', ' between items and ': ' after keys, asciiJson no white space.
-const ascii = (s) => s.replace(/[\u007f-￿]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const ascii = (s) => s.replace(/[\u007f-\uffff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 export const spacedJson = (v) => ascii(spaced(v));
 export const asciiJson = (v) => ascii(JSON.stringify(v));
 function spaced(v) {

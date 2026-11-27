@@ -28,7 +28,7 @@ import { decode } from './decode.mjs';
 import { DecodeCache, DC_BITS } from './dcache.mjs';
 import { ALU_AND, ALU_EOR, ALU_ORR, ALU_ORN, ALU_BIC, ALU_MOV, ALU_MVN, ALU_ADD, ALU_ADC, ALU_SUB, ALU_SBC, ALU_RSB, ALU_TST,
   ALU_TEQ, ALU_CMP, ALU_CMN, popcount } from './decode.mjs';
-import { SystemBlock, CFSR, HFSR_FORCED, HFSR_DEBUGEVT, EXC_HARDFAULT, EXC_MEMMANAGE, EXC_BUSFAULT, EXC_USAGEFAULT, EXC_SVCALL,
+import { SystemBlock, CFSR, HFSR_FORCED, HFSR_DEBUGEVT, EXC_NMI, EXC_HARDFAULT, EXC_MEMMANAGE, EXC_BUSFAULT, EXC_USAGEFAULT, EXC_SVCALL,
   EXC_DEBUGMON } from './sys.mjs';
 import { Unimplemented, BusError } from './errors.mjs';
 export { Unimplemented, BusError };
@@ -413,6 +413,7 @@ export class CortexM4 {
     if (toHandler && (psr & 0x1ff) === 0) return invalid();
     if (!toHandler && (psr & 0x1ff) !== 0) return invalid();
     this.excl = -1;
+    if (ret !== EXC_NMI) this.faultmask = 0;
     this.event = 1;
     this.irqDirty = true;
     if (!toHandler && (s.scr & 2)) this.sleeping = true;   // SLEEPONEXIT
@@ -668,9 +669,10 @@ const X = {
     const base = d.rn === PC ? c.r[PC] & ~3 : c.r[d.rn];
     const off = d.rm >= 0 ? c.r[d.rm] << d.sa : d.imm;
     const oa = (d.add ? base + off : base - off) | 0, a = d.idx ? oa : base;
+    if (d.rd === PC && (a & 3)) throw usage(CFSR.UNALIGNED);
     const v = c.load(a, d.sz, d.sg);
     if (d.wb) c.setReg(d.rn, oa);
-    if (d.rd === PC) { if (a & 3) throw usage(CFSR.UNALIGNED); c.bxWrite(v); } else c.setReg(d.rd, v);
+    if (d.rd === PC) c.bxWrite(v); else c.setReg(d.rd, v);
   },
   str(c, d) {
     const base = c.r[d.rn];

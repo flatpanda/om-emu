@@ -130,7 +130,7 @@ export class Stm32l4 {
     // ADC1, the USB device (with no host) and its packet memory
     this.adc = this.attach(BASE.ADC, new Adc({ sched: dom('ADC'), irq, analog: (ch) => this.board.analog(ch) }));
     this.usb = this.attach(BASE.USB, new UsbStub());
-    this.attach(BASE.USB + 0x400, new UsbPma());
+    this.usbPma = this.attach(BASE.USB + 0x400, new UsbPma());
     // the DMA requests of the modelled peripherals (RM0394 tables 41 and 42): ADC1 on DMA1 1 and DMA2 3; SPI2 on DMA1
     // 4 / 5, USART2 on DMA1 6 / 7 and USART1 on DMA2 6 / 7 are the image's own choices (docs/om1-scpu-spec.md
     // sections 3.1 and 4.2)
@@ -150,7 +150,7 @@ export class Stm32l4 {
     // the chip's resettable state (all but the backup domain's RTC and the board), for a system reset
     this.resettable = [this.flashIf, ...this.gpio.ports.filter(Boolean), this.exti, this.exti.syscfg, this.dma1, this.dma2,
       this.usart1, this.usart2, this.lpuart1, this.i2c1, this.i2c2, this.spi2, this.tim1, this.tim2, this.tim15, this.tim16,
-      this.adc, this.usb];
+      this.adc, this.usb, this.usbPma];
     this.mode = 'run';                            // one of MODES
     this.standbys = 0;                            // Standby entries so far
     this.stops = 0;                               // Stop 0 / 1 / 2 entries so far

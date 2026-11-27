@@ -220,7 +220,7 @@ export class Timer extends Regs {
       this.cnt = 0;
       this.overflow();
       this.compares();
-    } else this.sr |= 1 << Number(what.slice(2));
+    } else this.compares();
     this.after();
     this.schedule();
   }

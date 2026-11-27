@@ -81,19 +81,22 @@ export class Driver {
   // Player.run's loop for an async host (no --replay). Any other failure (a bug) propagates to the caller.
   async run() {
     const pl = this.pl;
-    try { pl.open_session(); } catch (e) {
-      if (!sessionError(e)) throw e;
-      pl.set_phase('error', pl.describe(e));
-    }
-    while (!pl.stopping()) {
-      try { pl.tick(); } catch (e) {
+    try {
+      try { pl.open_session(); } catch (e) {
         if (!sessionError(e)) throw e;
-        pl.fail(e);
+        pl.set_phase('error', pl.describe(e));
       }
-      await this.wake();
+      while (!pl.stopping()) {
+        try { pl.tick(); } catch (e) {
+          if (!sessionError(e)) throw e;
+          pl.fail(e);
+        }
+        await this.wake();
+      }
+      pl.close_session();
+      pl.write_log();
+    } finally {
+      this.sched.close?.();
     }
-    pl.close_session();
-    pl.write_log();
-    this.sched.close?.();
   }
 }

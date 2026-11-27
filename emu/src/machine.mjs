@@ -271,13 +271,14 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // unit D, unit V); null for a register the stub does not have.
     getReg(n) {
       live();
+      if (n < 0) return null;
       if (n < 15) return R[n] >>> 0;
       if (n === 15) return S.insns % 4294967296;
       return n <= 19 ? R[[HI, UC, UD, UV][n - 16]] >>> 0 : null;
     },
     setReg(n, v) {
       live(); runnable('setReg'); notPaused('setReg');
-      if (n > 19) return false;
+      if (n < 0 || n > 19) return false;
       if (n < 15) {
         R[n] = v | 0;
         if (n === PSW) { R[PSW] &= 0xffff; R[UNDEF] = 0; R[HAZ] = 0; }   // a debugger-written PSW is defined

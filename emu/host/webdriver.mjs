@@ -95,6 +95,7 @@ export async function startBrowser(name, opts) {
   const port = await freePort();
   const log = fs.openSync(path.join(dir, `${name}-driver.log`), 'a');
   const d = spawn(driver, B.args(port, dir), { detached: true, stdio: ['ignore', log, log], env, cwd: dir });
+  fs.closeSync(log);
   pids.push(d.pid);
   GROUPS.add(d.pid);
   const kill = () => { for (const pid of pids.reverse()) killGroup(pid); pids.length = 0; };
@@ -121,7 +122,10 @@ async function call(base, method, p, body) {
   try { doc = JSON.parse(text); } catch { throw new WebDriverError('unknown error', `${method} ${p}: HTTP ${r.status} ${text.slice(0, 300)}`); }
   const v = doc.value;
   // an error comes with a status of 400 or more (W3C WebDriver, 6.6); a script's own result may hold an 'error' key
-  if (!r.ok && v && typeof v === 'object' && v.error) throw new WebDriverError(v.error, `${method} ${p}: ${v.message}`);
+  if (!r.ok) {
+    if (v && typeof v === 'object' && v.error) throw new WebDriverError(v.error, `${method} ${p}: ${v.message}`);
+    throw new WebDriverError('unknown error', `${method} ${p}: HTTP ${r.status} ${text.slice(0, 300)}`);
+  }
   return v;
 }
 

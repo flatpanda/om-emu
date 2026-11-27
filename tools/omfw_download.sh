@@ -16,8 +16,8 @@ REPLY=$(curl -s --user-agent "Olympus" --header "Content-Type: text/xml; Charset
 EOF
 )
 echo "$REPLY" > "$OUT/${CODE}_reply.xml"
-URL=$(echo "$REPLY" | grep -oP '(?<=<url>)[^<]+' | head -1 | sed 's/&amp;/\&/g')
-FN=$(echo "$REPLY" | grep -oP '(?<=<file_name>)[^<]+' | head -1)
+URL=$(echo "$REPLY" | grep -oP '(?<=<url>)[^<]+' | head -1 | sed 's/&amp;/\&/g' || true)
+FN=$(echo "$REPLY" | grep -oP '(?<=<file_name>)[^<]+' | head -1 || true)
 [ -n "$URL" ] || { echo "no fw for $CODE"; echo "$REPLY"; exit 1; }
 curl -s -o "$OUT/$FN" "$URL"
 ls -l "$OUT/$FN"

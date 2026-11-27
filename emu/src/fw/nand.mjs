@@ -202,10 +202,15 @@ export function encodeExtract(x) {
 }
 export function decodeExtract(bytes) {
   if (bytes.length < 8 || String.fromCharCode(...bytes.subarray(0, 4)) !== 'OMNX') throw new NandError('not a NAND extract');
-  const n = u32(bytes, 4), meta = JSON.parse(new TextDecoder().decode(bytes.subarray(8, 8 + n)));
+  const n = u32(bytes, 4);
+  if (8 + n > bytes.length) throw new NandError(`a NAND extract of ${bytes.length} bytes, header needs ${8 + n}`);
+  const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(8, 8 + n)));
   if (meta.version !== EXTRACT_VERSION) throw new NandError(`a NAND extract of version ${meta.version}, not ${EXTRACT_VERSION}`);
   let o = 8 + n;
-  const spans = meta.spans.map(([a, len]) => { const b = bytes.subarray(o, o + len); o += len; return [a, b]; });
+  const spans = meta.spans.map(([a, len]) => {
+    if (!Number.isInteger(len) || len < 0 || o + len > bytes.length) throw new NandError(`a NAND extract span at ${o} of length ${len} out of bounds (${bytes.length})`);
+    const b = bytes.subarray(o, o + len); o += len; return [a, b];
+  });
   if (o !== bytes.length) throw new NandError(`a NAND extract of ${bytes.length} bytes, its spans end at ${o}`);
   return { areas: meta.areas, spans };
 }

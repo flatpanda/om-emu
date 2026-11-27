@@ -923,7 +923,7 @@ export async function openSession(o = {}) {
     },
     planned: planned.map((x) => x.text),
     input: (inp) => {
-      if (inp?.type === 'debug' && (['write', 'setReg', 'setRegs'].includes(inp.op) || (inp.op === 'call' && inp.mem))) pokes.push({ step: records.length, token: 'input', input: inp });
+      if (inp?.type === 'debug' && (['write', 'setReg', 'setRegs'].includes(inp.op) || (inp.op === 'call' && inp.mem?.length))) pokes.push({ step: records.length, token: 'input', input: inp });
       const res = apply(inp);
       if (inp?.type === 'token' && typeof inp.token === 'string' && HARNESS_TOKEN.test(inp.token)) harness.push({ step: records.length, token: inp.token, via: 'input' });
       if (inp?.type === 'debug' && inp.op === 'call' && res.debug?.ok) calls.push({ step: records.length, fn: res.debug.fn.notation, via: 'input' });

@@ -8,13 +8,17 @@ import { romPath, resPath, nandPath } from '../src/fw/models.mjs';
 
 export const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 
+let PINS = null;
 // A MODELS entry's .BIN as BLOBS.sha256 pins it: {rel (fw/... or fw/old/...), sha256}, or null
 export function binPin(m) {
-  for (const line of fs.readFileSync(path.join(REPO, 'BLOBS.sha256'), 'utf8').split('\n')) {
-    const [h, rel] = line.trim().split(/\s+/);
-    if (rel?.startsWith('fw/') && rel.endsWith(`/${m.bin}`)) return { rel, sha256: h };
+  if (!PINS) {
+    PINS = new Map();
+    for (const line of fs.readFileSync(path.join(REPO, 'BLOBS.sha256'), 'utf8').split('\n')) {
+      const [h, rel] = line.trim().split(/\s+/);
+      if (rel?.startsWith('fw/')) PINS.set(path.posix.basename(rel), { rel, sha256: h });
+    }
   }
-  return null;
+  return PINS.get(m.bin) ?? null;
 }
 
 // The unpacked files of a MODELS entry are on disk: both blocks and the NAND extract where it has one (their digests

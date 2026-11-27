@@ -3,6 +3,7 @@
 // HTTP client); node:http with agent false, a connection per request, JSON both ways. Its failures are LabErrors
 // (RuntimeError, URLError, TimeoutError, AssertionError), which a test reports as 'name: message'.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import zlib from 'node:zlib';
@@ -45,8 +46,7 @@ export function request(base, method, p, { headers = {}, data = null, timeout = 
 const text = (b) => Buffer.from(b).toString('utf8');
 
 // A child's exit status: the code, or minus the signal number.
-const SIGNUM = { SIGHUP: 1, SIGINT: 2, SIGKILL: 9, SIGUSR2: 12, SIGTERM: 15, SIGABRT: 6, SIGSEGV: 11 };
-function rcOf(code, signal) { return code !== null ? code : signal ? -(SIGNUM[signal] ?? 0) : null; }
+function rcOf(code, signal) { return code !== null ? code : signal ? -(os.constants.signals[signal] ?? 0) : null; }
 
 // Start-up wait predicate for Play.init: stays false while booting or replaying (including across a power cycle).
 export const startupReady = (s) => !s.replaying && !['starting', 'replaying'].includes(s.phase);

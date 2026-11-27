@@ -223,12 +223,13 @@ export function placer({ a, b, baseA, baseB, map, entries, scratch = null, loade
       const span = (x + 32 - fa) * 1.5 + 64;
       for (let o = fb; o < fb + span && ib.length < 6000; o += ilen(b, o)) ib.push(o);
       const n = ia.length, m = ib.length, L = new Uint16Array((n + 1) * (m + 1));
+      const sa = ia.map((o) => skel(a, o)), sb = ib.map((o) => skel(b, o));
       for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
-        L[i * (m + 1) + j] = skel(a, ia[i]) === skel(b, ib[j]) ? L[(i + 1) * (m + 1) + j + 1] + 1 : Math.max(L[(i + 1) * (m + 1) + j], L[i * (m + 1) + j + 1]);
+        L[i * (m + 1) + j] = sa[i] === sb[j] ? L[(i + 1) * (m + 1) + j + 1] + 1 : Math.max(L[(i + 1) * (m + 1) + j], L[i * (m + 1) + j + 1]);
       }
       if (L[0] < n * 0.7) continue;                   // the bodies are not the same function
       for (let i = 0, j = 0; i < n && j < m;) {
-        if (skel(a, ia[i]) === skel(b, ib[j]) && L[i * (m + 1) + j] === L[(i + 1) * (m + 1) + j + 1] + 1) {
+        if (sa[i] === sb[j] && L[i * (m + 1) + j] === L[(i + 1) * (m + 1) + j + 1] + 1) {
           if (ia[i] === x) return { to: (base + ib[j]) >>> 0, how: 'align' };
           if (ia[i + 1] === x && E[lo - 1] === x && isReturn(a, ia[i]) && j + 1 < m && calledInB(ib[j + 1])) return { to: (base + ib[j + 1]) >>> 0, how: 'align' };
           i++; j++;
@@ -248,11 +249,11 @@ export function placer({ a, b, baseA, baseB, map, entries, scratch = null, loade
   const straight = (o) => !callAt(b, o) && !isReturn(b, o) && !(b[o] >= 0xc0 && b[o] <= 0xcc) && b[o] !== 0xdc && !(b[o] === 0xf0 && b[o + 1] >= 0xf0);
   function entryOf(x, o) {
     if (!isEntry(x) || calledInB(o)) return null;
-    for (let q = o - 1; q >= o - ENTRY_SNAP; q--) {
+    for (let q = o - 1; q >= 0 && q >= o - ENTRY_SNAP; q--) {
       if (!calledInB(q)) continue;
       let p = q;
       while (p < o && straight(p)) p += ilen(b, p);
-      return p === o ? { to: (CODE_BASE + q) >>> 0, how: 'code-entry' } : null;
+      if (p === o) return { to: (CODE_BASE + q) >>> 0, how: 'code-entry' };
     }
     return null;
   }

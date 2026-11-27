@@ -63,14 +63,13 @@ const sortedPairs = (m) => [...m.values()].sort((a, b) => a[0] - b[0] || a[1] - 
 
 // Versioned Map for HLE.hooks so direct .set/.delete/.clear mutations invalidate the cached breakpoint list.
 class HookMap extends Map {
-  constructor() { super(); this._ver = 0; }
+  constructor(entries) { super(entries); this._ver = 0; }
   set(k, v) { this._ver++; return super.set(k, v); }
   delete(k) { const ok = super.delete(k); if (ok) this._ver++; return ok; }
   clear() { if (this.size) { this._ver++; super.clear(); } }
 }
 
 export class HLE {
-  // env: { rom (Uint8Array image), createHash, stats (Stats or null), observer factory... }; see Simulator.
   // env: { rom (the image, Uint8Array), createHash, clock?, beginSession? }. beginSession() returns the session's
   // { stats, attach(hle), close(hle, closeSim) }: the per-session hooks around HLE construction and close (Stats per
   // session, the tracer attached after init, devices read before close).
@@ -242,7 +241,7 @@ export class HLE {
   }
   get hooks() { return this._hooks; }
   set hooks(m) {
-    this._hooks = m;
+    this._hooks = m instanceof HookMap ? m : new HookMap(m);
     this._hooksGen += 1;
     this._hooksVer = -1;
     this._loopCache = null;

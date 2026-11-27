@@ -38,11 +38,11 @@ export class SystemBlock {
   }
 
   reset() {
-    this.pending.fill(0); this.active.fill(0); this.enabled.fill(0); this.prio.fill(0);
+    this.pending.fill(0); this.active.fill(0); this.enabled.fill(0); this.level.fill(0); this.prio.fill(0);
     this.vtor = 0; this.prigroup = 0; this.scr = 0; this.ccr = 0x200; this.shcsrEna = 0; this.cfsr = 0; this.hfsr = 0;
     this.dfsr = 0; this.mmfar = 0; this.bfar = 0; this.cpacr = 0; this.actlr = 0;
     this.fpccr = 0xc0000000 | 0; this.fpcar = 0; this.fpdscr = 0;
-    this.stCsr = 0; this.stRvr = 0; this.stCvr = 0; this.stCount = 0; this.stFrac = 0;
+    this.stCsr = 0; this.stRvr = 0; this.stCvr = 0; this.stFrac = 0;
     this.mpuCtrl = 0; this.mpuRnr = 0; this.mpuRbar = new Int32Array(8); this.mpuRasr = new Int32Array(8);
     this.dwtCtrl = 0x40000000; this.cyccnt = 0; this.demcr = 0;
     this.resetRequest = false;
@@ -112,10 +112,25 @@ export class SystemBlock {
     if (!(this.stCsr & 1)) return;
     let counts = cycles;
     if (!(this.stCsr & 4)) { this.stFrac += cycles; counts = Math.floor(this.stFrac / this.refDiv); this.stFrac -= counts * this.refDiv; }
-    for (let i = 0; i < counts; i++) {
-      if (this.stCvr === 0) { this.stCvr = this.stRvr; continue; }
-      this.stCvr--;
-      if (this.stCvr === 0) { this.stCsr |= 0x10000; if (this.stCsr & 2) this.setPending(EXC_SYSTICK); }
+    if (counts <= 0) return;
+    if (this.stCvr === 0) {
+      if (this.stRvr === 0) return;
+      this.stCvr = this.stRvr;
+      counts--;
+    }
+    if (counts <= 0) return;
+    if (counts < this.stCvr) {
+      this.stCvr -= counts;
+    } else {
+      this.stCsr |= 0x10000;
+      if (this.stCsr & 2) this.setPending(EXC_SYSTICK);
+      const rem = counts - this.stCvr;
+      if (this.stRvr === 0) this.stCvr = 0;
+      else {
+        const period = this.stRvr + 1;
+        const pos = rem % period;
+        this.stCvr = pos === 0 ? 0 : period - pos;
+      }
     }
   }
 

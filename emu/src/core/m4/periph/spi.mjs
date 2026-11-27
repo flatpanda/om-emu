@@ -74,7 +74,7 @@ export class Spi extends Regs {
         this.lines();
         return;
       }
-      case SR: this.ovr = this.ovr && !!(v & OVR); return;   // CRCERR is the only writable bit; OVR clears by reading
+      case SR: return;   // CRCERR is the only writable bit; OVR clears by reading DR then SR
       case DR: {
         const n = mask === 0xff || mask === 0xff00 || mask === 0xff0000 || mask === 0xff000000 ? 1 : 2;
         for (let i = 0; i < n; i++) if (this.txf.length < 4) this.txf.push((v >>> (8 * i)) & 0xff);

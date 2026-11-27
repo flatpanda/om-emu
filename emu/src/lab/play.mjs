@@ -748,6 +748,22 @@ export class PlayError extends FirmwareError {}
 const bracketState = () => ({ calls: 0, pairs: 0, open: null, bad: null, closed_last: null, last: [] });
 
 // NavLab + the play observers and stand-ins (installed by PlaySession.play_bring_up, not in the constructor).
+// S-HEAP's opt-in fill (OM_HEAP_FILL=HEX, opts.heap_fill; off by default): a word, written over every block S-HEAP hands
+// out and every block it takes back. S-HEAP's new blocks come from memory nothing else used, so a field the code never
+// set reads 0 in the lab, where the camera's heap hands out whatever the block held before (a freed block's old contents);
+// code that reads such a field runs on in the lab and fails on the camera. With a fill like 0xdeadbeef (odd and in no
+// mapped range) a pointer or a code address read from such a field faults at its first use, and a use after free reads
+// the fill. The fill is the lab's, not the camera's: it shows that a read of unset memory happens, not what the camera
+// reads there. Returns 64 KiB of the word (little-endian), or null when off
+export function heapFill(v) {
+  if (v === undefined || v === null || v === '' || v === 'off') return null;
+  const t = String(v).replace(/^0x/i, '');
+  if (!/^[0-9a-f]{1,8}$/i.test(t)) throw new PlayError(`heap fill ${v}: a 32-bit word in hex (e.g. deadbeef) or off`);
+  const w = parseInt(t, 16) >>> 0, buf = new Uint8Array(0x10000);
+  for (let k = 0; k < buf.length; k += 4) { buf[k] = w & 0xFF; buf[k + 1] = (w >>> 8) & 0xFF; buf[k + 2] = (w >>> 16) & 0xFF; buf[k + 3] = w >>> 24; }
+  return buf;
+}
+
 export class PlayLab extends N.NavLab {
   // H-GUIBYAPP: in a play session the camera application creates the GUI at its start, as on the camera; the lab's
   // bring-up does not (two GUIs, the lab's idle one holding a root of output 0 and one of OSD layer 1's two buffers).
@@ -789,6 +805,7 @@ export class PlayLab extends N.NavLab {
     this.heap_owner = new Map();                       // block -> [malloc's caller (disassembly), task id]
     this.heap_free = new Map();
     this.heap_stats = new Tally();
+    this.heap_fill = heapFill(opts.heap_fill ?? envVar(this.env, 'heap_fill', 'OM_HEAP_FILL'));
     this.hook(HLE.MALLOC, (h, r) => this._s_malloc(h, r), 'S-HEAP malloc');
     this.hook(HLE.FREE, (h, r) => this._s_free(h, r), 'S-HEAP free');
     // the heap's block get and release of one pool, which code calls without malloc (Level Adjust's sampling loop,
@@ -942,6 +959,11 @@ export class PlayLab extends N.NavLab {
     }
   }
   // S-HEAP
+  // the opt-in fill (OM_HEAP_FILL, opts.heap_fill): the block's bytes, the word repeated, at malloc and at free
+  _heap_fill(a, size) {
+    const f = this.heap_fill;
+    for (let k = 0; k < size; k += f.length) this.sim.write(a + k, size - k >= f.length ? f : f.subarray(0, size - k));
+  }
   _s_malloc(hle, r, regs = r) {
     const size = Math.max(16, Math.floor((r.d0 + 15) / 16) * 16);   // unbounded: malloc(-1) exhausts the heap
     const free = this.heap_free.get(size);
@@ -956,6 +978,7 @@ export class PlayLab extends N.NavLab {
       this.heap_stats.add('new');
     }
     this.heap_sizes.set(a, size);
+    if (this.heap_fill) this._heap_fill(a, size);
     // who allocated it: malloc's caller and the running task's id (the kernel's current TCB, its id at +16)
     this.heap_owner.set(a, [disasm(r.mdr), this.nk ? unpack('<H', this.sim.read(this.sim.u32(this.nk.kcb(96)) + K.TCB_ID, 2))[0] : null]);
     hle.finish(regs, { a0: a });
@@ -964,6 +987,7 @@ export class PlayLab extends N.NavLab {
     const a = r.a0;
     const size = this.heap_sizes.get(a);
     if (size !== undefined) {
+      if (this.heap_fill) this._heap_fill(a, size);
       this.heap_sizes.delete(a);
       this.heap_owner.delete(a);
       if (!this.heap_free.has(size)) this.heap_free.set(size, []);

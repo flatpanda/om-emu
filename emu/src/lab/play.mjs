@@ -805,7 +805,7 @@ export class PlayLab extends N.NavLab {
     this.heap_owner = new Map();                       // block -> [malloc's caller (disassembly), task id]
     this.heap_free = new Map();
     this.heap_stats = new Tally();
-    this.heap_fill = heapFill(opts.heap_fill ?? globalThis.process?.env?.OM_HEAP_FILL);
+    this.heap_fill = heapFill(opts.heap_fill ?? envVar(this.env, 'heap_fill', 'OM_HEAP_FILL'));
     this.hook(HLE.MALLOC, (h, r) => this._s_malloc(h, r), 'S-HEAP malloc');
     this.hook(HLE.FREE, (h, r) => this._s_free(h, r), 'S-HEAP free');
     // the heap's block get and release of one pool, which code calls without malloc (Level Adjust's sampling loop,

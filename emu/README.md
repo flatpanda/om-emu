@@ -1160,6 +1160,7 @@ What the pass finds on caduceus-om3's releases (their gates found, the rest list
 ```sh
 node emu/bin/session.mjs --model E142 --strict on --patch mine.json 'wait:1500 s1'   # report the strict classes
 OM_STRICT=1 node emu/bin/play.mjs --patch mine.json                                  # the same through the environment
+node emu/bin/session.mjs --model E143 --strict cache --patch mine.json 'wait:1500 s1' # and the data-cache model's classes
 ```
 
 `--strict on|off` on `bin/session.mjs` (`openSession`'s `strict`), or `OM_STRICT=1` in the environment of any tool
@@ -1180,6 +1181,15 @@ modified firmware and that the lab otherwise runs as asked (caduceus-ep7's safet
   E142 among them): caduceus-ep7's issue #48, a read of E142's init word `0x6025aa98` where the boot had put it at
   `0x61fc27d8`, which read 0 on the camera. `unloaded-read`: in the loaded-ranges mode, a load from a range the boot
   does not load or is not shown to load, which reads S-STALERAM's fill unreported otherwise.
+- With `--strict cache` (`OM_STRICT=cache`) also a model of CPU 0's data cache (`src/core/dcache.mjs`, A-DCACHE:
+  write-back, write-allocate, 8 KiB in 2 ways, 16-byte lines) beside the lab's memory, which has none, for code that
+  mixes the cached `0x6…` and uncached `0xA…` DRAM views without the maintenance the camera needs:
+  `cache-stale-read` (a cached load of bytes a CPU uncached store changed behind the line the cache holds),
+  `cache-lost-write` (a dirty line written back, by an eviction or K-CFLUSH, over bytes a CPU uncached store changed)
+  and `cache-uncached-stale` (an uncached load of bytes a cached store changed that only the cache holds). Only CPU
+  uncached stores count as changes behind the cache: the lab's own writes stand for hardware whose maintenance it does
+  not run. Every CPU RAM access takes the slow paths, so a run is slower. The model is CPU 0's, so under it
+  `--cpu2 auto` (the default) stands CPU 2 in on E143 too, and the session says so; `--cpu2 native` is refused.
 
 Each site is a finding `{class, site, disasm, addr, ...}` (the class above, the accessing instruction's run-time pc and
 its code notation, the address, then the size, the value, MDR as `ret` and a count; `sec_ready`'s shape), listed in

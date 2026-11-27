@@ -1280,11 +1280,14 @@ export class PlaySession extends N.NavSession {
     if (!['stand-in', 'probe'].includes(take)) throw new ValueError(`take ${show(take)}: stand-in or probe`);
     if (take === 'probe' && !ON_LAB_MODEL) throw new ValueError(`--take probe: ${MODEL}'s TAKE addresses are not read (E143 only, src/lab/take.mjs)`);
     // CPU 2 natively (--cpu2 auto|stand-in|native, E143 only; src/lab/cpu2.mjs, src/core/cores.mjs): the machine gets
-    // a second core; auto (the default) is native on E143 and stand-in elsewhere
+    // a second core; auto (the default) is native on E143 and stand-in elsewhere. The data-cache model (--strict cache,
+    // src/lab/strict.mjs) is CPU 0's alone, so under it auto is stand-in on E143 as well (cpu2_note says so); native
+    // asked for in so many words stays an error (src/lab/sim.mjs)
     const cpu2 = opts.cpu2 ?? 'auto';
     if (!['auto', 'stand-in', 'native'].includes(cpu2)) throw new ValueError(`cpu2 ${show(cpu2)}: auto, stand-in or native`);
     if (cpu2 === 'native' && !ON_LAB_MODEL) throw new ValueError(`--cpu2 native: ${MODEL}'s CPU 2 addresses are not read (E143 only, src/lab/cpu2.mjs)`);
-    const cpu2Native = cpu2 === 'native' || (cpu2 === 'auto' && ON_LAB_MODEL);
+    const strictCacheOn = !!env.strict?.cacheOpts || env.strict === 'cache';
+    const cpu2Native = cpu2 === 'native' || (cpu2 === 'auto' && ON_LAB_MODEL && !strictCacheOn);
     if (cpu2Native) {
       env = { ...env, machine: { ...(env.machine ?? {}), cores: { second: 2, quantum: CPU2_QUANTUM } } };
     }
@@ -1296,6 +1299,7 @@ export class PlaySession extends N.NavSession {
     if (k.device === 'evf' && opts.mutant !== 'evf-store-after-open') setdefault('store_first', true);
     super(env, k);
     this.opts = opts;
+    this.cpu2_note = cpu2 === 'auto' && ON_LAB_MODEL && strictCacheOn ? 'cpu2: stand-in (--cpu2 auto under --strict cache: the data-cache model is CPU 0\'s)' : null;
     // S-CAMAPP: the application's own work in a step (a mode change reloads its settings) is ten times the GUI's budget
     this.settle_hooks = 10 * N.STEP_HOOKS;
     this.tables = Tables.of(env.rom);

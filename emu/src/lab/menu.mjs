@@ -4,6 +4,7 @@
 // H-CONNECT; persist_ids, state_names, inputs_for). Addresses are disassembly notation unless marked run-time.
 import { A, isUnmapped, refuseUnmapped, MODEL_INFO, IMAGE_BASE, ON_LAB_MODEL, fact, knob } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
+import { strictCacheFlush } from '../core/mem.mjs';
 import * as D from './display.mjs';
 import * as K from './kernel.mjs';
 import * as M from './menudata.mjs';
@@ -1053,6 +1054,7 @@ export class MenuLab extends T.TextDisplayLab {
       if (!this.patch_flushes.includes(k)) this.patch_flushes.push(k);
     }
     this.store_log.cflush.set(k, (this.store_log.cflush.get(k) ?? 0) + 1);
+    strictCacheFlush();                                 // --strict cache: the data-cache model's write-back and invalidate
     hle.finish(r);
   }
   _k_crt_134d(hle, r) {

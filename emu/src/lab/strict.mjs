@@ -26,6 +26,13 @@
 //   unloaded-read   in the loaded-ranges mode (S-STALERAM, --loaded), a load from a range the boot does not load or is
 //                   not shown to load (src/fw/sections.mjs bootLoads' gaps and unshown): it reads S-STALERAM's fill,
 //                   which the mode alone does not report (src/lab/patchaudit.mjs unloadedRuns)
+// With --strict cache (OM_STRICT=cache) also three classes of a data-cache model (src/core/dcache.mjs, A-DCACHE): the
+// accesses where CPU 0's data cache would show the camera other bytes than the lab, code mixing the cached and uncached
+// DRAM views without the maintenance the camera needs (emu/FIDELITY-NOTES.md 4.1). Every CPU RAM access then takes the
+// slow paths, so a run is slower:
+//   cache-stale-read      a cached load of bytes a CPU uncached store changed behind the line the cache holds
+//   cache-lost-write      a dirty line's write-back (an eviction, K-CFLUSH) over bytes a CPU uncached store changed
+//   cache-uncached-stale  an uncached load of bytes a cached store changed that only the cache holds yet
 // Stock firmware's own sites of these classes are data (src/fw/strict-allow.mjs STRICT_ALLOW, built from stock
 // sessions): a site in its model's list is counted as allowed, not reported, unless its instruction lies on bytes a
 // patch overlay changed (src/lab/patchaudit.mjs PatchRanges.code). Everything is CPU accesses (src/core/mem.mjs
@@ -33,6 +40,7 @@
 import { ctx } from '../core/mem.mjs';
 import { SECTIONS_E143 } from '../fw/facts.mjs';
 import { FACTS } from '../fw/ports.mjs';
+import { DataCache } from '../core/dcache.mjs';
 import { STRICT_ALLOW } from '../fw/strict-allow.mjs';
 import { PatchRanges } from './patchaudit.mjs';
 
@@ -42,16 +50,21 @@ const CODE = 0x50000000;
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // the classes a finding names (its `class`)
 export const STRICT_CLASSES = ['misaligned', 'image-store', 'cave-store', 'init-read', 'unloaded-read'];
+export const STRICT_CACHE_CLASSES = ['cache-stale-read', 'cache-lost-write', 'cache-uncached-stale'];
 export const STRICT_SITES_MAX = 256;           // distinct new sites kept per class; more are counted (dropped)
 const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 
-// The mode from an option value ('on', 'off', true, false, undefined) and the environment's OM_STRICT ('1' or 'on'):
-// the option wins when given
+// The mode from an option value ('on', 'cache', 'off', true, false, undefined) and the environment's OM_STRICT ('1',
+// 'on' or 'cache'): the option wins when given. strictCache: the mode with the data-cache model
 export function strictOn(opt, environ = {}) {
-  if (opt === true || opt === 'on') return true;
+  if (opt === true || opt === 'on' || opt === 'cache') return true;
   if (opt === false || opt === 'off') return false;
-  if (opt !== undefined && opt !== null && opt !== 'auto') throw new Error(`strict ${opt}: on or off`);
-  return environ.OM_STRICT === '1' || environ.OM_STRICT === 'on';
+  if (opt !== undefined && opt !== null && opt !== 'auto') throw new Error(`strict ${opt}: on, cache or off`);
+  return environ.OM_STRICT === '1' || environ.OM_STRICT === 'on' || environ.OM_STRICT === 'cache';
+}
+export function strictCache(opt, environ = {}) {
+  if (opt !== undefined && opt !== null && opt !== 'auto') return opt === 'cache';
+  return environ.OM_STRICT === 'cache';
 }
 
 // The ranges of a run (cached-view run-time addresses, [lo, hi)): stores, the block's span; reads, each preload row's
@@ -111,8 +124,10 @@ export function allowed(list, kind, at, addr) {
 // One run's strict log, across its sessions (a host makes one and passes it as env.strict; src/lab/sim.mjs makes one
 // for OM_STRICT=1 when the host passes none). arm() for each machine gives src/core/mem.mjs setStrict's config.
 export class StrictLog {
-  constructor({ model, allow = STRICT_ALLOW, max = STRICT_SITES_MAX } = {}) {
+  // cache: the data-cache model's options ({kib, ways}, src/core/dcache.mjs; true: its defaults), or null: none
+  constructor({ model, allow = STRICT_ALLOW, max = STRICT_SITES_MAX, cache = null } = {}) {
     this.model = model; this.allow = allow[model] ?? []; this.max = max;
+    this.cacheOpts = cache === true ? {} : cache; this.cache = null;
     this.sites = new Map();          // `${kind}:${pc}` -> site record
     this.allowedCounts = new Map();  // allowlist entry -> accesses
     this.caves = new Map();          // own range's lo -> its cave-store finding (its sites in a Map by pc)
@@ -123,19 +138,24 @@ export class StrictLog {
   // rom: the run-time image in use, base / end the block's span, preload the board's rows, loads the loaded-ranges
   // mode's ranges (or null), patchRanges the overlay's changed [offset, length] (or null), stock the stock run-time
   // image (or null: no cave-store range), ends optional section end-word addresses when loads is null (default:
-  // fact sections.ends for this.model, so flash-copy-family bodies get cave-store without bootLoads)
-  arm({ rom, base, end, preload = [], loads = null, patchRanges = null, stock = null, ends = null }) {
+  // fact sections.ends for this.model, so flash-copy-family bodies get cave-store without bootLoads), dram the cached
+  // DRAM view's size (the data-cache model's range from 0x60000000). Each machine gets a new cache model, empty
+  arm({ rom, base, end, preload = [], loads = null, patchRanges = null, stock = null, ends = null, dram = 0 }) {
     const r = strictRanges({ base, end, preload, loads });
     const b = base >>> 0;
     this.r = { ...r, base: b, end: end >>> 0, patch: patchRanges ? new PatchRanges(patchRanges, rom, base) : null,
       own: patchRanges ? ownRanges(loads, stock, b, rom, ends ?? sectionEndsFor(this.model)) : [] };
-    return { stores: r.stores.map((x) => [x.lo, x.hi]), reads: r.reads.map((x) => [x.lo, x.hi]), report: (kind, a, w, dir, v) => this.report(kind, a, w, dir, v) };
+    if (this.cacheOpts && !(dram > 0)) throw new Error('strict cache: no DRAM size to model');
+    this.cache = this.cacheOpts ? new DataCache({ ...this.cacheOpts, report: (kind, a, w, dir, v, where) => this.report(kind, a, w, dir, v, where) }) : null;
+    return { stores: r.stores.map((x) => [x.lo, x.hi]), reads: r.reads.map((x) => [x.lo, x.hi]), report: (kind, a, w, dir, v) => this.report(kind, a, w, dir, v),
+      ...(this.cache ? { cache: { model: this.cache, lo: 0x60000000, hi: (0x60000000 + dram) >>> 0 } } : {}) };
   }
-  // src/core/mem.mjs's report: kind 'misaligned', 'store' or 'read'; a the access's address (either view)
-  report(kind, a, w, dir, v) {
+  // src/core/mem.mjs's report: kind 'misaligned', 'store' or 'read'; a the access's address (either view). The data-
+  // cache model's: kind one of STRICT_CACHE_CLASSES, with its where
+  report(kind, a, w, dir, v, cacheWhere = null) {
     const { base, end } = this.r;
     const c = a >= 0xA0000000 && a < 0xC0000000 ? (a - 0x40000000) >>> 0 : a >>> 0;
-    let cls = kind === 'misaligned' ? 'misaligned' : kind === 'store' ? 'image-store' : null, where = null;
+    let cls = kind === 'misaligned' ? 'misaligned' : kind === 'store' ? 'image-store' : STRICT_CACHE_CLASSES.includes(kind) ? kind : null, where = cacheWhere;
     if (kind === 'read') {
       const x = this.r.reads.find((g) => c >= g.lo && c < g.hi);
       if (!x) return;
@@ -206,7 +226,8 @@ export class StrictLog {
   doc() {
     const span = (r) => (r ? `${h8(r[0])}..${h8(r[1])}` : 'any');
     const allowedList = [...this.allowedCounts].map(([e, n]) => ({ kind: e.kind, at: span(e.at), addr: span(e.addr), why: e.why, n }));
-    return { model: this.model, findings: [...this.sites.values()].map((s) => (s.class === 'cave-store' ? this.caveDoc(s) : (({ addrs, ...x }) => (addrs.length > 1 ? { ...x, addrs } : x))(s))), allowed: allowedList, dropped: this.dropped };
+    return { model: this.model, findings: [...this.sites.values()].map((s) => (s.class === 'cave-store' ? this.caveDoc(s) : (({ addrs, ...x }) => (addrs.length > 1 ? { ...x, addrs } : x))(s))), allowed: allowedList, dropped: this.dropped,
+      ...(this.cache ? { cache: { kib: this.cache.kib, ways: this.cache.ways, line: 16, ...this.cache.counts } } : {}) };
   }
 }
 

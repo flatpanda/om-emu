@@ -1340,6 +1340,8 @@ export class DisplayLab extends OsdLab {
       // edge question for A6 (no attach records these planes: under camapp 3 DISPLAY cmd 5 shows the through image's
       // bank as IMG2 behind the menu, docs/hle-gaps/4.2.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
       // on A12)
+      // kind 2's IMG2 / IMG3 have no attach either: vsccompose2.mjs draws them only at 1:1 and refuses a scaled one
+      if (p > 0 && BOARD.vsc.kind === 2) continue;
       if (p > 0 && this.unscaled(c, p)) continue;
       const regs = name === 'IMG1' ? this.img_steps(c, true) : null;
       let fit = name === 'IMG1' ? (this.decoded_fit(c, regs) ?? this.img_attach.get(c) ?? null) : null;

@@ -11,7 +11,7 @@
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the kind-3 VSC's COMPOSE on E122's and E118's boards (a
-// child per board, test_vsc3.mjs), the accelerometer stand-in's sample
+// child per board, test_vsc3.mjs), kind 2's IMG planes on E137's board (test_vsc2img.mjs), the accelerometer stand-in's sample
 // (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), the host's
 // writer of the card's FAT32 and exFAT volumes read back by those readers, and bin/card.mjs on a card the test makes
 // (test_cardfs.mjs cardfsUnits, cardCliTests), S-SUBJECT's
@@ -90,6 +90,7 @@ import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
 import { vsc3Units } from '../test/test_vsc3.mjs';
+import { vsc2ImgUnits } from '../test/test_vsc2img.mjs';
 import { accUnits } from '../test/test_acc.mjs';
 import { storageUnits } from '../test/test_storage.mjs';
 import { subjectUnits } from '../test/test_subject.mjs';
@@ -218,6 +219,7 @@ report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnit
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('kind-3 VSC COMPOSE on E122\'s and E118\'s boards (planes, palette groups, order codes, scaler, levels, refusals, the line compare)', vsc3Units());
+report('kind-2 IMG planes on E137\'s board (format 3 decode and blend, alpha off, the refusals: format 0, scaled, level, window, unwritten)', vsc2ImgUnits());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)', storageUnits());
 report('the host\'s card writer on FAT32 and exFAT, read back by refs/ (src/lab/cardfs.mjs)', cardfsUnits());

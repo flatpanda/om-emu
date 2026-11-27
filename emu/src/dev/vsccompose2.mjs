@@ -22,7 +22,9 @@
 //                  32-bit word a pixel: byte 0 alpha (0 transparent .. 255 opaque, not premultiplied: colour stays
 //                  above alpha where alpha is low, X in the camera's buffer), bytes 1..3 B, G, R; drawn through the
 //                  firmware's integer BT.601 and blended over what is below. Format 0 (live view) and a scaled plane
-//                  are refused (FMT_UNMODELLED, RSZ_UNMODELLED; I for the split of the control word)
+//                  are refused (FMT_UNMODELLED, RSZ_UNMODELLED; I for the split of the control word), and so is a level
+//                  other than 0 (not drawn, PLANC_ZERO) and 0x100 (PLANC_UNOBSERVED, as kind 1's PLANC: Color
+//                  Creator writes 0x100, X; what the chip does with another level is ?)
 //   palette q      128 words at +0x800 + 0x800 q, the second bank +0x200 when bit 4 of OSD14 / OSD16 / OSD18 is set
 //                  (the writer 0x50023685 fills the other bank, the commit 0x50187eda flips the bit, D); a word is
 //                  tra << 24 | Cr << 16 | Cb << 8 | Y with tra 0..31 as on E143 (X)
@@ -166,6 +168,7 @@ export function compose2(v, c) {
       if (fmt !== 3) { cerror(E.FMT_UNMODELLED, ctlOff, ctl, p, 0, 0); return E.FMT_UNMODELLED; }
       if (rsz) { cerror(E.RSZ_UNMODELLED, R.RSZ[p], rsz, p, 0, 0); return E.RSZ_UNMODELLED; }
       if (!(ctl & 0x1FF)) { v.noteRecord(NOTE.PLANC_ZERO, c, ctlOff, p); return 0x101; }
+      if ((ctl & 0x1FF) !== FULL_LEVEL) { cerror(E.PLANC_UNOBSERVED, ctlOff, ctl, p, 0, 0); return E.PLANC_UNOBSERVED; }
       const xs = w1 >>> 16, ys = w2 >>> 16, pw = w1 & 0xFFFF, ph = w3 & 0xFFFF, stride = ld * 64;
       if (xs < ox || ys < oy || !pw || !ph || xs - ox + pw > vw || ys - oy + ph > vh || (w2 & 0xFFFF) !== ys) {
         cerror(E.WINDOW, a1, w1, w2, w3, 0); return E.WINDOW;

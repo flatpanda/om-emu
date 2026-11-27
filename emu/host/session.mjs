@@ -506,7 +506,7 @@ export async function openSession(o = {}) {
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
     take: 'stand-in', cpu2: o.cpu2 ?? 'auto', camapp: String(o.camapp ?? '1'), play_native: o.playNative ?? 'auto', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg, lang: langArg };
-  let frame = null, sessionNo = 0;
+  let frame = null, sessionNo = 0, cpu2Said = false;
   const baseEnv = { rom, resBlock, nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: E.loadImage() } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
@@ -561,6 +561,7 @@ export async function openSession(o = {}) {
     pl = new Player(a, envFor(sessionNo));
     pl.off_positions = positions;
     pl.open_session();
+    if (pl.session?.cpu2_note && !cpu2Said) { say(pl.session.cpu2_note); cpu2Said = true; }   // --strict cache's CPU 2 fallback (play.mjs)
   };
   const closePlayer = () => {
     if (!pl) return;

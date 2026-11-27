@@ -22,7 +22,9 @@
 //                  the init word 0x6025aa98 (init-read, copied to 0x61fc27d8), a byte store into section 3's range
 //                  (image-store) and a misaligned word load (misaligned, the call faulting), each on patched bytes;
 //                  the controls, the live copy's read and a .bss byte store, report nothing; on E143 a routine in
-//                  section 6's tail loading a word past its loaded end (unloaded-read), its control a word inside
+//                  section 6's tail loading a word past its loaded end (unloaded-read), its control a word inside;
+//                  --strict cache on E143 under --cpu2 auto (CPU 2 stood in and said, no new site), its control
+//                  --cpu2 native (refused)
 //   node emu/test/test_strict.mjs [--session]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -260,6 +262,19 @@ export async function strictSession() {
       ok(s.rc === 0 && st && st.findings.length === 0, `${model} stock session ${i + 1} with --strict on: rc ${s.rc}, ${st ? `${st.findings.length} new site(s) ${JSON.stringify(st.findings.slice(0, 4))}` : 'no strict in the summary'} ${s.rc ? s.err.slice(-300) : ''}`);
     }
     ok(allowedN > 0, `${model}: the stock sessions' accesses at allowed sites: ${allowedN} (the allowlist keeps them quiet)`);
+  }
+  // --strict cache under the default --cpu2 auto on E143: CPU 2 stood in, said so, the cache model in the doc, no new
+  // site; its control, --cpu2 native asked for, is refused (src/lab/sim.mjs; bin/session.mjs has no --cpu2, so openSession)
+  {
+    const c = session('E143', ['--strict', 'cache'], ['wait:1500', 's1']), st = c.sum?.strict;
+    ok(c.rc === 0 && st?.cache && st.findings.length === 0 && /cpu2: stand-in \(--cpu2 auto under --strict cache/.test(c.err) && c.sum.stand_ins?.includes('S-CPU2'),
+      `E143 --strict cache under --cpu2 auto: CPU 2 stood in and said, no new site: rc ${c.rc} ${st ? JSON.stringify({ cache: st.cache, findings: st.findings.length }) : 'no strict'} ${c.err.slice(-300)}`);
+    const { openSession } = await import('../host/session.mjs');
+    const was = process.env.OM_EMU_MODEL;
+    process.env.OM_EMU_MODEL = 'E143';
+    let n = null;
+    try { n = (await openSession({ strict: 'cache', cpu2: 'native' })).failed; } catch (e) { n = { message: e.message }; } finally { if (was === undefined) delete process.env.OM_EMU_MODEL; else process.env.OM_EMU_MODEL = was; }
+    ok(/strict cache: the data-cache model is CPU 0's/.test(n?.message ?? ''), `E143 --strict cache with --cpu2 native asked for: refused (${JSON.stringify(n)?.slice(0, 200)})`);
   }
   // a patch on E142: routines in section 1's 0xFF tail (0x602108ec..0x60211000, caduceus-ep7's section table; X here)
   const tmp = path.join(process.env.HOME, '.cache/om-emu-tmp/test-strict-' + process.pid);

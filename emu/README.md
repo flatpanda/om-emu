@@ -1188,8 +1188,8 @@ modified firmware and that the lab otherwise runs as asked (caduceus-ep7's safet
   `cache-lost-write` (a dirty line written back, by an eviction or K-CFLUSH, over bytes a CPU uncached store changed)
   and `cache-uncached-stale` (an uncached load of bytes a cached store changed that only the cache holds). Only CPU
   uncached stores count as changes behind the cache: the lab's own writes stand for hardware whose maintenance it does
-  not run. Every CPU RAM access takes the slow paths, so a run is slower; with `--cpu2 native` it is refused (the
-  model is CPU 0's).
+  not run. Every CPU RAM access takes the slow paths, so a run is slower. The model is CPU 0's, so under it
+  `--cpu2 auto` (the default) stands CPU 2 in on E143 too, and the session says so; `--cpu2 native` is refused.
 
 Each site is a finding `{class, site, disasm, addr, ...}` (the class above, the accessing instruction's run-time pc and
 its code notation, the address, then the size, the value, MDR as `ret` and a count; `sec_ready`'s shape), listed in

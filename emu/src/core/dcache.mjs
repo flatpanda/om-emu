@@ -69,7 +69,8 @@ export class DataCache {
       }
     }
   }
-  // before a CPU load of RAM: a its address, o its memory offset, w its size
+  // before a CPU load of RAM: a its address, o its memory offset, w its size. A misaligned access has faulted before
+  // this (src/core/mem.mjs), so an access is aligned to its size and k + w <= 16: it never crosses a line
   ld(a, o, w) {
     const l = o >>> 4, k = o & 15;
     if (DataCache.cached(a)) {
@@ -89,13 +90,15 @@ export class DataCache {
       const slot = this._find(l);
       if (slot >= 0 && this.dirty[slot] !== 0) {
         const s = slot * DCACHE_LINE;
+        // the lab has no cache, so U8 already holds the cached store's byte; the camera's memory still holds base, the
+        // byte at the fill. They differ only when the store changed the byte (a store of the same value reads the same)
         for (let b = k; b < k + w; b++) {
           if ((this.dirty[slot] & (1 << b)) && this.base[s + b] !== this.U8[l * DCACHE_LINE + b]) { this.report('cache-uncached-stale', a, w, 'r', this.U8[l * DCACHE_LINE + b], `a cached store's byte not written back (memory still 0x${this.base[s + b].toString(16).padStart(2, '0')})`); break; }
         }
       }
     }
   }
-  // before a CPU store to RAM (v the value, w bytes little-endian)
+  // before a CPU store to RAM (v the value, w bytes little-endian); aligned as ld's, within one line
   st(a, o, w, v) {
     const l = o >>> 4, k = o & 15;
     if (DataCache.cached(a)) {

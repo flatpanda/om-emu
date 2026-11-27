@@ -61,7 +61,7 @@ export class Simulator {
     // the strict mode (src/lab/strict.mjs): env.strict, the host's StrictLog for the run (or 'on' / 'off'), else
     // OM_STRICT; this.strict the log (null: off). env.stockRom, the stock run-time image beside an overlay, gives the
     // ranges the patch made the boot load (cave-store). Its data-cache model (--strict cache) is CPU 0's: with a second
-    // core running it is refused
+    // core running it is refused (--cpu2 native asked for; under it play.mjs makes --cpu2 auto stand-in)
     this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL, cache: strictCache(env.strict) }) : null;
     if (this.strict?.cacheOpts && cores) throw new Error('strict cache: the data-cache model is CPU 0\'s; a second core (--cpu2 native) is not modelled with it');
     const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null, stock: env.stockRom ?? null, dram: BOARD.dram_size }) ?? null;

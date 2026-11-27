@@ -35,7 +35,7 @@
 import { R, MDR, insnLength } from '../core/cpu.mjs';
 import { dbgRead } from '../core/mem.mjs';
 import { cached } from '../fw/facts.mjs';
-import { bootLoads } from '../fw/sections.mjs';
+import { bootLoads, stagedUnloadedRanges, StagedLoadSchedule } from '../fw/sections.mjs';
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
@@ -255,11 +255,49 @@ export class SecReadyAudit {
   constructor(layout, changed, { read = dbgRead } = {}) {
     this.layout = layout; this.pieces = patchedPieces(layout, changed); this.read = read;
     this.findings = []; this.bits = null; this.seen = new Set(); this.byKey = new Map();
+    this.stagedFindings = []; this.stagedByKey = new Map();
     const p = this.pieces;
     this.lo = p.length ? p[0].lo : 0; this.hi = p.length ? Math.max(...p.map((x) => x.hi)) : 0;
     this.guard = (pc, len) => this.check(pc, len);
   }
   staged(bits) { this.bits = bits >>> 0; }
+  unreadyTiers(stageMask) { return unreadyTiers(this.layout, stageMask); }
+  stagedCheck(pc, stageMask, { len = 1, from = null } = {}) {
+    const c = cached(pc >>> 0), mask = stageMask >>> 0, missing = this.unreadyTiers(mask);
+    let piece = null;
+    for (let k = 0; k < len && piece === null; k++) piece = this.piece(c + k);
+    if (piece === null) {
+      return { ok: true, hazard: false, patched: false, class: null, pc: h8(c), section: sectionOf(this.layout, c), stageMask: h8(mask), unreadyTiers: missing };
+    }
+    const bit = 1 << (piece.n - 1), ready = (mask & bit) !== 0;
+    const rec = {
+      ok: ready,
+      hazard: !ready,
+      patched: true,
+      class: ready ? 'staged-ready' : 'staged-unready-run',
+      pc: h8(c),
+      disasm: h8(c - this.layout.base + DIS),
+      section: piece.n,
+      tier: tier(piece.n),
+      from,
+      fromTier: from == null ? null : tier(from),
+      stageMask: h8(mask),
+      missingBit: ready ? null : piece.n - 1,
+      unreadyTiers: missing,
+    };
+    if (!ready) {
+      const key = `${piece.n}:${mask}`, had = this.stagedByKey.get(key);
+      if (had) {
+        had.insns++;
+        if (had.pcs.length < PCS && !had.pcs.includes(rec.pc)) had.pcs.push(rec.pc);
+      } else {
+        const stored = { ...rec, insns: 1, pcs: [rec.pc] };
+        this.stagedByKey.set(key, stored);
+        this.stagedFindings.push(stored);
+      }
+    }
+    return rec;
+  }
   piece(a) {
     const p = this.pieces;
     let lo = 0, hi = p.length;
@@ -323,6 +361,30 @@ export function unreadyRuns(report, phase = null) {
   const list = (report?.findings ?? []).filter((f) => f.class === 'unready-run');
   return phase === null ? list : list.filter((f) => f.phase === phase);
 }
+
+// Staged-load check classes and verdict helper: distinguishes a confirmed boot-order hazard (patched code executing in
+// section s while bit s - 1 is clear at stageMask, e.g. section 6 -> section 8 at mask 0x7f) from a properly gated call
+// that enters only after the target section's stage bit is set.
+export const STAGED_LOAD_CLASSES = ['staged-unready-run', 'staged-ready'];
+export function unreadyTiers(layout, stageMask) {
+  const unloaded = stagedUnloadedRanges(layout, stageMask);
+  return [...new Set(unloaded.map((u) => tier(u.n)))].sort((a, b) => a - b);
+}
+export function stagedVerdict(auditOrFindings) {
+  const list = Array.isArray(auditOrFindings) ? auditOrFindings : (auditOrFindings?.stagedFindings ?? []);
+  const hazards = list.filter((f) => f && f.class === 'staged-unready-run');
+  const sections = [...new Set(hazards.map((h) => h.section))].sort((a, b) => a - b);
+  const tiers = [...new Set(hazards.map((h) => h.tier))].sort((a, b) => a - b);
+  return {
+    verdict: hazards.length ? 'boot-order-hazard' : 'clean',
+    hazard: hazards.length > 0,
+    count: hazards.length,
+    sections,
+    tiers,
+    findings: hazards,
+  };
+}
+export { stagedUnloadedRanges, StagedLoadSchedule };
 
 // secReadyReport's report as one line (the hosts' patch audit line, and their closing line)
 export function secReadyLine(s) {

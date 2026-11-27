@@ -38,7 +38,8 @@
 // 15 reads; E146 res_size(0, 0) = 0xe7000, E147 0x11ae00; res_version(3) on E147 0x10000000 (its images head's
 // version 0x1000); the lens data lookup reads the same 13824-byte record at 0x4709de00.
 import { fact, A } from '../fw/model.mjs';
-import { STORAGE_E143, resTables } from '../fw/facts.mjs';
+import { STORAGE_E143 } from '../fw/facts-const.mjs';
+import { resTables } from '../fw/facts.mjs';
 import { withBody, NandError } from '../fw/nand.mjs';
 import { loadAddress } from './resources.mjs';
 import { runtime, where, FirmwareError } from './hle.mjs';

@@ -1,0 +1,801 @@
+// Shared browser UI for web/play.html (node HTTP host) and web/index.html (browser Web Worker host):
+// controls, keyboard/pointer/touch input, status/frame/audio loops, S-SCENE, Card/HDMI/tilt panel,
+// tabs, and ?selftest=1. Browser-only (no Node built-ins).
+
+export const $ = (id) => document.getElementById(id);
+export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// base64 of little-endian 16-bit signed PCM words (for HTTP /api/audio responses)
+export function pcm16(b64) {
+  const s = atob(b64), out = new Int16Array(s.length >> 1);
+  for (let i = 0; i < out.length; i++) out[i] = (s.charCodeAt(2 * i) | s.charCodeAt(2 * i + 1) << 8) << 16 >> 16;
+  return out;
+}
+
+// The Card panel: open it, wait for the initial read (refs/volume.mjs), exercise Read the card and Take out / Put in
+// (leaving the card back in the slot), and restore the panel and tab state.
+export async function cardPanelSteps(step, env) {
+  const { $: getEl, document: doc, until, getCard, getCardReading } = env;
+  const wasOpen = getEl('cardpanel').open;
+  const prevTab = doc.querySelector('#tabs button.sel')?.dataset.tab || null;
+  try {
+    getEl('cardpanel').open = true;
+    const loaded = await until(() => { const c = getCard(); return c && (c.volume || c.error) && getCardReading() === null; }, 30000);
+    const c0 = getCard();
+    step('Card panel: the card read (refs/volume.mjs)', loaded && getEl('cardpanel').open && !!(c0 && c0.volume && c0.volume.type) && !c0.error,
+      { open: getEl('cardpanel').open, state: getEl('card-state').textContent, card: c0 && { slot: c0.slot, volume: c0.volume, error: c0.error, files: (c0.files || []).length } });
+    const removeBtn = getEl('card-remove'), insertBtn = getEl('card-insert'), readBtn = getEl('card-read');
+    const wired = !!(removeBtn && insertBtn && readBtn && typeof removeBtn.onclick === 'function' && typeof insertBtn.onclick === 'function' && typeof readBtn.onclick === 'function');
+    const prevCard = getCard();
+    if (readBtn) readBtn.click();
+    const refreshed = await until(() => { const c = getCard(); return c !== prevCard && getCardReading() === null && !!(c && (c.volume || c.error)); }, 30000);
+    const c1 = getCard();
+    step('Card panel: controls wired and Read the card refreshes', wired && refreshed && !!(c1 && c1.volume && c1.volume.type) && !c1.error && getEl('card-files').innerHTML.length > 0,
+      { wired, refreshed, state: getEl('card-state').textContent, remove_disabled: removeBtn?.disabled, insert_disabled: insertBtn?.disabled });
+    if (removeBtn && !removeBtn.disabled && c1 && c1.slot && c1.slot.present) {
+      const cardBeforeOut = c1;
+      removeBtn.click();
+      const afterOut = await until(() => { const c = getCard(); return c !== cardBeforeOut && getCardReading() === null && !!(c && c.slot); }, 60000);
+      const cOut = getCard();
+      const removed = afterOut && cOut.slot.present === false && removeBtn.disabled && !insertBtn.disabled && getEl('card-state').textContent.startsWith('out of the slot');
+      const refused = afterOut && cOut.slot.present === true && getEl('eventlog').textContent.includes('refused:');
+      if (removed) {
+        const cardBeforeIn = cOut;
+        insertBtn.click();
+        const afterIn = await until(() => { const c = getCard(); return c !== cardBeforeIn && getCardReading() === null && !!(c && c.slot && c.slot.present) && !removeBtn.disabled; }, 60000);
+        const cIn = getCard();
+        const reinserted = afterIn && cIn.slot.present === true && !!(cIn.volume && cIn.volume.type) && !cIn.error && getEl('card-state').textContent.startsWith('in the slot');
+        step('Card panel: Take out and Put in (S-MEDIA)', reinserted,
+          { removed, reinserted, state: getEl('card-state').textContent, present: cIn.slot.present, mounted: cIn.slot.mounted });
+      } else {
+        step('Card panel: Take out and Put in (S-MEDIA)', refused,
+          { removed, refused, state: getEl('card-state').textContent, present: cOut?.slot?.present });
+      }
+    } else {
+      step('Card panel: Take out and Put in (S-MEDIA)', false,
+        { remove_disabled: removeBtn?.disabled, insert_disabled: insertBtn?.disabled, slot: c1?.slot || null });
+    }
+  } finally {
+    const cFin = getCard();
+    if (cFin && cFin.slot && cFin.slot.present === false && getEl('card-insert') && !getEl('card-insert').disabled) {
+      const cardBeforeFix = cFin;
+      getEl('card-insert').click();
+      await until(() => { const c = getCard(); return c !== cardBeforeFix && getCardReading() === null && !!(c && c.slot && c.slot.present); }, 60000);
+    }
+    getEl('cardpanel').open = wasOpen;
+    if (prevTab && doc.querySelector('#tabs button.sel')?.dataset.tab !== prevTab) {
+      const btn = doc.querySelector(`#tabs button[data-tab="${prevTab}"]`);
+      if (btn) btn.click();
+    }
+  }
+  const activeTab = doc.querySelector('#tabs button.sel')?.dataset.tab || null;
+  const cEnd = getCard();
+  step('Card panel: state restored', getEl('cardpanel').open === wasOpen && activeTab === prevTab && !!(cEnd && cEnd.slot && cEnd.slot.present),
+    { open: getEl('cardpanel').open, wasOpen, activeTab, prevTab, present: cEnd?.slot?.present ?? null });
+}
+
+export function createPlayerUI(host) {
+  let CONTROLS = [], BYID = {}, KEYMAP = {}, STATUS = {}, stopped = false, frameSeq = 0, statusSeq = 0;
+  const cv = $('cv'), g = host.canvasOpts ? cv.getContext('2d', host.canvasOpts) : cv.getContext('2d');
+
+  async function api(path, body) {
+    const r = await host.api(path, body);
+    if (!r.ok && r.status !== 204) throw new Error(path + ' ' + r.status);
+    return r;
+  }
+
+  // Every input is its own request, so two in flight together can reach the server in either order: each carries this
+  // page's id and its place in the page's order (cseq), and the page's own timestamp (t_client, ms), which the server's
+  // touch timing (H-TOUCHGAP) uses inside one contact and between taps.
+  const CLIENT = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+  let cseq = 0;
+  function send(inp) {
+    if (stopped) return;
+    const body = Object.assign({}, inp, { client: CLIENT, cseq: ++cseq, t_client: performance.now() });
+    api('/api/input', body).catch(() => {});
+    logEvent('→ ' + JSON.stringify(inp));
+  }
+  // send, then the input's result (?sync=1): {record, error, ...}, or null when no answer came (the session stopped)
+  async function sendWait(inp) {
+    if (stopped) return null;
+    const body = Object.assign({}, inp, { client: CLIENT, cseq: ++cseq, t_client: performance.now() });
+    logEvent('→ ' + JSON.stringify(inp));
+    try { return (await (await api('/api/input?sync=1', body)).json()).result; } catch (e) { return null; }
+  }
+
+  // ---- keyboard -------------------------------------------------------------------------------------------------------
+  const CODE = { BracketLeft: '[', BracketRight: ']', Comma: ',', Period: '.', Backslash: '\\' };
+  const SHIFTABLE = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'T', 'Home', 'End', 'PageUp', 'PageDown']);
+  function keyName(e) {
+    let k = e.code;
+    if (k.startsWith('Key')) k = k.slice(3);
+    else if (k.startsWith('Digit')) k = k.slice(5);
+    else if (CODE[k]) k = CODE[k];
+    if (e.shiftKey && SHIFTABLE.has(k)) k = 'Shift+' + k;
+    return k;
+  }
+  const DIALKEYS = { '[': ['main', -1], ']': ['main', 1], ',': ['sub', -1], '.': ['sub', 1] };
+  const held = new Set();
+  const sentDown = new Set();
+  function control(id, action, alt) {
+    const c = BYID[id];
+    if (!c) return;
+    if (c.status === 'not-wired') { note(c.name + ': not wired — ' + c.reason); return; }
+    if (c.kind === 'power') {
+      if (action !== 'down') return;
+      if (STATUS.phase === 'off' || STATUS.phase === 'error') send({ type: 'control', op: 'power', value: 1 });
+      else send({ type: 'control', op: 'power', value: 0 });
+      return;
+    }
+    if (c.kind === 'modedial') return;
+    if (action === 'down') { sentDown.add(id); send({ type: 'key', id, action }); return; }
+    if (sentDown.delete(id)) send({ type: 'key', id, action: 'up' });   // a switch's release is ignored by the server
+  }
+  addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    const k = keyName(e);
+    if (e.ctrlKey || e.metaKey) return;
+    if (DIALKEYS[k]) { e.preventDefault(); if (!e.repeat) send({ type: 'dial', id: DIALKEYS[k][0], detents: DIALKEYS[k][1] }); return; }
+    if (k === 'PageUp' || k === 'PageDown') { e.preventDefault(); if (!e.repeat) modeStep(k === 'PageUp' ? 1 : -1); return; }
+    const id = KEYMAP[k];
+    if (!id) return;
+    e.preventDefault();
+    if (e.repeat || held.has(k)) return;
+    held.add(k);
+    press(id, true);
+    control(id, 'down', e.altKey);
+  });
+  addEventListener('keyup', (e) => {
+    const k = keyName(e);
+    const plain = k.startsWith('Shift+') ? k.slice(6) : k;
+    for (const kk of [k, plain, 'Shift+' + plain]) {
+      if (held.has(kk)) {
+        held.delete(kk);
+        const id = KEYMAP[kk];
+        if (id) { e.preventDefault(); press(id, false); control(id, 'up', e.altKey); }
+      }
+    }
+  });
+  addEventListener('blur', () => {
+    for (const k of held) { const id = KEYMAP[k]; if (id) { press(id, false); control(id, 'up'); } }
+    held.clear();
+    for (const f of heldPointers.values()) f({});
+    heldPointers.clear();
+  });
+  function press(id, on) { document.querySelectorAll(`[data-ctl="${id}"]`).forEach((b) => b.classList.toggle('down', on)); }
+  function modeStep(d) { send({ type: 'switch', id: 'mode_dial', step: d }); }   // relative: the server adds it to the position it has
+  function modePick(k) { if (k !== STATUS.mode_dial) send({ type: 'switch', id: 'mode_dial', value: k }); }   // absolute
+
+  // The mode dial from the status: its positions (mode_dial_positions: each one's code, the firmware's name of it and the
+  // label shown, "position k" for a code the build does not name) round the ring in entry order, the current one lit
+  // and named in the middle. Which way round they lie on the body, and whether its dial turns past its ends, the
+  // firmware does not tell: the steps wrap, as the server's do.
+  let modeKey = null;
+  function showModeDial(s) {
+    const ps = s.mode_dial_positions || [], k = s.mode_dial ?? 0, dial = $('mode');
+    const key = ps.map((p) => p.label).join('|');
+    if (key !== modeKey) {
+      modeKey = key;
+      dial.querySelectorAll('.pos').forEach((b) => b.remove());
+      ps.forEach((p, i) => {
+        const a = 2 * Math.PI * i / ps.length, b = document.createElement('button');
+        b.className = 'pos'; b.dataset.pos = String(i);
+        b.style.left = `${50 + 37 * Math.sin(a)}%`; b.style.top = `${50 - 37 * Math.cos(a)}%`;
+        b.textContent = p.name === null ? String(i) : p.label;
+        b.title = `Mode dial position ${i}: ${p.label}` + (p.name === null ? (p.code === null ? ' (not in the dial table)' : ` (code ${p.code}, which this firmware does not name)`) : ` (the firmware's MODEDIAL_${p.name}, code ${p.code})`);
+        b.setAttribute('aria-label', `mode dial: ${p.label}`);
+        b.addEventListener('click', () => modePick(i));
+        dial.appendChild(b);
+      });
+    }
+    const p = ps[k], label = p ? p.label : ps.length ? `position ${k}` : '–';           // (no session: no positions)
+    $('modeval').textContent = label;
+    $('modeval').classList.toggle('long', label.length > 3);
+    dial.querySelectorAll('.pos').forEach((b) => { const on = +b.dataset.pos === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+  }
+
+  // ---- buttons ----------------------------------------------------------------------------------------------------------
+  function wireButtons() {
+    document.querySelectorAll('[data-ctl]').forEach((b) => {
+      const c = BYID[b.dataset.ctl];
+      if (!c) return;
+      b.classList.add(c.status === 'wired' ? 'wired' : c.status === 'decoded' ? 'decoded' : 'none');
+      b.title = `${c.name} [${c.key || 'click'}] — ${c.status}${c.reason ? ': ' + c.reason : ''}${c.note ? ' (' + c.note + ')' : ''}`;
+      if (c.key && c.key.length <= 9 && !b.querySelector('kbd')) { const k = document.createElement('kbd'); k.textContent = c.key.replace('Arrow', '').replace('Shift+', '⇧'); b.appendChild(k); }
+      holdButton(b, c.id);
+    });
+    document.querySelectorAll('[data-dial]').forEach((d) => {
+      d.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => send({ type: 'dial', id: d.dataset.dial, detents: +b.dataset.d })));
+      d.addEventListener('wheel', (e) => { e.preventDefault(); send({ type: 'dial', id: d.dataset.dial, detents: e.deltaY > 0 ? 1 : -1 }); }, { passive: false });
+    });
+    document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => modeStep(+b.dataset.mode)));
+  }
+
+  function capture(el, e) { try { el.setPointerCapture(e.pointerId); } catch (_) { /* a synthetic pointer (selftest) */ } }
+  // A pressed page button is released by its pointer's up or cancel wherever the pointer is then (window, capture phase):
+  // pointer capture sends it to the button, and the window listener also catches a pointer released off the button
+  // when capture is not available, so no 'down' is left without its 'up'.
+  const heldPointers = new Map();     // pointerId -> release
+  function holdButton(b, id) {
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); capture(b, e);
+      if (heldPointers.has(e.pointerId)) return;
+      b.classList.add('down'); control(id, 'down', e.altKey);
+      heldPointers.set(e.pointerId, (ev) => { b.classList.remove('down'); control(id, 'up', ev.altKey); });
+    });
+  }
+  function releasePointer(e) { const f = heldPointers.get(e.pointerId); if (f) { heldPointers.delete(e.pointerId); f(e); } }
+  addEventListener('pointerup', releasePointer, true);
+  addEventListener('pointercancel', releasePointer, true);
+
+  // ---- touch on the monitor --------------------------------------------------------------------------------------------
+  let touching = false, lastMove = 0, wheelAcc = 0;
+  function pos(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: Math.max(0, Math.min(899, Math.round((e.clientX - r.left) / r.width * 900))),
+             y: Math.max(0, Math.min(599, Math.round((e.clientY - r.top) / r.height * 600))) };
+  }
+  cv.addEventListener('pointerdown', (e) => {
+    if (STATUS.device !== 'tft') { note('touch: the touch panel is the rear monitor; the page sends touches while the TFT is shown'); return; }
+    e.preventDefault(); capture(cv, e); touching = true; send({ type: 'touch', action: 'down', ...pos(e) });
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!touching) return; const t = performance.now(); if (t - lastMove < 30) return; lastMove = t;
+    send({ type: 'touch', action: 'move', ...pos(e) });
+  });
+  const tup = (e) => { if (!touching) return; touching = false; send({ type: 'touch', action: 'up', ...pos(e) }); };
+  cv.addEventListener('pointerup', tup); cv.addEventListener('pointercancel', tup);
+  $('screen').addEventListener('wheel', (e) => {
+    e.preventDefault(); wheelAcc += e.deltaY;
+    if (Math.abs(wheelAcc) < 40) return;
+    send({ type: 'dial', id: e.shiftKey ? 'sub' : 'main', detents: wheelAcc > 0 ? 1 : -1 }); wheelAcc = 0;
+  }, { passive: false });
+
+  // ---- frames and status (long polls) ---------------------------------------------------------------------------------
+  async function frames() {
+    while (!stopped) {
+      try {
+        const r = await api('/api/frame?after=' + frameSeq);
+        if (r.status === 204) continue;
+        frameSeq = +r.headers.get('X-Frame-Seq');
+        const dev = r.headers.get('X-Device');
+        $('screen').classList.toggle('evf', dev === 'evf');
+        await host.drawFrame(r, { cv, g, seq: frameSeq, dev });
+        $('poster').style.display = 'none';
+      } catch (e) { await gone(); }
+    }
+  }
+  async function statusLoop() {
+    while (!stopped) {
+      try {
+        const r = await api('/api/status?after=' + statusSeq);
+        const s = await r.json(); statusSeq = s.seq || statusSeq; STATUS = s; showStatus(s);
+      } catch (e) { await gone(); }
+    }
+  }
+
+  // ---- sound (GET /api/audio long poll; src/lab/audio.mjs) -----------------------------------------------------------
+  // The lab's sound (S-SHUTTERSND's clicks at a release; PCM the firmware makes, once the lab runs its sound) played with
+  // WebAudio, each event at its lab time from the first event of a run, SND_LEAD ahead of the context's clock. A page may
+  // start sound only after a gesture: the context starts at the first key or pointer press on the page; Sound mutes it.
+  // The poll runs only while the context plays (from the newest event then, after=-1): a page with no sound holds no
+  // third long poll (two tabs' status, frame and audio polls would take a browser's six connections to the server).
+  const SND = { ctx: null, muted: false, seq: -1, lab0: null, t0: 0, ends: new Map(), polling: false }, SND_LEAD = 0.15;
+  const sndOn = () => !stopped && !SND.muted && SND.ctx !== null && SND.ctx.state === 'running';
+  function sndResume() {
+    if (SND.muted) return;
+    if (!SND.ctx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      try { SND.ctx = new C(); } catch (e) { return; }
+    }
+    if (SND.ctx.state === 'suspended') SND.ctx.resume().then(sound, () => {}); else sound();
+  }
+  addEventListener('pointerdown', sndResume, true);
+  addEventListener('keydown', sndResume, true);
+  $('sound').onclick = () => {
+    SND.muted = !SND.muted;
+    $('sound').textContent = SND.muted ? 'Sound off' : 'Sound on';
+    if (SND.muted) SND.ctx?.suspend().catch(() => {}); else sndResume();
+  };
+  // one event: its 16-bit samples (interleaved by channel) at its lab time; a run starts again where an event would be
+  // late or more than 2 s ahead, and a block that starts where its source's previous one ended in lab time (a stream)
+  // plays right after that one
+  function sndPlay(e, pcm) {
+    const c = SND.ctx;
+    if (!sndOn()) return;
+    const buf = c.createBuffer(e.channels, e.frames, e.rate);
+    for (let ch = 0; ch < e.channels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < e.frames; i++) d[i] = pcm[i * e.channels + ch] / 32768; }
+    const now = c.currentTime;
+    let at = SND.lab0 === null ? -1 : SND.t0 + (e.t_lab_ns - SND.lab0) / 1e9;
+    if (at < now + 0.01 || at > now + 2) { SND.lab0 = e.t_lab_ns; SND.t0 = at = now + SND_LEAD; }
+    const prev = SND.ends.get(e.source), lab_end = e.t_lab_ns + Math.round(e.frames / e.rate * 1e9);
+    if (prev && Math.abs(e.t_lab_ns - prev[0]) < 1e6 && prev[1] > now) at = prev[1];
+    SND.ends.set(e.source, [lab_end, at + e.frames / e.rate]);
+    const s = c.createBufferSource();
+    s.buffer = buf; s.connect(c.destination); s.start(at);
+  }
+  async function sound() {
+    if (SND.polling || !sndOn()) return;
+    SND.polling = true;
+    SND.seq = -1;
+    while (sndOn()) {
+      try {
+        const r = await api('/api/audio?after=' + SND.seq), d = await r.json();
+        for (const [e, pcm] of host.audioEvents(r, d)) sndPlay(e, pcm);
+        SND.seq = d.seq;
+      } catch (e) { await new Promise((r) => setTimeout(r, 1000)); }
+    }
+    SND.polling = false;
+  }
+
+  let failures = 0;
+  async function gone() {
+    failures += 1;
+    if (failures > 3 && !(host.isSwitching && host.isSwitching())) {
+      stopped = true;
+      showStatus({ phase: 'stopped' });
+      $('ovl').textContent = host.goneText;
+      $('screen').classList.add('show-ovl');
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  let lastLogged = 0, lastInputError = null;
+  function showStatus(s) {
+    failures = 0;
+    host.onStatus(s);
+    const ph = $('phase'); ph.textContent = s.phase; ph.className = 'phase ' + s.phase;
+    $('status').classList.toggle('busy', s.phase === 'busy' || s.phase === 'waiting-gui' || s.phase === 'starting');
+    $('s-gui').textContent = s.gui ? `${s.gui} ${s.gui_name}` : '–';
+    $('s-screen').textContent = s.screen || '–';
+    $('s-panel').textContent = s.panel ?? '–';
+    $('s-dev').textContent = s.device || '–';
+    $('s-layout').textContent = s.layout ? `byte ${s.layout.layout}, connect ${s.layout.connect}` : '–';
+    $('s-a15').textContent = $('s-a15').title = s.a15 && s.a15.text ? s.a15.text + (s.a15_frames ? ` (${s.a15_frames} frames)` : '') : '';
+    // a patch overlay (--patch, src/fw/patch.mjs): the firmware is not the stock release, so the line stays on screen
+    $('s-patch').textContent = $('s-patch').title = s.patch ? patchText(s.patch) : '';
+    $('s-lab').textContent = s.lab_ns != null ? (s.lab_ns / 1e9).toFixed(2) + ' s' : '–';
+    $('s-pace').textContent = s.pace != null ? s.pace + (s.idle === 'off' ? ' (paused)' : '') : (s.idle === 'off' ? 'paused' : '–');
+    $('s-lat').textContent = s.last && s.last.latency_ms != null ? s.last.latency_ms + ' ms' : '–';
+    const rec = s.last && s.last.record;
+    if (rec) {
+      const ui = (rec.uiin || []).map((u) => `${u.code} ${u.ev || ''}`).join(', ');
+      $('s-last').textContent = `${rec.token}${ui ? ' · UI_IN ' + ui : ''}${rec.messages && rec.messages.length ? ' · GUI ' + rec.messages.join(' ') : ''}` +
+        (rec.switch && rec.switch.reopens ? ` · screen re-opened, lost ${rec.switch.reopens}` : '');
+    }
+    if (s.input_error && s.input_error !== lastInputError) note('refused: ' + s.input_error);
+    lastInputError = s.input_error;
+    for (const e of s.log_tail || []) {
+      if (e.idx > lastLogged && e.record) { lastLogged = e.idx; logRecord(e.record); }
+    }
+    showModeDial(s);
+    if (s.bits) $('monstate').textContent = `monitor bit ${s.bits.monitor}, rotate ${s.bits.rotate}, lever ${s.bits.lever}` +
+      (s.tp_mask != null ? ` · touch gestures the GUI enabled: ${(s.tp_gestures || []).join(' ') || 'none'} (0x${s.tp_mask.toString(16)})` +
+        ((s.tp_mask & 16) ? '' : ' — set when the shooting screen was built on the EVF; it is rebuilt on the next switch back or MENU twice') : '');
+    $('powerbtn').textContent = s.phase === 'off' ? 'OFF' : 'ON';
+    $('pause').textContent = s.idle === 'off' ? 'Resume time' : 'Pause time';
+    $('eyecup').textContent = s.device === 'evf' ? 'EVF (shown)' : 'EVF';
+    document.querySelectorAll('[data-ctl="eye"]').forEach((b) => b.classList.toggle('on', s.device === 'evf'));
+    const ov = $('ovl'), mod = host.getModel ? host.getModel() : null;
+    if (s.phase === 'starting') { ov.textContent = 'starting the lab… (3-5 s)'; $('screen').classList.add('show-ovl'); }
+    else if (s.phase === 'off') { ov.textContent = 'power off (H-POWER)\npress O or the power button to start a new session'; $('screen').classList.add('show-ovl'); }
+    else if (s.phase === 'stopped') { $('screen').classList.add('show-ovl'); }
+    else if (s.phase === 'error') { ov.textContent = `lab error on ${mod ? mod.label : 'this model'}: its session stopped (see below)\nRestart starts a new session; the model menu above switches to another body`; $('screen').classList.add('show-ovl'); }
+    else $('screen').classList.remove('show-ovl');
+    const eb = $('errbox');
+    if (s.error && s.phase === 'error') eb.innerHTML = `<div class="err">${esc(s.error.message)}\n\n${esc(s.error.stderr_tail || '')}</div>`;
+    else if (s.frame_error) eb.innerHTML = `<div class="note">frame not updated: ${esc(s.frame_error)}</div>`;
+    else eb.innerHTML = '';
+    if (s.dropped && Object.keys(s.dropped).length) $('s-last').title = 'dropped: ' + JSON.stringify(s.dropped);
+    showScene(s.scene);
+    showSubject(s);
+    showPorts(s);
+  }
+  // the status's patch: the overlay's summary (src/fw/patch.mjs patchLine's wording)
+  function patchText(p) {
+    const blocks = p.blocks.map((b) => `${b.block} block sha256 ${b.sha256.slice(0, 16)} (stock ${b.stock_sha256.slice(0, 16)})`).join(', ');
+    const not = (p.not_applied ?? []).map((x) => `${x.field} (${x.why})`).join(', ');
+    return `patched firmware, not stock: ${p.applied} patch${p.applied === 1 ? '' : 'es'} (${p.bytes} bytes changed) from ${p.files.join(', ')}; ${blocks}${not ? `; not applied: ${not}` : ''}`;
+  }
+  function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
+
+  // ---- S-SCENE controls ------------------------------------------------------------------------------------------------
+  const STOPS = [1.2, 1.4, 1.8, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+  const SHUTTERS = [8000, 4000, 2000, 1000, 500, 250, 125, 60, 30, 15, 8, 4, 2].map((d) => [`1/${d}`, 1 / d]).concat([['1"', 1], ['2"', 2]]);
+  const ISOS = [64, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+  const focusOf = (v) => +(0.25 * Math.pow(4000, v / 100)).toPrecision(3);          // the slider: 0.25 m .. 1 km, logarithmic
+  const sliderOf = (m) => Math.round(100 * Math.log(m / 0.25) / Math.log(4000));
+  const opt = (el, items) => { el.innerHTML = items.map(([l, v]) => `<option value="${v}">${l}</option>`).join(''); };
+  opt($('sc-ap'), STOPS.map((n) => [`f/${n}`, n])); $('sc-ap').value = '2.8';
+  opt($('sc-sh'), SHUTTERS); $('sc-sh').value = String(1 / 125);
+  opt($('sc-iso'), ISOS.map((n) => [String(n), n])); $('sc-iso').value = '200';
+  let sceneTimer = null, scenePending = {};
+  function sceneSend(change, now) {
+    Object.assign(scenePending, change);
+    clearTimeout(sceneTimer);
+    sceneTimer = setTimeout(() => { const c = scenePending; scenePending = {}; sceneTimer = null; send({ type: 'scene', change: c }); }, now ? 0 : 150);
+  }
+  function sceneWire(id, field, conv, show) {
+    const el = $(id), out = el.parentElement.querySelector('output');
+    const upd = (now) => { const v = conv(el.value); if (out) out.textContent = show ? show(v) : v; if (field) sceneSend({ [field]: v }, now); };
+    el.addEventListener('input', () => upd(false));
+    el.addEventListener('change', () => upd(true));
+    if (out) out.textContent = show ? show(conv(el.value)) : conv(el.value);
+  }
+  sceneWire('sc-lv', 'liveview', (v) => v === '1', (v) => (v ? 'on' : 'off'));
+  sceneWire('sc-preset', 'preset', (v) => v, () => '');
+  sceneWire('sc-ev', 'ev', Number, (v) => `EV ${v}`);
+  sceneWire('sc-focal', 'focal_mm', Number, (v) => `${v} mm`);
+  sceneWire('sc-ap', 'aperture', Number, (v) => `f/${v}`);
+  sceneWire('sc-focus', 'focus_m', (v) => focusOf(Number(v)), (v) => `${v} m`);
+  sceneWire('sc-mode', 'mode', (v) => v, () => '');
+  sceneWire('sc-sh', 'shutter_s', Number, (v) => (v >= 1 ? `${v}"` : `1/${Math.round(1 / v)}`));
+  sceneWire('sc-iso', 'iso', Number, (v) => `ISO ${v}`);
+  sceneWire('sc-comp', 'comp_ev', Number, (v) => `${v > 0 ? '+' : ''}${v} EV`);
+  for (const ax of ['x', 'y']) {
+    const el = $(`sc-af${ax}`), out = el.parentElement.querySelector('output');
+    const upd = (now) => { out.textContent = el.value; sceneSend({ af_point: [Number($('sc-afx').value), Number($('sc-afy').value)] }, now); };
+    el.addEventListener('input', () => upd(false)); el.addEventListener('change', () => upd(true));
+    out.textContent = el.value;
+  }
+  let sceneLayersKey = '';
+  function sceneLayers(layers) {
+    const key = layers.map((l) => l.name).join();
+    if (key === sceneLayersKey) return;
+    sceneLayersKey = key;
+    $('sc-layers').innerHTML = layers.map((l, i) => `<label><span>${esc(l.name)} m</span><input type="range" min="0" max="100" step="1" value="${sliderOf(l.depth_m)}" data-li="${i}" data-lf="depth_m"><output>${l.depth_m}</output></label>` +
+      `<label><span>${esc(l.name)} m/s</span><input type="range" min="-10" max="10" step="0.1" value="${l.speed}" data-li="${i}" data-lf="speed"><output>${l.speed}</output></label>`).join('');
+    $('sc-layers').querySelectorAll('input').forEach((el) => {
+      const out = el.parentElement.querySelector('output');
+      const upd = (now) => {
+        const v = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : Number(el.value);
+        out.textContent = v;
+        send({ type: 'scene', change: { layer: { index: Number(el.dataset.li), [el.dataset.lf]: v } } });
+      };
+      el.addEventListener('change', () => upd(true));
+      el.addEventListener('input', () => { out.textContent = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : el.value; });
+    });
+  }
+  // the controls follow the scene the server reports (S1 moves the focus), except the one being used and while a change
+  // is on its way
+  function sceneSync(sc) {
+    if (sceneTimer !== null && Object.keys(scenePending).length) return;
+    const put = (id, v, text) => { const el = $(id); if (document.activeElement === el) return; el.value = String(v); const o = el.parentElement.querySelector('output'); if (o) o.textContent = text; };
+    put('sc-lv', sc?.liveview ? '1' : '0', sc?.liveview ? 'on' : 'off');   // a new session (restart) has no scene
+    if (!sc) return;
+    put('sc-preset', sc.preset, '');
+    put('sc-ev', sc.ev, `EV ${sc.ev}`);
+    put('sc-focal', sc.lens.focal_mm, `${sc.lens.focal_mm} mm`);
+    put('sc-ap', sc.lens.aperture, `f/${sc.lens.aperture}`);
+    put('sc-focus', sliderOf(sc.lens.focus_m), `${sc.lens.focus_m} m`);
+    put('sc-afx', sc.af_point[0], sc.af_point[0]);
+    put('sc-afy', sc.af_point[1], sc.af_point[1]);
+    put('sc-mode', sc.exposure.mode, '');
+    put('sc-iso', sc.exposure.iso, `ISO ${sc.exposure.iso}`);
+    put('sc-comp', sc.exposure.comp_ev, `${sc.exposure.comp_ev > 0 ? '+' : ''}${sc.exposure.comp_ev} EV`);
+  }
+  function showScene(sc) {
+    if (!sc) { sceneSync(null); $('sc-read').textContent = 'live view off: turn it on above (a scene input; it stays in the session log, --replay repeats it)'; return; }
+    sceneSync(sc);
+    sceneLayers(sc.layers);
+    const e = sc.exposure, sh = e.shutter_s >= 1 ? `${e.shutter_s.toFixed(1)}"` : `1/${Math.round(1 / e.shutter_s)}`;
+    const caps = (sc.captures || []).map((c) => `#${c.n} ${c.shutter_s >= 1 ? c.shutter_s + '"' : '1/' + Math.round(1 / c.shutter_s)} f/${c.aperture} ISO ${c.iso} (${c.ev_offset >= 0 ? '+' : ''}${c.ev_offset} EV) focus ${c.focus_m} m AF ${c.af}`).join('\n');
+    $('sc-read').textContent = `live view ${sc.liveview ? 'on' : 'off'} · exposure in use ${sh} f/${e.aperture} ISO ${e.iso}` +
+      ` (${e.ev_offset >= 0 ? '+' : ''}${e.ev_offset} EV against mid-grey${e.clipped ? ', ' + e.clipped + 'exposed' : ''}) · focus ${sc.lens.focus_m} m · AF ${sc.af} (S1)\n` +
+      sc.layers.map((l) => `${l.name.padEnd(10)} ${String(l.depth_m).padStart(6)} m  ${String(l.speed).padStart(5)} m/s  circle of confusion ${(l.coc_mm * 1000).toFixed(0)} µm`).join('\n') +
+      (caps ? `\ncaptures (S2):\n${caps}` : '') +
+      ((sc.clips || []).length ? '\nclips (REC):\n' + sc.clips.map((c) => `#${c.n} ${c.end_ns === null ? 'recording since ' + (c.start_ns / 1e9).toFixed(2) + ' s lab time' : c.seconds + ' s'}`).join('\n') : '');
+  }
+
+  // ---- subject detection's frames (MDET's table, or S-SUBJECT's), read from the status --------------------------------
+  const SUBJECT_KINDS = { 1: 'motorsports', 2: 'airplanes', 3: 'trains', 4: 'birds', 5: 'animals' };    // src/lab/subject.mjs KINDS
+  function showSubject(s) {
+    const sub = s.camapp && s.camapp.subject;
+    const src = sub && sub.source === 'mdet' ? "MDET's table" : 'S-SUBJECT';
+    $('sc-subject').textContent = !sub ? 'subject frames: none in this session'
+      : `subject frames (${src}): ${sub.frames}${sub.frames ? ` on the ${sub.device}, setting 1682 = ${sub.kind} (${SUBJECT_KINDS[sub.kind] || '?'})` : ' now'}`;
+  }
+
+  // ---- the card, the HDMI port and the session's options (GET /api/session, /api/card, /api/card/file, /api/card/image) --
+  const UNPLUG_WHY = 'the cable comes out: the transmitter flags the change (A-HDMI-1) and the firmware reports the disconnect to UI_IN natively; on E143 the HDMI output stays open (nothing in the lab switches back)';
+  const CARD_THUMBS = 24;             // thumbnails drawn per read of the card, the newest files first
+  let SESSION = null, CARD = null, cardImages = null, cardReading = null, cardAgain = false;
+  // a card's capacity from its sectors (the slot's), as 'N GiB' (sectors of 512 bytes)
+  const cardGiB = (sectors) => `${+(sectors / 2097152).toFixed(2)} GiB`;
+  const fmtBytes = (n) => (n == null ? '' : n >= 2 ** 20 ? (n / 2 ** 20).toFixed(1) + ' MiB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : n + ' B');
+  const isJpeg = (p) => /\.jpe?g$/i.test(p);
+  const LIVE = new Set(['running', 'busy', 'waiting-gui']);
+  async function loadSession() {
+    try { SESSION = await (await api('/api/session')).json(); } catch (e) { SESSION = null; $('sess-line').textContent = 'the session options could not be read: ' + e.message; return; }
+    showPorts(STATUS);
+  }
+  // The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
+  function sessionText(d, s) {
+    const used = new Set(s.stand_ins || []);
+    const lens = used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps/4.4.md 4.4.2)'
+      : d.lens === 'stand-in' ? 'the lens stood in (S-LENS), as asked'
+      : 'the lens stood in (S-LENS: this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
+    const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
+      : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
+    const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
+    return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${d.rotate === 'on' ? 'PER_ROTATE' : 'no PER_ROTATE'} · ${lens} · ${nv} · ${card}. ${host.sessionHow}`;
+  }
+  function showPorts(s) {
+    if (!SESSION) return;
+    $('sess-line').textContent = sessionText(SESSION, s);
+    // HDMI (the status's hdmi: the port as the lab sees it, only in a session started with it)
+    const port = s.hdmi, plug = $('hdmi-plug'), un = $('hdmi-unplug');
+    const mod = host.getModel ? host.getModel() : null;
+    let text;
+    if (SESSION.hdmi !== 'on') text = `no HDMI port in this session: ${host.hdmiHow}`;
+    else if (!port) text = LIVE.has(s.phase) ? `no HDMI port on ${mod && mod.model ? mod.model : 'this body'} in the lab (src/fw/models.mjs hdmi)` : `no session (${s.phase})`;
+    else text = `cable ${port.cable} · DDC reads ${port.ddc_reads} · the driver's EDID state ${port.edid_state}` + (port.open ? ` · the HDMI output open (format ${port.open.format}, ${port.open.vtotal} lines of ${port.open.line_ns} ns; S-OUTDEV)` : '') + (port.cable === 'in' ? ` · Unplug: ${UNPLUG_WHY}` : '');
+    plug.disabled = !port || port.cable === 'in' || !LIVE.has(s.phase);
+    un.disabled = !port || port.cable !== 'in' || !LIVE.has(s.phase);
+    plug.title = port ? 'S-HDMISINK: a 1080p60 sink with the lab\'s EDID on the port; the firmware takes the hot-plug interrupt and reads the EDID over the DDC itself' : text;
+    un.title = port ? UNPLUG_WHY : text;
+    $('hdmi-state').textContent = text;
+    // the tilt's range: with PER_ROTATE (rotate on) any attitude, else within 45 degrees (A-ACC-2)
+    const rot = SESSION.rotate === 'on';
+    $('tilt-roll').min = rot ? -180 : -45; $('tilt-roll').max = rot ? 180 : 45;
+    $('tilt-pitch').min = rot ? -90 : -45; $('tilt-pitch').max = rot ? 90 : 45;
+    showCardButtons(s);
+    // a new picture on the card (S-RECFILE): read it again while the panel is open
+    const n = s.camapp ? s.camapp.card_images : null;
+    if ($('cardpanel').open && n != null && n !== cardImages) { cardImages = n; cardRefresh(); }
+  }
+  function showCardButtons(s) {
+    const slot = CARD && CARD.slot, live = LIVE.has(s.phase);
+    $('card-remove').disabled = !(slot && slot.session && slot.present && live);
+    $('card-insert').disabled = !(slot && slot.session && !slot.present && live);
+  }
+  // GET /api/card: the card's document, then the list and the thumbnails; one read at a time (a call meanwhile reads
+  // again after it)
+  function cardRefresh() {
+    if (cardReading) { cardAgain = true; return cardReading; }
+    cardReading = (async () => {
+      $('card-state').textContent = 'reading the card…';
+      try {
+        const r = await host.cardApi('/api/card'), d = await r.json();
+        CARD = r.status === 200 ? d : { error: d.error || `status ${r.status}` };
+      } catch (e) { CARD = { error: e.message }; }
+      showCard();
+    })().finally(() => { cardReading = null; if (cardAgain) { cardAgain = false; cardRefresh(); } });
+    return cardReading;
+  }
+  function showCard() {
+    const c = CARD, slot = c.slot, files = c.files || [];
+    const where = !slot ? '' : (slot.present ? 'in the slot' : 'out of the slot') +
+      (!slot.session ? ' (no session: the kept card)' : slot.present ? (slot.mounted ? ', mounted by the firmware' : ', not mounted') : '');
+    const vol = c.volume ? `${c.volume.type} "${c.volume.label}" · ${files.filter((f) => !f.dir).length} files` +
+      (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (${c.volume.type === 'exFAT' ? 'the allocation bitmap' : 'FSInfo'})` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
+    const size = slot && slot.sectors ? `a ${cardGiB(slot.sectors)} ${slot.kind} card` : '';
+    $('card-state').textContent = [where, size, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
+    showCardButtons(STATUS);
+    const rows = files.map((f, i) => `<tr><td>${!f.dir && isJpeg(f.path) ? `<canvas class="thumb" data-thumb="${i}" width="1" height="1"></canvas>` : ''}</td>` +
+      `<td class="mono">${esc(f.path)}${f.dir ? '/' : ''}</td><td>${f.dir ? '' : fmtBytes(f.size)}</td><td class="mono">${esc(f.mtime || '')}</td>` +
+      `<td>${f.dir ? '' : (isJpeg(f.path) ? `<button class="tb" data-view="${i}">View</button> ` : '') + `<button class="tb" data-get="${i}">Download</button>`}</td></tr>`).join('');
+    $('card-files').innerHTML = !c.files ? '' : rows ? `<table><tr><th></th><th>File</th><th>Size</th><th>Date</th><th></th></tr>${rows}</table>` : '<p class="note">no files on the card</p>';
+    $('card-files').querySelectorAll('[data-view]').forEach((b) => { b.onclick = () => cardView(files[+b.dataset.view].path); });
+    $('card-files').querySelectorAll('[data-get]').forEach((b) => { b.onclick = () => cardDownload(files[+b.dataset.get].path); });
+    cardThumbs(c);
+  }
+  // The thumbnails, one request at a time, the newest files first (the DCF numbers grow), while this read is shown
+  async function cardThumbs(c) {
+    const cells = [...$('card-files').querySelectorAll('[data-thumb]')].slice(-CARD_THUMBS).reverse();
+    for (const thumb of cells) {
+      if (CARD !== c) return;
+      const f = c.files[+thumb.dataset.thumb];
+      try {
+        const r = await host.cardApi(`/api/card/image?path=${encodeURIComponent(f.path)}&max=96`);
+        if (r.status === 200) await host.drawCardImage(r, thumb); else thumb.title = (await r.json()).error;
+      } catch (e) { thumb.title = e.message; }
+    }
+  }
+  async function cardView(path) {
+    $('card-view').hidden = false;
+    $('card-caption').textContent = `${path}: decoding…`;
+    try {
+      const r = await host.cardApi(`/api/card/image?path=${encodeURIComponent(path)}&max=1600`);
+      if (r.status !== 200) { $('card-caption').textContent = `${path}: ${(await r.json()).error}`; return; }
+      await host.drawCardImage(r, $('card-canvas'));
+      $('card-caption').textContent = `${path}: ${r.headers.get('X-Image-Size')}, decoded by refs/jpeg.mjs (drawn at ${$('card-canvas').width} x ${$('card-canvas').height})`;
+    } catch (e) { $('card-caption').textContent = `${path}: ${e.message}`; }
+  }
+  async function cardDownload(path) {
+    try {
+      const r = await host.cardApi(`/api/card/file?path=${encodeURIComponent(path)}`);
+      if (r.status !== 200) { note(`card ${path}: ${(await r.json()).error}`); return; }
+      const url = URL.createObjectURL(await r.blob()), a = document.createElement('a');
+      a.href = url; a.download = path.split('/').pop();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (e) { note(`card ${path}: ${e.message}`); }
+  }
+  // the card input (S-MEDIA), then the card read again; the lab's refusal (another body, a busy media layer) is noted
+  async function cardInput(action) {
+    $('card-remove').disabled = $('card-insert').disabled = true;
+    const res = await sendWait({ type: 'card', action });
+    if (res && res.error) note('refused: ' + res.error);
+    await cardRefresh();
+  }
+  $('hdmi-plug').onclick = () => send({ type: 'hdmi', action: 'plug' });
+  $('hdmi-unplug').onclick = () => send({ type: 'hdmi', action: 'unplug' });       // the transmitter's side A-HDMI-1
+  $('card-remove').onclick = () => cardInput('remove');
+  $('card-insert').onclick = () => cardInput('insert');
+  $('card-read').onclick = () => cardRefresh();
+  for (const id of ['tilt-roll', 'tilt-pitch']) {
+    $(id).addEventListener('input', () => { $(id + '-v').textContent = $(id).value + '°'; });
+    $(id).addEventListener('change', () => send({ type: 'tilt', roll: Number($('tilt-roll').value), pitch: Number($('tilt-pitch').value) }));
+  }
+  $('cardpanel').addEventListener('toggle', () => { if ($('cardpanel').open) { loadSession(); cardRefresh(); } });
+
+  function logEvent(t) { const el = $('eventlog'); el.textContent = (t + '\n' + el.textContent).slice(0, 40000); }
+  function logRecord(r) {
+    const ui = (r.uiin || []).map((u) => `${u.code} ${u.ev || ''}`).join(', ');
+    logEvent(`#${r.n} ${r.token}: ${r.state_before} -> ${r.state && r.state.gui} ${r.state && r.state.gui_name}` +
+             `${ui ? ' | UI_IN ' + ui : ''}${r.indices && r.indices.length ? ' | sendEvent ' + r.indices.join(',') : ''}` +
+             ` | ${r.engine_commands} engine cmds` +
+             `${r.writes && r.writes.length ? ' | writes ' + JSON.stringify(r.writes) : ''}`);
+    if (r.gestures || r.touch_posted || r.cafwd) {
+      const el = $('touchlog');
+      const gs = (r.gestures || []).map((x) => `${x.name}(${x.x},${x.y})`).join(' ');
+      const tp = (r.touch_posted || []).map((x) => `${x.status}->${x.name}`).join(' ');
+      const ca = (r.cafwd || []).map((x) => `the GUI's answer ${x.param} from ${x.caller}`).join(' ');
+      el.textContent = (`#${r.n} ${r.token}: driver ${gs || '-'} | HFW ${(r.tp_status || []).join(',') || '-'} | GUI ${tp || '-'} | ${ca || ''}\n` + el.textContent).slice(0, 40000);
+    }
+  }
+
+  // ---- tabs ----------------------------------------------------------------------------------------------------------
+  $('tabs').addEventListener('click', (e) => {
+    const t = e.target.dataset.tab; if (!t) return;
+    document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('sel', b.dataset.tab === t));
+    document.querySelectorAll('.tab').forEach((d) => d.classList.toggle('sel', d.id === 'tab-' + t));
+  });
+  function fill(controls, screens) {
+    const rows = controls.filter((c) => !c.kind.startsWith('fw')).map((c) => {
+      const evs = (c.ev || []).filter(Boolean).join(' / ');
+      const ui = c.uiin ? `${c.uiin.group}.${c.uiin.byte}.${c.uiin.bit} <code>${c.uiin.code}</code> ${evs}`
+        : c.inject ? `code entry <code>0x5014c12e(0x${c.inject[0].toString(16)}, ${c.inject[1]} / ${c.inject[2]})</code> ${evs}`
+        : c.dial ? `counter writer <code>0x5014bae6(0x${c.dial[0].toString(16).padStart(8, '0')}, ±1)</code> ${evs}` : '–';
+      const gui = c.gui.map((i, k) => i == null ? '' : `${['on', 'long', 'off'][k]} ${i} <code>${esc(c.gui_names[k])}</code>`).filter(Boolean).join('<br>');
+      return `<tr><td><b>${esc(c.key)}</b></td><td>${esc(c.name)}</td><td class="st-${c.status}">${c.status}</td><td>${ui}</td><td>${gui || '–'}</td><td>${esc(c.reason || c.note || '')}</td></tr>`;
+    }).join('');
+    $('tab-keys').innerHTML = `<p class="note">Keys go through the firmware's own key decoder UI_IN (task 84) natively, and the firmware's camera application turns the decoded EV into the GUI's input itself. Dials: [ ] (main), , . (sub), mouse wheel; each detent goes through the firmware's counter writer and UI_IN's dial step. Multi-selector: Shift + arrows, Shift + Home / PageUp / End / PageDown for the diagonals, Shift + Enter to press (the press and the directions go through UI_IN's joystick decoder; the camera application's own query names the direction). Mode dial: PageUp / PageDown (or the arrows under it) turn it one position, wrapping (whether the body's dial stops at its ends is not known); a click on a position turns it there. Each position's name is the firmware's (UI_IN's dial table and the build's names of its codes: S, M, B, C1..C4, Movie, P, A in entry order on the OM-1). The dial starts at P, the mode the camera starts in; turned, the camera application changes its mode (its settings and the shooting screen's mode: P, A, S, M, B, P with C1..C4, the movie screen).</p>
+      <table><tr><th>Key</th><th>Control</th><th>Status</th><th>UI_IN (group.byte.bit, code, EV)</th><th>GUI (sendEvent index, message)</th><th>Note</th></tr>${rows}</table>`;
+    const fw = controls.filter((c) => c.kind.startsWith('fw'));
+    $('tab-fw').innerHTML = `<p class="note">Every other entry of UI_IN groups 0-4. Pressing one pushes its bit natively (group 4 through the firmware's own group-4 producer 0x5014d537); the decoded code shows in the status line. The CEC keys have a GUI index by name; the monitor joint 0x2403 and headphone 0x1711 switches go to 208 / 209 by explicit rows; LLPSW 0x121c and HDMI 0x0501 go through the switch table's pick (0x50424f9a, native) to 66 / 67 and 121. The others (grey) are decoded only: no EV name, or no GUI message for it.</p><div class="fw">` +
+      fw.map((c) => `<button class="b ${c.status === 'wired' ? 'wired' : 'decoded'}" data-fw="${c.id}" title="${esc((c.ev || []).join(' / '))}">${c.uiin.group}.${c.uiin.byte}.${c.uiin.bit} ${c.uiin.code}<br><small>${esc((c.ev || []).filter(Boolean)[0] || '')}</small></button>`).join('') + '</div>';
+    document.querySelectorAll('[data-fw]').forEach((b) => {
+      b.style.height = 'auto'; b.style.padding = '4px 10px'; b.style.borderRadius = '8px';
+      holdButton(b, b.dataset.fw);
+    });
+    $('tab-screens').innerHTML = `<table><tr><th>Screen</th><th>GUI state / panel</th><th>How</th><th>Status</th></tr>
+      <tr><td>Date prompt, shooting / standby info</td><td>0x0108 / 324, 10</td><td>start (the camera application takes the GUI to its screen), S1 or INFO</td><td>native; values from the native store; the shooting information from the application's state (S-RELSEQ, S-CARD, S-LENS stand in for the modules)</td></tr>
+      <tr><td>Setup Menu, all tabs and pages, help, popups, sub-screens</td><td>0x0b02 / 329 …</td><td>MENU, keys, dials</td><td>native; the live view stops behind it (S-THROUGH); closing it skips the settings' flash save (S-SETSAVE)</td></tr>
+      <tr><td>Playback, no picture</td><td>0x0505 / 324</td><td>PLAY before any S2</td><td>native "No Picture"</td></tr>
+      <tr><td>Super Control Panel and its cells' screens</td><td>0x0403 / 467 …</td><td>OK on the shooting screen, then arrows / dials / OK</td><td>native</td></tr>
+      <tr><td>Focus confirmation, recording screen, rec view</td><td>0x0108</td><td>S1, REC (mode dial at Movie, LLPSW released), S2</td><td>native (S-DISPFRAME runs CPU 3's DISP_FRAME; S-RECVIEW holds the capture's frame)</td></tr>
+      <tr><td>Every screen above on the EVF</td><td>layout byte 2 (0 in menus)</td><td>LV (V), eye sensor (N), or --device evf</td><td>the GUI is told (H-CONNECT 131) and the application re-enters the screen (S-OUTDISP); the EVF's bottom bar and repaint are still wrong (docs/om1-shutter-spec.md section 7 item 56)</td></tr>
+      <tr><td>Playback of the pictures taken</td><td>0x0508 / 0x050b</td><td>S2, then PLAY; left / right, INFO; PLAY or S1 back</td><td>native GUI; S-CARD keeps the images, S-PLAYSEQ finishes the play module's requests, S-PLAYCOMP answers for the play component, S-PLAYVIEW shows the frame S-SCENE renders again from the scene kept with the image</td></tr></table>`;
+    $('tab-standins').innerHTML = '<table><tr><th>Label</th><th>In use</th><th>What and why</th></tr>' +
+      Object.entries(screens.stand_ins).map(([k, v]) => `<tr><td><b>${k}</b></td><td class="inuse" data-si="${k}"></td><td>${esc(v)}</td></tr>`).join('') + '</table>';
+  }
+  setInterval(() => {
+    const used = new Set(STATUS.stand_ins || []);
+    document.querySelectorAll('[data-si]').forEach((td) => { td.textContent = used.has(td.dataset.si) ? 'yes' : ''; });
+  }, 1000);
+  $('restart').onclick = () => send({ type: 'control', op: 'restart' });
+  $('pause').onclick = () => send({ type: 'control', op: STATUS.idle === 'off' ? 'resume' : 'pause' });
+  $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
+
+  // ---- self-test (?selftest=1 under play.mjs --debug-api, result to /api/pagetest): drives this page's own handlers with synthetic events ----------
+  async function until(pred, ms) { const t0 = performance.now(); while (performance.now() - t0 < ms) { if (pred()) return true; await sleep(50); } return false; }
+  function key(code, type, shiftKey) { window.dispatchEvent(new KeyboardEvent(type, { code, key: code.replace('Key', '').toLowerCase(), shiftKey: !!shiftKey, bubbles: true })); }
+  async function tap(code) { key(code, 'keydown'); await sleep(150); key(code, 'keyup'); }
+  // What a pointer at a control's centre reaches (elementFromPoint, the control scrolled into view): the control itself
+  // or its content, or whatever covers it. A click at the centre goes to that, so a covered control does not get it;
+  // both are true when it reached the control.
+  function hitsAtCentre(el) {
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    const r = el.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { hit, own: !!hit && (hit === el || el.contains(hit)) };
+  }
+  function clickAtCentre(el) { const { hit, own } = hitsAtCentre(el); if (hit) hit.click(); return own; }
+  // the mode dial shows the status's position by its name, lit on the ring
+  const modeShown = () => {
+    const p = (STATUS.mode_dial_positions || [])[STATUS.mode_dial], on = document.querySelector('#mode .pos.on');
+    return !!p && $('modeval').textContent === p.label && !!on && +on.dataset.pos === STATUS.mode_dial;
+  };
+  // The mode dial with the mouse: the next and previous arrows and the position half way round, each clicked at its
+  // centre; then every visible control of the camera is the one a click at its centre reaches. Returns the position
+  // the dial is left at.
+  async function modeDialSteps(step, nd) {
+    const at = (k) => until(() => STATUS.mode_dial === k && STATUS.phase === 'running', 20000);
+    const m1 = STATUS.mode_dial;
+    step('mode dial: the name shown', modeShown(), { mode: m1, shown: $('modeval').textContent });
+    const next = clickAtCentre(document.querySelector('[data-mode="+1"]'));
+    step('mode dial: ▶ at its centre, the next position', next && await at((m1 + 1) % nd) && modeShown(), { hit: next, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+    const prev = clickAtCentre(document.querySelector('[data-mode="-1"]'));
+    step('mode dial: ◀ at its centre, the previous position', prev && await at(m1) && modeShown(), { hit: prev, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+    const k = (m1 + (nd >> 1)) % nd, pick = clickAtCentre(document.querySelector(`#mode .pos[data-pos="${k}"]`));
+    step(`mode dial: position ${k} picked on the ring`, pick && await at(k) && modeShown(), { hit: pick, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+    const covered = [...document.querySelectorAll('#cam button')].filter((b) => b.checkVisibility() && !hitsAtCentre(b).own).map((b) => b.outerHTML.slice(0, 80));
+    step('every camera control is what its centre hits', covered.length === 0, { covered });
+    return k;
+  }
+  async function selftest() {
+    const R = { steps: [] };
+    const step = (name, ok, extra) => R.steps.push({ name, ok, ...(extra || {}) });
+    step('first frame and running', await until(() => frameSeq >= 1 && STATUS.phase === 'running', 60000), { gui: STATUS.gui });
+    await sleep(500);
+    R.canvas_shooting = cv.toDataURL('image/png');
+    await tap('KeyM');
+    step('M key: Setup Menu (UI_IN, the camera application)', await until(() => STATUS.gui === '0x0b02', 20000), { gui: STATUS.gui });
+    await sleep(800);
+    const row0 = STATUS.menu && STATUS.menu.row;
+    await tap('ArrowDown');
+    step('ArrowDown: cursor moves', await until(() => STATUS.menu && STATUS.menu.row !== row0 && STATUS.phase === 'running', 20000), { row0, row: STATUS.menu && STATUS.menu.row });
+    await sleep(800);
+    R.canvas_menu = cv.toDataURL('image/png');
+    await tap('KeyM');
+    step('M key again: shooting screen', await until(() => STATUS.gui === '0x0108', 20000), { gui: STATUS.gui });
+    await sleep(800);
+    const r = cv.getBoundingClientRect();
+    // the touch-mode icon (35, 465 of the 900 x 600 composite): a touch the camera application takes on the shooting
+    // screen, as test/test_web.mjs PAGE_B6_INPUTS's
+    const at = { clientX: r.left + 35 / 900 * r.width, clientY: r.top + 465 / 600 * r.height, pointerId: 7, bubbles: true, isPrimary: true };
+    cv.dispatchEvent(new PointerEvent('pointerdown', at));
+    await sleep(300);
+    cv.dispatchEvent(new PointerEvent('pointerup', at));
+    step('mouse on the monitor: GUI touch', await until(() => $('touchlog').textContent.includes('answer'), 20000), { log: $('touchlog').textContent.slice(0, 300) });
+    await sleep(1000);
+    R.canvas_touch = cv.toDataURL('image/png');
+    const m0 = STATUS.mode_dial || 0, nd = (STATUS.mode_dial_positions || []).length;
+    for (let i = 0; i < 2; i++) { key('PageUp', 'keydown'); key('PageUp', 'keyup'); }   // faster than one input runs
+    step('PageUp twice quickly: mode dial two positions', nd > 0 && await until(() => STATUS.mode_dial === (m0 + 2) % nd && STATUS.phase === 'running', 20000), { m0, mode: STATUS.mode_dial });
+    const md = await modeDialSteps(step, nd);
+    // a firmware key pressed on its button and released off it (synthetic pointers cannot be captured): the up still goes
+    const fwb = document.querySelector('[data-fw="fw_2005"]');
+    const pressed = () => (STATUS.pressed || []).includes('fw_2005');
+    const rep0 = (STATUS.dropped || {})['key repeat'] || 0;
+    for (const pid of [11, 12]) {
+      fwb.dispatchEvent(new PointerEvent('pointerdown', { pointerId: pid, bubbles: true, isPrimary: true }));
+      const down = await until(() => pressed() && STATUS.phase === 'running', 20000);
+      document.body.dispatchEvent(new PointerEvent('pointerup', { pointerId: pid, bubbles: true, isPrimary: true }));
+      step(`firmware key 0x2005 pressed, released off the button (#${pid - 10})`, down && await until(() => !pressed() && STATUS.phase === 'running', 20000) &&
+           ((STATUS.dropped || {})['key repeat'] || 0) === rep0, { pressed: STATUS.pressed, dropped: STATUS.dropped });
+    }
+    key('PageDown', 'keydown', true); await sleep(150); key('PageDown', 'keyup', true);
+    step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === md, { mode: STATUS.mode_dial });
+    // the Card, HDMI and session options panel: the session's options, the card the firmware formatted at the start read
+    // with refs/volume.mjs, and the HDMI control's state (no port without --hdmi on)
+    const sess = await (await api('/api/session')).json();
+    step('session options (GET /api/session)', typeof sess.lens === 'string' && (sess.hdmi === 'on' || sess.hdmi === 'off'), { session: sess });
+    await cardPanelSteps(step, { $, document, until, getCard: () => CARD, getCardReading: () => cardReading });
+    step('HDMI control', sess.hdmi === 'on' ? !!STATUS.hdmi : $('hdmi-plug').disabled && $('hdmi-state').textContent.startsWith('no HDMI port'),
+      { hdmi: STATUS.hdmi || null, text: $('hdmi-state').textContent });
+    R.buttons = { wired: document.querySelectorAll('[data-ctl].b.wired').length, decoded: document.querySelectorAll('[data-ctl].b.decoded').length, none: document.querySelectorAll('[data-ctl].b.none').length };
+    R.keymap = KEYMAP;
+    R.events = $('eventlog').textContent.slice(0, 3000);
+    R.status = STATUS;
+    await host.postPagetest(R);
+  }
+
+  async function start() {
+    CONTROLS = await (await api('/api/controls')).json();
+    const screens = await (await api('/api/screens')).json();
+    for (const c of CONTROLS) {
+      BYID[c.id] = c;
+      for (const k of [c.key, c.alt_key]) if (k && !k.includes(' ') && c.kind !== 'dial' && c.kind !== 'modedial') KEYMAP[k] = c.id;
+    }
+    wireButtons(); fill(CONTROLS, screens); loadSession();
+    statusLoop(); frames();
+    if (new URLSearchParams(location.search).get('selftest') === '1') selftest();
+  }
+
+  return { cv, g, api, note, loadSession, start, stop: () => { stopped = true; }, getStatus: () => STATUS };
+}

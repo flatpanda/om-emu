@@ -20,7 +20,7 @@ import { deepEqual } from '../util/equal.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { gui_palette } from './osdfmt.mjs';
-import { TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../fw/facts.mjs';
+import { TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../fw/facts-const.mjs';
 
 // the model's VSC (src/fw/board.mjs; E143: 0x9bb80000, channels of 0x8000, the output block 0x9bb98000)
 // kinds 2 and 3 (LATER): the TFT and the EVF on channel 0, no output block; kind 3 has one timing bank for both

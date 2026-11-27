@@ -181,7 +181,7 @@ export function laterInits(session, tid) {
   }
   const a = lab.sim.read(f.a, 1)[0], c = lab.sim.read(f.c, 1)[0];
   if (a !== 1 || c !== 1) throw new PowerError(`H-PWRLATER: after ${h8(f.late)}: A (${h8(f.a)}) ${a}, C (${h8(f.c)}) ${c}, not both 1`);
-  if (globalThis.process?.env?.OM_POWER_LATER_LOG) console.error('H-PWRLATER', JSON.stringify(out));
+  if (lab.env?.power_later_log) console.error('H-PWRLATER', JSON.stringify(out));
   return out;
 }
 

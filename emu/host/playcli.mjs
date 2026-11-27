@@ -38,6 +38,10 @@ import { blocksPresent } from './blobs.mjs';
 
 export const PROG = 'play.mjs';
 export const PAGE = path.join(REPO, 'emu/web/play.html');
+const ASSETS = {
+  '/ui.css': [path.join(REPO, 'emu/web/ui.css'), 'text/css; charset=utf-8'],
+  '/ui.mjs': [path.join(REPO, 'emu/web/ui.mjs'), 'application/javascript; charset=utf-8'],
+};
 export const OUT = path.join(REPO, 'emu/out/play', MODEL);
 // The options, in the order session.json's args keep
 export const ACTIONS = [
@@ -262,6 +266,7 @@ export async function main(argv) {
     ...(overlay ? { patch: overlay.summary } : {}) };
   overlay = null;                      // the worker makes its own blocks (patches)
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
+    assets: Object.fromEntries(Object.entries(ASSETS).map(([k, [f, t]]) => [k, [new Uint8Array(fs.readFileSync(f)), t]])),
     session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread
     onPagetest: (body) => {            // <out>/pagetest.json: a write that fails is the request's error (host/server.mjs)
       try { fs.writeFileSync(path.join(out, 'pagetest.json'), JSON.stringify(body)); } catch (e) { throw new RuntimeError(e.message); }

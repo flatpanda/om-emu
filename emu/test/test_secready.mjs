@@ -27,7 +27,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine, secReadyReport, unreadyRuns } from '../src/lab/secready.mjs';
+import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine, secReadyReport, unreadyRuns, STAGED_LOAD_CLASSES, unreadyTiers, stagedVerdict } from '../src/lab/secready.mjs';
+import { stagedUnloadedRanges, StagedLoadSchedule, STAGE_TIERS } from '../src/fw/sections.mjs';
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const tester = () => {
@@ -138,6 +139,63 @@ export function secreadyUnits() {
   ok(w3.findings.length === 1 && w3.findings[0].kind === 'cleared' && rp3.runtime.by_phase.cleared === 1 && unreadyRuns(rp3, 'cleared').length === 1,
     `cleared phase recorded and summarized: ${show(rp3)}`);
   ok(secReadyLine(secReadyReport(plain, f)).includes('; patched code ran in 2 section(s) and phase(s) whose stage bit was clear: 0x60000700 (section 8, 2 instruction(s) in 1 piece(s), word 0x0000007f, caller'), `secReadyLine with runs: ${secReadyLine(secReadyReport(plain, f))}`);
+  // staged-load boot-stage section availability: stagedUnloadedRanges, StagedLoadSchedule, stagedCheck, unreadyTiers, stagedVerdict
+  const u0 = stagedUnloadedRanges(LAYOUT, 0x00);
+  const u3f = stagedUnloadedRanges(LAYOUT, 0x3f);
+  const u7f = stagedUnloadedRanges(LAYOUT, 0x7f);
+  const u3ff = stagedUnloadedRanges(LAYOUT, 0x3ff);
+  ok(u0.length === 10 && u0[0].n === 1 && u0[0].start === BASE && u0[0].end === BASE + 0x100 && u0[9].n === 10 && u0[9].end === BASE + 0xa00,
+    `stagedUnloadedRanges(0x00): all 10 sections unloaded: ${show(u0)}`);
+  ok(show(u3f.map((r) => r.n)) === '[7,8,9,10]' && u3f[0].start === BASE + 0x600 && u3f[0].end === BASE + 0x700,
+    `stagedUnloadedRanges(0x3f): sections 7..10 unloaded: ${show(u3f)}`);
+  ok(show(u7f.map((r) => r.n)) === '[8,9,10]' && u7f[0].start === BASE + 0x700 && u7f[0].end === BASE + 0x800 && u7f[0].bit === 7,
+    `stagedUnloadedRanges(0x7f): sections 8..10 unloaded (beta2 boot window): ${show(u7f)}`);
+  ok(u3ff.length === 0, `stagedUnloadedRanges(0x3ff): all 10 sections loaded, empty: ${show(u3ff)}`);
+  ok(show(unreadyTiers(LAYOUT, 0x00)) === '[0,1,2]' && show(unreadyTiers(LAYOUT, 0x1f)) === '[1,2]' &&
+    show(unreadyTiers(LAYOUT, 0x3f)) === '[1,2]' && show(unreadyTiers(LAYOUT, 0x7f)) === '[2]' &&
+    show(unreadyTiers(LAYOUT, 0x3ff)) === '[]',
+  `unreadyTiers across stage masks: 0x00..0x3ff`);
+  const sched = new StagedLoadSchedule(LAYOUT);
+  ok(STAGE_TIERS.length === 3 && sched.mask === 0 && !sched.allReady() && sched.isReady(0) && !sched.isReady(1),
+    `StagedLoadSchedule initial state: mask=${sched.mask}`);
+  sched.advanceTier(0);
+  ok(sched.mask === 0x1f && sched.isReady(5) && !sched.isReady(6) && sched.unloadedAt(0xa0000520)?.n === 6,
+    `StagedLoadSchedule tier 0 (early): sections 1..5 ready, section 6 unloaded (uncached view)`);
+  sched.advanceTier(1);
+  ok(sched.mask === 0x7f && sched.isReady(7) && !sched.isReady(8) && sched.unloadedAt(BASE + 0x720)?.n === 8,
+    `StagedLoadSchedule tier 1 (middle): sections 1..7 ready, section 8 unloaded`);
+  sched.advanceTier(2);
+  ok(sched.mask === 0x3ff && sched.allReady() && sched.unloadedRanges().length === 0 && sched.unloadedAt(BASE + 0x720) === null,
+    `StagedLoadSchedule tier 2 (late): all 10 sections ready`);
+  // synthetic beta2 vs beta3 staged-load verdict:
+  // beta2: section 6 hook jumps to patched fw_897j in section 8 (0x720) at stageMask = 0x7f (sections 1..7 ready, 8..10 unloaded)
+  const beta2Audit = new SecReadyAudit(LAYOUT, [[0x510, 5], [0x720, 8]], { read: read32 });
+  const beta2Hit = beta2Audit.stagedCheck(BASE + 0x720, 0x7f, { from: 6 });
+  const beta2V = stagedVerdict(beta2Audit);
+  ok(STAGED_LOAD_CLASSES.includes('staged-unready-run') && STAGED_LOAD_CLASSES.includes('staged-ready') &&
+    !beta2Hit.ok && beta2Hit.hazard && beta2Hit.class === 'staged-unready-run' && beta2Hit.section === 8 &&
+    beta2Hit.tier === 2 && beta2Hit.from === 6 && beta2Hit.fromTier === 1 && beta2Hit.missingBit === 7 &&
+    show(beta2Hit.unreadyTiers) === '[2]' && beta2V.verdict === 'boot-order-hazard' && beta2V.hazard &&
+    beta2V.count === 1 && show(beta2V.sections) === '[8]' && show(beta2V.tiers) === '[2]',
+  `synthetic beta2 (section 6 -> 8 at stageMask 0x7f): caught as boot-order-hazard: ${show({ beta2Hit, beta2V })}`);
+  // synthetic crop-round-7: section 2 hook jumps to section 6 (0x520) at stageMask = 0x1f (sections 1..5 ready, 6..10 unloaded)
+  const crop7Audit = new SecReadyAudit(LAYOUT, [[0x110, 5], [0x520, 8]], { read: read32 });
+  const crop7Hit = crop7Audit.stagedCheck(BASE + 0x520, 0x1f, { from: 2 });
+  const crop7V = stagedVerdict(crop7Audit);
+  ok(!crop7Hit.ok && crop7Hit.hazard && crop7Hit.section === 6 && crop7Hit.missingBit === 5 &&
+    crop7V.verdict === 'boot-order-hazard' && show(crop7V.sections) === '[6]',
+  `synthetic crop-round-7 (section 2 -> 6 at stageMask 0x1f): caught as boot-order-hazard: ${show({ crop7Hit, crop7V })}`);
+  // synthetic beta3: gated on cm_init, only enters section 8 (0x720) at stageMask = 0x3ff (all 10 sections ready)
+  const beta3Audit = new SecReadyAudit(LAYOUT, [[0x510, 5], [0x720, 8]], { read: read32 });
+  const beta3Gate = beta3Audit.stagedCheck(BASE + 0x510, 0x7f, { from: 6 }); // gate check in section 6 at 0x7f is ready
+  const beta3Call = beta3Audit.stagedCheck(BASE + 0x720, 0x3ff, { from: 6 }); // section 8 entered only at 0x3ff
+  const beta3Unpatched = beta3Audit.stagedCheck(BASE + 0x820, 0x7f); // off patched bytes
+  const beta3V = stagedVerdict(beta3Audit);
+  ok(beta3Gate.ok && !beta3Gate.hazard && beta3Gate.class === 'staged-ready' &&
+    beta3Call.ok && !beta3Call.hazard && beta3Call.class === 'staged-ready' && beta3Call.missingBit === null &&
+    beta3Unpatched.ok && !beta3Unpatched.patched && beta3Unpatched.class === null &&
+    beta3V.verdict === 'clean' && !beta3V.hazard && beta3V.count === 0,
+  `synthetic beta3 (gated until stageMask 0x3ff): passes clean: ${show({ beta3Gate, beta3Call, beta3V })}`);
   return { checks: T.checks, bad };
 }
 

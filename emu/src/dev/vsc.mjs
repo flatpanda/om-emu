@@ -11,8 +11,11 @@ import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../co
 import { CLOCK_NONE } from './timer.mjs';
 import { IRQ_VSC } from './intc.mjs';
 import { vscTables } from './vscregs.mjs';
+import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, STORE_BASE, chanDbg, udiv } from './vscdefs.mjs';
 import { compose, histMeasure } from './vsccompose.mjs';
 import { compose2 } from './vsccompose2.mjs';
+
+export { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, STORE_BASE, chanDbg, udiv };
 
 // The model's VSC (src/fw/board.mjs). Kind 1 (E143, E147): what this header says. Kind 2 (E144): two channels of
 // 0x4000, the register file 0x000..reg_end with the latched copies of some registers named *_VL at +0x400 (read-only;
@@ -32,34 +35,16 @@ const V = BOARD.vsc, GEN2 = V.kind === 2, K3 = V.kind === 3, LATER = GEN2 || K3;
 const LINE_MASK = K3 ? (1 << V.line_bits) - 1 : GEN2 ? 0x3FFF : 0x7FFF;
 const LINE_IRQ = V.line_irq ?? null;
 export const VSC_BASE = V.base, VSC_SIZE = V.size, CHANNELS = V.channels, CHAN_STRIDE = V.stride;
-export const REG_WORDS = V.reg_end / 4, PAL_BASE = 0x4400, PAL_WORDS = 0x1800 / 4, LUT_BASE = 0x5C00, LUT_WORDS = 0xC00 / 4;
+export const REG_WORDS = V.reg_end / 4, PAL_WORDS = 0x1800 / 4, LUT_BASE = 0x5C00, LUT_WORDS = 0xC00 / 4;
 export const OUT_SRAM = 0x4000, OSRAM_WORDS = 0x1000 / 4;
-export const OUTPUT_BASE = 0x89000000, OUTPUT_SIZE = 0x800000;
+export const OUTPUT_BASE = 0x89000000;
 export const DEBUG_BASE = 0x89800000, DEBUG_SIZE = 0x10000, DOORBELL_BASE = 0x89810000;
-export const E = { REG_UNKNOWN: 1, WIDTH: 2, MIRROR_WRITE: 3, MIRROR_LIVE: 4, RO_WRITE: 5, DEBUG_CPU_WRITE: 6, DOORBELL: 7,
-  NOT_LATCHED: 8, FIELD_MODE: 9, WINDOW: 10, MIX_UNOBSERVED: 11, PLANC_UNOBSERVED: 12, FMT_UNMODELLED: 13,
-  SPOS_UNMODELLED: 14, DMA_FIELD: 15, DMABN_SHORT: 16, DMA_RANGE: 17, RSZ_UNMODELLED: 18, PEAK_BC: 19, BG_FIELD: 20,
-  OSDCP2_FIELD: 21, PAL_UNWRITTEN: 22, PAL_FIELD: 23, UNWRITTEN: 24, NOT_RUNNING: 25, ORDER: 26,
-  FEATURE_UNOBSERVED: 27, HIST_UNMODELLED: 28 };
 const ERROR_NAMES = [];
 for (const [k, v] of Object.entries(E)) ERROR_NAMES[v] = k;
-export const NOTE = { RESET_READ: 1, MIRROR_RESET_READ: 2, SRAM_RESET_READ: 3, OUT_READ: 4, MONI3_IDLE: 5,
-  COMPOSE_RESET: 6, ASSUMED: 7, SPOS_A18: 8, PLANC_ZERO: 9, VIEW: 10, HIST_NO_SOURCE: 11 };
-export const D = { MAGIC: 0x000, VERSION: 0x004, ERR_TOTAL: 0x008, NOTE_TOTAL: 0x00C, T_LO: 0x010, T_HI: 0x014,
-  LAST_CMD: 0x018, LAST_RESULT: 0x01C, ARG0: 0x020, ARG1: 0x024, COMMANDS: 0x028, CPU_ACCESSES: 0x02C,
-  EVENT_SOURCES: 0x030, HIST_ZERO_READS: 0x034, HIST_ASSUMED: 0x038, HIST_KEPT_READS: 0x03C, CHAN: 0x040, CHAN_SIZE: 0x40,
-  HDR: 0x100, PLANE: 0x180,
-  ERR_RING: 0x400, ERR_SLOTS: 64, NOTE_RING: 0x1000, NOTE_SLOTS: 512, FLAGS: 0x4000, FLAGS_SIZE: 0x1400, OUT_FLAGS: 0x8000 };
-export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 0x10, LINE_NS: 0x14, START_LO: 0x18,
-  START_HI: 0x1C, LEN: 0x20, LATCHED: 0x24, COMPOSE: 0x28, LINE_NS_EVF: 0x2C, ORDER: 0x30, ASSUME: 0x38, VIEW: 0x39,
-  TIMING: 0x3A, HIST: 0x3B, HIST_RUNS: 0x3C };
 const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const R = V.regs;
 // kind 2's storage after the register file and the *_VL mirror words (the copy of the register 0x400 below)
 const STORE = K3 ? V.store : [0x800, 0x4000];
-// kinds 2 and 3: the plain storage's first local offset (a stored word at offset o is ch.store[(o - STORE_BASE) / 4],
-// flagged in the palette flags at that index)
-export const STORE_BASE = STORE[0];
 const STORE_FLAGGED = K3 ? (V.store[1] - V.store[0]) / 4 : 0xC00, VL = 0x400;
 // kind 3's latched copies: [first local offset, the registers that have one]
 const LATCH = K3 ? V.latch : null, LATCHED = new Set(K3 ? V.latched : []);
@@ -86,13 +71,9 @@ const HIST_IDLE = 0, HIST_ARMED = 1, HIST_RUNNING = 2;
 const BINS_NONE = 0, BINS_NO_SOURCE = 1, BINS_UNKNOWN = 2, BINS_MEASURED = 3;
 // the read's discard condition (A-VSCHIST-2): the written bank's DMAEN bit 5 (IMG1) clear and HIST2[17:16] 0
 const histDiscards = (w) => !(w[DMAEN / 4] & 0x20) && ((w[HIST2 / 4] >>> 16) & 3) === 0;
-export const FACE_FIRST = 0xD00, FACE_LAST = 0xD1C;
-export const chanDbg = (c, f) => D.CHAN + D.CHAN_SIZE * c + f;
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const hex = (v) => '0x' + (v >>> 0).toString(16);
 const liveRegister = (off) => off === R.INTEN1 || off === R.INTST1 || off === R.MONI3 || off === R.INTEN2 || off === R.INTST2;
-// floor(a / b) of non-negative integers below 2^53 (uint64 division in the C)
-export function udiv(a, b) { let q = Math.floor(a / b); if (q * b > a) q--; return q; }
 
 export class Vsc {
   constructor(machine, clock, intc, bus, image) {

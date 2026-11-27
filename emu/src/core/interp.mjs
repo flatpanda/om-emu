@@ -238,6 +238,7 @@ export function resetInterp() {
   PROBE.clear(); PROBE_FN = null; P_PC = -1; P_N = -1;
   WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; SEGS = new Set([0x17]); FORCE_FB = false;
   LOCAL_PAGE = -1; localSlots.length = 0;
+  cacheMisses = 0;
   setSmcHook(invalidateChunk);
 }
 // The bus window remap (bus.mjs onRemap, a valid CPU store to 0x98100058): the decode-cache slots of window pcs hold
@@ -271,14 +272,15 @@ function invalidateChunk(o) {
   }
   chunkVer[ch] = nv;
 }
-export function cacheStats() {     // test aid: live slots (version-based SMC keeps no per-chunk lists)
+export function cacheStats() {     // test aid: live slots and decode misses (version-based SMC keeps no per-chunk lists)
   let live = 0;
   for (let i = 0; i < ctag.length; i++) {
     if (cver0[i] !== 0 && cver0[i] === chunkVer[cch0[i]] && (cch1[i] < 0 || cver1[i] === chunkVer[cch1[i]])) live++;
   }
-  return { live, chunks: 0, refs: 0, maxList: 0 };
+  return { live, chunks: 0, refs: 0, maxList: 0, misses: cacheMisses };
 }
 
+let cacheMisses = 0;
 const CBITS = 16, CMASK = (1 << CBITS) - 1;
 const ctag = new Int32Array(1 << CBITS).fill(-1);
 const ckind = new Uint8Array(1 << CBITS), cx = new Uint8Array(1 << CBITS), cy = new Uint8Array(1 << CBITS);
@@ -301,6 +303,7 @@ function addf(l, r) { const x = (l + r) | 0; setFlags(x, (l >>> 0) + (r >>> 0) >
 function subf(l, r) { const x = (l - r) | 0; setFlags(x, MUT === 1 ? (l >>> 0) <= (r >>> 0) : (l >>> 0) < (r >>> 0), ((l ^ r) & (l ^ x)) < 0); return x; }
 function cond(cc, pc) { if ((R[UNDEF] & CC_USES[cc]) && MUT !== 2) throw new Fault(6, pc); return ccEval(cc, R[PSW]); }
 function decode(pc, i) {
+  cacheMisses++;
   let op, p = 0, len;
   try {
     op = cb(pc);

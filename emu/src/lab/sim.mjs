@@ -2,12 +2,11 @@
 // without the PERF2 machinery (no host reads, register cache, write elision or HLE builtins), over
 // the machine API. Stats: g_count and g_digest (sha256 of every 'g' reply
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
-import { A, IMAGE_BASE, IMAGE_END, MODEL, fact } from '../fw/model.mjs';
+import { A, IMAGE_BASE, IMAGE_END, MODEL } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { StrictLog, strictOn } from './strict.mjs';
-import { SECTIONS_E143, BOOT_E143 } from '../fw/facts.mjs';
-import { bootLoads, rangeMessage, POISON } from '../fw/sections.mjs';
-import { SecReadyAudit, secLayout } from './secready.mjs';
+import { rangeMessage, POISON } from '../fw/sections.mjs';
+import { sectionsFact, loadedRanges, secReadyWatch } from './patchaudit.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
 import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
@@ -40,30 +39,7 @@ export function packRegs(regs) {
 const u32le = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]);
 
-// The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
-export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
-// The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
-// env.patch, the overlay summary --patch and --main both give, on a body whose section loader and reset head copies
-// the rule reads (E143, E146, E147), else off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
-// in use, a patched end word's value included). 'on' on a body without the rule throws.
-export function loadedRanges(env) {
-  const mode = env.loaded ?? 'auto';
-  if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);
-  const f = sectionsFact(), known = f !== null && f.head !== null;
-  if (mode === 'off' || (mode === 'auto' && (!env.patch || !known))) return null;
-  if (!known) throw new ValueError(`--loaded on: ${f === null ? 'this build holds no section loader the rule reads' : 'the reset head copies of this build (the flash-copy family\'s) are not read'} (src/fw/facts.mjs sectionLoader), so what its boot loads is not known`);
-  return bootLoads(env.rom, IMAGE_BASE, f);
-}
-
-// The --sec-ready watch for an env (src/lab/secready.mjs SecReadyAudit): the overlay's changed bytes in the sections
-// read from env.rom; refused (ValueError) without an overlay or on a body whose section loader or stage word the
-// lab does not read
-export function secReadyWatch(env) {
-  if (!env.patchRanges) throw new ValueError('--sec-ready: no patch overlay (--patch or --main) to watch');
-  const f = sectionsFact(), stage = f === null ? null : fact('boot', BOOT_E143)?.stage ?? null;
-  if (f === null || f.head === null || stage === null) throw new ValueError('--sec-ready: this build holds no section loader and stage word the lab reads (src/fw/facts.mjs sectionLoader, bootState): E143, E146 and E147');
-  return new SecReadyAudit(secLayout(env.rom, IMAGE_BASE, f, stage), env.patchRanges);
-}
+export { sectionsFact, loadedRanges, secReadyWatch };
 
 export class Simulator {
   // env: { rom, createHash, clock?, stats? (a Stats or null), slice? (instructions per continue slice), onSlice?,

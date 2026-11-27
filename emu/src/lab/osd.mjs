@@ -11,7 +11,7 @@ import { pack, unpack } from '../util/bytes.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { gui_palette } from './osdfmt.mjs';
 import { A, ON_LAB_MODEL, IMAGE_BASE, MODEL_INFO, fact } from '../fw/model.mjs';
-import { CTORS_E143 } from '../fw/facts.mjs';
+import { CTORS_E143 } from '../fw/facts-const.mjs';
 import { BOARD } from '../fw/board.mjs';
 
 export { EngineError };

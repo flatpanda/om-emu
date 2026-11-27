@@ -47,7 +47,7 @@ const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >
 
 // The mode from an option value ('on', 'off', true, false, undefined) and the environment's OM_STRICT ('1' or 'on'):
 // the option wins when given
-export function strictOn(opt, environ = Reflect.get(globalThis, 'process')?.env ?? {}) {
+export function strictOn(opt, environ = {}) {
   if (opt === true || opt === 'on') return true;
   if (opt === false || opt === 'off') return false;
   if (opt !== undefined && opt !== null && opt !== 'auto') throw new Error(`strict ${opt}: on or off`);

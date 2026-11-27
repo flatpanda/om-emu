@@ -105,3 +105,66 @@ export function unshownMessage(u, pc) {
 
 // The refusal's words for a range of either list (src/lab/sim.mjs): unshownMessage for an unshown one, else gapMessage
 export function rangeMessage(g, pc, base, f) { return g.kind ? unshownMessage(g, pc) : gapMessage(g, pc, base, f); }
+
+// Boot-stage section load tiers (docs/hle-gaps/4.6.md 4.6.3, 4.6.4, D): USTART_L2 copies sections 1..10 in order and
+// posts each section's step, which ORs bit n - 1 into the stage word (sections 1..5 early: USTART_L/2/3 wait up to
+// stage 4; 6..7 middle: USTART4 waits for stages 6 and 7; 8..10 late: section 8 on CPU 1 after stage 7, sections 9..10
+// after stage 8, waited on by USTART5).
+export const STAGE_TIERS = [
+  { tier: 0, name: 'early', sections: [1, 2, 3, 4, 5], mask: 0x1f },
+  { tier: 1, name: 'middle', sections: [6, 7], mask: 0x7f },
+  { tier: 2, name: 'late', sections: [8, 9, 10], mask: 0x3ff },
+];
+
+// Exact [start, end) run-time address ranges (cached view) of sections in layout (from bootLoads or secLayout) whose
+// stage bit (bit n - 1 for section n) is still clear in stageMask (unloaded at that boot stage). Each entry also carries
+// lo/hi aliases so gapAt() works directly on the returned list.
+export function stagedUnloadedRanges(layout, stageMask = 0) {
+  const mask = stageMask >>> 0;
+  const out = [];
+  for (const s of layout.sections) {
+    const bit = s.n - 1;
+    if (bit >= 0 && bit < 32 && ((mask >>> bit) & 1) === 0 && s.start < s.end) {
+      out.push({ n: s.n, bit, start: s.start, end: s.end, lo: s.start, hi: s.end });
+    }
+  }
+  return out;
+}
+
+// Tracks staged section availability across the camera's boot-load schedule (USTART_L2 order, D: 4.6.4).
+export class StagedLoadSchedule {
+  constructor(layout, { initialMask = 0 } = {}) {
+    this.layout = layout;
+    this.fullMask = layout.sections.reduce((m, s) => (m | (1 << (s.n - 1))) >>> 0, 0);
+    this.mask = (initialMask >>> 0) & this.fullMask;
+  }
+  isReady(section) {
+    if (section === 0) return true;
+    const bit = section - 1;
+    return bit >= 0 && bit < 32 && ((this.mask >>> bit) & 1) !== 0;
+  }
+  readySection(n) {
+    const bit = n - 1;
+    if (bit >= 0 && bit < 32) this.mask = (this.mask | (1 << bit)) & this.fullMask;
+    return this.mask >>> 0;
+  }
+  setStageMask(mask) {
+    this.mask = (mask >>> 0) & this.fullMask;
+    return this.mask;
+  }
+  advanceTier(tierIdx) {
+    const t = STAGE_TIERS[tierIdx];
+    if (!t) throw new RangeError(`StagedLoadSchedule: unknown tier ${tierIdx}`);
+    this.mask = (this.mask | t.mask) & this.fullMask;
+    return this.mask >>> 0;
+  }
+  unloadedRanges(mask = this.mask) {
+    return stagedUnloadedRanges(this.layout, mask);
+  }
+  unloadedAt(a, mask = this.mask) {
+    return gapAt(this.unloadedRanges(mask), a);
+  }
+  allReady() {
+    return this.mask === this.fullMask;
+  }
+}

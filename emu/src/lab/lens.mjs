@@ -32,7 +32,7 @@
 // init chain (0x50122689 on: the frames of src/lab/lensmcu.mjs) and the state poll. The bring-up runs lab time until
 // the driver's lens-0 data-valid and attach flags are set and the chain has reached the state poll, and checks it.
 import { fact } from '../fw/model.mjs';
-import { LENS_DRIVER_E143, DPC_E143, STORAGE_E143 } from '../fw/facts.mjs';
+import { LENS_DRIVER_E143, DPC_E143, STORAGE_E143 } from '../fw/facts-const.mjs';
 import { FirmwareError, where, runtime } from './hle.mjs';
 import { OLYQEWR } from './display.mjs';
 import * as K from './kernel.mjs';

@@ -94,18 +94,24 @@ export const SCPU_PORT_GROUP = 0;
 // sub-CPU's message 0x08, which PER_SCPU's poll takes and its handler 0x5005d43e gives the same producer (D)
 export const UIIN_PORT_SCAN = A(0x5005D36A);
 const uiinScan = () => fact('scpu.port_scan', true);
+// Host environment lookup: prefer an explicit value from env, falling back to Node's process.env for CLI and tests.
+export function envVar(env, key, name, fallback = undefined) {
+  const fromEnv = env?.[key];
+  if (fromEnv !== undefined) return fromEnv;
+  return globalThis.process?.env?.[name] ?? fallback;
+}
 // USB_IDLE (docs/hle-gaps/4.10.md 4.10.2, 4.10.3): the USB cable at a session's start, as the sub-CPU's PC13 (active
-// low, D): 'in' (PC13 low, the default) or 'out' (PC13 high, no cable), opts.usb_idle or OM_USB_IDLE. The sub-CPU's
+// low, D): 'in' (PC13 low, the default) or 'out' (PC13 high, no cable), opts.usb_idle, env.usb_idle or OM_USB_IDLE. The sub-CPU's
 // model (S-SCPUDEV, or its own firmware with OM_EMU_SCPU=native) starts its port scan at that level, so UI_IN's module
 // init takes it from the scan's first report; S-USBCABLE's first step is then a plug. With 'out' the lever's off makes
 // the application call startShutDown itself, and S-SHUTDOWN follows that call (src/lab/power.mjs)
 export const USB_IDLE = { in: 0, out: 1 };
-export function usbIdle(o) {
-  const v = o.usb_idle ?? globalThis.process?.env?.OM_USB_IDLE ?? 'in';
+export function usbIdle(o, env = null) {
+  const v = o?.usb_idle ?? envVar(env, 'usb_idle', 'OM_USB_IDLE', 'in');
   if (!Object.hasOwn(USB_IDLE, v)) throw new ValueError(`usb_idle ${show(v)}: in or out`);
   // (X, E146: H-UIINSCAN in UI_IN's init's place decodes the scan's 0x0400 at state 1 against the lab's idle image,
   // which keeps it at 0: the image's start with no cable is not read there)
-  if (v === 'out' && (uiinInit() === null || o.mutant === 'no-uiininit')) throw new ValueError(`usb_idle out: ${MODEL} does not run UI_IN's module init natively (H-UIININIT, src/fw/models.mjs uiin_init; E143), so its idle image holds the USB switch 0x0400 at a cable in`);
+  if (v === 'out' && (uiinInit() === null || o?.mutant === 'no-uiininit')) throw new ValueError(`usb_idle out: ${MODEL} does not run UI_IN's module init natively (H-UIININIT, src/fw/models.mjs uiin_init; E143), so its idle image holds the USB switch 0x0400 at a cable in`);
   return v;
 }
 // H-UIININIT (src/fw/models.mjs uiin_init; docs/hle-gaps/4.7.md 4.7.17): on a body that gives it, UI_IN's module init
@@ -130,9 +136,11 @@ export const WAKE_POWER_BUTTON = 1;
 // its end posts its completion as a deferred call (E143's table gives every channel completion kind 5, 0x5004d1ee ->
 // 0x500503d4, D), so the deferred calls' init runs before it, also on a body whose native lens ran it in its own
 // bring-up (H-DPCINIT, src/lab/lens.mjs). A body whose board gives the converter, whose facts give the init and which
-// AD_BODIES lists runs it: E143 alone. E146 and E147 carry the fact since the port of 2026-11-24, but neither body's
-// channels were read against the converter's model, and E147's table names converter channel 8, which the model does
-// not have (X: its bring-up stopped there), so they keep the path before; the mutant no-adinit keeps the path before, where every
+// AD_BODIES lists runs it: E143 and E146. Static inspection of FACTS.E146.adc on the E146 image confirms its 6-channel
+// table [[1,6,5],[2,0,5],[3,2,5],[4,1,5],[5,3,5],[12,7,5]] is identical to E143's (D). E147's FACTS.E147.adc table
+// holds 8 channels [[1,3,5],[2,0,5],[4,1,5],[12,6,5],[13,7,5],[14,5,5],[15,8,5],[16,2,5]] (D): although om1.adc now
+// models converter channels 0..9 (including 8 at +0x70 and 9 at +0x74), driver channels 13..16 on E147 are not yet
+// D-identified, so E147 stays out of AD_BODIES for now; the mutant no-adinit keeps the path before, where every
 // request takes the driver's 'no channel' path (a deferred completion with no samples; UI_IN's channel open logs
 // 0x28001511, 4.7.17). The converter's channels' values (src/dev/adc.mjs values), by the driver's channel (the table
 // gives each its converter channel, D):
@@ -150,9 +158,9 @@ export const WAKE_POWER_BUTTON = 1;
 //   2501..3024, 1663..2500, below; its 'inserted' test 0x500467e8: below 3766, D)
 // Any other channel has no value: its conversion's start is UNKNOWN (src/dev/adc.mjs)
 export const AD_DIAL_CHANNEL = 12, AD_POWER_CHANNELS = [1, 2, 3, 4, 5], AD_POWER_VALUE = 0;
-export const AD_DIAL_THRESHOLDS = A(0x6298877C), AD_DIAL_POSITIONS = 10;
+export const AD_DIAL_THRESHOLDS = A(0x6298877C), AD_DIAL_POSITIONS = 10, AD_MAX_CHANNELS = 10;
 export const AD_ERRLOG = 0x28001511;
-const AD_BODIES = new Set(['E143']);
+export const AD_BODIES = new Set(['E143', 'E146']);
 const adInit = () => {
   if (!boardKnows('adc') || !AD_BODIES.has(MODEL)) return null;
   if (!ON_LAB_MODEL && !FACTS[MODEL]?.adc) return null;
@@ -361,6 +369,10 @@ export const CONTROLS = [
 // The body's Fn-type buttons: UI_IN keys the camera application maps through its button settings (0x5104d084 ->
 // 0x5104bd2b, table 0x612c36bc -> getter 0x5104e12d -> 0x5104be42, table 0x612c388c -> 0x5104bc84); the default
 // function of each is in its note.
+// UI_IN key 0x120b (AEL/AFL): absent from E143's variant-0 matrix (only in variant 1), but present as a type-2 key in
+// ported bodies' variant-0 tables (E147 group 1 byte 0 bit 3 polarity 0, EV_PRESS_CUSTOM6_KEY, D; also E144, E137, E148,
+// E125, E139, E134). Wired by apply_uiin_layout on bodies whose tables hold it, staying not-wired on E143.
+export const AEL_CODE = 0x120B;
 CONTROLS.push(
   row('iso', 'ISO', 'key', [3, 2, 1, 0x1230, 2, 0], [null, null, null]),
   row('exp', 'Exposure compensation (+/-)', 'key', [3, 2, 0, 0x1209, 2, 0], [null, null, null]),
@@ -370,7 +382,7 @@ CONTROLS.push(
   row('lvkey', '|o| button', 'key', [3, 1, 1, 0x2302, 2, 0], [null, null, null]),
   row('front1', 'Front upper button', 'key', [3, 3, 1, 0x1226, 2, 0], [null, null, null]),
   row('front2', 'Front lower button', 'key', [3, 4, 1, 0x1227, 2, 0], [null, null, null]),
-  row('ael', 'AEL/AFL', 'none', null, [null, null, null], { status: 'not-wired',
+  row('ael', 'AEL/AFL', 'key', null, [null, null, null], { bodykey: AEL_CODE, status: 'not-wired',
     reason: "0x120b is only in UI_IN's key matrix variant 1 (boards 1..7 by the board map 0x60224082); the lab's board 0 reads variant 0" }),
   row('bkt', 'BKT', 'none', null, [null, null, null], { status: 'not-wired',
     reason: "the key matrix (0x60224774) has no BKT key; BKT is a function a button can be given (button settings)" }),
@@ -1387,10 +1399,10 @@ export class PlaySession extends N.NavSession {
     // native lens until 2026-10-29)
     this.app_touch = this.lens !== null;
   }
-  storage_runs() { return !!STORAGE && !globalThis.process?.env?.OM_NO_STORAGE; }
+  storage_runs() { return !!STORAGE && !envVar(this.env, 'no_storage', 'OM_NO_STORAGE'); }
   // the lens option (env.lens, node's OM_EMU_LENS): 'native' (the default) or 'stand-in' (S-LENS)
   lens_option() {
-    const v = this.env.lens ?? globalThis.process?.env?.OM_EMU_LENS ?? 'native';
+    const v = envVar(this.env, 'lens', 'OM_EMU_LENS', 'native');
     if (v !== 'native' && v !== 'stand-in') throw new ValueError(`the lens option ${show(v)}: native or stand-in`);
     return v;
   }
@@ -1449,7 +1461,7 @@ export class PlaySession extends N.NavSession {
     if (!['lab', 'reads'].includes(us)) throw new ValueError(`us_clock ${show(us)}: lab or reads`);
     if (us === 'reads') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 0));
     lab.mutant = this.opts.mutant ?? null;           // (nvram-b-unread: menu.mjs nvram_load)
-    this.usb_idle = usbIdle(this.opts);              // USB_IDLE: the sub-CPU's PC13 at the start (menu.mjs store_init)
+    this.usb_idle = usbIdle(this.opts, this.env);    // USB_IDLE: the sub-CPU's PC13 at the start (menu.mjs store_init)
     lab.scan_idle = { ...SCAN_IDLE, PC13: USB_IDLE[this.usb_idle] };
     // H-TPINIT before the start's display open (PlayLab.kernel_display) where the driver waits for the INT
     lab.touch_init_early = this.touch_on && (fact('touch_int', null) ?? null) !== null;
@@ -1520,7 +1532,7 @@ export class PlaySession extends N.NavSession {
     if (this.lens) this.lens.bring_up();
     // H-PWRLATER (opt-in): the power manager's later inits once the deferred calls' handlers are attached (H-DPCINIT,
     // with the native lens in its bring-up just above), as the boot runs them after the lens init (power.mjs)
-    if (this.power_manager && (o.power_later ?? globalThis.process?.env?.OM_POWER_LATER) === 'on') this.power_manager.later = laterInits(this, this.power_manager.tid);
+    if (this.power_manager && (o.power_later ?? envVar(this.env, 'power_later', 'OM_POWER_LATER')) === 'on') this.power_manager.later = laterInits(this, this.power_manager.tid);
     if (this.audio_on) { this.audio_hw = new AudioHw(this); this.audio_hw.bring_up(); }
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.uiin_init && { uiin_init: this.uiin_init }), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
       ...(this.resnand && { resnand: { ...this.resnand.status(), log: this.resnand.take_log() } }), ...(resnandSkipped && { resnand: { skipped: resnandSkipped } }),
@@ -1566,7 +1578,7 @@ export class PlaySession extends N.NavSession {
   // H-ADINIT (above, adInit): the A/D driver's init natively, after H-DPCINIT. Checked: the converter's IRQ is the
   // board's and has no handler before; the table's words are 0 before (the BSS value; the init does not run); after it
   // the count is not 0, the table is the word +4 of the configuration record the core byte selects, every entry's
-  // converter channel is below the converter's 8 and the IRQ has a handler. The converter's values from then on are
+  // converter channel is below the converter's AD_MAX_CHANNELS (10) and the IRQ has a handler. The converter's values from then on are
   // the lab's (adValue)
   ad_bring_up(f) {
     const lab = this.lab, sim = lab.sim, adc = sim.m.devices.adc;
@@ -1585,7 +1597,7 @@ export class PlaySession extends N.NavSession {
       throw new PlayError(`H-ADINIT: after ${h8(f.init)}: ${n} channels at ${h8(table)} (the record ${h8(record)} of core byte ${core}), IRQ ${f.irq}'s handler ${h8(sim.u32(IRQ.HANDLER_TABLE + 4 * f.irq))}`);
     }
     const e = sim.read(table, 3 * n), channels = Array.from({ length: n }, (_, i) => [e[3 * i], e[3 * i + 1], e[3 * i + 2]]);
-    const bad = channels.filter(([, k]) => k >= 8);
+    const bad = channels.filter(([, k]) => k >= AD_MAX_CHANNELS);
     if (bad.length) throw new PlayError(`H-ADINIT: channels ${show(bad)} name a converter channel the converter (src/dev/adc.mjs) does not have`);
     if (new Set(channels.map(([, k]) => k)).size !== n) throw new PlayError(`H-ADINIT: channels ${show(channels)} share a converter channel`);
     this.ad_channels = new Map(channels.map(([c, k]) => [k, c]));

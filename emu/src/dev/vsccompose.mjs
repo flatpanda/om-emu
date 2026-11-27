@@ -10,7 +10,7 @@
 // samples it (imgRows).
 import { MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vsc.mjs';
+import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vscdefs.mjs';
 
 const R = { INTEN1: 0x00C, INTST1: 0x010, DMAEN: 0x060, IMG_DMASADR: 0x390, OSD_DMASADR: 0x39C, IMG_DMALD: 0x3A8,
   OSD_DMALD: 0x3B4, IMG_DMABN: 0x3C0, OSD_DMABN: 0x3CC, IMGDMASPOS: 0x3D8, OSDDMASPOS: 0x3DC, IMG_FMT: 0x400,
@@ -22,7 +22,6 @@ const BC_V19 = 0x10F;
 const HDR = { CHANNEL: 0, WIDTH: 1, HEIGHT: 2, FRAME: 3, ERRORS: 4, PAL_UNWRITTEN: 5, SKIPPED: 6, DRAWN: 7, OX: 8, OY: 9,
   MIX_FLAGS: 10, T_LO: 11, T_HI: 12, STATUS: 13, ASSUMED: 14, VIEW: 15 };
 const UNW = 0xFFFFFFFF;
-// (vsc.mjs imports this module: the bindings imported from it are used inside functions only, never at load time.)
 const RC_NONE = 0, RC_MODEL = 1, RC_STORED = 2;
 const REG_CLASS = [[0x00C, 0x010, RC_MODEL], [0x014, 0x018, RC_STORED], [0x030, 0x038, RC_STORED], [0x05C, 0x05C, RC_STORED],
   [0x060, 0x060, RC_MODEL], [0x068, 0x068, RC_STORED], [0x084, 0x33C, RC_STORED], [0x368, 0x38C, RC_STORED],

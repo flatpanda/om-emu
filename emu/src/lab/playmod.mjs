@@ -53,7 +53,7 @@
 import { FirmwareError, where, disasm } from './hle.mjs';
 import { dhtTables } from './jpeg.mjs';
 import { A, fact, ON_LAB_MODEL, MODEL } from '../fw/model.mjs';
-import { PLAY_TASKS_E143, PLAY_DECODE_E143, valueAt } from '../fw/facts.mjs';
+import { PLAY_TASKS_E143, PLAY_DECODE_E143, valueAt } from '../fw/facts-const.mjs';
 import { FACTS } from '../fw/ports.mjs';
 
 export class PlayModError extends FirmwareError {}

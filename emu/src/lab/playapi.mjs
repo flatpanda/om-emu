@@ -197,6 +197,12 @@ export class PlayApi {
       const t = this.opts.check?.token ?? '';
       return this.send(200, enc.encode(new TextDecoder().decode(this.opts.page).replaceAll('__POSTER__', `/api/frame?after=0&t=${t}`)), 'text/html; charset=utf-8');
     }
+    if (this.opts.assets && Object.hasOwn(this.opts.assets, path)) {
+      const no = this.allowed(req, path, args, false);
+      if (no) return no;
+      const [body, ctype] = this.opts.assets[path];
+      return this.send(200, body, ctype);
+    }
     const no = this.allowed(req, path, args);
     if (no) return no;
     if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables, this.liveRows()));

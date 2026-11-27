@@ -144,6 +144,8 @@ import { webSelftestUnits } from '../test/test_web_selftest.mjs';
 import { slot2StatusUnits } from '../test/test_slot2_status.mjs';
 import { panelDoneUnits } from '../test/test_paneldone.mjs';
 import { debugInspectUnits } from '../test/test_debug_inspect.mjs';
+import { cycleUnits } from '../test/test_cycles.mjs';
+import { magnifyUnits } from '../test/test_magnify.mjs';
 
 let runFacts = false;
 for (const arg of process.argv.slice(2)) {
@@ -253,6 +255,8 @@ report('web pages ?selftest=1 Card panel coverage (web/play.html, web/index.html
 report('second card slot HLS media status word under camapp 1 (units)', slot2StatusUnits());
 report('S-PANELDONE gate flag-satisfaction checks (src/lab/menu.mjs)', panelDoneUnits());
 report('debug API non-mutating breakpoints and watchpoints inspection ops', debugInspectUnits());
+report('static ES dependency cycle gate across emu/src (0 cycles)', cycleUnits());
+report('E147 AEL/AFL (0x120b) control wiring, H-ADINIT E146/E147, and envVar helper', magnifyUnits());
 if (runFacts) {
   const fa = factsTests();
   report(`firmware facts (${fa.models} unpacked main blocks)`, fa);

@@ -290,7 +290,7 @@ import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
-import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143, DUAL_SLOT_E143 } from '../fw/facts.mjs';
+import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143, DUAL_SLOT_E143 } from '../fw/facts-const.mjs';
 import { geometry as rawGeometry, rawFrame } from './rawframe.mjs';
 
 export class RecError extends FirmwareError {}

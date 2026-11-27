@@ -1502,6 +1502,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
     bad += r.bad.length;
   }
 }
+// static dependency cycle gate (P1.4) and E147 AEL/AFL + H-ADINIT E146 units (P1.2/P1.3a)
+{
+  const { cycleUnits } = await import('../test/test_cycles.mjs');
+  const { magnifyUnits } = await import('../test/test_magnify.mjs');
+  for (const [label, r] of [
+    ['static ES dependency cycle gate (emu/src)', cycleUnits()],
+    ['E147 AEL/AFL control & H-ADINIT E146 units', magnifyUnits()],
+  ]) {
+    console.log(`${label}: ${r.checks - r.bad.length}/${r.checks}`);
+    r.bad.forEach((x) => console.log('  ', x));
+    bad += r.bad.length;
+  }
+}
 const fa = factsTests();
 console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);
 fa.bad.forEach((x) => console.log('  ', x));

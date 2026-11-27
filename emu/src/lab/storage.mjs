@@ -93,7 +93,7 @@ import { SdCard, SECTOR, NO_RESPONSE } from './sdcard.mjs';
 import { A, MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, CARD_SLOTS_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, CARD_SLOTS_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts-const.mjs';
 
 export class StorageError extends FirmwareError {}
 // The card slots of a body with the second slot's facts (docs/hle-gaps/4.8.md 4.8.12, D): slot n is drive n, the SD host's

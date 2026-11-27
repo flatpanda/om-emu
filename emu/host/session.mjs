@@ -501,7 +501,7 @@ export async function openSession(o = {}) {
 
   // the strict mode (src/lab/strict.mjs): o.strict 'on' / 'off', else OM_STRICT; one log for the whole run
   let strictLog;
-  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict) ? new StrictLog({ model: MODEL }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
+  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict, process.env) ? new StrictLog({ model: MODEL }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
   if (strictLog) say('strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words; src/lab/strict.mjs)');
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,

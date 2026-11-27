@@ -28,10 +28,36 @@
 //                    a section whose stage bit was clear; as secReadyReport's {static, watched, findings by class}
 import { insnLength } from '../core/cpu.mjs';
 import { FirmwareError, ValueError } from './errors.mjs';
-import { IMAGE_BASE, MODEL, ON_LAB_MODEL } from '../fw/model.mjs';
+import { IMAGE_BASE, MODEL, ON_LAB_MODEL, fact } from '../fw/model.mjs';
 import { PORTS, FACTS } from '../fw/ports.mjs';
-import { loadedRanges, secReadyWatch } from './sim.mjs';
-import { secOrder, secReadyLine, secReadyReport } from './secready.mjs';
+import { SECTIONS_E143, BOOT_E143 } from '../fw/facts.mjs';
+import { bootLoads } from '../fw/sections.mjs';
+import { SecReadyAudit, secLayout, secOrder, secReadyLine, secReadyReport } from './secready.mjs';
+
+// The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
+export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
+// The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
+// env.patch, the overlay summary --patch and --main both give, on a body whose section loader and reset head copies
+// the rule reads (E143, E146, E147), else off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
+// in use, a patched end word's value included). 'on' on a body without the rule throws.
+export function loadedRanges(env) {
+  const mode = env.loaded ?? 'auto';
+  if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);
+  const f = sectionsFact(), known = f !== null && f.head !== null;
+  if (mode === 'off' || (mode === 'auto' && (!env.patch || !known))) return null;
+  if (!known) throw new ValueError(`--loaded on: ${f === null ? 'this build holds no section loader the rule reads' : 'the reset head copies of this build (the flash-copy family\'s) are not read'} (src/fw/facts.mjs sectionLoader), so what its boot loads is not known`);
+  return bootLoads(env.rom, IMAGE_BASE, f);
+}
+
+// The --sec-ready watch for an env (src/lab/secready.mjs SecReadyAudit): the overlay's changed bytes in the sections
+// read from env.rom; refused (ValueError) without an overlay or on a body whose section loader or stage word the
+// lab does not read
+export function secReadyWatch(env) {
+  if (!env.patchRanges) throw new ValueError('--sec-ready: no patch overlay (--patch or --main) to watch');
+  const f = sectionsFact(), stage = f === null ? null : fact('boot', BOOT_E143)?.stage ?? null;
+  if (f === null || f.head === null || stage === null) throw new ValueError('--sec-ready: this build holds no section loader and stage word the lab reads (src/fw/facts.mjs sectionLoader, bootState): E143, E146 and E147');
+  return new SecReadyAudit(secLayout(env.rom, IMAGE_BASE, f, stage), env.patchRanges);
+}
 
 export class PatchHooked extends FirmwareError {}
 

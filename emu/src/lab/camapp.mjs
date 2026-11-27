@@ -1230,9 +1230,10 @@ export class CamApp {
   // as TAKE_MAIN reads it on taking the request (0x503c275c)
   take_ready(q, w) {
     if (!this.takerdy_on) return null;
-    const lab = this.s.lab, T = TAKERDY_E143, tr = this.take_requests;
+    const lab = this.s.lab, T = TAKERDY_E143, tr = this.take_requests, queues = apiQueues();
+    if (!tr || queues[T.queue] !== q) return null;
     const kind = (w[2] >>> 0) === T.ready ? lab.sim.u32((w[3] >>> 0) + tr.kind_at) >>> 0 : 0;
-    const rule = take_ready_rule(q, w[2] >>> 0, kind, apiQueues(), tr), what = `${this.queue_name(q)} cmd ${w[2]} [${w.map(h8).join(' ')}]`;
+    const rule = take_ready_rule(q, w[2] >>> 0, kind, queues, tr), what = `${this.queue_name(q)} cmd ${w[2]} [${w.map(h8).join(' ')}]`;
     if (rule === 'ready') return { to: lab.sim.u32((w[3] >>> 0) + tr.queue_at) >>> 0, msg: [0, tr.event, 0] };
     if (rule === 'take') {
       this.takerdy_takes.push([lab.lab_time(), w[1] >>> 0]);
@@ -1455,7 +1456,10 @@ export class CamApp {
     this.dispsync_fns = sync;
     if (sync) observeDispsync(lab, sync, (code) => this.dispsync.add(code));
     lab.observe(SHOOTING_START, () => { this.shooting = true; }, 'S-RELSEQ (shooting service)');
-    lab.observe(SHOOTING_END, () => { this.shooting = false; }, 'S-RELSEQ (shooting service end)');
+    lab.observe(SHOOTING_END, () => {
+      this.shooting = false;
+      if (this.native_tra) { this.native_shot_started = false; this.native_cbs_step.clear(); }
+    }, 'S-RELSEQ (shooting service end)');
     if (this.native_tra) lab.observe(SHOOT_POST, (l, r) => {
       if (this.posting_cbs) return;
       const id = r.d0 >>> 0, param = r.d1 >>> 0;

@@ -177,10 +177,10 @@ export class Tracer extends HarnessDigest {
   // doorbell result, and the xcpu ring rows new since the previous summary.
   ipiSummary() {
     const sim = this.sim, d = (o) => sim.u32(IRQ.DEBUG + o), total = d(IRQ.D_XCPU_TOTAL);
-    if (total - this.xcpu_seen > IRQ.RING_SLOTS) throw new Error(`capture: ${total - this.xcpu_seen} xcpu ring rows since the last summary overflow the ring`);
+    if (total - this.xcpu_seen > IRQ.XCPU_RING_SLOTS) throw new Error(`capture: ${total - this.xcpu_seen} xcpu ring rows since the last summary overflow the ring`);
     const xcpu = [];
     for (let n = this.xcpu_seen; n < total; n++) {
-      const b = sim.read(IRQ.DEBUG + IRQ.D_XCPU_RING + 16 * (n % IRQ.RING_SLOTS), 16);
+      const b = sim.read(IRQ.DEBUG + IRQ.D_XCPU_RING + 16 * (n % IRQ.XCPU_RING_SLOTS), 16);
       xcpu.push([u32(b, 0), u32(b, 4), u32(b, 8), u32(b, 12)]);
     }
     this.xcpu_seen = total;

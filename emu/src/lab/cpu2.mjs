@@ -43,6 +43,11 @@ const h8 = (v) => '0x' + fx(v >>> 0, 8);
 const D = (v) => runtime(A(v));                  // a code address in the disassembly notation, at run time
 
 export const CPU2_ENTRY = A(0x50008F01), RELEASE = A(0xA3258360);
+// per-CPU queue-to-flag binding table initializer (D: 0x5002bfb9 sets 0xa3258350[0..3] to each core's own table
+// 0xa3256e80, 0xa3257c90, 0xa3257f90, 0xa32581d0; without it both CPU 0 and CPU 2 dereference NULL + (q-1)*12 in low
+// RAM and CPU 2's queue 0x200a clobbers CPU 0's queue 0x000a, PWR_MAIN)
+const QUEUE_FLAG_INIT = A(0x5002BFB9);
+export function initQueueFlagTables(lab) { lab.call(QUEUE_FLAG_INIT, null, null, null, 20000); }
 // core 2's return trampoline: an offset of the lab's CALLER page no other harness code uses (0x400 is display.mjs's
 // DOORBELL_STUB, 0x480 irq.mjs's STORE_STUB)
 export const RETURN2 = A(0xA2100600);

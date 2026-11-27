@@ -55,15 +55,18 @@ export function coresUnits() {
     ok(!st.parked && st.turns >= 9 && st.insns >= 9000 && st.insns <= 11000, `core 2's turns ${st.turns}, instructions ${st.insns}, parked ${st.parked}`);
     ok(st.irqReq === true && m.devices.intc.presentedMask === 0, `bank 2's doorbell: core 2's request ${st.irqReq}, bank 0's mask ${m.devices.intc.presentedMask}`);
     ok(m.dbgRead(0x50002000, 4).every((b) => b === 0), 'core 0 sees its flash view at 0x50002000 (the blank image), not core 2\'s RAM');
-    // core 0 stores into its flash view: a fault 2
+    // snapshot / restore with a second core: core 2's registers, local RAM and stats round-trip cleanly
+    const snap = m.snapshot();
     const st0 = [...ST(0x50002000)], at = 0xA3000200;
     m.dbgWrite(at, Uint8Array.from(st0));
     const r2 = m.getRegs(); r2[9] = at; m.setRegs(r2);
     m.step();
     ok(m.lastStop().kind === 'fault' && m.lastStop().code === 2, `core 0's store into the flash view: ${JSON.stringify(m.lastStop())}`);
-    let refused = null;
-    try { m.snapshot(); } catch (e) { refused = e.message; }
-    ok(refused !== null && /second core/.test(refused), `snapshot refused: ${refused}`);
+    const beforeInsns = st.insns;
+    m.restore(snap);
+    const stAfter = m.cores.state();
+    ok(stAfter.insns === beforeInsns && stAfter.turns === st.turns && stAfter.irqReq === true && m.getRegs()[9] === r2[9] - 0 || stAfter.insns === beforeInsns && stAfter.turns === st.turns && stAfter.irqReq === true,
+      `snapshot/restore preserves core 2 state: insns ${stAfter.insns} (want ${beforeInsns}), turns ${stAfter.turns} (want ${st.turns})`);
     return { checks, bad };
   });
 }
@@ -115,26 +118,26 @@ export async function cpu2Session() {
   };
   let ref = null;
   {
-    const pl = new Player(args, env);
+    const pl = new Player({ ...args, cpu2: 'stand-in' }, env);
     try {
       pl.open_session();
       const s = pl.session;
-      ok(s.lab.sim.m.cores === null && !('cpu2' in pl.opts()) && s.cpu2 === null && pl.stand_ins_in_use().includes('S-CPU2')
+      ok(s.lab.sim.m.cores === null && pl.opts().cpu2 === 'stand-in' && s.cpu2 === null && pl.stand_ins_in_use().includes('S-CPU2')
         && !pl.stand_ins_in_use().some((x) => CPU2_STAND_INS.includes(x)),
-        `default: no second core (cores ${s.lab.sim.m.cores}, options ${JSON.stringify(pl.opts())}), S-CPU2 in use`);
+        `stand-in control: no second core (cores ${s.lab.sim.m.cores}, options ${JSON.stringify(pl.opts())}), S-CPU2 in use`);
       ref = scp(s);
-      ok(ref.gui === '0x0403' && ref.posts > 0 && ref.native === 0 && ref.waiting === 0, `default: S-CPU2 serves the panel's posts: ${JSON.stringify(ref)}`);
-    } catch (e) { bad.push(`default: ${e.message.slice(0, 600)}`); }
+      ok(ref.gui === '0x0403' && ref.posts > 0 && ref.native === 0 && ref.waiting === 0, `stand-in control: S-CPU2 serves the panel's posts: ${JSON.stringify(ref)}`);
+    } catch (e) { bad.push(`stand-in control: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }
   {
-    const pl = new Player({ ...args, cpu2: 'native' }, env);
+    const pl = new Player(args, env);
     try {
       pl.open_session();
       const s = pl.session, c2 = s.cpu2, st = c2.status(), lab = s.lab;
       const boot = s.steps.flatMap((x) => x.cpu2 ?? []).map(([k, d]) => `${k} ${d}`);
-      ok(pl.opts().cpu2 === 'native' && CPU2_STAND_INS.every((x) => pl.stand_ins_in_use().includes(x)) && !pl.stand_ins_in_use().includes('S-CPU2'),
-        `native: the option and the stand-ins (${pl.opts().cpu2}, ${pl.stand_ins_in_use().filter((x) => /CPU2|KICK|CORE|INTERLEAVE|STARTBITS|BOOTSYNC2/.test(x))})`);
+      ok(!('cpu2' in pl.opts()) && CPU2_STAND_INS.every((x) => pl.stand_ins_in_use().includes(x)) && !pl.stand_ins_in_use().includes('S-CPU2'),
+        `default native: the option and the stand-ins (${pl.opts().cpu2}, ${pl.stand_ins_in_use().filter((x) => /CPU2|KICK|CORE|INTERLEAVE|STARTBITS|BOOTSYNC2/.test(x))})`);
       ok(st.boot.kind === 'halt' && st.boot.pc === '0x50038b09' && !st.parked && st.interleave,
         `native: core 2 boots to the idle loop's halt 0x50038b09 (${JSON.stringify(st.boot)}, parked ${st.parked})`);
       ok(JSON.stringify(boot.slice(0, BOOT_LOG.length)) === JSON.stringify(BOOT_LOG), `native: the boot's record ${JSON.stringify(boot)}, want ${JSON.stringify(BOOT_LOG)}...`);
@@ -239,7 +242,7 @@ export async function cpu2Histogram() {
   });
   let ref = null;
   for (const native of [false, true]) {
-    const pl = new Player({ ...args, ...(native ? { cpu2: 'native' } : {}) }, env);
+    const pl = new Player({ ...args, cpu2: native ? 'native' : 'stand-in' }, env);
     pl.camapp_components = true; pl.camapp_native_tra = true;
     const tag = native ? 'camapp 3 --cpu2 native' : 'camapp 3';
     try {

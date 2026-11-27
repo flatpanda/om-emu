@@ -48,8 +48,7 @@ export async function playBodySession() {
   const { expectedView } = await import('./test_imgpipe.mjs');
   if (DRAM) (await import('../src/fw/board.mjs')).BOARD.dram_size = DRAM << 20;
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
-  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
-  pl.camapp_components = true; pl.camapp_native_tra = true; pl.camapp_play_native = true;
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, camapp: '3' }, env);
   try {
     pl.open_session();
     const s = pl.session, lab = s.lab, ca = s.camapp, pm = ca.play_native;

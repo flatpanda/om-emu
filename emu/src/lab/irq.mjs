@@ -33,7 +33,7 @@ export const D_PRESENTED_TOTAL = 0x010, D_ACCEPTED_TOTAL = 0x014, D_REQUEST = 0x
 export const D_IPI_WRITES = 0x024, D_DOORBELL_RESULT = 0x028, D_IPI_REPEATS = 0x02C, D_PRESENT_NOW = 0x040;
 export const D_PENDING = 0x060, D_IPI_REQ = 0x070, D_XCPU_TOTAL = 0x07C, D_XCPU_RING = 0x6000;
 export const D_ERR_RING = 0x100, D_LINES = 0x1000, D_LEVELS = 0x2000, D_TEST = 0x3000;
-export const D_PRESENTED_RING = 0x4000, D_ACCEPTED_RING = 0x5000, RING_SLOTS = 256;
+export const D_PRESENTED_RING = 0x4000, D_ACCEPTED_RING = 0x5000, RING_SLOTS = 256, XCPU_RING_SLOTS = 2048;
 export const GATE_OFF = 0, GATE_PC = 1, GATE_ANY = 2;
 export const TEST_OFF = 0, TEST_LEVEL = 1, TEST_ONCE = 2;
 export const ERRORS = { 1: 'UNKNOWN', 2: 'LEVEL_VALUE', 3: 'TEST_DRIVEN', 4: 'DEBUG_CPU', 5: 'DOORBELL' };
@@ -73,10 +73,10 @@ export class IntcDebug {
   level(irq) { return this.sim.u32(BANKS[0] + 4 * irq); }
   bank_level(bank, irq) { return this.sim.u32(BANKS[bank] + 4 * irq); }
   line(irq) { const b = this.sim.read(DEBUG + D_LINES + irq, 1)[0]; return [!!(b & 1), !!(b & 2), !!(b & 0x80)]; }
-  _ring(totalOffset, base, since = 0) {
-    const total = this.u32(totalOffset), first = Math.max(since, total - RING_SLOTS), out = [];
+  _ring(totalOffset, base, since = 0, slots = RING_SLOTS) {
+    const total = this.u32(totalOffset), first = Math.max(since, total - slots), out = [];
     for (let n = first; n < total; n++) {
-      const b = this.sim.read(DEBUG + base + 16 * (n % RING_SLOTS), 16);
+      const b = this.sim.read(DEBUG + base + 16 * (n % slots), 16);
       out.push([u32(b, 0), u32(b, 4), u32(b, 8), u32(b, 12)]);
     }
     return [total, out];
@@ -109,7 +109,7 @@ export class IntcDebug {
   // +0x808 pending bits of a bank (A-IPI), from the debug window (no side effect).
   ipi_pending(bank) { return this.u32(D_PENDING + 4 * bank); }
   // [total, [(bank, value, pc, insns_lo)]] of the sets of banks 1..3.
-  xcpu(since = 0) { return this._ring(D_XCPU_TOTAL, D_XCPU_RING, since); }
+  xcpu(since = 0) { return this._ring(D_XCPU_TOTAL, D_XCPU_RING, since, XCPU_RING_SLOTS); }
   // Doorbell cmd 2: pending[bank] = (pending[bank] & ~clear) | set_ (one CPU store from harness code).
   ipi_request(bank, set_ = 0, clear = 0, stub = STORE_STUB) {
     if (this.version() < 2) throw new RuntimeError('interrupt controller window version < 2 (no +0x808 model)');

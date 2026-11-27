@@ -182,7 +182,8 @@ export function runCall(lab, dbg, spec, { atStop = false } = {}) {
     }
   }
   const saved = m.getRegs().slice(), labRegs = [16, 17, 18, 19].map((n) => m.getReg(n)), ctx = atStop ? m.cpuContext() : null;
-  const keep = { stats: sim.stats, observer: sim.observer, stub: lab.stubObserver, debug: sim.debug, bps: [...sim.breakpoints], data: lab.data };
+  const keep = { stats: sim.stats, observer: sim.observer, stub: lab.stubObserver, debug: sim.debug, bps: [...sim.breakpoints], data: lab.data, interleave: m.cores ? m.cores.interleave : false };
+  if (m.cores) m.cores.interleave = false;
   const n0 = lab.log.length, ev0 = lab.kernel?.events.length ?? 0, err0 = lab.kernel?.errors.length ?? 0, k0 = m.stderrCount();
   const undo = [];                   // [address, bytes]: put back last first
   const keepBytes = (a, n) => { if (n) undo.push([a >>> 0, dbg.read(a >>> 0, n)]); };
@@ -270,6 +271,7 @@ export function runCall(lab, dbg, spec, { atStop = false } = {}) {
     out.stderr = m.stderrFrom(k0).lines;
     return out;
   } catch (e) { thrown = e; throw e; } finally {
+    if (m.cores) m.cores.interleave = keep.interleave;
     sim.stats = keep.stats; sim.observer = keep.observer; lab.stubObserver = keep.stub; sim.debug = keep.debug;
     // the ring goes back to where it was unless a stand-in allocated from it during the call (its block may be in use)
     if (base !== null && lab.data === base + spec.scratch) lab.data = keep.data;

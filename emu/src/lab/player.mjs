@@ -52,7 +52,7 @@ import { patchLine } from '../fw/patch.mjs';
 import { patchAudit } from './patchaudit.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
 import { CPU2_STAND_INS } from './cpu2.mjs';
-import { PLAY_NATIVE_STAND_INS } from './playmod.mjs';
+import { PLAY_NATIVE, PLAY_NATIVE_STAND_INS } from './playmod.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -341,9 +341,11 @@ export class Player {
     this.stop = false;
     this.stop_seen = false;          // the stop as the ?sync=1 waiters see it (set_stop)
     this.session = null;
-    this.camapp_components = false;  // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
-    this.camapp_native_tra = false;  // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
-    this.camapp_play_native = false; // with camapp 3 only: the play module natively (playmod.mjs; set by its tests)
+    const cm = Number(a.camapp ?? 1);
+    this.camapp_components = cm === 2 || cm === 3;   // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
+    this.camapp_native_tra = cm === 3;               // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
+    const pn = a.play_native ?? (cm === 3 ? 'auto' : 'off');
+    this.camapp_play_native = pn === 'on' || (pn === 'auto' && cm === 3 && PLAY_NATIVE); // with camapp 3: auto-on where PLAY_NATIVE holds
     this.cam_fe = false;             // --take probe: cam.c's second init against S-CAMFE (take.mjs H-CAMINIT2); off by default
     this.usb_start = null;           // 'out': the session starts with no USB cable, PC13 high (play.mjs; set by its tests)
     this.usb_host = false;           // S-USBHOST: a USB host behind the cable answers the driver's state query (set by its tests)
@@ -413,7 +415,7 @@ export class Player {
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
       ...((a.rotate ?? 'auto') !== 'auto' ? { rotate: a.rotate } : {}),   // absent when auto (the default since 2026-11-23)
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
-      ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
+      ...((a.cpu2 ?? 'auto') !== 'auto' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs); absent when auto (native on E143)
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
       ...((a.held ?? []).length ? { held: a.held } : {}),   // keys held down at power-on (play.mjs PlaySession: opts.held)
       ...(this.off_positions !== null ? { carried: this.off_positions } : {}),   // a power-on after the lever's off (power)

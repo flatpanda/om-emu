@@ -234,6 +234,45 @@ export class Cores {
   }
   // what a stop handler sees: the running core's registers and the bus (debugger accesses: no device side effects on
   // a read of RAM; a device read is the device's debugger read)
+  // Snapshot / restore of the per-core state at a stop (machine.mjs snapshot/restore): always on core 0 (the harness
+  // never stops on core 2). Core 2's RAM pages live in mem.buf and are covered by memSnapshot/memRestore.
+  snapshot() {
+    if (this.cur !== 0) throw new Error('cores.snapshot: must be on core 0');
+    const copyCtx = (c) => ({
+      R: c.R.slice(), S: { ...c.S },
+      interp: c.interp === null ? null : { ...c.interp, bp: c.interp.bp.slice(), builtin: new Set(c.interp.builtin) },
+      io: { ...c.io }, cst: { n: c.cst.n.slice(), o: c.cst.o.slice(), k: c.cst.k },
+      started: c.started, halted: c.halted, parked: c.parked, resumable: c.resumable,
+      halts: new Set(c.halts), stops: c.stops.slice(), polls: new Map(c.polls),
+      poll: c.poll === null ? null : { addr: c.poll.addr, bytes: c.poll.bytes.slice() },
+      pollSeen: new Map([...c.pollSeen].map(([k, b]) => [k, b.slice()])),
+      woken: new Set(c.woken),
+    });
+    return {
+      q0: this.q0, interleave: this.interleave, stats: { ...this.stats }, problems: this.problems.slice(),
+      ctx: { 0: copyCtx(this.ctx[0]), [this.second]: copyCtx(this.ctx[this.second]) },
+    };
+  }
+  restore(snap) {
+    if (this.cur !== 0) throw new Error('cores.restore: must be on core 0');
+    this.q0 = snap.q0; this.interleave = snap.interleave;
+    Object.assign(this.stats, snap.stats);
+    this.problems.length = 0; this.problems.push(...snap.problems);
+    for (const id of [0, this.second]) {
+      const c = this.ctx[id], s = snap.ctx[id];
+      c.R.set(s.R);
+      Object.assign(c.S, s.S);
+      c.interp = s.interp === null ? null : { ...s.interp, bp: s.interp.bp.slice(), builtin: new Set(s.interp.builtin) };
+      c.io.n = s.io.n; c.io.pc = s.io.pc;
+      c.cst.n.set(s.cst.n); c.cst.o.set(s.cst.o); c.cst.k = s.cst.k;
+      c.started = s.started; c.halted = s.halted; c.parked = s.parked; c.resumable = s.resumable;
+      c.halts = new Set(s.halts); c.stops = s.stops.slice(); c.polls = new Map(s.polls);
+      c.poll = s.poll === null ? null : { addr: s.poll.addr, bytes: s.poll.bytes.slice() };
+      c.pollSeen = new Map([...s.pollSeen].map(([k, b]) => [k, b.slice()]));
+      c.woken = new Set(s.woken);
+    }
+    this.intc.cur = 0;
+  }
   _api(c) {
     const self = this;
     return {

@@ -46,7 +46,7 @@ import { CamApp, CA_MODULE9_READERS, pcPdQueue } from './camapp.mjs';
 import { MecCount } from './mec.mjs';
 import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
-import { Cpu2, CPU2_QUANTUM } from './cpu2.mjs';
+import { Cpu2, CPU2_QUANTUM, initQueueFlagTables } from './cpu2.mjs';
 import { labSoundArea, STAND_IN as SOUNDRES } from './soundres.mjs';
 import { DisplayQueue } from './dispq.mjs';
 
@@ -1255,12 +1255,13 @@ export class PlaySession extends N.NavSession {
     const take = opts.take ?? 'stand-in';
     if (!['stand-in', 'probe'].includes(take)) throw new ValueError(`take ${show(take)}: stand-in or probe`);
     if (take === 'probe' && !ON_LAB_MODEL) throw new ValueError(`--take probe: ${MODEL}'s TAKE addresses are not read (E143 only, src/lab/take.mjs)`);
-    // CPU 2 natively (--cpu2 native, E143 only; src/lab/cpu2.mjs, src/core/cores.mjs): the machine gets a second core;
-    // off by default
-    const cpu2 = opts.cpu2 ?? 'stand-in';
-    if (!['stand-in', 'native'].includes(cpu2)) throw new ValueError(`cpu2 ${show(cpu2)}: stand-in or native`);
-    if (cpu2 === 'native') {
-      if (!ON_LAB_MODEL) throw new ValueError(`--cpu2 native: ${MODEL}'s CPU 2 addresses are not read (E143 only, src/lab/cpu2.mjs)`);
+    // CPU 2 natively (--cpu2 auto|stand-in|native, E143 only; src/lab/cpu2.mjs, src/core/cores.mjs): the machine gets
+    // a second core; auto (the default) is native on E143 and stand-in elsewhere
+    const cpu2 = opts.cpu2 ?? 'auto';
+    if (!['auto', 'stand-in', 'native'].includes(cpu2)) throw new ValueError(`cpu2 ${show(cpu2)}: auto, stand-in or native`);
+    if (cpu2 === 'native' && !ON_LAB_MODEL) throw new ValueError(`--cpu2 native: ${MODEL}'s CPU 2 addresses are not read (E143 only, src/lab/cpu2.mjs)`);
+    const cpu2Native = cpu2 === 'native' || (cpu2 === 'auto' && ON_LAB_MODEL);
+    if (cpu2Native) {
       env = { ...env, machine: { ...(env.machine ?? {}), cores: { second: 2, quantum: CPU2_QUANTUM } } };
     }
     // defaults for the keys kw does not give (a key given as null keeps it)
@@ -1355,7 +1356,7 @@ export class PlaySession extends N.NavSession {
     this.capture_frame = null; this.recview_hold = false;   // S-RECVIEW: the last capture's frame, held during the rec view
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
-    this.cpu2_native = (opts.cpu2 ?? 'stand-in') === 'native';
+    this.cpu2_native = cpu2Native;
     this.cpu2 = null;              // --cpu2 native (cpu2.mjs): CPU 2 on the machine's second core, from the bring-up on
     // the session's sound for the host (audio.mjs): only where the host plays it (env.onAudio, the players' pages)
     this.audio = typeof env.onAudio === 'function' ? new AudioOut() : null;
@@ -1515,6 +1516,7 @@ export class PlaySession extends N.NavSession {
     if (this.scpu_port) this.scpu_port_bring_up();
     for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
     if (lab.scpu_link && uiinScan() && !this.uiin_init) this.uiin_scan_bring_up();
+    if (this.cpu2_native) initQueueFlagTables(lab);
     if (lab.scpu_link && POWER_OFF) this.power_manager_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();

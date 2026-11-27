@@ -453,12 +453,12 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // happened after the snapshot (the whole machine state comes back).
     snapshot() {
       live(); notPaused('snapshot');
-      if (cores !== null) throw new Error('snapshot: not with a second core (src/core/cores.mjs keeps per-core state the snapshot does not hold)');
       if (failed !== null) throw new HostStopped('snapshot', failed);
       const cpuS = {};
       for (const k of Object.keys(S)) if (k !== 'intc') cpuS[k] = S[k];
       return { gen: myGen, mem: mem.memSnapshot(), R: R.slice(), S: cpuS, interp: interpState(),
         devices: snapshotDevices(this.devices, [m, ...Object.values(this.devices), rom], mem.buf),
+        cores: cores !== null ? cores.snapshot() : null,
         isc: isc.slice(), stderrLines: stderrLines.slice(), stderrBase, stats: { ...stats }, builtins: new Set(builtins), pendingDebug };
     },
     restore(snap) {
@@ -470,6 +470,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       setInterpState(snap.interp);
       flushDecode();
       restoreDevices(this.devices, snap.devices);
+      if (cores !== null) cores.restore(snap.cores);
       isc.set(snap.isc);
       stderrLines.length = 0; stderrLines.push(...snap.stderrLines); stderrBase = snap.stderrBase;
       Object.assign(stats, snap.stats);
@@ -477,14 +478,14 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       pendingDebug = snap.pendingDebug;
       failed = null; lastStop = null; lastWatch = null; mem.clearWatchHit();
     },
-    snapshotBytes(snap) { return snap.mem.data.length + devicesBytes(snap.devices) + 4 * snap.R.length; },
+    snapshotBytes(snap) { return snap.mem.data.length + devicesBytes(snap.devices) + 4 * snap.R.length + (snap.cores ? 4 * snap.R.length : 0); },
     // The CPU's whole context at a stop, for a nested harness run there and back (src/debug/call.mjs at a debug stop):
     // every CPU word with the ones getRegs leaves out (the flags' undefined bits, the PSW hazard), the run loop's flags
     // but the interrupt request (the controller's line, which the nested run does not roll back), the interpreter's
     // TB-start record, a pending debug stop and the last stop. Memory and devices are not in it.
     cpuContext() {
       live(); notPaused('cpuContext');
-      if (cores !== null) throw new Error('cpuContext: not with a second core (src/core/cores.mjs keeps per-core state)');
+      if (cores !== null && cores.cur !== 0) throw new Error('cpuContext: must be on core 0');
       const cpuS = {};
       for (const k of Object.keys(S)) if (k !== 'intc' && k !== 'irqReq') cpuS[k] = S[k];
       return { gen: myGen, R: R.slice(), S: cpuS, interp: interpState(), pendingDebug, lastStop, lastWatch };

@@ -4,10 +4,12 @@
   "license": "MIT",
   "type": "module",
   "description": "OM-Emu: an emulator of Olympus/OM camera firmware in JavaScript; see README.md",
-  "engines": { "node": ">=26" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "test": "node bin/test.mjs",
     "test:pure": "node bin/test-pure.mjs",
+    "test:fast": "node bin/test-pure.mjs --no-facts",
+    "test:facts": "node test/test_facts.mjs",
     "golden": "node bin/golden.mjs check",
     "play": "sh play.sh",
     "fetch-fw": "node bin/fetch-fw.mjs",

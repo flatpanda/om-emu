@@ -21,6 +21,8 @@ export async function strictCaveUnits() {
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const mem = await import('../src/core/mem.mjs');
   const { IMAGE_BASE } = await import('../src/fw/model.mjs');
+  const { MODELS } = await import('../src/fw/models.mjs');
+  const { FACTS } = await import('../src/fw/ports.mjs');
   const { StrictLog, ownRanges, strictLine, STRICT_CLASSES } = await import('../src/lab/strict.mjs');
 
   // a block of SIZE at B: section 1 [B, B + 0x10000) with its end word at +0x40 (stock end +0x8000, patched +0xc000);
@@ -40,6 +42,17 @@ export async function strictCaveUnits() {
   ok(ownRanges(loads, lowered, B).length === 0, 'ownRanges: an end word the patch lowered gives none');
   ok(ownRanges(loads, rom, B).length === 0, 'ownRanges: the stock image equal to the patched one gives none');
   ok(ownRanges(null, stock, B).length === 0 && ownRanges(loads, null, B).length === 0, 'ownRanges: no loads or no stock image, none');
+  // flash-copy family (loads null, section end words read directly from rom and stock via ends)
+  const ends = [B + 0x40, B + 0x44];
+  const ownFc = ownRanges(null, stock, B, rom, ends);
+  ok(ownFc.length === 1 && ownFc[0].lo === B + 0x8000 && ownFc[0].hi === B + 0xc000 && ownFc[0].n === 1 && ownFc[0].word === B + 0x40 && ownFc[0].stock === B + 0x8000,
+    `ownRanges (ends fallback): section 1's raised piece without loads: ${JSON.stringify(ownFc)}`);
+  ok(ownRanges(null, lowered, B, rom, ends).length === 0 && ownRanges(null, rom, B, rom, ends).length === 0,
+    'ownRanges (ends fallback): lowered or unchanged end word gives none');
+  const oob = rom.slice(); oob.set(le(B + SIZE + 4), 0x40);
+  ok(ownRanges(null, stock, B, oob, ends).length === 0, 'ownRanges (ends fallback): patched end past image end ignored');
+  ok(ownRanges(null, stock, B, null, ends).length === 0 && ownRanges(null, stock, B, rom, []).length === 0,
+    'ownRanges (ends fallback): missing rom or empty ends gives none');
 
   const pc0 = mem.ctx.pc, ins0 = mem.ctx.insns, mdr0 = mem.ctx.mdr;
   let pc = 0;
@@ -95,6 +108,33 @@ export async function strictCaveUnits() {
       const xd = X.doc();
       ok(xd.findings.length === 5 && xd.findings.every((f) => f.class === 'image-store'), `control, ${what}: five image-store sites: ${JSON.stringify(xd.findings.map((f) => [f.class, f.disasm]))}`);
     }
+    // flash-copy family: StrictLog armed with loads: null and explicit ends aggregates cave-store without bootLoads
+    const fcLog = ({ ranges = patchRanges, st = stock } = {}) => {
+      const l = new StrictLog({ model: 'T', allow: { T: [] } });
+      l.arm({ rom, base: B, end: B + SIZE, preload: [], loads: null, patchRanges: ranges, stock: st, ends });
+      return l;
+    };
+    const F = fcLog();
+    pc = B + 0x200; F.report('store', B + 0x8100, 4, 'w', 1);
+    pc = B + 0x300; F.report('store', B + 0xa000, 1, 'w', 2);
+    pc = B + 0x310; F.report('store', B + 0x12000, 1, 'w', 3);
+    const fd = F.doc(), fcCave = fd.findings.filter((f) => f.class === 'cave-store'), fcPer = fd.findings.filter((f) => f.class === 'image-store');
+    ok(fd.findings.length === 2 && fcCave.length === 1 && fcCave[0].range === `${h8(B + 0x8000)}..${h8(B + 0xc000)}` && fcCave[0].sites === 2 && fcCave[0].patched === 1 && fcPer.length === 1,
+      `flash-copy fallback (loads null, ends): one cave-store and one image-store: ${JSON.stringify(fd.findings)}`);
+    const Fno = fcLog({ ranges: null });
+    pc = B + 0x200; Fno.report('store', B + 0x8100, 4, 'w', 1);
+    ok(Fno.doc().findings.length === 1 && Fno.doc().findings[0].class === 'image-store', 'flash-copy control: no overlay gives image-store');
+    // real flash-copy-family model lookup (E142: FACTS.E142.sections.ends resolved automatically when loads is null)
+    const e142Base = MODELS.E142.image_base >>> 0, e142Word = FACTS.E142.sections.ends[0] >>> 0, e142Off = e142Word - e142Base;
+    const e142Stock = new Uint8Array(SIZE).fill(0xcb), e142Rom = e142Stock.slice();
+    e142Stock.set(le(e142Base + 0x30000), e142Off);
+    e142Rom.set(le(e142Base + 0x34000), e142Off);
+    const E142 = new StrictLog({ model: 'E142', allow: { E142: [] } });
+    E142.arm({ rom: e142Rom, base: e142Base, end: e142Base + SIZE, preload: [], loads: null, patchRanges: [[e142Off, 4], [0x200, 4]], stock: e142Stock });
+    pc = e142Base + 0x200; E142.report('store', e142Base + 0x31000, 4, 'w', 9);
+    const e142Doc = E142.doc();
+    ok(e142Doc.findings.length === 1 && e142Doc.findings[0].class === 'cave-store' && e142Doc.findings[0].range === `${h8(e142Base + 0x30000)}..${h8(e142Base + 0x34000)}`,
+      `E142 automatic sections.ends lookup with loads null: ${JSON.stringify(e142Doc.findings)}`);
   } finally { mem.ctx.pc = pc0; mem.ctx.insns = ins0; mem.ctx.mdr = mdr0; }
   return { bad, checks };
 }

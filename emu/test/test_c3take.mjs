@@ -31,10 +31,21 @@ export async function stillSession() {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { POSITION_SWITCHES } = await import('../src/lab/play.mjs');
+  const { CBS, relseq_skip_native } = await import('../src/lab/camapp.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true };
   const PHASE_QUERY = A(0x50AB57E9), Q = fact('api.queues', { TAKE_EXEC: 0x5A, TAKE_FUNC: 0x5E }), TAKE_QUEUES = [Q.TAKE_EXEC, Q.TAKE_FUNC];
+  // pure rule checks for S-RELSEQ native callback deduplication under camapp 3
+  ok(!relseq_skip_native(new Set(), false, 'START_FOCUS', CBS)
+    && !relseq_skip_native(new Set(), false, 'START_SHOOTING_PICTURE', CBS)
+    && !relseq_skip_native(new Set(), false, 'START_EXPOSE', CBS)
+    && !relseq_skip_native(new Set([CBS.END_FOCUS]), true, 'END_FOCUS', CBS)
+    && relseq_skip_native(new Set([CBS.START_FOCUS]), false, 'START_FOCUS', CBS)
+    && relseq_skip_native(new Set(), true, 'START_SHOOTING_PICTURE', CBS)
+    && relseq_skip_native(new Set([CBS.START_SHOOTING_PICTURE]), false, 'START_SHOOTING_PICTURE', CBS)
+    && relseq_skip_native(new Set([CBS.START_EXPOSE]), false, 'START_EXPOSE', CBS),
+    `${MODEL}: relseq_skip_native deduplicates START_FOCUS, START_SHOOTING_PICTURE and START_EXPOSE only when posted natively`);
   if (MODEL === 'E147') {
     ok(POSITION_SWITCHES.length === 0 || POSITION_SWITCHES.some((p) => p.join() === STILL_SWITCH_E147.join()),
       `E147: the still / movie switch 0x1909 starts at its third position ${JSON.stringify(STILL_SWITCH_E147)}: ${JSON.stringify(POSITION_SWITCHES)}`);
@@ -49,7 +60,7 @@ export async function stillSession() {
       const key = (k, d) => { const rec = s.key(k, d); ca.pump(); return rec; };
       const tap = (k) => { const rec = key(k, 'down'); idle(100); key(k, 'up'); idle(800); return rec; };
       const phase = () => lab.call(PHASE_QUERY, {}, null, null, 200000).d0;
-      const logged = (re) => [...s.steps.flatMap((x) => x.camapp ?? []), ...ca.log].filter(([k, d]) => k === 'modpost' && re.test(d)).length;
+      const logged = (re, kind = 'modpost') => [...s.steps.flatMap((x) => x.camapp ?? []), ...ca.log].filter(([k, d]) => k === kind && re.test(d)).length;
       const left = () => TAKE_QUEUES.flatMap((q) => ca.modpost_left.get(q) ?? []).map((x) => x.what);
       run({ pl, s, ca, idle, key, tap, phase, logged, left });
     } catch (e) { bad.push(`${MODEL} ${tag}: ${e.message.slice(0, 800)}`); }
@@ -63,27 +74,40 @@ export async function stillSession() {
     const p0 = phase();
     ok(s.status().gui === GUI_SHOOTING && p0 === STANDBY, `${MODEL}: the shooting screen after the menu (${s.status().gui}), phase ${p0}`);
     key('s1', 'down'); idle(600);
-    const p1 = phase(), e1 = ca.takerdy_events;
-    ok(p1 === READY_DONE && e1 === 1, `${MODEL}: S1 takes the sequence to ${READY_DONE} on S-TAKERDY's event: phase ${p1}, events ${e1}`);
+    const p1 = phase(), e1 = ca.takerdy_events, started1 = ca.native_shot_started;
+    const natStart1 = ca.native_cbs.some(([id]) => id === CBS.START_SHOOTING_PICTURE);
+    ok(p1 === READY_DONE && e1 === 1 && started1 === true && natStart1,
+      `${MODEL}: S1 takes the sequence to ${READY_DONE} on S-TAKERDY's event: phase ${p1}, events ${e1}, native START_SHOOTING_PICTURE ${natStart1}, shot_started ${started1}`);
     key('s1', 'up'); idle(1000);
-    const p2 = phase();
+    const p2 = phase(), started2 = ca.native_shot_started;
+    const natEnd1 = ca.native_cbs.some(([id]) => id === CBS.END_SHOOTING_PICTURE);
     const open = tap('menu'), gui = s.status().gui, close = tap('menu');
-    ok(p2 === STANDBY && open.events.length > 0 && gui === GUI_MENU && close.events.length > 0 && s.status().gui === GUI_SHOOTING,
-      `${MODEL}: S1 released alone returns to ${p2} (want ${STANDBY}), MENU after it: ${open.events.length} GUI events, ${gui} (want ${GUI_MENU}), back ${s.status().gui}`);
+    ok(p2 === STANDBY && started2 === false && natEnd1 && open.events.length > 0 && gui === GUI_MENU && close.events.length > 0 && s.status().gui === GUI_SHOOTING,
+      `${MODEL}: S1 released alone returns to ${p2} (want ${STANDBY}), native END_SHOOTING_PICTURE ${natEnd1}, shot_started ${started2}, MENU after it: ${open.events.length} GUI events, ${gui} (want ${GUI_MENU}), back ${s.status().gui}`);
+    const nat0 = ca.native_cbs.length;
     key('s1', 'down'); idle(600);
     key('s2', 'down'); idle(700);
     const p3 = phase();
     key('s2', 'up'); key('s1', 'up'); idle(2000);
     const p4 = phase(), rec = tap('menu');
+    const shotNat = ca.native_cbs.slice(nat0).map(([id]) => id);
+    const dupStartPic = logged(/^START_SHOOTING_PICTURE\(/, 'cbs'), dupExpose = logged(/^START_EXPOSE\(/, 'cbs');
+    const skipStartPic = logged(/^START_SHOOTING_PICTURE skipped:/, 'cbs'), skipExpose = logged(/^START_EXPOSE skipped:/, 'cbs');
+    const natFocus = ca.native_cbs.filter(([id]) => id === CBS.START_FOCUS).length;
+    const dupFocus = logged(/^START_FOCUS\(/, 'cbs'), skipFocus = logged(/^START_FOCUS skipped:/, 'cbs');
     ok(p3 === TAKE_PICTURE && p4 === TAKE_PICTURE && ca.takerdy_events === 2 && ca.takerdy_takes.length === 1 && rec.events.length === 0
       && s.status().gui === GUI_SHOOTING && ca.card_images() === 1,
       `${MODEL}: a full shot goes to ${TAKE_PICTURE}: after S2 ${p3}, after the releases ${p4}; events ${ca.takerdy_events}, take-picture requests taken ${ca.takerdy_takes.length}; MENU sets ${rec.events.length} GUI events (${s.status().gui}); S-RELSEQ's picture ${ca.card_images()}`);
+    ok(shotNat.includes(CBS.START_SHOOTING_PICTURE) && shotNat.includes(CBS.START_EXPOSE)
+      && dupStartPic === 0 && dupExpose === 0 && skipStartPic === 1 && skipExpose === 1
+      && (natFocus === 0 || (dupFocus === 0 && skipFocus === natFocus)),
+      `${MODEL}: native sequence callbacks deduplicated in S-RELSEQ: shot native ${JSON.stringify(shotNat)}, dup [pic=${dupStartPic}, exp=${dupExpose}, foc=${dupFocus}], skipped [pic=${skipStartPic}, exp=${skipExpose}, foc=${skipFocus}/${natFocus}]`);
     const used = pl.stand_ins_in_use(), f29 = logged(/^TAKE_FUNC \(\d+\) cmd 29 .*: taken as TAKE_FUNC would take it/);
     ok(used.includes('S-TAKERDY') && used.includes('S-MODPOST') && f29 === 1 && left().length === 0,
       `${MODEL}: the player lists S-TAKERDY (${used.includes('S-TAKERDY')}) and S-MODPOST (${used.includes('S-MODPOST')}); TAKE_FUNC 29 taken ${f29} times; direct posts left in TAKE's queues: ${JSON.stringify(left())}`);
   });
   // the control: S-TAKERDY off, so the take-ready never ends; S2's direct post is the take API's control 0x40
-  session('control (S-TAKERDY off)', ({ s, ca, idle, key, tap, phase, left }) => {
+  session('control (S-TAKERDY off)', ({ s, ca, idle, key, tap, phase, logged, left }) => {
     ca.takerdy_on = false;
     idle(2000);
     tap('menu'); tap('menu');
@@ -93,8 +117,11 @@ export async function stillSession() {
     key('s2', 'down'); idle(700);
     key('s2', 'up'); key('s1', 'up'); idle(2000);
     const p2 = phase(), rec = tap('menu');
-    ok(p1 === READY && p2 === READY && ca.takerdy_events === 0 && ca.modpost_taken === m0 + 1 && left().length === 0 && rec.events.length === 0 && s.status().gui === GUI_SHOOTING,
-      `${MODEL} control: S1 stops in ${p1} with no event (${ca.takerdy_events}), the full shot leaves ${p2}, S2's direct post taken (${ca.modpost_taken - m0}), MENU sets ${rec.events.length} GUI events`);
+    const natExpose = ca.native_cbs.some(([id]) => id === CBS.START_EXPOSE);
+    const postExpose = logged(/^START_EXPOSE\(/, 'cbs'), skipStartPic = logged(/^START_SHOOTING_PICTURE skipped:/, 'cbs');
+    ok(p1 === READY && p2 === READY && ca.takerdy_events === 0 && ca.modpost_taken === m0 + 1 && left().length === 0 && rec.events.length === 0 && s.status().gui === GUI_SHOOTING
+      && !natExpose && postExpose === 1 && skipStartPic === 1,
+      `${MODEL} control: S1 stops in ${p1} with no event (${ca.takerdy_events}), the full shot leaves ${p2}, S2's direct post taken (${ca.modpost_taken - m0}), MENU sets ${rec.events.length} GUI events, native START_EXPOSE ${natExpose}, S-RELSEQ START_EXPOSE ${postExpose}, skipped START_SHOOTING_PICTURE ${skipStartPic}`);
   });
   return { checks, bad };
 }

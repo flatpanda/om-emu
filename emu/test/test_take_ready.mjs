@@ -96,6 +96,7 @@ export async function secondShotSession() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { loadImage, loadBlock, loadNand, createHash, loadScpuImage } = await import('../checks/lib/env.mjs');
+  const { ScpuM4 } = await import('../src/lab/scpum4.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { disasm, runtime } = await import('../src/lab/hle.mjs');
@@ -107,7 +108,7 @@ export async function secondShotSession() {
     const tag = native ? 'the sub-CPU\'s firmware' : 'S-SCPUDEV';
     let env = { ...base, scpu: 'off' };
     if (native) {
-      try { env = { ...base, scpu: 'native', scpuImage: loadScpuImage() }; } catch (e) { bad.push(`${tag}: no SCPU image: ${e.message.slice(0, 200)}`); continue; }
+      try { env = { ...base, scpu: 'native', scpuImage: loadScpuImage(), ScpuM4 }; } catch (e) { bad.push(`${tag}: no SCPU image: ${e.message.slice(0, 200)}`); continue; }
     }
     const pl = new Player(args, env);
     pl.camapp_components = true; pl.camapp_native_tra = true;

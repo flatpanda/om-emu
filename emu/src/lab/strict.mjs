@@ -12,8 +12,10 @@
 //                   found none into the image (their report)
 //   cave-store      a store into a range the patch made the boot load: a section's range from its stock end to the
 //                   end its end word holds in the patched image, where the patch raised that word (caduceus-om3's
-//                   section 6, 0x60f49800..0x6103f000 on E147, their report). Known only in the loaded-ranges mode
-//                   with the stock image at hand (env.stockRom): there the patch keeps its own variables, so these
+//                   section 6, 0x60f49800..0x6103f000 on E147, their report). Known with the stock image at hand
+//                   (env.stockRom) whenever the build's section end words are read: from bootLoads in the loaded-ranges
+//                   mode (E143, E146, E147), or directly from fact sections.ends on the flash-copy family (E125, E130,
+//                   E133, E137, E140, E142) and when --loaded is off. There the patch keeps its own variables, so these
 //                   stores are one finding per range (ownRanges, the sites counted) and never take a stock-range
 //                   image-store's place under the cap
 //   init-read       a load from the source of a boot copy of image data to another address (src/fw/board.mjs preload:
@@ -29,8 +31,12 @@
 // patch overlay changed (src/lab/patchaudit.mjs PatchRanges.code). Everything is CPU accesses (src/core/mem.mjs
 // setStrict): the lab's own reads and writes (stand-ins, the debugger, DMA) never report.
 import { ctx } from '../core/mem.mjs';
+import { SECTIONS_E143 } from '../fw/facts.mjs';
+import { FACTS } from '../fw/ports.mjs';
 import { STRICT_ALLOW } from '../fw/strict-allow.mjs';
 import { PatchRanges } from './patchaudit.mjs';
+
+const sectionEndsFor = (model) => (model === 'E143' ? SECTIONS_E143 : FACTS[model]?.sections)?.ends ?? null;
 
 const CODE = 0x50000000;
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -61,17 +67,31 @@ export function strictRanges({ base, end, preload = [], loads = null }) {
 }
 
 // The ranges a patch made the boot load (cave-store): loads, the patched image's (src/fw/sections.mjs bootLoads, or
-// null), stock the stock run-time image (or null), base its run-time address. Each section whose end word holds a
-// higher end in the patched image than in the stock one gives [stock end, patched end) ({lo, hi, n, word, stock});
-// [] without loads or stock. The word is read where bootLoads reads it (the fact's address), in both images
-export function ownRanges(loads, stock, base) {
-  if (!loads || !stock) return [];
+// null), stock the stock run-time image (or null), base its run-time address; where loads is null (the flash-copy
+// family, whose reset head copies are not read so bootLoads does not run: E125, E130, E133, E137, E140, E142, or
+// --loaded off), rom (the patched image) and ends (the section end words' run-time addresses, fact sections.ends,
+// section 1 first) give the same check directly. Each section whose end word holds a higher end in the patched image
+// than in the stock one gives [stock end, patched end) ({lo, hi, n, word, stock}); [] without stock or without
+// either loads or (rom and ends).
+export function ownRanges(loads, stock, base, rom = null, ends = null) {
+  if (!stock) return [];
   const out = [];
-  for (const s of loads.sections ?? []) {
-    const o = s.word - base;
-    if (o < 0 || o + 4 > stock.length) continue;
-    const was = u32(stock, o);
-    if (s.end > was) out.push({ lo: was, hi: s.end, n: s.n, word: s.word, stock: was });
+  if (loads) {
+    for (const s of loads.sections ?? []) {
+      const o = s.word - base;
+      if (o < 0 || o + 4 > stock.length) continue;
+      const was = u32(stock, o);
+      if (s.end > was) out.push({ lo: was, hi: s.end, n: s.n, word: s.word, stock: was });
+    }
+    return out;
+  }
+  if (!rom || !ends?.length) return out;
+  const hi = base + rom.length;
+  for (let i = 0; i < ends.length; i++) {
+    const word = ends[i] >>> 0, o = word - base;
+    if (o < 0 || o + 4 > stock.length || o + 4 > rom.length) continue;
+    const was = u32(stock, o), now = u32(rom, o);
+    if (now > was && was >= base && now <= hi) out.push({ lo: was, hi: now, n: i + 1, word, stock: was });
   }
   return out;
 }
@@ -102,11 +122,13 @@ export class StrictLog {
   }
   // rom: the run-time image in use, base / end the block's span, preload the board's rows, loads the loaded-ranges
   // mode's ranges (or null), patchRanges the overlay's changed [offset, length] (or null), stock the stock run-time
-  // image (or null: no cave-store range)
-  arm({ rom, base, end, preload = [], loads = null, patchRanges = null, stock = null }) {
+  // image (or null: no cave-store range), ends optional section end-word addresses when loads is null (default:
+  // fact sections.ends for this.model, so flash-copy-family bodies get cave-store without bootLoads)
+  arm({ rom, base, end, preload = [], loads = null, patchRanges = null, stock = null, ends = null }) {
     const r = strictRanges({ base, end, preload, loads });
-    this.r = { ...r, base: base >>> 0, end: end >>> 0, patch: patchRanges ? new PatchRanges(patchRanges, rom, base) : null,
-      own: patchRanges ? ownRanges(loads, stock, base >>> 0) : [] };
+    const b = base >>> 0;
+    this.r = { ...r, base: b, end: end >>> 0, patch: patchRanges ? new PatchRanges(patchRanges, rom, base) : null,
+      own: patchRanges ? ownRanges(loads, stock, b, rom, ends ?? sectionEndsFor(this.model)) : [] };
     return { stores: r.stores.map((x) => [x.lo, x.hi]), reads: r.reads.map((x) => [x.lo, x.hi]), report: (kind, a, w, dir, v) => this.report(kind, a, w, dir, v) };
   }
   // src/core/mem.mjs's report: kind 'misaligned', 'store' or 'read'; a the access's address (either view)

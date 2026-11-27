@@ -464,6 +464,19 @@ const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
 // the callbacks' ids, by name in the build's CBS name table (src/fw/facts.mjs cbsIds): a build may number one
 // otherwise (E142's END_SHOOTING_PICTURE is 369, E143's 211)
 export const CBS = fact('cbs', CBS_E143);
+// S-RELSEQ under control camapp 3 (docs/hle-gaps/4.1.md 4.1.12, docs/hle-gaps/4.3.md 4.3.8; D, X): when the native
+// shooting sequence runs (through image on, phase 101 -> 102 -> 103 -> 106), the firmware's own shooting reactive
+// posts START_SHOOTING_PICTURE (at S1 READY entry), START_FOCUS (at S1 READY entry when half-press AF is on),
+// END_SHOOTING_PICTURE (at STANDBY entry from END_WAIT) and START_EXPOSE (at S2 TAKE_PICTURE entry) through
+// SHOOT_POST. Observing native SHOOT_POST calls under camapp 3 lets S-RELSEQ skip duplicates of callbacks the native
+// sequence already posted, while keeping its fallback whenever the sequence did not run (before the through image
+// starts, or S2 with S-TAKERDY off).
+export function relseq_skip_native(native_step, native_shot_started, name, cbs = CBS) {
+  if (name === 'START_SHOOTING_PICTURE') return native_shot_started || native_step.has(cbs.START_SHOOTING_PICTURE);
+  if (name === 'START_FOCUS') return native_step.has(cbs.START_FOCUS);
+  if (name === 'START_EXPOSE') return native_step.has(cbs.START_EXPOSE);
+  return false;
+}
 // S-RELSEQ's shooting phase during a movie: the phases the shooting component's sequence enters (CmpSqp_SequencePartsBase,
 // setter 0x50cc6121: 113 at 0x50c87a17 (MOV_READY, I), 114 MOV_READY_FINISH, 115 MOV_RECORDING, 117 MOV_END), which the
 // phase query 0x50ab57e9 answers in place of 100 (no sequence controller in camapp 1). getMovieState is 1 at 113..115.
@@ -915,6 +928,10 @@ export class CamApp {
     this.native_tra = this.components && !!session.opts.camapp_native_tra;
     this.tra_native = [];
     this.tra_returns = new Map();
+    this.posting_cbs = false;  // true while S-RELSEQ / S-AFLOCK is calling SHOOT_POST itself
+    this.native_cbs = [];      // camapp 3: [cbsId, param] posted natively through SHOOT_POST (capped at TRA_NATIVE_LOG)
+    this.native_cbs_step = new Set();   // camapp 3: CBS ids posted natively since the last key() step
+    this.native_shot_started = false;   // camapp 3: native sequence posted START_SHOOTING_PICTURE and not yet END_SHOOTING_PICTURE
     this.hist_ends = 0;        // S-HISTEND: DISPLAY cmd 15's histogram waits the lab clock ran to the run's end
     this.hist_waited = [];     // camapp 3: [d0, lab ns] where each of cmd 15's histogram waits returned
     this.imgpro_inited = false; // camapp 3: H-IMGPROINIT and S-STAGE9 done
@@ -1202,7 +1219,9 @@ export class CamApp {
   af_lock_post(locked) {
     const lab = this.s.lab;
     this.log.push(['cbs', `AF_LOCK(${locked})`]);
-    lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS_AF_LOCK, d1: locked }, null, null, 50000000);
+    this.posting_cbs = true;
+    try { lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS_AF_LOCK, d1: locked }, null, null, 50000000); }
+    finally { this.posting_cbs = false; }
     this.s.settle('S-AFLOCK AF_LOCK');
   }
   // S-TAKERDY (TAKERDY_E143's comment): a request the API sender posts to S-MODACK's queue q, w its four words;
@@ -1437,6 +1456,15 @@ export class CamApp {
     if (sync) observeDispsync(lab, sync, (code) => this.dispsync.add(code));
     lab.observe(SHOOTING_START, () => { this.shooting = true; }, 'S-RELSEQ (shooting service)');
     lab.observe(SHOOTING_END, () => { this.shooting = false; }, 'S-RELSEQ (shooting service end)');
+    if (this.native_tra) lab.observe(SHOOT_POST, (l, r) => {
+      if (this.posting_cbs) return;
+      const id = r.d0 >>> 0, param = r.d1 >>> 0;
+      this.native_cbs.push([id, param]);
+      if (this.native_cbs.length > TRA_NATIVE_LOG) this.native_cbs.shift();
+      this.native_cbs_step.add(id);
+      if (id === CBS.START_SHOOTING_PICTURE) this.native_shot_started = true;
+      else if (id === CBS.END_SHOOTING_PICTURE) this.native_shot_started = false;
+    }, 'camapp 3 (native shooting callbacks)');
     const fd = fact('func_direct.id', { sp: 28 });
     lab.observe(FUNC_DIRECT_RUN, (l, r) => this.funcs.push(fd.reg ? r[fd.reg] >>> 0 : lab.sim.u32((r.sp >>> 0) + fd.sp)), 'S-RELSEQ function direct');
     lab.hook(TRA_EXEC_CALL, (h, r) => tra(h, r, false), 'S-TRAACK');
@@ -2019,7 +2047,10 @@ export class CamApp {
     for (const [name, param] of list) {
       this.log.push(['cbs', `${name}(${param})`]);
       if (Object.hasOwn(MOVIE_PHASE, name)) this.movie_phase = MOVIE_PHASE[name];
-      lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS[name], d1: param }, null, null, 50000000);
+      if (name === 'END_SHOOTING_PICTURE') this.native_shot_started = false;
+      this.posting_cbs = true;
+      try { lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS[name], d1: param }, null, null, 50000000); }
+      finally { this.posting_cbs = false; }
     }
     s.settle(`S-RELSEQ ${list.map(([name]) => name).join(', ')}`);
     this.pump();
@@ -2075,7 +2106,9 @@ export class CamApp {
       this.log.push(['cbs', 'S1 with no half-press AF (the focus mode): no START_FOCUS, no END_FOCUS']);
     } else if (downs.includes('s1')) {
       this.af_lock('ready');                                                         // S-AFLOCK: the sequence's READY
-      this.post('START_FOCUS');
+      if (relseq_skip_native(this.native_cbs_step, this.native_shot_started, 'START_FOCUS')) {
+        this.log.push(['cbs', 'START_FOCUS skipped: posted natively by the shooting sequence']);
+      } else this.post('START_FOCUS');
       const ok = !(live && SC.focusAt(sc, this.s.lab.lab_time() / 1e9) === null);
       if (ok) this.af_lock('focus');                                                 // S-AFLOCK: the AF lock
       this.post('END_FOCUS', ok ? 1 : 0);
@@ -2087,8 +2120,12 @@ export class CamApp {
     if (downs.includes('s2')) {
       this.release += 1;
       this.view_release = this.release;
-      this.post('START_SHOOTING_PICTURE');
-      this.post('START_EXPOSE');
+      if (relseq_skip_native(this.native_cbs_step, this.native_shot_started, 'START_SHOOTING_PICTURE')) {
+        this.log.push(['cbs', 'START_SHOOTING_PICTURE skipped: posted natively by the shooting sequence']);
+      } else this.post('START_SHOOTING_PICTURE');
+      if (relseq_skip_native(this.native_cbs_step, this.native_shot_started, 'START_EXPOSE')) {
+        this.log.push(['cbs', 'START_EXPOSE skipped: posted natively by the shooting sequence']);
+      } else this.post('START_EXPOSE');
       this.s.mec?.step();                                                          // H-MECCOUNT: the mechanism counts it
       const t = live ? SC.exposureOf(sc).shutter_s : DEFAULT_SHUTTER_S;
       this.shutter_sound?.open(this.s.lab.lab_time());                             // S-SHUTTERSND: the exposure starts
@@ -2099,6 +2136,7 @@ export class CamApp {
       this.at(t * 1e9 + RECVIEW_NS, 'START_THROUGH_IMAGE_PROCESS');
       this.tick();
     }
+    this.native_cbs_step.clear();
     for (const f of this.funcs) this.log.push(['func', `function direct ${f}`]);
     if (this.recording !== null && (rec_down || this.funcs.includes(FUNC_RECORDING_MOVIE))) {
       this.card_used_ms += Math.floor((this.s.lab.lab_time() - this.recording) / 1e6);

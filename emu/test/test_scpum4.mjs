@@ -21,7 +21,7 @@ import { Scheduler } from '../src/core/m4/periph/sched.mjs';
 import { Spi } from '../src/core/m4/periph/spi.mjs';
 import { Dma, ccr } from '../src/core/m4/periph/dma.mjs';
 import { ScpuDev, ScpuMemory } from '../src/lab/scpudev.mjs';
-import { LeadClock, WireFrames, clockBytes, LEAD_S, BOOT_S, LINK_HZ } from '../src/lab/scpum4.mjs';
+import { ScpuM4, LeadClock, WireFrames, clockBytes, LEAD_S, BOOT_S, LINK_HZ } from '../src/lab/scpum4.mjs';
 import { bytesHex } from '../src/util/bytes.mjs';
 
 // ---- A-SCPUM4-1's clock
@@ -180,7 +180,7 @@ export async function scpuM4Session() {
   const ref = linkRecord(p0);
   const offRef = MODEL_INFO.power_native ? powerOff(p0) : null;
   p0.close_session();
-  const p1 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'native', scpuImage });
+  const p1 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'native', scpuImage, ScpuM4 });
   try { p1.open_session(); } catch (e) {
     ok(false, `${MODEL}: the start with the sub-CPU's own firmware: ${e.message.split('\n')[0]}`);
     const dev = p1.session?.lab?.scpu_dev;

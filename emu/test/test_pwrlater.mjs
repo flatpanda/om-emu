@@ -22,6 +22,7 @@ export async function pwrLaterSession() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { loadImage, loadBlock, loadNand, loadScpuImage } = await import('../checks/lib/env.mjs');
+  const { ScpuM4 } = await import('../src/lab/scpum4.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { MODEL, MODEL_INFO, fact } = await import('../src/fw/model.mjs');
@@ -35,7 +36,7 @@ export async function pwrLaterSession() {
   const f = fact('power.later', POWER_LATER_E143), was = process.env.OM_POWER_LATER;
   const open = (later, scpu) => {
     if (later) process.env.OM_POWER_LATER = 'on'; else delete process.env.OM_POWER_LATER;
-    const pl = new Player(args, { ...base, ...(scpu === 'native' ? { scpu: 'native', scpuImage } : { scpu: 'off' }) });
+    const pl = new Player(args, { ...base, ...(scpu === 'native' ? { scpu: 'native', scpuImage, ScpuM4 } : { scpu: 'off' }) });
     try { pl.open_session(); return { pl }; } catch (e) { try { pl.close_session(); } catch { /* never opened */ } return { pl, error: e }; }
   };
   // the start's end: GUI, the published frame's sha16 and the lab time

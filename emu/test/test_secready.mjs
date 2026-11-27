@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
+import { secOrder, SecReadyAudit, secLayout, sectionOf, tier, secReadyLine, secReadyReport, unreadyRuns } from '../src/lab/secready.mjs';
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const tester = () => {
@@ -78,6 +78,14 @@ export function secreadyUnits() {
   for (const [r, what] of [[g1, 'the stage word read first'], [g2, 'the stage test called first'], [g3, 'a patched gate routine (the copied mask, cached view) called first']]) {
     ok(r.crossings === 1 && r.gated === 1 && r.ungated.length === 0, `${what}: gated, ${show(r)}`);
   }
+  // byte-level stage check (btst imm8,(STAGE+1) for sections 9..10) and transitive patched gate helper
+  const btst = (w, mask) => [0xfe, 0x02, ...le32(w), mask];
+  const g4 = run([HOOK, [0x1c0, [...btst(STAGE + 1, 0x01), ...callTo(0x1c7, 0x820)]]]);
+  const g5 = run([HOOK, [0x1c0, [...callTo(0x1c0, 0x040), ...callTo(0x1c7, 0x620)]], [0x040, [...callTo(0x040, 0x060), 0xdf, 0x00, 0x00]], [0x060, [...read(STAGE), 0xdf, 0x00, 0x00]]]);
+  ok(g4.crossings === 1 && g4.gated === 1 && g4.ungated.length === 0, `btst on STAGE+1 gates crossing into section 9: ${show(g4)}`);
+  ok(g5.crossings === 1 && g5.gated === 1 && g5.ungated.length === 0, `transitive patched gate helper gates crossing: ${show(g5)}`);
+  const broken2 = run([HOOK, [0x1c0, [...callTo(0x1c0, 0x040), ...callTo(0x1c7, 0x620)]], [0x040, [...callTo(0x040, 0x060), 0xdf, 0x00, 0x00]], [0x060, [...read(STAGE + 8), 0xdf, 0x00, 0x00]]]);
+  ok(broken2.ungated.length === 1 && broken2.ungated[0].target === h8(BASE + 0x620), `control: transitive helper reading another word is ungated: ${show(broken2)}`);
   // control: the word moved by 8 bytes, no gate
   const broken = run([HOOK, [0x1c0, [...read(STAGE + 8), ...callTo(0x1c6, 0x620)]]]);
   ok(broken.ungated.length === 1 && broken.ungated[0].target === h8(BASE + 0x620), `control: the cave reading another word is ungated: ${show(broken)}`);
@@ -116,6 +124,19 @@ export function secreadyUnits() {
   ok(rp.watched && rp.static.crossings === 1 && rp.findings.map((x) => `${x.class} ${x.site}`).join() === `ungated-branch ${h8(BASE + 0x1c0)},unready-run ${h8(BASE + 0x700)},unready-run ${h8(BASE + 0x703)}` &&
     rp.findings[0].addr === h8(BASE + 0x620) && rp.findings[0].branch === 'call' && rp.findings[1].phase === 'before-bootstage' && rp.findings[1].section === 8 && !secReadyReport(null, null).watched,
   `secReadyReport: one findings list by class, site and address: ${show(rp)}`);
+  ok(rp.runtime && rp.runtime.records === 2 && rp.runtime.insns === 4 && rp.runtime.pieces === 2 && show(rp.runtime.sections) === '[8]' &&
+    rp.runtime.by_phase['before-bootstage'] === 1 && rp.runtime.by_phase['never-readied'] === 1 && rp.runtime.by_phase.cleared === 0 && secReadyReport(plain, null).runtime === null,
+  `secReadyReport runtime summary: ${show(rp.runtime)}`);
+  ok(unreadyRuns(rp).length === 2 && unreadyRuns(rp, 'before-bootstage').length === 1 && unreadyRuns(rp, 'never-readied').length === 1 && unreadyRuns(rp, 'cleared').length === 0,
+    `unreadyRuns helper filters runtime-observed hits from static ungated-branch: ${show(unreadyRuns(rp))}`);
+  // cleared phase: bit 5 was set by S-BOOTSTAGE (0x7f), then cleared in memory before patched code in section 6 runs
+  mem[STAGE] = 0x5f;
+  const w3 = new SecReadyAudit(LAYOUT, [[0x500, 4]], { read: read32 });
+  w3.staged(0x7f);
+  w3.guard(BASE + 0x500, 2);
+  const rp3 = secReadyReport(null, w3.findings);
+  ok(w3.findings.length === 1 && w3.findings[0].kind === 'cleared' && rp3.runtime.by_phase.cleared === 1 && unreadyRuns(rp3, 'cleared').length === 1,
+    `cleared phase recorded and summarized: ${show(rp3)}`);
   ok(secReadyLine(secReadyReport(plain, f)).includes('; patched code ran in 2 section(s) and phase(s) whose stage bit was clear: 0x60000700 (section 8, 2 instruction(s) in 1 piece(s), word 0x0000007f, caller'), `secReadyLine with runs: ${secReadyLine(secReadyReport(plain, f))}`);
   return { checks: T.checks, bad };
 }

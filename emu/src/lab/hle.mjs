@@ -1,8 +1,8 @@
 // High-level emulation harness (no PERF2 builtins: memset / memcpy are not folded on the host).
 // Code addresses in this API use the disassembly base 0x50000000 + body offset; code runs at IMAGE_BASE + offset
 // (src/fw/model.mjs; E143 0x60021020).
-import { Simulator, REGS, SP, packRegs, BASE } from './sim.mjs';
-import { FirmwareError, AssertionError } from './errors.mjs';
+import { Simulator, REGS, SP, BASE } from './sim.mjs';
+import { FirmwareError } from './errors.mjs';
 import { show } from '../util/show.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { A, refuseUnmapped, MODEL_INFO, IMAGE_BASE } from '../fw/model.mjs';
@@ -61,6 +61,14 @@ export function disasm(address) { return (address - IMAGE_BASE + BASE) >>> 0; }
 export function where(address) { return `0x${fx(address >>> 0, 8)} (disasm 0x${fx(disasm(address), 8)})`; }
 const sortedPairs = (m) => [...m.values()].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 
+// Versioned Map for HLE.hooks so direct .set/.delete/.clear mutations invalidate the cached breakpoint list.
+class HookMap extends Map {
+  constructor() { super(); this._ver = 0; }
+  set(k, v) { this._ver++; return super.set(k, v); }
+  delete(k) { const ok = super.delete(k); if (ok) this._ver++; return ok; }
+  clear() { if (this.size) { this._ver++; super.clear(); } }
+}
+
 export class HLE {
   // env: { rom (Uint8Array image), createHash, stats (Stats or null), observer factory... }; see Simulator.
   // env: { rom (the image, Uint8Array), createHash, clock?, beginSession? }. beginSession() returns the session's
@@ -71,7 +79,12 @@ export class HLE {
     this.env = env;
     this.session = env.beginSession ? env.beginSession(this) : null;     // the lab: a check tracer picks the format by its class
     this.sim = new Simulator({ ...env, stats: this.session ? this.session.stats : null }, this.constructor.INSN_LIMIT ?? null, this.constructor.KEEP_STDERR ?? false);
-    this.hooks = new Map();
+    this._hooks = new HookMap();
+    this._hooksGen = 0;
+    this._hooksVer = -1;
+    this._hooksArr = [];
+    this._foldedAll = [];
+    this._loopCache = null;
     this.log = [];
     this.heap = HEAP;
     this.frames = new Map();
@@ -143,21 +156,19 @@ export class HLE {
     this.sim.write(RETURN, bytes(0xDF, mask, size));
     const r = { ...regs, pc: RETURN, fault: 0 };
     for (const [name, value] of Object.entries(results)) r[name] = value >>> 0;
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers(r);
   }
   // From a hook on a CALL instruction: go on after it without running the callee (its registers stay as they are)
   skip_call(regs) {
     const here = regs.pc, op = this.sim.read(here, 1)[0];
     if (op !== 0xCD && op !== 0xDD) throw new FirmwareError(`skip at ${where(here)}: not a CALL`);
-    const r = { ...regs, pc: (here + (op === 0xDD ? 7 : 5)) >>> 0, fault: 0 };
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers({ ...regs, pc: (here + (op === 0xDD ? 7 : 5)) >>> 0, fault: 0 });
   }
   // From a hook inside the function the lab's call() entered with the frame [mask, size], its stack as that call left
   // it: return to the lab from here, as the function's own `ret [regs],size` would (the registers it saved restored)
   return_here(regs, [mask, size]) {
     this.sim.write(RETURN, bytes(0xDF, mask, size));
-    const r = { ...regs, pc: RETURN, fault: 0 };
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers({ ...regs, pc: RETURN, fault: 0 });
   }
   // finish() that first calls fn (disassembly notation) natively with the registers args ({d0: result} or {a0:
   // argument}) through `calls`, as a task calls a completion callback, then returns 0 in d0 from the hooked function
@@ -172,14 +183,14 @@ export class HLE {
     this.sim.write(RETURN, cat(bytes(0xfc, 0xff), u32le(runtime(fn) - RETURN), bytes(0x00, 0xDF, mask, size)));
     const r = { ...regs, pc: RETURN, fault: 0 };
     for (const [name, value] of Object.entries(args)) r[name] = value >>> 0;
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers(r);
   }
   finish_calls(regs, results = {}) {
     this._reached_by_calls(regs);
     this.sim.write(RETURN, bytes(0xf0, 0xfc));
     const r = { ...regs, pc: RETURN, fault: 0 };
     for (const [name, value] of Object.entries(results)) r[name] = value >>> 0;
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers(r);
   }
   // finish_after() for a function reached by `calls`: fn(args) through `calls` from a frame of CALLS_AFTER_FRAME bytes
   // below the return address the hooked function's `calls` left at (sp), which fn's own `calls` would overwrite, then
@@ -190,7 +201,7 @@ export class HLE {
     this.sim.write(RETURN, cat(bytes(0xfc, 0xff), u32le(runtime(fn) - RETURN), bytes(0xf8, 0xfe, CALLS_AFTER_FRAME, 0x00, 0xf0, 0xfc)));
     const r = { ...regs, pc: RETURN, fault: 0, sp: (regs.sp - CALLS_AFTER_FRAME) >>> 0 };
     for (const [name, value] of Object.entries(args)) r[name] = value >>> 0;
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+    this.sim.set_registers(r);
   }
   _reached_by_calls(regs) {
     const ra = regs.mdr, here = regs.pc;
@@ -229,20 +240,58 @@ export class HLE {
     this.call_depth = (this.call_depth ?? 0) + 1;
     try { return this._loop1(done, sp, limit, regs, ends); } finally { this.call_depth -= 1; }
   }
+  get hooks() { return this._hooks; }
+  set hooks(m) {
+    this._hooks = m;
+    this._hooksGen += 1;
+    this._hooksVer = -1;
+    this._loopCache = null;
+    if (this.sim) this.sim._bpRef = null;
+  }
+  _syncHooks() {
+    const isHM = this._hooks instanceof HookMap;
+    const ver = isHM ? this._hooksGen * 4294967296 + this._hooks._ver : -1;
+    if (isHM && ver === this._hooksVer) return ver;
+    this._hooksVer = ver;
+    this._hooksArr = [...this._hooks.keys()].sort((a, b) => a - b);
+    // the PERF2 builtin pcs (HLE.builtins with the stub hooked by identity): JS keeps their breakpoints
+    const folded = [];
+    const ms = runtime(MEMSET), mc = runtime(MEMCPY);
+    const hms = this._hooks.get(ms);
+    if (hms !== undefined && hms[0] === memset) folded.push(ms);
+    const hmc = this._hooks.get(mc);
+    if (hmc !== undefined && hmc[0] === memcpy) folded.push(mc);
+    this._foldedAll = folded;
+    return ver;
+  }
   _loop1(done, sp, limit, regs = null, ends = null) {
     let used = 0;
+    let localVer = -1, stops = null, folded = null;
     while (used < limit) {
-      const stops = new Set(this.hooks.keys());
-      stops.add(done);
-      if (ends !== null) for (const pc of ends) stops.add(pc);
-      // the PERF2 builtin pcs (HLE.builtins with the stub hooked by identity): JS keeps their breakpoints
-      const folded = [];
-      for (const [pc, stub] of [[runtime(MEMSET), memset], [runtime(MEMCPY), memcpy]]) {
-        const hook = this.hooks.get(pc);
-        if (hook !== undefined && hook[0] === stub && pc !== done) folded.push(pc);
+      const isHM = this._hooks instanceof HookMap;
+      const ver = isHM ? this._hooksGen * 4294967296 + this._hooks._ver : -1;
+      if (!isHM || ver !== localVer) {
+        if (isHM && ends === null && this._loopCache !== null && this._loopCache.ver === ver && this._loopCache.done === done) {
+          stops = this._loopCache.stops;
+          folded = this._loopCache.folded;
+          localVer = ver;
+        } else {
+          const synced = this._syncHooks();
+          localVer = synced;
+          if (ends === null) {
+            stops = this._hooks.has(done) ? this._hooksArr : this._hooksArr.concat(done);
+          } else {
+            const s = new Set(this._hooksArr);
+            s.add(done);
+            for (const pc of ends) s.add(pc);
+            stops = [...s].sort((a, b) => a - b);
+          }
+          folded = this._foldedAll.includes(done) ? this._foldedAll.filter((pc) => pc !== done) : this._foldedAll;
+          if (isHM && ends === null) this._loopCache = { ver: synced, done, stops, folded };
+        }
       }
       this.drained = 0;
-      let result = this.sim.run([...stops].sort((a, b) => a - b), false, null, folded);
+      let result = this.sim.run(stops, false, null, folded, true);
       used += this.drained;
       const pc = result.pc;
       if (pc === done && !result.fault) {

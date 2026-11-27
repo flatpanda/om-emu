@@ -6497,9 +6497,16 @@ export function apiTargets(img, ret) {
 // is read so: no API target names that queue (D: E143's, E137's and E125's tables, docs/model-survey.md finding
 // 130), and the port's placement of E143's id word read REC_EXEC_PROGRESS on E137 and FMEMEXEC on E125, which hold no
 // such name (finding 99)
-const OBJECT_NAME = 24, OBJECT_RECORD = 26, OBJECT_RUN_MIN = 100;
+const OBJECT_NAME = 24, OBJECT_RECORD = 26, OBJECT_RUN_MIN = 100, OBJECT_NAME_CACHE_MIN = 0x100000;
+const objectNameCache = new WeakMap();
 export const PC_PD_NAME = 'PC_PD_CMD_EXEC';
 export function objectNameId(img, name) {
+  let cache = null;
+  if (img.length >= OBJECT_NAME_CACHE_MIN) {
+    cache = objectNameCache.get(img);
+    if (!cache) { cache = new Map(); objectNameCache.set(img, cache); }
+    if (cache.has(name)) return cache.get(name);
+  }
   const looks = (o) => {
     if (o < 0 || o + OBJECT_RECORD > img.length) return false;
     let n = 0;
@@ -6509,18 +6516,21 @@ export function objectNameId(img, name) {
     return true;
   };
   const want = [...name].map((c) => c.charCodeAt(0)), hits = [];
-  for (let o = 0; o + OBJECT_RECORD <= img.length; o++) {
-    if (img[o] !== want[0]) continue;
-    let k = 1;
-    while (k < want.length && img[o + k] === want[k]) k++;
-    if (k < want.length || img[o + k] !== 0 || !looks(o)) continue;
-    let run = 1;
-    for (let p = o - OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p -= OBJECT_RECORD) run++;
-    for (let p = o + OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p += OBJECT_RECORD) run++;
-    if (run >= OBJECT_RUN_MIN) hits.push(o);
+  if (want.length) {
+    for (let o = img.indexOf(want[0]); o >= 0 && o + OBJECT_RECORD <= img.length; o = img.indexOf(want[0], o + 1)) {
+      let k = 1;
+      while (k < want.length && img[o + k] === want[k]) k++;
+      if (k < want.length || img[o + k] !== 0 || !looks(o)) continue;
+      let run = 1;
+      for (let p = o - OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p -= OBJECT_RECORD) run++;
+      for (let p = o + OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p += OBJECT_RECORD) run++;
+      if (run >= OBJECT_RUN_MIN) hits.push(o);
+    }
   }
   if (hits.length > 1) throw new Error(`objectNameId: ${hits.length} records named ${name} (${hits.map(h8).join(', ')})`);
-  return hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
+  const id = hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
+  if (cache) cache.set(name, id);
+  return id;
 }
 
 // The play module's start (fact 'play.tasks', src/lab/playmod.mjs H-PLAYSTART; docs/hle-gaps/4.8.md 4.8.11, 4.8.18):

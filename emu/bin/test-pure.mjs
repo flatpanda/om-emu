@@ -6,7 +6,8 @@
 // after a stop, the players' Card panel and session options (the card's reader, the card routes on a headless
 // Player, the browser's S-NVRAM host and its OPFS directories per build, the page's creative_dial), the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
-// src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
+// src/fw/facts.mjs (test_facts.mjs: firmware-optional, opt-in via --facts or npm run test:facts because scanning
+// unpacked/ takes ~2 min locally) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the kind-3 VSC's COMPOSE on E122's and E118's boards (a
@@ -70,7 +71,7 @@
 // The Stand-ins tab's rows: one for every label a session can report in use (test_standins.mjs standinsUnits).
 // What a picture is, said at the picture: the sentences and the two pages' copies (test_sources.mjs sourcesUnits).
 // The lab's call on a synthetic block of hand-written functions (test_slice.mjs sliceUnits).
-//   node emu/bin/test-pure.mjs
+//   node emu/bin/test-pure.mjs [--facts | --no-facts]
 import { vectors } from '../test/test_vectors.mjs';
 import { coreTests } from '../test/test_core.mjs';
 import { purity } from '../test/test_pure.mjs';
@@ -143,6 +144,20 @@ import { webSelftestUnits } from '../test/test_web_selftest.mjs';
 import { slot2StatusUnits } from '../test/test_slot2_status.mjs';
 import { panelDoneUnits } from '../test/test_paneldone.mjs';
 import { debugInspectUnits } from '../test/test_debug_inspect.mjs';
+
+let runFacts = false;
+for (const arg of process.argv.slice(2)) {
+  if (arg === '--facts') runFacts = true;
+  else if (arg === '--no-facts') runFacts = false;
+  else if (arg === '-h' || arg === '--help') {
+    console.log('usage: node emu/bin/test-pure.mjs [--facts | --no-facts]');
+    process.exit(0);
+  } else {
+    console.error(`test-pure.mjs: unknown option: ${arg}`);
+    console.error('usage: node emu/bin/test-pure.mjs [--facts | --no-facts]');
+    process.exit(2);
+  }
+}
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -238,8 +253,10 @@ report('web pages ?selftest=1 Card panel coverage (web/play.html, web/index.html
 report('second card slot HLS media status word under camapp 1 (units)', slot2StatusUnits());
 report('S-PANELDONE gate flag-satisfaction checks (src/lab/menu.mjs)', panelDoneUnits());
 report('debug API non-mutating breakpoints and watchpoints inspection ops', debugInspectUnits());
-const fa = factsTests();
-report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
+if (runFacts) {
+  const fa = factsTests();
+  report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
+}
 const pu = purity();
 report('purity', { checks: pu.files, bad: pu.bad });
 console.log(bad ? `FAILED (${bad})` : 'all passed');

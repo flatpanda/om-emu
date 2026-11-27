@@ -118,10 +118,11 @@ export async function adcFacts() {
 
 async function start(mutant, later) {
   const { loadImage, loadBlock, loadNand, createHash, loadScpuImage } = await import('../checks/lib/env.mjs');
+  const { ScpuM4 } = await import('../src/lab/scpum4.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000,
-    ...(later ? { scpu: 'native', scpuImage: loadScpuImage() } : {}) };
+    ...(later ? { scpu: 'native', scpuImage: loadScpuImage(), ScpuM4 } : {}) };
   const was = process.env.OM_POWER_LATER;
   if (later) process.env.OM_POWER_LATER = 'on'; else delete process.env.OM_POWER_LATER;
   try {

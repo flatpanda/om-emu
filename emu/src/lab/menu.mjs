@@ -15,7 +15,6 @@ import { EXEC_SLOTS, GUI_GUARDS, KIND3_RECORD, NRECORDS, REGISTRY, STRIDE, Engin
 import { RTOS } from './rtos.mjs';
 import { ScpuDev, ScpuMemory, SOURCES_IMAGE, SCAN_IDLE } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
-import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
 import { packRegs, sectionsFact } from './sim.mjs';
 import { show } from '../util/show.mjs';
@@ -953,8 +952,8 @@ export class MenuLab extends T.TextDisplayLab {
   }
   // The sub-CPU's own firmware at the far end of the link (src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6),
   // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to
-  // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage,
-  // node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
+  // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage) and
+  // constructor (env.ScpuM4; node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
   // The settings init chain run whole in H-STOREINIT's place: {entry, steps, tail} (settingsChainOf) where the body's
   // image holds it, by default; null for the narrow H-STOREINIT, where the image holds no chain the rule reads or the
   // host turns it off (env.settings_chain, node's OM_EMU_SETTINGS_CHAIN: '0' off, '1' on, refused where no chain is
@@ -972,6 +971,8 @@ export class MenuLab extends T.TextDisplayLab {
     if (nvram) throw new MenuError('OM_EMU_SCPU=native with S-NVRAM: the sub-CPU\'s own backup domain (its RTC and backup registers) is not kept between sessions; use one or the other');
     const image = this.env.scpuImage;
     if (!image) throw new MenuError(`OM_EMU_SCPU=native: the host passed no SCPU image (env.scpuImage: ${MODEL_INFO.name}'s ${MODEL_INFO.scpu_lle.block}; node: checks/lib/env.mjs scpuEnv)`);
+    const ScpuM4 = this.env.ScpuM4;
+    if (!ScpuM4) throw new MenuError('OM_EMU_SCPU=native: the host passed no ScpuM4 constructor (env.ScpuM4; node: checks/lib/env.mjs scpuEnv)');
     return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle, board: { drive: this.scan_idle ?? SCAN_IDLE } });
   }
   // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the

@@ -90,6 +90,10 @@ export class Simulator {
     this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded,
       fetchAudit: this.secReady?.guard ?? null, strict });
     this.breakpoints = new Set();
+    this._bpRef = null;
+    this._bpDebug = null;
+    this._builtinsRef = null;
+    this._regBuf = new Uint32Array(16);
     this.known_insns = 0; this.ran = false;
     this.fast = false;
     this.hle_window = null;
@@ -116,7 +120,9 @@ export class Simulator {
   }
   _probe() {
     this.stats.probes += 1;
-    this._account(this._packet('g'));
+    const value = this.m.getReg(15);
+    if (this.ran) this.stats.insns += (value - this.known_insns) >>> 0;
+    this.known_insns = value; this.ran = false;
   }
   _account(reply) {
     const value = parseInt(reply.slice(126, 128) + reply.slice(124, 126) + reply.slice(122, 124) + reply.slice(120, 122), 16);
@@ -191,7 +197,9 @@ export class Simulator {
   // The debugger's breakpoints with the harness's (break_at) on the machine.
   rearm() {
     const d = this.debug;
-    this.m.setBreakpoints(d === null || !d.pcs.size ? [...this.breakpoints] : [...new Set([...this.breakpoints, ...d.pcs])]);
+    this._bpRef = null;
+    this._bpDebug = d;
+    this.m.setBreakpoints(d === null || !d.pcs.size ? this.breakpoints : new Set([...this.breakpoints, ...d.pcs]));
   }
   // The debug stub: the GDB remote packets the harness sends.
   _packet(text) {
@@ -245,20 +253,51 @@ export class Simulator {
     }
   }
   registers() {
-    const raw = this.packet('g');
-    const r = hexRegs(raw), out = {};
-    for (let k = 0; k < 16; k++) out[REGS[k]] = r[k];
-    return out;
+    this._alive();
+    const r = this.m.getRegs();
+    if (this.stats !== null) {
+      const st = this.stats;
+      st.packets.set('g', (st.packets.get('g') || 0) + 1);
+      st.g_count += 1;
+      st.digest.update(regsHex(r));
+      const value = r[15];
+      if (this.ran) st.insns += (value - this.known_insns) >>> 0;
+      this.known_insns = value;
+      this.ran = false;
+    }
+    return {
+      d0: r[0], d1: r[1], d2: r[2], d3: r[3],
+      a0: r[4], a1: r[5], a2: r[6], a3: r[7],
+      sp: r[8], pc: r[9], psw: r[10], mdr: r[11],
+      lir: r[12], lar: r[13], fault: r[14], insns: r[15],
+    };
+  }
+  set_registers(regs) {
+    this._alive();
+    const r = this._regBuf;
+    r[0] = regs.d0 >>> 0; r[1] = regs.d1 >>> 0; r[2] = regs.d2 >>> 0; r[3] = regs.d3 >>> 0;
+    r[4] = regs.a0 >>> 0; r[5] = regs.a1 >>> 0; r[6] = regs.a2 >>> 0; r[7] = regs.a3 >>> 0;
+    r[8] = regs.sp >>> 0; r[9] = regs.pc >>> 0; r[10] = regs.psw >>> 0; r[11] = regs.mdr >>> 0;
+    r[12] = regs.lir >>> 0; r[13] = regs.lar >>> 0; r[14] = regs.fault >>> 0; r[15] = regs.insns >>> 0;
+    if (this.observer !== null && !this.observer.quiet) this.observer.onG('G' + regsHex(r));
+    if (this.stats === null) {
+      this.m.setRegs(r);
+      return;
+    }
+    if (this.ran) this._probe();
+    this.m.setRegs(r);
+    const st = this.stats;
+    st.packets.set('G', (st.packets.get('G') || 0) + 1);
+    this.known_insns = r[15];
+    this.ran = false;
   }
   reset(values = {}) {
-    const regs = {};
-    for (const n of REGS) regs[n] = 0;
-    regs.sp = SP; regs.pc = BASE;
+    const regs = { d0: 0, d1: 0, d2: 0, d3: 0, a0: 0, a1: 0, a2: 0, a3: 0, sp: SP, pc: BASE, psw: 0, mdr: 0, lir: 0, lar: 0, fault: 0, insns: 0 };
     for (const [name, value] of Object.entries(values)) {
       if (!Object.hasOwn(regs, name)) throw new ValueError(`Unknown register: ${name}`);
       regs[name] = value >>> 0;
     }
-    if (this.packet('G' + packRegs(regs)) !== 'OK') throw new AssertionError('');
+    this.set_registers(regs);
   }
   write(address, data) {
     this._alive();
@@ -285,12 +324,24 @@ export class Simulator {
   word(address, value) { this.write(address, le4(value >>> 0)); }
   break_at(addresses) {
     this.breakpoints = new Set(addresses);
-    if (this.debug === null) this.m.setBreakpoints([...this.breakpoints]);
+    this._bpRef = null;
+    this._bpDebug = this.debug;
+    if (this.debug === null) this.m.setBreakpoints(this.breakpoints);
     else this.rearm();
   }
   // builtins: the stops that are PERF2 builtin pcs (HLE._loop), for the kick refusal (d)
-  run(stops = [], step = false, on_stop = null, builtins = []) {
-    if (!step) { this.break_at(stops); this.m.setBuiltins(builtins); }
+  // immutable: caller guarantees stops and builtins arrays are fresh immutable snapshots (safe to skip by ref)
+  run(stops = [], step = false, on_stop = null, builtins = [], immutable = false) {
+    if (!step) {
+      if (!(immutable && stops === this._bpRef && this.debug === this._bpDebug)) {
+        this.break_at(stops);
+        if (immutable) { this._bpRef = stops; this._bpDebug = this.debug; }
+      }
+      if (!(immutable && builtins === this._builtinsRef)) {
+        this.m.setBuiltins(builtins);
+        this._builtinsRef = immutable ? builtins : null;
+      }
+    }
     const stop = this.packet(step ? 's' : 'c');
     if (!(stop.startsWith('S') || stop.startsWith('T'))) throw new RuntimeError(`Unexpected stop: ${stop}`);
     if (on_stop !== null) on_stop();
@@ -299,11 +350,10 @@ export class Simulator {
   cpu_store(address, value, stub) {
     const saved = this.registers();
     this.write(stub, new Uint8Array([0x60]));
-    const regs = { ...saved, pc: stub, d0: value >>> 0, a0: address, fault: 0 };
-    if (this.packet('G' + packRegs(regs)) !== 'OK') throw new AssertionError('');
+    this.set_registers({ ...saved, pc: stub, d0: value >>> 0, a0: address, fault: 0 });
     this.packet('s');
     const after = this.registers();
-    if (this.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
+    this.set_registers(saved);
     return after;
   }
   // Up to count words upward from SP; stops at the first unreadable word (a debugger read error).

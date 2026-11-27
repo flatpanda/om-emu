@@ -15,6 +15,7 @@ import { coverageOption } from './coverage.mjs';
 import { PatchRefused, readPatchText, applyPatches, patchLayout, mainFilePatches } from '../../src/fw/patch.mjs';
 import { extractSource, decodeExtract } from '../../src/fw/nand.mjs';
 import { identifyBytes } from '../../src/fw/identify.mjs';
+import { ScpuM4 } from '../../src/lab/scpum4.mjs';
 
 export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
@@ -127,8 +128,8 @@ export function loadScpuImage() {
   if (h !== lle.sha256) throw new Error(`${file}: sha256 ${h.slice(0, 16)}..., src/fw/models.mjs scpu_lle pins ${lle.sha256.slice(0, 16)}...`);
   return (scpuImage = b);
 }
-// A lab env's sub-CPU: with OM_EMU_SCPU=native, on a body that gives scpu_lle, its own firmware (env.scpu, scpuImage)
-export const scpuEnv = () => (process.env.OM_EMU_SCPU === 'native' && MODEL_INFO.scpu_lle ? { scpu: 'native', scpuImage: loadScpuImage() } : {});
+// A lab env's sub-CPU: with OM_EMU_SCPU=native, on a body that gives scpu_lle, its own firmware (env.scpu, scpuImage, ScpuM4)
+export const scpuEnv = () => (process.env.OM_EMU_SCPU === 'native' && MODEL_INFO.scpu_lle ? { scpu: 'native', scpuImage: loadScpuImage(), ScpuM4 } : {});
 
 // The env of src/lab (HLE, OsdLab, Simulator): the image, sha256, and no session (beginSession absent) unless a tracer
 // installed one with traceLabs (bin/checktrace.mjs: beginSession(lab), slice), so every lab a check creates is traced.

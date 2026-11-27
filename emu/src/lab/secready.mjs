@@ -157,7 +157,13 @@ const isRet = (b, o) => b[o] === 0xde || b[o] === 0xdf || (b[o] === 0xf0 && (b[o
 // ungated: [{at, disasm, from, kind, target, to, hook}]}: at the branch (run-time), hook the hook it was reached
 // from, from its section, to the target's; each branch once, from the first hook that reaches it ungated
 export function secOrder(img, stock, layout, changed) {
-  const base = layout.base, words = new Set([layout.stage, layout.copied].flatMap((w) => [cached(w), cached(w) + 0x40000000 >>> 0]));
+  const base = layout.base, stageC = cached(layout.stage), copiedC = cached(layout.copied);
+  // any byte of the 32-bit stage word or copied mask (either DRAM view): covers mov (W), movhu (W), movbu (W+k) and
+  // btst imm8,(W+k) (needed to test bits 8..9 for sections 9 and 10 in a byte op)
+  const isGateWord = (v) => {
+    const c = cached(v >>> 0);
+    return (c >= stageC && c < stageC + 4) || (c >= copiedC && c < copiedC + 4);
+  };
   const gateCalls = new Set(layout.gates ? [layout.gates.test, layout.gates.wait] : []);
   // the changed ranges joined across gaps shorter than an instruction (new bytes that happen to equal the stock ones,
   // the 0xff of a negative displacement over fill)
@@ -171,8 +177,9 @@ export function secOrder(img, stock, layout, changed) {
     while (lo < hi) { const m = (lo + hi) >> 1; if (runs[m].hi <= o) lo = m + 1; else hi = m; }
     return lo < runs.length && runs[lo].lo <= o ? runs[lo] : null;
   };
-  const names = (o) => wordsAt(img, o).some((v) => words.has(v));
-  // a run (from o) gates by itself: it names a word or calls a stage test / wait before its end
+  const names = (o) => wordsAt(img, o).some(isGateWord);
+  // a run (from o) gates by itself: it names the stage/copied word, calls a stage test / wait, or calls/jumps to
+  // another patched run that does (gatesMemo breaks cycles)
   const gatesMemo = new Map();
   const selfGates = (o) => {
     if (gatesMemo.has(o)) return gatesMemo.get(o);
@@ -182,6 +189,7 @@ export function secOrder(img, stock, layout, changed) {
     for (let q = o; r && q < r.hi && !g; ) {
       const f = flowAt(img, q);
       if (names(q) || (f.kind === 'call' && gateCalls.has(base + f.target >>> 0))) g = true;
+      else if ((f.kind === 'call' || f.kind === 'jmp') && runAt(f.target) && selfGates(f.target)) g = true;
       if (ENDS.has(f.kind) || isRet(img, q)) break;
       q += f.len;
     }
@@ -285,17 +293,35 @@ export class SecReadyAudit {
 
 // The audit's sec_ready part (patchAudit's, the status's and session.json's) from the static pass's result (or null:
 // not run) and the watch's records (or null: not watching), in the report shape the strict mode's log shares
-// (src/lab/strict.mjs StrictLog.doc): {static: {hooks, crossings, gated} | null, watched, findings: [{class, site
-// (run-time), disasm (code notation), ...}]}. class 'ungated-branch' (a static entry: addr its target, branch its
-// kind, from, to, hook) or 'unready-run' (a watch record: section, phase its kind, word, copied, caller, staged,
-// insns, pieces, pcs)
+// (src/lab/strict.mjs StrictLog.doc): {static: {hooks, crossings, gated} | null, watched, runtime: {records, insns,
+// pieces, sections, by_phase} | null, findings: [{class, site (run-time), disasm (code notation), ...}]}. class
+// 'ungated-branch' (a static heuristic entry: addr its target, branch its kind, from, to, hook) or 'unready-run' (a
+// run-time watch record: section, phase its kind, word, copied, caller, staged, insns, pieces, pcs)
 export const SEC_READY_CLASSES = ['ungated-branch', 'unready-run'];
 export function secReadyReport(st, runs) {
   const findings = [
     ...(st?.ungated ?? []).map(({ at, disasm, kind, target, ...x }) => ({ class: 'ungated-branch', site: at, disasm, addr: target, branch: kind, ...x })),
     ...(runs ?? []).map(({ pc, disasm, kind, ...x }) => ({ class: 'unready-run', site: pc, disasm, phase: kind, ...x })),
   ];
-  return { static: st ? { hooks: st.hooks, crossings: st.crossings, gated: st.gated } : null, watched: runs != null, findings };
+  const runtime = runs == null ? null : {
+    records: runs.length,
+    insns: runs.reduce((a, r) => a + r.insns, 0),
+    pieces: runs.reduce((a, r) => a + r.pieces, 0),
+    sections: [...new Set(runs.map((r) => r.section))].sort((a, b) => a - b),
+    by_phase: {
+      'before-bootstage': runs.filter((r) => r.kind === 'before-bootstage').length,
+      'never-readied': runs.filter((r) => r.kind === 'never-readied').length,
+      cleared: runs.filter((r) => r.kind === 'cleared').length,
+    },
+  };
+  return { static: st ? { hooks: st.hooks, crossings: st.crossings, gated: st.gated } : null, watched: runs != null, runtime, findings };
+}
+
+// The run-time-observed unready-run findings of a secReadyReport (distinguished from static ungated-branch heuristics),
+// optionally filtered by phase ('before-bootstage', 'never-readied', 'cleared')
+export function unreadyRuns(report, phase = null) {
+  const list = (report?.findings ?? []).filter((f) => f.class === 'unready-run');
+  return phase === null ? list : list.filter((f) => f.phase === phase);
 }
 
 // secReadyReport's report as one line (the hosts' patch audit line, and their closing line)

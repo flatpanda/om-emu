@@ -5,25 +5,28 @@
 // (ROADMAP item 7). The transport (FIFOs, doorbells, the hardware lock) is not here; the caller hands in each
 // MN -> node 4 message and takes each reply through send().
 //
-//   new A53Isc({ send, mem, net, pool })
+//   new A53Isc({ send, mem, net, pool, hhhr })
 //     send(node, port, bytes)   a node-4 -> MN message (Uint8Array)
 //     mem.read(addr, n) / mem.write(addr, bytes)   the MN's view of memory (the shared pool at 0x63fe0000 and the
 //                               socket buffers the MN names)
 //     net                       the socket back end (below); pool  { alloc(size) -> { block, size, addr }, free(h) }
 //                               for isc_cgi's 16 KiB buffer, addr the MN's view of the block (the memblock allocator
 //                               itself is the caller's: its policy is not checked against the A53's here)
+//     hhhr(req)                 the hhhr back end (ports 30/31): takes the 48-byte request, returns the 112-byte reply
 //   start()                     sccore's start-complete
 //   receive(port, bytes)        one MN -> node 4 message
 //   cgiRequest(req, done)       an HTTP request as isc_cgi relays it; done({ slot, data }) when the MN's reply is in
 //
 // Evidence (X: tools/a53-oracle run-isc.sh with iscpeer.mjs's scenarios, the recorded exchanges in
 // test/test_a53isc.mjs; D: the daemons' armhf code at the offsets given). What the A53 does that is not listed here
-// throws: an unknown port, sccore's kind 2, and the socket ops whose layouts are not fully read (recvfrom, select).
+// throws: an unknown or unverified port (isc_file, isc_olnet, blebridge, wifi_*, dbgterm_server, isc_test, sccore
+// ports 14/32), sccore's kind 2, and the socket ops whose layouts are not fully read (recvfrom, select).
 
 export const PORT = {
-  SOCK_REQ: 3, SOCK_REP: 4, CGI_DATA: 11, CGI_HANDLE: 12, CGI_RESULT: 13, CGI_ACK: 16, PWR_REQ: 26, PWR_REP: 27,
+  SOCK_REQ: 3, SOCK_REP: 4, CGI_DATA: 11, CGI_HANDLE: 12, CGI_RESULT: 13, CGI_ACK: 16,
+  PWR_REQ: 26, PWR_REP: 27, HHHR_REQ: 30, HHHR_REP: 31,
 };
-export const NODE_CPU1 = 1;
+export const NODE_CPU0 = 0, NODE_CPU1 = 1;
 // The pool's two views (D, iscdrv.ko .data config_isc_mem_addr; isc_socket 0x12b3c maps an MN address as
 // (addr & 0x3fffffff) | 0x2_80000000): the MN's 0x63fe0000 and the A53's 0x2_a3fe0000, the same bytes.
 export const POOL_MN = 0x63fe0000, POOL_A53_LO = 0xa3fe0000, POOL_A53_HI = 2, POOL_SIZE = 0x20000;
@@ -88,6 +91,13 @@ export const PENDING = Symbol('pending');
 export const CGI_BUF = 0x4000, CGI_INFO = 0x3444, CGI_REPLY = 0x3080, CGI_CHUNK = 0x3000, CGI_DATA = 0x10;
 export const CGI_METHOD = { GET: 1, POST: 2 };
 
+// hhhr (D: docs/a53-spec.md §9, hhhr.dis 0x133a0; X: tools/a53-oracle run-isc.sh). Receives a 48-byte request on
+// port 30 (matrix sizes + buffer handle; internal field layout not decoded in docs/a53-spec.md), mmaps /dev/mem,
+// runs ISC_dcache_clean_range over the result, and replies 112 bytes on port 31 to node 0 (CPU 0, IMGPRO_HHHR) —
+// the one daemon that replies to CPU 0 instead of CPU 1. Because the 48-byte / 112-byte payload fields are not
+// decoded, this service enforces the framing and delegates payload handling to the caller's hhhr(req) back end.
+export const HHHR_REQ = 48, HHHR_REP = 112;
+
 const u32 = (b, o) => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(o, true);
 const i32 = (b, o) => new DataView(b.buffer, b.byteOffset, b.byteLength).getInt32(o, true);
 const put32 = (b, o, v) => new DataView(b.buffer, b.byteOffset, b.byteLength).setUint32(o, v >>> 0, true);
@@ -99,8 +109,8 @@ const ascii = (s) => Uint8Array.from(s, (c) => {
 const fail = (what) => { throw new Error(`A53 ISC: ${what}`); };
 
 export class A53Isc {
-  constructor({ send, mem = null, net = null, pool = null }) {
-    this.send = send; this.mem = mem; this.net = net; this.pool = pool;
+  constructor({ send, mem = null, net = null, pool = null, hhhr = null }) {
+    this.send = send; this.mem = mem; this.net = net; this.pool = pool; this.hhhr = hhhr;
     this.slots = new Array(SLOTS).fill(null);   // in-flight socket records
     this.dropped = 0;
     this.cgi = null; this.cgiQueue = [];
@@ -112,6 +122,7 @@ export class A53Isc {
     const d = Uint8Array.from(data);
     if (port === PORT.PWR_REQ) return this.power(d);
     if (port === PORT.SOCK_REQ) return this.sock(d);
+    if (port === PORT.HHHR_REQ) return this.runHhhr(d);
     if ([PORT.CGI_HANDLE, PORT.CGI_ACK, PORT.CGI_DATA, PORT.CGI_RESULT].includes(port)) return this.cgiStep(port, d);
     fail(`no service on port ${port}`);
   }
@@ -124,6 +135,17 @@ export class A53Isc {
       return this.send(NODE_CPU1, PORT.PWR_REP, r);
     }
     fail(`port-26 kind ${d[0]} (not observed live)`);
+  }
+
+  // --- hhhr ---------------------------------------------------------------------------------------------------------
+  runHhhr(d) {
+    if (d.length !== HHHR_REQ) fail(`port-30 request of ${d.length} bytes`);
+    if (!this.hhhr) fail('hhhr without a back end');
+    const rep = this.hhhr(d);
+    if (!(rep instanceof Uint8Array) || rep.length !== HHHR_REP) {
+      fail(`hhhr reply of ${rep ? rep.length : rep} bytes (expected ${HHHR_REP})`);
+    }
+    return this.send(NODE_CPU0, PORT.HHHR_REP, rep);
   }
 
   // --- isc_socket -------------------------------------------------------------------------------------------------

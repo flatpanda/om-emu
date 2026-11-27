@@ -60,6 +60,9 @@
 //   ems1                    the EMS1 engine's model (src/dev/ems1.mjs, S-EMS1): {runs, busy, status, dropped, last: the
 //                           newest run {n, t_ns, start: the start word, channels: their mask, params: {offset:
 //                           value}} or null}, offsets and values in hex; refused on a board without the engine
+//   cpu2                    native CPU 2 (src/lab/cpu2.mjs, src/core/cores.mjs): {active: false} when the session has
+//                           no native CPU 2, else {active: true, state: cores.state(), regs (hex8), status: cpu2.status(),
+//                           tasks: core 2's non-dormant tasks [{tid, entry, state, priority, sp, running}]}; non-mutating
 //   setting {setting, read?}  a setting by id or by the firmware's own name (src/fw/setnames.mjs; the names from the
 //                           host's settingNames(), the body's block 2): {setting: {id, name (null for an id past the
 //                           table), value, hex}, steps} with value the settings getter's answer (the lab's GETTER, run
@@ -89,15 +92,15 @@
 // Worker-safe.
 import { Debugger } from './debugger.mjs';
 import { Protocol, BadRequest, outcome, list, dict, addr, count, watchList } from './protocol.mjs';
-import { regsHex, hex8 } from './regs.mjs';
-import { TCB_SP } from '../lab/kernel.mjs';
+import { REGS, regsHex, hex8 } from './regs.mjs';
+import { TCB_SP, NativeKernel } from '../lab/kernel.mjs';
 import { callSpec, runCall } from './call.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
 import { BASE, runtime, disasm } from '../lab/hle.mjs';
 import { GETTER } from '../lab/menu.mjs';
 import { SettingNameError } from '../fw/setnames.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call', 'setting', 'probe', 'hits']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'cpu2', 'call', 'setting', 'probe', 'hits']);
 export const HITS_MAX = 10000;           // the probes' log: the first this many hits since the last take, the rest counted
 export const STACK_WORDS_MAX = 256;      // a probed pc's stack capture: at most this many words per hit
 const KIND_NAMES = { r: 'r', w: 'w', rw: 'rw' };
@@ -301,6 +304,7 @@ export class LiveDebug {
         return { runs: d.runs, busy: d.busy(), status: hex8(d.status), dropped: d.dropped,
           last: l === null ? null : { n: l.n, t_ns: l.t_ns, start: hex8(l.start), channels: l.channels, params: Object.fromEntries(Object.entries(l.params).map(([o, v]) => [hex(+o), hex8(v)])) } };
       }
+      case 'cpu2': return this._cpu2();
       default: throw new BadRequest(`unknown op ${JSON.stringify(q.op)}`);
     }
   }
@@ -461,5 +465,23 @@ export class LiveDebug {
       out.push({ tid, entry: hex8(entry), state, priority: nk.priority(tid), sp: hex8(sim.u32(tcb + TCB_SP)), running: tcb === running });
     }
     return { tasks: out };
+  }
+  _cpu2() {
+    const cpu2 = this.player.session?.cpu2 ?? null;
+    if (!cpu2) return { active: false };
+    const cores = cpu2.cores ?? this.sim.m.cores;
+    const state = cores.state(), raw = cores.regs(), regObj = {};
+    for (let k = 0; k < 15; k++) regObj[REGS[k]] = raw[k] >>> 0;
+    regObj.insns = state.insns >>> 0;
+    const nk2 = new NativeKernel(this.lab, 2), tasks = [];
+    if (nk2.kcb(56)) {
+      const runningPtr = nk2.kcb(96), running = runningPtr ? this.sim.u32(runningPtr) : 0;
+      for (const [tid, [entry, tstate]] of nk2.tasks()) {
+        if (tstate === 'DMT') continue;
+        const tcb = nk2.tcb(tid);
+        tasks.push({ tid, entry: hex8(entry), state: tstate, priority: nk2.priority(tid), sp: hex8(this.sim.u32(tcb + TCB_SP)), running: tcb === running });
+      }
+    }
+    return { active: true, state, regs: regsHex(regObj), status: cpu2.status(), tasks };
   }
 }

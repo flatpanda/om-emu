@@ -9,8 +9,8 @@
 // - bsch: udf07 under the firmware's free-bit helper and its flags (bschUnits).
 //   node emu/test/test_core.mjs
 import { createMachine } from '../src/machine.mjs';
-import { R, S, PC, PSW, FAULT, UNDEF, HAZ, HI, UC, UD, UV, insnLength, step } from '../src/core/cpu.mjs';
-import { run, transfers } from '../src/core/interp.mjs';
+import { R, S, PC, PSW, FAULT, UNDEF, HAZ, HI, UC, UD, UV, insnLength, step, setExecTrace } from '../src/core/cpu.mjs';
+import { run, transfers, cacheStats } from '../src/core/interp.mjs';
 import { Fault } from '../src/core/mem.mjs';
 import { instructionLength } from '../checks/lib/isa.mjs';
 
@@ -144,17 +144,80 @@ export function bschUnits({ cases = 2000, seed = 3 } = {}) {
   return { checks, bad };
 }
 
+export function cachedForms() {
+  const m = createMachine({ rom: new Uint8Array(0) });
+  const bad = [];
+  // Each case: [label, code bytes, initial regs [d0..d3, a0..a3, sp], psw, stack word at sp (optional)]
+  const cases = [
+    ['asl imm8', [0xf8, 0xc0, 0x03], [0x12, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['lsr imm8', [0xf8, 0xc4, 0x01], [0x80000001 | 0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['asr imm8', [0xf8, 0xc8, 0x02], [0x80000005 | 0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['asl reg', [0xf2, 0x94], [0x05, 0x04, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['lsr reg', [0xf2, 0xa4], [0x80000001 | 0, 0x01, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['asr reg', [0xf2, 0xb4], [0x80000004 | 0, 0x02, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['not dn', [0xf2, 0x30], [0x0f0f0f0f, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['btst imm16', [0xfa, 0xec, 0x00, 0x80], [0x00008000, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['btst imm32', [0xfc, 0xec, 0x00, 0x00, 0x00, 0x80], [0x80000000 | 0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['stx w', [0xf3, 0x44], [0x12345678, 0x04, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['ldx w', [0xf3, 0x14], [0, 0x04, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['stx a', [0xf3, 0xd4], [0, 0x08, 0, 0, 0x10000, 0xdeadbeef | 0, 0, 0, 0x20100], 0],
+    ['ldx a', [0xf3, 0xa4], [0, 0x08, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['stx b', [0xf4, 0x44], [0xab, 0x0c, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['ldx b', [0xf4, 0x14], [0, 0x0c, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['stx h', [0xf4, 0xc4], [0xbeef, 0x0e, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['ldx h', [0xf4, 0x94], [0, 0x0e, 0, 0, 0x10000, 0, 0, 0, 0x20100], 0],
+    ['stabs16 w', [0x01, 0x10, 0x80], [0x11223344, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['ldabs16 w', [0x31, 0x10, 0x80], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['stabs32 w', [0xfc, 0x81, 0x20, 0x00, 0x01, 0x00], [0x55667788, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['ldabs32 w', [0xfc, 0xa5, 0x20, 0x00, 0x01, 0x00], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['jmp d16', [0xcc, 0x10, 0x00], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['jmp d32', [0xdc, 0x20, 0x00, 0x00, 0x00], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['bvc', [0xf8, 0xe8, 0x08], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0],
+    ['jmp (an)', [0xf0, 0xf5], [0, 0, 0, 0, 0, 0x1040, 0, 0, 0x20100], 0],
+    ['rets', [0xf0, 0xfc], [0, 0, 0, 0, 0, 0, 0, 0, 0x20100], 0, 0x1080],
+  ];
+  const initState = (regs, psw, stackWord) => {
+    R.fill(0); regs.forEach((v, k) => { R[k] = v; }); R[PC] = CODE; R[PSW] = psw; R[FAULT] = 0;
+    S.insns = 0; S.limit = 0; S.irqReq = false; S.irqWait = false; S.kick = false; S.exitReq = false;
+    if (stackWord !== undefined) m.dbgWrite(0x20100, Uint8Array.from([stackWord & 255, (stackWord >>> 8) & 255, (stackWord >>> 16) & 255, (stackWord >>> 24) & 255]));
+  };
+  for (const [label, bytes, regs, psw, stackWord] of cases) {
+    m.dbgWrite(CODE, Uint8Array.from(bytes));
+    initState(regs, psw, stackWord);
+    step();
+    const port = result(m);
+    const fallbacks = [];
+    setExecTrace((pc, op) => fallbacks.push(`${hex(pc)}:${hex(op)}`));
+    try {
+      initState(regs, psw, stackWord);
+      run(1);
+      const cached = result(m);
+      const d = differ(port, cached);
+      if (d.length) bad.push(`cachedForms ${label}: ${d.join('; ')}`);
+      const m1 = cacheStats().misses;
+      initState(regs, psw, stackWord);
+      run(1);
+      const m2 = cacheStats().misses;
+      if (m2 !== m1) bad.push(`cachedForms ${label}: second run missed cache (${m1} -> ${m2})`);
+      if (fallbacks.length) bad.push(`cachedForms ${label}: fell back to step() (${fallbacks.join(', ')})`);
+    } finally {
+      setExecTrace(null);
+    }
+  }
+  return { checks: cases.length, bad };
+}
+
 export function coreTests() {
-  const ls = lockstep(), lm = lockstep({ cases: 3000, mutant: 7 }), ln = lengths(), bs = bschUnits();
-  const bad = [...ls.bad.slice(0, 10), ...ln.bad.slice(0, 10), ...bs.bad.slice(0, 10)];
+  const ls = lockstep(), lm = lockstep({ cases: 3000, mutant: 7 }), ln = lengths(), bs = bschUnits(), cf = cachedForms();
+  const bad = [...ls.bad.slice(0, 10), ...ln.bad.slice(0, 10), ...bs.bad.slice(0, 10), ...cf.bad.slice(0, 10)];
   if (ls.faults === ls.cases || ls.faults < ls.cases / 20) bad.push(`lockstep: ${ls.faults} of ${ls.cases} cases fault (want a mix)`);
   if (!lm.bad.length) bad.push('lockstep with mutant 7 (ASL2 flags clobbered in the interpreter) found no difference');
-  return { lockstep: ls, mutant: lm, lengths: ln, bsch: bs, bad };
+  return { lockstep: ls, mutant: lm, lengths: ln, bsch: bs, cachedForms: cf, bad };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const r = coreTests();
-  console.log(`core lockstep step() vs run(1): ${r.lockstep.cases - r.lockstep.bad.length}/${r.lockstep.cases} identical (${r.lockstep.faults} faulting); mutant 7 caught in ${r.mutant.bad.length}/${r.mutant.cases}; lengths: ${r.lengths.pairs} (op, p) pairs, ${r.lengths.ran} non-faulting steps of non-transfer forms; udf07: ${r.bsch.checks - r.bsch.bad.length}/${r.bsch.checks}`);
+  console.log(`core lockstep step() vs run(1): ${r.lockstep.cases - r.lockstep.bad.length}/${r.lockstep.cases} identical (${r.lockstep.faults} faulting); mutant 7 caught in ${r.mutant.bad.length}/${r.mutant.cases}; lengths: ${r.lengths.pairs} (op, p) pairs, ${r.lengths.ran} non-faulting steps of non-transfer forms; udf07: ${r.bsch.checks - r.bsch.bad.length}/${r.bsch.checks}; cachedForms: ${r.cachedForms.checks - r.cachedForms.bad.length}/${r.cachedForms.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   process.exit(r.bad.length ? 1 : 0);
 }

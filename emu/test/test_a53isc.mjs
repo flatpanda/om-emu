@@ -7,7 +7,10 @@
 // the refusals: unobserved ports, kinds and ops throw, a thirteenth concurrent socket op is dropped as the A53 drops
 // it, a CGI message out of order throws.
 //   node emu/test/test_a53isc.mjs
-import { A53Isc, PORT, SOCK, PENDING, SLOTS, CGI_INFO, CGI_CHUNK, CGI_REPLY, CGI_DATA, POOL_MN } from '../src/lab/a53isc.mjs';
+import {
+  A53Isc, PORT, NODE_CPU0, NODE_CPU1, SOCK, PENDING, SLOTS,
+  CGI_INFO, CGI_CHUNK, CGI_REPLY, CGI_DATA, POOL_MN, HHHR_REQ, HHHR_REP,
+} from '../src/lab/a53isc.mjs';
 
 const tester = () => { const bad = []; let checks = 0; return { bad, get checks() { return checks; }, ok: (c, what) => { checks++; if (!c) bad.push(what); } }; };
 const hex = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
@@ -54,8 +57,10 @@ function harness() {
   for (const op of ['socket', 'bind', 'connect', 'listen', 'accept', 'send', 'sendto', 'recv', 'shutdown', 'close', 'getsockopt', 'setsockopt']) {
     net[op] = (...a) => { net.calls.push([op, ...a]); return net.queue.length ? net.queue.shift() : PENDING; };
   }
-  const svc = new A53Isc({ send: (node, port, b) => out.push({ node, port, b: Uint8Array.from(b) }), mem: { read, write }, net, pool });
-  return { svc, out, net, pool, read, write };
+  const hhhr = { calls: [], queue: [] };
+  const hhhrFn = (req) => { hhhr.calls.push(Uint8Array.from(req)); return hhhr.queue.length ? hhhr.queue.shift() : new Uint8Array(HHHR_REP); };
+  const svc = new A53Isc({ send: (node, port, b) => out.push({ node, port, b: Uint8Array.from(b) }), mem: { read, write }, net, pool, hhhr: hhhrFn });
+  return { svc, out, net, pool, hhhr, read, write };
 }
 
 export function a53iscUnits() {
@@ -328,6 +333,46 @@ export function a53iscUnits() {
     const badRes = new Uint8Array(32); put32(badRes, 4, 1);
     ok(throws(() => svc.receive(PORT.CGI_RESULT, badRes)), 'non-zero p13 result throws');
     ok(pool.freed.length === 2 && svc.cgi === null, 'refused p13 frees buffer and clears in-flight CGI');
+  }
+
+  { // hhhr (ports 30/31 -> node 0; docs/a53-spec.md §9, hhhr.dis 0x133a0 D, run-isc.sh X)
+    const { svc, out, hhhr } = harness();
+    ok(PORT.HHHR_REQ === 30 && PORT.HHHR_REP === 31 && NODE_CPU0 === 0 && NODE_CPU1 === 1 && HHHR_REQ === 48 && HHHR_REP === 112,
+      'hhhr port, node and length constants match docs/a53-spec.md §9');
+
+    // Live-evidenced 48-byte all-zero request (count 0) -> 112-byte reply on port 31 to node 0
+    const zeroReq = new Uint8Array(HHHR_REQ);
+    svc.receive(PORT.HHHR_REQ, zeroReq);
+    ok(hhhr.calls.length === 1 && hhhr.calls[0].length === HHHR_REQ && hex(hhhr.calls[0]) === hex(zeroReq),
+      'port-30 count-0 request forwards 48 bytes to hhhr back end');
+    ok(out.length === 1 && out[0].node === NODE_CPU0 && out[0].port === PORT.HHHR_REP && out[0].b.length === HHHR_REP,
+      'hhhr replies 112 bytes on port 31 to node 0 (CPU 0)');
+
+    // Non-zero 48-byte request and custom 112-byte reply forwarded verbatim
+    const req = Uint8Array.from({ length: HHHR_REQ }, (_, i) => (i * 7 + 3) & 0xff);
+    const rep = Uint8Array.from({ length: HHHR_REP }, (_, i) => (i * 13 + 1) & 0xff);
+    hhhr.queue.push(rep);
+    svc.receive(PORT.HHHR_REQ, req);
+    ok(hhhr.calls.length === 2 && hex(hhhr.calls[1]) === hex(req), 'port-30 payload forwarded verbatim');
+    ok(out.length === 2 && out[1].node === NODE_CPU0 && out[1].port === PORT.HHHR_REP && hex(out[1].b) === hex(rep),
+      'hhhr 112-byte reply forwarded verbatim to node 0 port 31');
+
+    // Refusal cases: wrong request length, missing back end, wrong reply length/type
+    ok(throws(() => svc.receive(PORT.HHHR_REQ, new Uint8Array(47))) && throws(() => svc.receive(PORT.HHHR_REQ, new Uint8Array(49))),
+      'a port-30 request that is not 48 bytes throws');
+    const noHhhr = new A53Isc({ send: () => {} });
+    ok(throws(() => noHhhr.receive(PORT.HHHR_REQ, zeroReq)), 'port-30 request without hhhr back end throws');
+    hhhr.queue.push(new Uint8Array(111));
+    ok(throws(() => svc.receive(PORT.HHHR_REQ, zeroReq)), 'hhhr reply shorter than 112 bytes throws');
+    hhhr.queue.push(new Uint8Array(113));
+    ok(throws(() => svc.receive(PORT.HHHR_REQ, zeroReq)), 'hhhr reply longer than 112 bytes throws');
+    hhhr.queue.push(null);
+    ok(throws(() => svc.receive(PORT.HHHR_REQ, zeroReq)), 'non-Uint8Array hhhr reply throws');
+
+    // Unverified daemon ports in docs/a53-spec.md §9 remain refused
+    const unverifiedPorts = [1, 6, 14, 15, 20, 24, 25, 28, 32, 47, 49];
+    ok(unverifiedPorts.every((p) => throws(() => svc.receive(p, new Uint8Array(8)))),
+      'unverified daemon ports (isc_file, isc_olnet, blebridge, wifi_*, dbgterm, isc_test, sccore 14/32) throw');
   }
   return t;
 }

@@ -20,6 +20,9 @@
 // u32 length> + data), except from a memset/memcpy hook stop to the next run and writes into the HLE window.
 import { Stats, regsHex } from '../lab/sim.mjs';
 import * as IRQ from '../lab/irq.mjs';
+import {
+  DEBUG_BASE as INTC_DEBUG, D as INTC_D, RING_SLOTS as INTC_RING_SLOTS, XCPU_RING_SLOTS as INTC_XCPU_RING_SLOTS,
+} from '../dev/intc-abi.mjs';
 import { pack, bytesHex } from '../util/bytes.mjs';
 import { norm, normOut, canonJson } from '../util/tracejson.mjs';
 
@@ -106,14 +109,14 @@ export class Tracer extends HarnessDigest {
   attach(hle) {
     this.hle = hle;
     const sim = this.sim = hle.sim;
-    this.presented_seen = sim.u32(IRQ.DEBUG + IRQ.D_PRESENTED_TOTAL);
-    this.accepted_seen = sim.u32(IRQ.DEBUG + IRQ.D_ACCEPTED_TOTAL);
+    this.presented_seen = sim.u32(INTC_DEBUG + INTC_D.PRESENTED_TOTAL);
+    this.accepted_seen = sim.u32(INTC_DEBUG + INTC_D.ACCEPTED_TOTAL);
     sim.observer = this;
     hle.stubObserver = (name) => this.on_stub(name);
     hle.composeObserver = (device, nextFrame, result, n0, notes) => this.onCompose(device, nextFrame, result, n0, notes);
     if (this.fmt4) {
       this.lab = hle;                                   // final.planes: the session lab's surfaces
-      this.xcpu_seen = sim.u32(IRQ.DEBUG + IRQ.D_XCPU_TOTAL);
+      this.xcpu_seen = sim.u32(INTC_DEBUG + INTC_D.XCPU_TOTAL);
       hle.labObserver = this;                           // DisplayLab.step / compose call dstep and dnote
     }
   }
@@ -136,19 +139,19 @@ export class Tracer extends HarnessDigest {
     this._irq_rows();
   }
   _ring(totalOff, base, since) {
-    const sim = this.sim, total = sim.u32(IRQ.DEBUG + totalOff);
-    if (total - since > IRQ.RING_SLOTS) throw new Error(`capture: ${total - since} ring entries since the last stop overflow the ring`);
+    const sim = this.sim, total = sim.u32(INTC_DEBUG + totalOff);
+    if (total - since > INTC_RING_SLOTS) throw new Error(`capture: ${total - since} ring entries since the last stop overflow the ring`);
     const rows = [];
     for (let n = since; n < total; n++) {
-      const b = sim.read(IRQ.DEBUG + base + 16 * (n % IRQ.RING_SLOTS), 16);
+      const b = sim.read(INTC_DEBUG + base + 16 * (n % INTC_RING_SLOTS), 16);
       rows.push([u32(b, 0), u32(b, 4), u32(b, 8), u32(b, 12)]);
     }
     return [total, rows];
   }
   _irq_rows() {
     let pres, acc;
-    [this.presented_seen, pres] = this._ring(IRQ.D_PRESENTED_TOTAL, IRQ.D_PRESENTED_RING, this.presented_seen);
-    [this.accepted_seen, acc] = this._ring(IRQ.D_ACCEPTED_TOTAL, IRQ.D_ACCEPTED_RING, this.accepted_seen);
+    [this.presented_seen, pres] = this._ring(INTC_D.PRESENTED_TOTAL, INTC_D.PRESENTED_RING, this.presented_seen);
+    [this.accepted_seen, acc] = this._ring(INTC_D.ACCEPTED_TOTAL, INTC_D.ACCEPTED_RING, this.accepted_seen);
     if (pres.length || acc.length) this.events.push(['irq', pres, acc.map(([lv, pc, lo, hi]) => [lv, pc, lo + hi * 4294967296])]);
   }
   on_stub(name) {
@@ -160,12 +163,12 @@ export class Tracer extends HarnessDigest {
   }
   // ---- summaries
   devices() {
-    const sim = this.sim, d = (o) => sim.u32(IRQ.DEBUG + o);
-    const gate = sim.read(IRQ.DEBUG + IRQ.D_GATE_MODE, 8);
+    const sim = this.sim, d = (o) => sim.u32(INTC_DEBUG + o);
+    const gate = sim.read(INTC_DEBUG + INTC_D.GATE_MODE, 8);
     return {
       t: this._time(),
-      intc: { presented: d(IRQ.D_PRESENTED_TOTAL), accepted: d(IRQ.D_ACCEPTED_TOTAL), errors: d(IRQ.D_ERR_TOTAL),
-        level_mask: d(IRQ.D_LEVEL_MASK), gate: [u32(gate, 0), u32(gate, 4)] },
+      intc: { presented: d(INTC_D.PRESENTED_TOTAL), accepted: d(INTC_D.ACCEPTED_TOTAL), errors: d(INTC_D.ERR_TOTAL),
+        level_mask: d(INTC_D.LEVEL_MASK), gate: [u32(gate, 0), u32(gate, 4)] },
       timer: { ie: sim.u32(IRQ.TIMER_DEBUG + IRQ.T_IE), errors: sim.u32(IRQ.TIMER_DEBUG + IRQ.T_ERR_TOTAL),
         ch1: new IRQ.TimerDebug(sim).channel(1) },
       engine: Object.fromEntries(ENGINE_FIELDS.map(([k, off]) => [k, sim.u32(OSD_DEBUG + off)])),
@@ -176,17 +179,17 @@ export class Tracer extends HarnessDigest {
   // The IPI summary (format /4): pending bits per bank, the xcpu ring total, repeats, +0x810 writes, the last
   // doorbell result, and the xcpu ring rows new since the previous summary.
   ipiSummary() {
-    const sim = this.sim, d = (o) => sim.u32(IRQ.DEBUG + o), total = d(IRQ.D_XCPU_TOTAL);
-    if (total - this.xcpu_seen > IRQ.XCPU_RING_SLOTS) throw new Error(`capture: ${total - this.xcpu_seen} xcpu ring rows since the last summary overflow the ring`);
+    const sim = this.sim, d = (o) => sim.u32(INTC_DEBUG + o), total = d(INTC_D.XCPU_TOTAL);
+    if (total - this.xcpu_seen > INTC_XCPU_RING_SLOTS) throw new Error(`capture: ${total - this.xcpu_seen} xcpu ring rows since the last summary overflow the ring`);
     const xcpu = [];
     for (let n = this.xcpu_seen; n < total; n++) {
-      const b = sim.read(IRQ.DEBUG + IRQ.D_XCPU_RING + 16 * (n % IRQ.XCPU_RING_SLOTS), 16);
+      const b = sim.read(INTC_DEBUG + INTC_D.XCPU_RING + 16 * (n % INTC_XCPU_RING_SLOTS), 16);
       xcpu.push([u32(b, 0), u32(b, 4), u32(b, 8), u32(b, 12)]);
     }
     this.xcpu_seen = total;
-    const p = sim.read(IRQ.DEBUG + IRQ.D_PENDING, 16);
-    return { pending: [u32(p, 0), u32(p, 4), u32(p, 8), u32(p, 12)], xcpu_total: total, repeats: d(IRQ.D_IPI_REPEATS),
-      writes: d(IRQ.D_IPI_WRITES), doorbell_result: d(IRQ.D_DOORBELL_RESULT), xcpu };
+    const p = sim.read(INTC_DEBUG + INTC_D.PENDING, 16);
+    return { pending: [u32(p, 0), u32(p, 4), u32(p, 8), u32(p, 12)], xcpu_total: total, repeats: d(INTC_D.IPI_REPEATS),
+      writes: d(INTC_D.IPI_WRITES), doorbell_result: d(INTC_D.DOORBELL_RESULT), xcpu };
   }
   planes() {
     if (this.lab === null || !this.lab.surfaces) return null;

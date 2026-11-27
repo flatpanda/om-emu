@@ -6,6 +6,16 @@ import { BOARD, timerIrq } from '../fw/board.mjs';
 import { show } from '../util/show.mjs';
 import { pack as spack } from '../util/bytes.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
+import {
+  DEBUG_BASE, DOORBELL_BASE, DEBUG_MAGIC,
+  D_MAGIC, D_VERSION, D_GATE_MODE, D_GATE_PC,
+  D_PRESENTED_TOTAL, D_ACCEPTED_TOTAL, D_REQUEST, D_LEVEL_MASK, D_ERR_TOTAL,
+  D_IPI_WRITES, D_DOORBELL_RESULT, D_IPI_REPEATS, D_PRESENT_NOW,
+  D_PENDING, D_IPI_REQ, D_XCPU_TOTAL, D_XCPU_RING,
+  D_ERR_RING, ERR_SLOTS, D_LINES, D_LEVELS, D_TEST,
+  D_PRESENTED_RING, D_ACCEPTED_RING, RING_SLOTS, XCPU_RING_SLOTS,
+  GATE_OFF, GATE_PC, GATE_ANY, TEST_OFF, TEST_LEVEL, TEST_ONCE, ERRORS,
+} from '../dev/intc-abi.mjs';
 
 // the board's vector page (src/fw/board.mjs vector_page, E143's 0x60030000, which the machine gives the core): a board
 // fact read from the vector init's stores, not a firmware address A() translates (no data of the image sits there to
@@ -27,16 +37,16 @@ export const IPI_POST = A(0x50035AFD), IPI_STORE = A(0x50035BD1), IPI_DESC = A(0
 // the drain routine per descriptor bit
 export const IPI_DRAIN = { 8: A(0x50035BE0), 16: A(0x50035C34), 32: A(0x50035C88), 64: A(0x50035CDC) };
 export const irq_timer = timerIrq;
-export const DEBUG = 0x89A00000, DOORBELL = 0x89A20000, STORE_STUB = A(0xA2100480);
-export const D_MAGIC = 0x000, D_GATE_MODE = 0x008, D_GATE_PC = 0x00C;
-export const D_PRESENTED_TOTAL = 0x010, D_ACCEPTED_TOTAL = 0x014, D_REQUEST = 0x018, D_LEVEL_MASK = 0x01C, D_ERR_TOTAL = 0x020;
-export const D_IPI_WRITES = 0x024, D_DOORBELL_RESULT = 0x028, D_IPI_REPEATS = 0x02C, D_PRESENT_NOW = 0x040;
-export const D_PENDING = 0x060, D_IPI_REQ = 0x070, D_XCPU_TOTAL = 0x07C, D_XCPU_RING = 0x6000;
-export const D_ERR_RING = 0x100, D_LINES = 0x1000, D_LEVELS = 0x2000, D_TEST = 0x3000;
-export const D_PRESENTED_RING = 0x4000, D_ACCEPTED_RING = 0x5000, RING_SLOTS = 256, XCPU_RING_SLOTS = 2048;
-export const GATE_OFF = 0, GATE_PC = 1, GATE_ANY = 2;
-export const TEST_OFF = 0, TEST_LEVEL = 1, TEST_ONCE = 2;
-export const ERRORS = { 1: 'UNKNOWN', 2: 'LEVEL_VALUE', 3: 'TEST_DRIVEN', 4: 'DEBUG_CPU', 5: 'DOORBELL' };
+export const DEBUG = DEBUG_BASE, DOORBELL = DOORBELL_BASE, STORE_STUB = A(0xA2100480);
+export {
+  D_MAGIC, D_GATE_MODE, D_GATE_PC,
+  D_PRESENTED_TOTAL, D_ACCEPTED_TOTAL, D_REQUEST, D_LEVEL_MASK, D_ERR_TOTAL,
+  D_IPI_WRITES, D_DOORBELL_RESULT, D_IPI_REPEATS, D_PRESENT_NOW,
+  D_PENDING, D_IPI_REQ, D_XCPU_TOTAL, D_XCPU_RING,
+  D_ERR_RING, D_LINES, D_LEVELS, D_TEST,
+  D_PRESENTED_RING, D_ACCEPTED_RING, RING_SLOTS, XCPU_RING_SLOTS,
+  GATE_OFF, GATE_PC, GATE_ANY, TEST_OFF, TEST_LEVEL, TEST_ONCE, ERRORS,
+};
 
 const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const pack = (...vs) => { const b = new Uint8Array(4 * vs.length); const d = new DataView(b.buffer); vs.forEach((v, i) => d.setUint32(4 * i, v >>> 0, true)); return b; };
@@ -56,7 +66,7 @@ export class IntcDebug {
       if (e instanceof RuntimeError) throw new RuntimeError(`the machine has no interrupt controller window (${e.message})`);
       throw e;
     }
-    if (magic !== 0x43544E49) throw new RuntimeError(`interrupt controller window magic 0x${fx(magic, 8)}: not emu's interrupt controller model`);
+    if (magic !== DEBUG_MAGIC) throw new RuntimeError(`interrupt controller window magic 0x${fx(magic, 8)}: not emu's interrupt controller model`);
     this.presented_seen = 0;
     this.log = [];
   }
@@ -98,14 +108,14 @@ export class IntcDebug {
   }
   errors() {
     const total = this.u32(D_ERR_TOTAL), out = [];
-    for (let n = Math.max(0, total - 16); n < total; n++) {
-      const b = this.sim.read(DEBUG + D_ERR_RING + 16 * (n % 16), 16);
+    for (let n = Math.max(0, total - ERR_SLOTS); n < total; n++) {
+      const b = this.sim.read(DEBUG + D_ERR_RING + 16 * (n % ERR_SLOTS), 16);
       const kind = u32(b, 0);
       out.push({ name: ERRORS[kind] ?? kind, addr: u32(b, 4), value: u32(b, 8), pc: u32(b, 12) });
     }
     return [total, out];
   }
-  version() { return this.u32(0x004); }
+  version() { return this.u32(D_VERSION); }
   // +0x808 pending bits of a bank (A-IPI), from the debug window (no side effect).
   ipi_pending(bank) { return this.u32(D_PENDING + 4 * bank); }
   // [total, [(bank, value, pc, insns_lo)]] of the sets of banks 1..3.

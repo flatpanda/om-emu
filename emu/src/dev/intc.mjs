@@ -5,11 +5,17 @@
 // (interp.mjs, S.kick).
 import { BUS, Unported, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
 import { BOARD, timerIrq } from '../fw/board.mjs';
+import {
+  DEBUG_BASE, DEBUG_SIZE, DOORBELL_BASE, DEBUG_MAGIC, D,
+  GATE_OFF, GATE_PC, GATE_ANY, TEST_ONCE,
+  ERR_UNKNOWN, ERR_LEVEL_VALUE, ERR_TEST_DRIVEN, ERR_DEBUG_CPU, ERR_DOORBELL,
+} from './intc-abi.mjs';
+
+export { DEBUG_BASE, DEBUG_SIZE, DOORBELL_BASE };
 
 // the model's controller (src/fw/board.mjs; E143: 4 banks, 356 IRQs, the offsets named below)
 const B = BOARD.intc;
 export const IRQS = B.irqs, LEVELS = 7, BANKS = B.banks.length;
-export const DEBUG_BASE = 0x89A00000, DEBUG_SIZE = 0x10000, DOORBELL_BASE = 0x89A20000;
 export const IRQ_OSD_ENGINE = B.irq_osd_engine, IRQ_IPI = B.irq_ipi;
 // the kick's IRQ (A-KICK, a second core only): the one after IRQ_IPI; E143's 325, whose level register is a bank's
 // +0x514 (the CPU entries write 0x40 there, the kernel's INTC inits 0, D) and whose handler 0x50003faf writes 1 to its
@@ -18,16 +24,7 @@ const IRQ_KICK = B.irq_ipi + 1;
 export const IRQ_VSC = (c) => B.irq_vsc0 + 2 * c, IRQ_TIMER = timerIrq;
 const BANK_BASE = B.banks;
 const PRESENTED = B.presented, IPI_SET = B.ipi_set, IPI_CLEAR = B.ipi_clear, KICK = B.kick, CTL = B.ctl, OFF = B.off ?? null;   // off: the E143 board's only
-const D = {
-  MAGIC: 0x000, VERSION: 0x004, GATE_MODE: 0x008, GATE_PC: 0x00C, PRESENTED_TOTAL: 0x010, ACCEPTED_TOTAL: 0x014,
-  REQUEST: 0x018, LEVEL_MASK: 0x01C, ERR_TOTAL: 0x020, IPI_WRITES: 0x024, DOORBELL_RESULT: 0x028, IPI_REPEATS: 0x02C,
-  PRESENT_NOW: 0x040, PENDING: 0x060, IPI_REQ: 0x070, XCPU_TOTAL: 0x07C, ERR_RING: 0x100, ERR_SLOTS: 16,
-  LINES: 0x1000, LEVELS: 0x2000, TEST: 0x3000, PRESENTED_RING: 0x4000, ACCEPTED_RING: 0x5000, RING_SLOTS: 256,
-  XCPU_RING: 0x6000, XCPU_RING_SLOTS: 2048,
-};
-const GATE_OFF = 0, GATE_PC = 1, GATE_ANY = 2;
 const MUT_HIGHEST_LEVEL = 23, MUT_HIGHEST_IRQ = 27, MUT_IPI_NO_CLEAR = 31;
-const ERR_UNKNOWN = 1, ERR_LEVEL_VALUE = 2, ERR_TEST_DRIVEN = 3, ERR_DEBUG_CPU = 4, ERR_DOORBELL = 5;
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // The debugger's interrupt trace (src/debug/): IT(0, irq, level, pc, insns) at every presentation the presented ring
 // records (a CPU read of bank 0's +0x700 register that names an IRQ), IT(1, level, pc, insns) at every acceptance
@@ -56,7 +53,7 @@ export class Intc {
     const off = allocWindow(DEBUG_SIZE);
     this.dbg = U8.subarray(off, off + DEBUG_SIZE);
     this.d32 = new Uint32Array(buf, off, DEBUG_SIZE / 4);
-    this.dset(D.MAGIC, 0x43544E49);
+    this.dset(D.MAGIC, DEBUG_MAGIC);
     this.dset(D.VERSION, 2);
     this.driven[IRQ_IPI] = 1;
     this.dbg[D.LINES + IRQ_IPI] = 0x80;
@@ -193,7 +190,7 @@ export class Intc {
           this.dset(slot, irq); this.dset(slot + 4, level); this.dset(slot + 8, ctx.pc());
           this.dset(slot + 12, ctx.insns() % 4294967296); this.dset(D.PRESENTED_TOTAL, total + 1);
           if (IT !== null) IT(0, irq, level, ctx.pc() >>> 0, ctx.insns());
-          if (this.test[irq] === 2) { this.test[irq] = 0; this.recompute(); }
+          if (this.test[irq] === TEST_ONCE) { this.test[irq] = 0; this.recompute(); }
         }
         return data;
       }

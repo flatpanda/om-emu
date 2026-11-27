@@ -23,7 +23,8 @@
 //   (src/lab/strict.mjs; absent: OM_STRICT), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
 //   and --device), rotate 'auto'|'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT; auto, the default, on where the body
-//   has it: E143, E146, E147), lang CODE (play's --lang; default 'en', validated against the model's supported
+//   has it: E143, E146, E147), cpu2 'auto'|'stand-in'|'native', camapp '1'|'2'|'3', playNative 'auto'|'on'|'off'
+//   (play's --cpu2, --camapp and --play-native), lang CODE (play's --lang; default 'en', validated against the model's supported
 //   languages and kept across restart), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
 //   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
@@ -81,6 +82,24 @@ export function validateLang(lang, supported) {
     throw new TokenError(`--lang ${code}: one of ${[...supported].sort().join(', ')}`);
   }
   return code;
+}
+export const CPU2_CHOICES = ['auto', 'stand-in', 'native'];
+export const CAMAPP_CHOICES = ['1', '2', '3'];
+export const PLAY_NATIVE_CHOICES = ['auto', 'on', 'off'];
+export function validateCpu2(cpu2) {
+  const v = cpu2 === undefined ? 'auto' : cpu2;
+  if (typeof v !== 'string' || !CPU2_CHOICES.includes(v)) throw new TokenError(`--cpu2 ${v}: one of ${CPU2_CHOICES.join(', ')}`);
+  return v;
+}
+export function validateCamapp(camapp) {
+  const v = camapp === undefined ? '1' : (typeof camapp === 'number' ? String(camapp) : camapp);
+  if (typeof v !== 'string' || !CAMAPP_CHOICES.includes(v)) throw new TokenError(`--camapp ${camapp}: one of ${CAMAPP_CHOICES.join(', ')}`);
+  return v;
+}
+export function validatePlayNative(playNative) {
+  const v = playNative === undefined ? 'auto' : playNative;
+  if (typeof v !== 'string' || !PLAY_NATIVE_CHOICES.includes(v)) throw new TokenError(`--play-native ${v}: one of ${PLAY_NATIVE_CHOICES.join(', ')}`);
+  return v;
 }
 class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
 // the steps that run at a debug stop (the firmware held inside a tick): reads, pokes, checks, the card, arming, resume
@@ -433,6 +452,7 @@ export async function openSession(o = {}) {
   // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
   // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
   const a15Arg = o.a15 ?? 'auto', rotateArg = o.rotate ?? 'auto', deviceArg = o.device ?? 'tft', langArg = validateLang(o.lang), osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
+  const cpu2Arg = validateCpu2(o.cpu2), camappArg = validateCamapp(o.camapp), playNativeArg = validatePlayNative(o.playNative);
   if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
   if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
   if (!['auto', 'off', 'on'].includes(rotateArg)) throw new TokenError(`--rotate ${rotateArg}: auto, off or on`);
@@ -505,7 +525,7 @@ export async function openSession(o = {}) {
   if (strictLog) say('strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words; src/lab/strict.mjs)');
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
-    take: 'stand-in', cpu2: o.cpu2 ?? 'auto', camapp: String(o.camapp ?? '1'), play_native: o.playNative ?? 'auto', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg, lang: langArg };
+    take: 'stand-in', cpu2: cpu2Arg, camapp: camappArg, play_native: playNativeArg, creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg, lang: langArg };
   let frame = null, sessionNo = 0;
   const baseEnv = { rom, resBlock, nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: E.loadImage() } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),

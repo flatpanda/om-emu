@@ -146,6 +146,10 @@ import { panelDoneUnits } from '../test/test_paneldone.mjs';
 import { debugInspectUnits } from '../test/test_debug_inspect.mjs';
 import { cycleUnits } from '../test/test_cycles.mjs';
 import { magnifyUnits } from '../test/test_magnify.mjs';
+import { sessionCliUnits } from '../test/test_session_cli.mjs';
+import { resPatchUnits } from '../test/test_respatch.mjs';
+import { debugCpu2Units } from '../test/test_debug_cpu2.mjs';
+import { webArgsUnits } from '../test/test_web_args.mjs';
 
 let runFacts = false;
 for (const arg of process.argv.slice(2)) {
@@ -257,6 +261,10 @@ report('S-PANELDONE gate flag-satisfaction checks (src/lab/menu.mjs)', panelDone
 report('debug API non-mutating breakpoints and watchpoints inspection ops', debugInspectUnits());
 report('static ES dependency cycle gate across emu/src (0 cycles)', cycleUnits());
 report('E147 AEL/AFL (0x120b) control wiring, H-ADINIT E146/E147, and envVar helper', magnifyUnits());
+report('session CLI --cpu2 / --camapp / --play-native options (bin/session.mjs, host/session.mjs)', sessionCliUnits());
+report('resource-block (0101) patch extraction, diff and summary (src/fw/respatch.mjs)', resPatchUnits());
+report('live debug API cpu2 inspection op (src/debug/live.mjs)', debugCpu2Units());
+report('browser player cpu2 / camapp / play_native URL args and session text (web/args.mjs, web/ui.mjs)', webArgsUnits());
 if (runFacts) {
   const fa = factsTests();
   report(`firmware facts (${fa.models} unpacked main blocks)`, fa);

@@ -75,6 +75,22 @@ export async function cardPanelSteps(step, env) {
     { open: getEl('cardpanel').open, wasOpen, activeTab, prevTab, present: cEnd?.slot?.present ?? null });
 }
 
+// The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
+export function formatSessionText(d, s = {}, sessionHow = '') {
+  const used = new Set(s.stand_ins || []);
+  const lens = used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps/4.4.md 4.4.2)'
+    : d.lens === 'stand-in' ? 'the lens stood in (S-LENS), as asked'
+    : 'the lens stood in (S-LENS: this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
+  const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
+    : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
+  const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
+  const extra = [];
+  if (d.cpu2 && d.cpu2 !== 'auto') extra.push(`cpu2 ${d.cpu2}`);
+  if (d.camapp && String(d.camapp) !== '1') extra.push(`camapp ${d.camapp}`);
+  if (d.play_native && d.play_native !== 'auto') extra.push(`play_native ${d.play_native}`);
+  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${d.rotate === 'on' ? 'PER_ROTATE' : 'no PER_ROTATE'}${extra.length ? ' · ' + extra.join(' · ') : ''} · ${lens} · ${nv} · ${card}. ${sessionHow}`;
+}
+
 export function createPlayerUI(host) {
   let CONTROLS = [], BYID = {}, KEYMAP = {}, STATUS = {}, stopped = false, frameSeq = 0, statusSeq = 0;
   const cv = $('cv'), g = host.canvasOpts ? cv.getContext('2d', host.canvasOpts) : cv.getContext('2d');
@@ -514,14 +530,7 @@ export function createPlayerUI(host) {
   }
   // The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
   function sessionText(d, s) {
-    const used = new Set(s.stand_ins || []);
-    const lens = used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps/4.4.md 4.4.2)'
-      : d.lens === 'stand-in' ? 'the lens stood in (S-LENS), as asked'
-      : 'the lens stood in (S-LENS: this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
-    const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
-      : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
-    const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
-    return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${d.rotate === 'on' ? 'PER_ROTATE' : 'no PER_ROTATE'} · ${lens} · ${nv} · ${card}. ${host.sessionHow}`;
+    return formatSessionText(d, s, host.sessionHow);
   }
   function showPorts(s) {
     if (!SESSION) return;

@@ -295,12 +295,24 @@ const K = { FB: 0, CLR: 1, EXTB: 2, EXTBU: 3, EXTH: 4, EXTHU: 5, ADDI_A: 6, ADDI
   LDD_W: 49, LDD_B: 50, LDD_H: 51, STD_W: 52, STD_B: 53, STD_H: 54, LDDA: 55, STDA: 56, ADDI32_D: 57, ADDI32_A: 58,
   CMPI32_D: 59, ANDI_D: 60, ORI_D: 61, MOVI32_D: 62, MOVI32_A: 63, ADD_SP: 64, MOVI_AA: 65, MOVI8_A: 66,
   UDFMULI: 67, ADD_AD: 68, ADD_AA: 69, SUB_AD: 70, LDSP16: 71, STSP16: 72, CMPI_A32: 73, BTSTI: 74, XORI_D: 75,
-  FBM: 76, SUB_DA: 77, SUB_AA: 78, SUBI32_D: 79, SUBI32_A: 80 };
+  FBM: 76, SUB_DA: 77, SUB_AA: 78, SUBI32_D: 79, SUBI32_A: 80,
+  SHIFTI: 81, SHIFTR: 82, LDX_W: 83, STX_W: 84, LDX_A: 85, STX_A: 86, LDX_B: 87, STX_B: 88, LDX_H: 89, STX_H: 90,
+  LDABS: 91, STABS: 92, NOT_D: 93, JMP_A: 94, RETS: 95 };
 // FBM: helper form that returns to the main loop (transfer kind 3). The inline SUB/CMP forms are F1 0x-3x, 9x, Ax;
 // Ax-Bx CMP; FA/FC C8, D8; FC C4, D4: the forms check_perf's mutant 1 changes (P1).
 function setFlags(x, c, v) { R[PSW] = (R[PSW] & ~15) | (x === 0 ? Z : 0) | (x < 0 ? N : 0) | (c ? C : 0) | (v ? V : 0); R[UNDEF] &= ~15; }
 function addf(l, r) { const x = (l + r) | 0; setFlags(x, (l >>> 0) + (r >>> 0) > 0xffffffff, (~(l ^ r) & (l ^ x)) < 0); return x; }
 function subf(l, r) { const x = (l - r) | 0; setFlags(x, MUT === 1 ? (l >>> 0) <= (r >>> 0) : (l >>> 0) < (r >>> 0), ((l ^ r) & (l ^ x)) < 0); return x; }
+function shiftf(value, count, kind) {
+  let result = value, undef = V, carry = 0;
+  count &= 31;
+  if (count === 0 || kind === 0) undef |= C; else carry = (value & 1) ? C : 0;
+  if (count) result = kind === 0 ? value << count : kind === 1 ? (value >>> count) | 0 : value >> count;
+  const w = 15 & ~undef;
+  R[PSW] = (R[PSW] & ~w) | (((result === 0 ? Z : 0) | (result < 0 ? N : 0) | carry) & w);
+  R[UNDEF] = (R[UNDEF] & ~15) | undef;
+  return result;
+}
 function cond(cc, pc) { if ((R[UNDEF] & CC_USES[cc]) && MUT !== 2) throw new Fault(6, pc); return ccEval(cc, R[PSW]); }
 function decode(pc, i) {
   cacheMisses++;
@@ -320,13 +332,16 @@ function decode(pc, i) {
   if (CV !== null) CV(pc);                                      // the coverage hook (cpu.mjs): pc runs next
   const src = (op >> 2) & 3, dst = op & 3;
   let k = K.FB, x = 0, y = 0, imm = 0;
-  if (op <= 0x0f) { if ((op & 3) === 0) { k = K.CLR; x = src; } }
+  if (op <= 0x0f) {
+    if ((op & 3) === 0) { k = K.CLR; x = src; }
+    else { k = K.STABS; x = src; y = op & 3; imm = cv(pc + 1, 2) & 0xffff; }
+  }
   else if (op <= 0x1f) { k = [K.EXTB, K.EXTBU, K.EXTH, K.EXTHU][(op - 0x10) >> 2]; x = dst; }
   else if (op <= 0x23) { k = K.ADDI_A; x = dst; imm = s8(cb(pc + 1)); }
   else if (op <= 0x27) { k = K.MOVI_A; x = dst; imm = cv(pc + 1, 2) & 0xffff; }
   else if (op <= 0x2b) { k = K.ADDI_D; x = dst; imm = s8(cb(pc + 1)); }
   else if (op <= 0x2f) { k = K.MOVI_D; x = dst; imm = s16(cv(pc + 1, 2)); }
-  else if (op <= 0x3b) { /* abs16 loads: fallback */ }
+  else if (op <= 0x3b) { k = K.LDABS; x = dst; y = op < 0x34 ? 1 : op < 0x38 ? 2 : 3; imm = cv(pc + 1, 2) & 0xffff; }
   else if (op <= 0x3f) { k = K.MOV_AA; x = dst; y = 8 - 4; /* a[dst] = sp */ k = K.MOVI_AA; }
   else if (op <= 0x4f) {
     if (dst === 0) { k = K.INC_D; x = src; } else if (dst === 1) { k = K.INC_A; x = src; }
@@ -345,8 +360,10 @@ function decode(pc, i) {
   } else if (op <= 0xc9) { k = K.BCC; x = op & 15; imm = s8(cb(pc + 1)); }
   else if (op === 0xca) { k = K.BRA; imm = s8(cb(pc + 1)); }
   else if (op === 0xcb) k = K.NOP;
+  else if (op === 0xcc) { k = K.BRA; imm = s16(cv(pc + 1, 2)); }
   else if (op >= 0xd0 && op <= 0xd9) { k = K.LCC; x = op & 15; }
   else if (op === 0xdb) { k = K.SETLB; }
+  else if (op === 0xdc) { k = K.BRA; imm = cv(pc + 1, 4); }
   else if (op >= 0xe0 && op <= 0xef) { k = K.ADD_DD; x = dst; y = src; }
   else if (op === 0xf0) {
     const s = (p >> 2) & 3, d = p & 3;
@@ -354,6 +371,7 @@ function decode(pc, i) {
       case 0x00: k = K.LDA_A; x = s; y = d; break; case 0x10: k = K.STA_A; x = s; y = d; break;
       case 0x40: k = K.LDBU_A; x = s; y = d; break; case 0x50: k = K.STB_A; x = s; y = d; break;
       case 0x60: k = K.LDHU_A; x = s; y = d; break; case 0x70: k = K.STH_A; x = s; y = d; break;
+      case 0xf0: if (p >= 0xf4 && p < 0xf8) { k = K.JMP_A; x = d; } else if (p === 0xfc) k = K.RETS; break;
     }
   } else if (op === 0xf1) {
     const s = (p >> 2) & 3, d = p & 3; x = d; y = s;
@@ -366,7 +384,17 @@ function decode(pc, i) {
     }
   } else if (op === 0xf2) {
     const s = (p >> 2) & 3, d = p & 3; x = d; y = s;
-    switch (p >> 4) { case 0: k = K.AND_DD; break; case 1: k = K.OR_DD; break; case 2: k = K.XOR_DD; break; }
+    switch (p >> 4) {
+      case 0: k = K.AND_DD; break; case 1: k = K.OR_DD; break; case 2: k = K.XOR_DD; break;
+      case 3: if (p <= 0x33) k = K.NOT_D; break;
+      case 9: case 10: case 11: k = K.SHIFTR; imm = (p >> 4) - 9; break;
+    }
+  } else if (op === 0xf3) {
+    x = (p >> 4) & 3; y = p & 0x0f;
+    k = p < 0x40 ? K.LDX_W : p < 0x80 ? K.STX_W : p < 0xc0 ? K.LDX_A : K.STX_A;
+  } else if (op === 0xf4) {
+    x = (p >> 4) & 3; y = p & 0x0f;
+    k = p < 0x40 ? K.LDX_B : p < 0x80 ? K.STX_B : p < 0xc0 ? K.LDX_H : K.STX_H;
   } else if (op === 0xf9 || op === 0xfb || op === 0xfd) {
     const w = op === 0xf9 ? 1 : op === 0xfb ? 2 : 4, nn = p >> 4, tt = (p >> 2) & 3;
     let v = cv(pc + 2, w);
@@ -381,23 +409,32 @@ function decode(pc, i) {
         x = s; y = d; imm = simm;
         if (p & 0x10) k = isA ? K.STDA : mw === 4 ? K.STD_W : mw === 1 ? K.STD_B : K.STD_H;
         else k = isA ? K.LDDA : mw === 4 ? K.LDD_W : mw === 1 ? K.LDD_B : K.LDD_H;
-      } else if (p >= 0x90 && p < 0xa0 && !(op === 0xf8 && (p & 3) < 2)) { k = K.STSP16; x = s; y = p & 3; imm = v; }
-      else if (p >= 0xb0 && p < 0xc0 && !(op === 0xf8 && p < 0xb8)) { k = K.LDSP16; x = d; y = p; imm = v; }
-      else if (op !== 0xf8 && p >= 0xc0) {
+      } else if (p < 0x90) {
+        if (op === 0xfc || (op === 0xfa && (p & 3) === 0)) { k = K.STABS; x = s; y = p & 3; imm = v; }
+      } else if (p < 0xa0) {
+        if (!(op === 0xf8 && (p & 3) < 2)) { k = K.STSP16; x = s; y = p & 3; imm = v; }
+      } else if (p < 0xb0) {
+        if (op === 0xfc || (op === 0xfa && p <= 0xa3)) { k = K.LDABS; x = d; y = (p - 0xa0) >> 2; imm = v; }
+      } else if (p < 0xc0) {
+        if (!(op === 0xf8 && p < 0xb8)) { k = K.LDSP16; x = d; y = p; imm = v; }
+      } else if (op !== 0xf8) {
         x = d;
         switch (p & 0xfc) {
           case 0xc0: k = K.ADDI32_D; imm = simm; break; case 0xc8: k = K.CMPI32_D; imm = simm; break;
           case 0xd0: k = K.ADDI32_A; imm = simm; break; case 0xd8: k = K.CMPI_A32; imm = v; break;
           case 0xe0: k = K.ANDI_D; imm = v; break; case 0xe4: k = K.ORI_D; imm = v; break; case 0xe8: k = K.XORI_D; imm = v; break;
+          case 0xec: k = K.BTSTI; imm = v; break;
           case 0xcc: if (op === 0xfc) { k = K.MOVI32_D; imm = v; } break;
           case 0xc4: if (op === 0xfc) { k = K.SUBI32_D; imm = v; } break;
           case 0xd4: if (op === 0xfc) { k = K.SUBI32_A; imm = v; } break;
           case 0xdc: if (op === 0xfc) { k = K.MOVI32_A; imm = v; } break;
           case 0xfc: if (p === 0xfe) { k = K.ADD_SP; imm = simm; } break;
         }
-      } else if (op === 0xf8 && p === 0xfe) { k = K.ADD_SP; imm = simm; }
-      else if (op === 0xf8 && p >= 0xe0 && p <= 0xe7) { x = d; imm = v; k = p < 0xe4 ? K.ANDI_D : K.ORI_D; }
-      else if (op === 0xf8 && p >= 0xec && p <= 0xef) { x = d; imm = v; k = K.BTSTI; }
+      } else if (p <= 0xcb) { k = K.SHIFTI; x = d; y = (p - 0xc0) >> 2; imm = v & 31; }
+      else if (p >= 0xe0 && p <= 0xe7) { x = d; imm = v; k = p < 0xe4 ? K.ANDI_D : K.ORI_D; }
+      else if (p >= 0xe8 && p <= 0xeb) { k = K.BCC; x = 10 + (p - 0xe8); imm = simm; }
+      else if (p >= 0xec && p <= 0xef) { x = d; imm = v; k = K.BTSTI; }
+      else if (p === 0xfe) { k = K.ADD_SP; imm = simm; }
     }
   }
   if ((op === 0xf0 && p === 0xfd) || (op === 0xf2 && (p & 0xf3) === 0xf3) || (op === 0xfa && (p === 0xfc || p === 0xfd))) k = K.FBM;
@@ -596,6 +633,21 @@ export function run(budget = Infinity, resumed = false) {
         case K.UDFMULI: R[D0 + x] = Math.imul(R[D0 + x], imm); R[UNDEF] |= 15; break;
         case K.STSP16: { const a = (R[SP] + imm) | 0, v = y === 0 ? R[A0 + x] : R[D0 + x]; if (y < 2) st32(a, v); else if (y === 2) st8(a, v); else st16(a, v); break; }
         case K.LDSP16: { const p = y, a = (R[SP] + imm) | 0, v = p < 0xb8 ? ld32(a) : p < 0xbc ? ld8(a) : ld16(a); if (p < 0xb4) R[A0 + x] = v; else R[D0 + x] = v; break; }
+        case K.SHIFTI: R[D0 + x] = shiftf(R[D0 + x], imm, y); break;
+        case K.SHIFTR: R[D0 + x] = shiftf(R[D0 + x], R[D0 + y], imm); break;
+        case K.LDX_W: R[D0 + x] = ld32((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0); break;
+        case K.STX_W: st32((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0, R[D0 + x]); break;
+        case K.LDX_A: R[A0 + x] = ld32((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0); break;
+        case K.STX_A: st32((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0, R[A0 + x]); break;
+        case K.LDX_B: R[D0 + x] = ld8((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0); break;
+        case K.STX_B: st8((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0, R[D0 + x]); break;
+        case K.LDX_H: R[D0 + x] = ld16((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0); break;
+        case K.STX_H: st16((R[A0 + (y & 3)] + R[D0 + (y >> 2)]) | 0, R[D0 + x]); break;
+        case K.STABS: { const v = y === 0 ? R[A0 + x] : R[D0 + x]; if (y < 2) st32(imm, v); else if (y === 2) st8(imm, v); else st16(imm, v); break; }
+        case K.LDABS: { const v = y < 2 ? ld32(imm) : y === 2 ? ld8(imm) : ld16(imm); if (y === 0) R[A0 + x] = v; else R[D0 + x] = v; break; }
+        case K.NOT_D: { const r = ~R[D0 + x]; setFlags(r, false, false); R[D0 + x] = r; break; }
+        case K.JMP_A: next = R[A0 + x]; tbPc = next; if (MUT === 3) { tbAt = S.insns; R[PC] = next; continue; } tbAt = S.insns + 1; break;
+        case K.RETS: next = ld32(R[SP]); tbPc = next; if (MUT === 3) { tbAt = S.insns; R[PC] = next; continue; } tbAt = S.insns + 1; break;
         default:
           step();
           if (R[PC] !== next) { tbPc = R[PC]; tbAt = S.insns; }

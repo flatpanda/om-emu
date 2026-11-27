@@ -167,7 +167,7 @@ async function boot(msg) {
     };
     player = new Player(a, env);
     api = new PlayApi(player, { tables: Tables.of(fw.rom), frameRgba: (w, h, raw) => rgbaOf(w, h, raw), onSubmit: () => driver?.kick(),
-      cardImage: jpegRgba, session: { host: 'browser', lens, nvram: nvram ? nvram.file : null, card: null, card_size: cardSize, ...(patch ? { patch } : {}) } });
+      cardImage: jpegRgba, session: { host: 'browser', lens, nvram: nvram ? nvram.file : null, card: null, card_size: cardSize, cpu2: a.cpu2, camapp: a.camapp, play_native: a.play_native, ...(patch ? { patch } : {}) } });
     driver = new Driver(player);
   } catch (err) {                       // nothing started: the page may boot again (another file, the cache)
     player = api = driver = null;

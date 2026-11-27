@@ -166,14 +166,14 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F12 hooks are a flat address-keyed Map any layer rewrites | partly fixed (`hook()` refuses the wrong address notation; `wrap()`); an owner-aware registry is phase 2 |
 | F13 every entry point hand-builds an untyped env bag | open, phase 2 |
 | F14 one Player, two loop shapes, with hosts reaching into Player internals | open, conditional |
-| F15 dependency direction is unconstrained and inverted in places | open, conditional |
+| F15 dependency direction is unconstrained and inverted in places | partly fixed (2026-11-26): all circular dependencies in `emu/src/` are eliminated (`src/dev/vscdefs.mjs`, `src/lab/patchaudit.mjs`) and enforced at 0 cycles by `test/test_cycles.mjs`; broader layer-direction rules stay open, conditional |
 | F16 instruction semantics are implemented twice, with hand-maintained derived lists | partly fixed: `test/test_core.mjs` runs the two in lockstep and checks the length and transfer tables |
 | F17 lab features form an eight-class inheritance chain | signature drift fixed; composition instead of the chain is phase 2 |
 | F18 negative-control mutants are compiled into product code | open, phase 2 |
 | F19 machine options travel through a realm-global array and import side effects | partly fixed: the Simulator passes `env.machine` (`mutant`, `oneInsn`, `coverage`) to `createMachine` and `OM_MACHINE` (and `OM_COVERAGE`) is parsed at first use; the options still travel in the untyped env bag (F13) |
 | F20 board and SoC constants are hard-coded across core, memory and interpreter | largely addressed by the multi-model work: per-model boards (`src/fw/board.mjs`) and address tables (`src/fw/ports.mjs`) |
 | F21 devices self-register into the global address table; the lab stub is special-cased | open, conditional |
-| F22 the debug-window and doorbell ABI is defined on both the device and the harness side | open, phase 2 |
+| F22 the debug-window and doorbell ABI is defined on both the device and the harness side | open, phase 2 (`src/dev/vscdefs.mjs` deduplicated device-side VSC constants; remaining device/harness debug-window ABIs are phase 2) |
 | F23 no single owner of machine state | open, conditional |
 | F24 snapshots are live object graphs; lab sessions have no checkpoints | open: measure start-up cost first |
 | F25 every snapshot copies the ROM view and all eagerly dirtied windows | fixed (2026-11-26): `memSnapshot` / `memRestore` skip unmutated read-only `K_ROM` pages (`test/test_mem_snapshot.mjs`) |
@@ -190,7 +190,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F39 scenario runner and play workload exist in both `bin/` and `web/` | open, conditional |
 | F40 the checks and gates hard-code Linux facilities | fixed (2026-11-26): `bin/checks.mjs` `--measure` detects GNU vs BSD/macOS `/usr/bin/time` portably (`test/test_checks_time.mjs`) |
 | C01 the CPU stops on every exceptional event and has no architectural exception path | open, phase 3 (strictness faults, exception entry) |
-| C02 the SoC has four CPUs; emu structurally has one | open: CPU 2 and CPU 3 are served by stand-ins at single call sites |
+| C02 the SoC has four CPUs; emu structurally has one | partly fixed (2026-11-26): CPU 2 runs natively by default on E143 (`--cpu2 auto`, `src/core/cores.mjs`, `src/lab/cpu2.mjs`) with multi-core `snapshot()`/`restore()`, retiring `S-CPU2` and `S-AUDCPU2` (opt-in via `--cpu2 stand-in`); CPUs 1 and 3 and other bodies' secondary cores remain open |
 | C03 no hardware anchor below the ISA level | open, phase 5 (camera evidence) |
 | C04 K-native runs firmware task bodies on harness stacks, outside kernel scheduling | open, phase 4 (DISPLAY as a kernel task) |
 | C05 no standard reverse-engineering endpoint | open: an RSP endpoint only if someone needs gdb |

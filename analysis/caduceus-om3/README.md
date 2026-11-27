@@ -22,8 +22,9 @@ base `ae63e25`, took up section 7's follow-ups against the checkout at `0b1d5cb`
 listed in 4.1, and where it changed a result the text says so. A third round on 2026-11-14, on base `a68dca3` and the
 same checkout, took up the second round's follow-ups in the same way, and a fourth later that day, on base `b36e3e5`,
 took up the third's. A fifth on 2026-11-17, on base `19befb74`, read upstream's eight releases since (v0.29.2 to
-v0.30.3, checkout `78a809e`), pinned them and judged what in them is useful here (section 8). No excerpt of
-Caduceus' code, no byte of its patch and no picture it draws is committed.
+v0.30.3, checkout `78a809e`), pinned them and judged what in them is useful here (section 8). A sixth on 2026-11-22,
+on base `6b111c6b`, pinned the eight after that (v0.30.4-alpha to v0.40.2) from their release assets (section 9). No
+excerpt of Caduceus' code, no byte of its patch and no picture it draws is committed.
 
 **Licence.** The repository is Apache-2.0 (`LICENSE`) with a `NOTICE` that says the release patch files hold only the
 bytes the project writes, that its tour screenshots were drawn by om-emu running its firmware, and that its developer
@@ -89,6 +90,10 @@ made on an older om-emu (they name `147ca89` and `d24ff9d`, 2026-11-03 and 2026-
    firmware's own setting names in container block 2 (X on E143, E146 and E147), the mode codes and the still / movie
    switch's byte (X), the stage list's colour-matrix call and a shot's job types (D), and three camera-vs-lab
    differences around the mode change, unexplained. One correction (2.7's family 898).
+8. **Since (2026-11-22, section 9).** Eight more, v0.30.4-alpha to v0.40.2 (crop modes, borders, their own grain,
+   screen-info rows), all pass v0.30.3's flow as pinned; the one new observation is the audit naming the settings
+   store's save, which their patch now enters. Two lab limits their `research/TESTING.md` still states (`fopen`
+   truncation, no still / movie switch in `bin/session.mjs`) no longer hold.
 
 ## 1. What it is, and how it is built and delivered
 
@@ -182,14 +187,14 @@ port's `storage.nand.access` and its read mode), logs a non-zero result and then
 `mov (0xa32de590),d1; or d1,d0; mov d0,(0xa32de590)` with `d0 = 1 << (n - 1)` at `0x50024f13..0x50024f1b` (D). Those
 two are the block's only absolute references to `0xa32de590` (X, a scan of every aligned and unaligned word), so the
 word has no reader in stock code. Its E143 twin is `0xa32df1f8`, set by `0x50024e6b` in USTART_L2 `0x50024572`
-(`docs/hle-gaps.md` 4.6); the port pairs that loader with E147's `0x500245a5` (X, `PORTS.E147`). In a stock E147
+(`docs/hle-gaps/4.6.md` 4.6); the port pairs that loader with E147's `0x500245a5` (X, `PORTS.E147`). In a stock E147
 session at `f2b326b` it read 0 at open and after S2 (X), as the lab runs no loader. S-SECLOADED now sets it as the
 loader leaves it (`emu/FIDELITY-NOTES.md` 7.17): it reads `0x3ff` at open with no write, stock and under v0.29 (X).
 
 The phase mask beside it, `0xa32de58c` (`FACTS.E147.boot.stage`), has three references: the wait `0x50024e1b` and the
 per-section step's `or` at `0x5002503e..0x50025046` (X, the same scan). Bit n - 1 is set by section n's step after
 its static constructors; CPU 0 runs the steps of every section but 8, whose step CPU 1 runs, and the steps of 9 and 10
-are posted only after stage 8's bit (D, `docs/hle-gaps.md` 4.6.4). S-BOOTSTAGE sets the bits of sections 1 to 7, whose
+are posted only after stage 8's bit (D, `docs/hle-gaps/4.6.md` 4.6.4). S-BOOTSTAGE sets the bits of sections 1 to 7, whose
 constructors the lab runs (or which have none), and the word reads `0x7f` at open (X, 2026-11-14; it read 1, bit 0
 alone, before). Their gate does not test it; only the card-load worker of v0.25..v0.27 waited for bits `0x2e9` (D,
 their source), which include bits 7 and 9. Of those releases the patch audit lists a task in patched bytes for v0.26.2
@@ -204,7 +209,7 @@ kind 8 at `0x60369300` and kind 1 at `0x603692f8` (D, `0x50adf011..0x50adf034`),
 `0x50bd33fd` when its checks pass (D). S-CARD writes SD's word `0xF000` (`camapp.mjs`, since `2d10425`, 2026-11-12), and
 a stock session reads `0xF000` there at open (X), so their write of that word is redundant now. At a card's removal the
 slot's card-switch case of the sequence parts writes NOT_PRESENT `0x1001`, at an insertion NO_MOUNT 0, and the media
-manager's status update then rewrites each slot's word from its device (D, `docs/hle-gaps.md` 4.8.3). Since 2026-11-14
+manager's status update then rewrites each slot's word from its device (D, `docs/hle-gaps/4.8.md` 4.8.3). Since 2026-11-14
 S-MEDIA writes the same for the first slot at a removal and an insertion, and S-CARD writes NOT_PRESENT at a start with
 the slot empty (X: a stock session started with `--no-card` reads `01100000` at `0x60369308`).
 
@@ -245,7 +250,7 @@ ImageDescription `0x010e` 32 bytes at `+0x5a8`, Make at `+0x5c8`, Model at `+0x5
 `FACTS.E147.rec_file.exif.tags`' offsets, an independent check. In the lab at `f2b326b` the site never ran (X, stock
 and v0.29, S1 then S2): the set-up's UserComment loop `0x50434fd7` (theirs `0x60455ff7`) ran once, the per-shot fill
 did not, as S-EXIFPRM stood in for TAKE's EXIF set. Since H-RECPRECON the EXIF set runs natively at S2
-(`docs/hle-gaps.md` 4.3.11), the fill site with it: under v0.29 the S2 picture on the card has ImageDescription
+(`docs/hle-gaps/4.3.md` 4.3.11), the fill site with it: under v0.29 the S2 picture on the card has ImageDescription
 `FILM 1 Portra 400` and a UserComment that starts `Caduceus FILM 1 Portra 400` (X, `refs/exif.mjs` on the file
 `bin/session.mjs` took off the card, section 4.2), and a `trace:` of the site records one arrival per S2 press, stock
 and v0.29 (X, second round). Of the exposure fields beside them, ExposureTime is the session's exposure plan since
@@ -265,7 +270,7 @@ and v0.29 (X, second round). Of the exposure fields beside them, ExposureTime is
   setting 897 natively to the families above, and a power cycle keeps the position (X, `emu/test/test_cdial.mjs`).
   Whether that path goes through this routine is not read (?).
 - **Settings getters (X, port pairs).** Their capture-safe getter `0x50042360` (theirs `0x60063380`) is om-emu's
-  "settings read" of REC_IMAGE (`docs/hle-gaps.md`'s table; E143's camera-state read `0x500417da`,
+  "settings read" of REC_IMAGE (`docs/hle-gaps/4.3.md` 4.3.5's table; E143's camera-state read `0x500417da`,
   `FACTS.E147.rec_image.settings`); their setting getter `0x503cf0f1` (theirs `0x603f0111`) is E143's `0x503c49ab`
   (`docs/om1-settings-spec.md`). They report that calling the other getter (theirs `0x603f039d`) during a capture
   rebooted the camera (v0.24).
@@ -324,10 +329,10 @@ empty too (X, the regression run of 4.2).
 | Capture-path crashes: v0.24's getter during capture, lk6's WB read from the heap at S1, ft5 / ft7 / ft8, rc2b's broken file, grain with RAW+JPEG | reboot, hang, a file with EXIF and thumbnail only | not reached ("the emulator cannot capture") | TAKE, development and encode are stood in (S-RELSEQ, S-EXPOSE, S-EXIFPRM, S-JPEGENC) | the photo code: closed, the per-shot EXIF fill runs (4.1); the still set-up (`.hook_su`): runs at S2 since 2026-11-14, what it builds not checked (4.1, follow-up 1); development: follow-up 9 |
 | `fb`-prefixed `movbu (d8,An),Am` (gt1) | misread | "worked" | om-emu faults on `fb` with nn = 2 (`src/core/cpu.mjs`, D); the instruction sat in the capture path the lab never ran (I) | nothing in the CPU |
 | lk7 / lk9: block code in the uncached heap on the COLOR switch | 1 s hang, restart | fine | no fetch cost, watchdog or stack-depth model | not taken (4.4) |
-| The colour wheel's plane | drawn | `PLANC_UNOBSERVED`, on stock too | the OpenVG / K3000 stack on CPU 1 is dormant (`docs/hle-gaps.md` 4.12) | follow-up 10 |
+| The colour wheel's plane | drawn | `PLANC_UNOBSERVED`, on stock too | the OpenVG / K3000 stack on CPU 1 is dormant (`docs/hle-gaps/4.12.md` 4.12) | follow-up 10 |
 | Their guide pictures (Test 11) | drawn | `BMP_TOKEN`, not drawn | the OSD engine refused every run across a row end; stock has none (X, 4.1) | closed: format 0x0B's runs go on in the next row (A-BMPWRAP, 4.1) |
 | v0.27's sporadic start-up hang with the dial moved while off | hang | not shown | one deterministic schedule; no dial position | the position: closed, the dial is an input a power cycle keeps (4.1); the race is not taken |
-| Stills-mode arrow keys and the front dial (`research/BUTTONS.md`) | differ | other setting ids read | until 2026-11-13 the lab's movie mode on E147: its still / movie switch started at a movie position, and the button-function lookup then takes its movie column (`docs/hle-gaps.md` 4.1.13, D) | the arrows and the front dial: closed, at the stills position the arrows read setting ids 50..53 and the dials work, agreeing with their camera results (X, 2026-11-14, 4.1; the camera's side their report); OK on their custom Picture Mode row (their test 12) and the ISO and Fn keys still differ (section 6) |
+| Stills-mode arrow keys and the front dial (`research/BUTTONS.md`) | differ | other setting ids read | until 2026-11-13 the lab's movie mode on E147: its still / movie switch started at a movie position, and the button-function lookup then takes its movie column (`docs/hle-gaps/4.1.md` 4.1.13, D) | the arrows and the front dial: closed, at the stills position the arrows read setting ids 50..53 and the dials work, agreeing with their camera results (X, 2026-11-14, 4.1; the camera's side their report); OK on their custom Picture Mode row (their test 12) and the ISO and Fn keys still differ (section 6) |
 
 **Where the lab answered.** Their notebook credits the lab with a frame bug that overwrote a saved register (`gd_set`),
 a cached-alias relocation landing at a wild address, an assembler-made wild call that stopped the session (the lab was
@@ -396,7 +401,7 @@ Each option, its stand-in and its status are in `emu/README.md`; where the lab d
   function run to its return through the lab's own call path, its hooks answering as for the lab's own calls, every
   register returned. In the loaded-ranges mode a call into code the boot does not load or is not shown to load is
   refused before it runs. Replaces their stubs (4.3; for calls into the middle of a function, below).
-- **The per-shot EXIF fill** (2.6), run with the EXIF set natively at S2 (H-RECPRECON, `docs/hle-gaps.md` 4.3.11):
+- **The per-shot EXIF fill** (2.6), run with the EXIF set natively at S2 (H-RECPRECON, `docs/hle-gaps/4.3.md` 4.3.11):
   their photo code runs, and its fields are read back from the card's JPEG.
 - **A scripted session tool**: `bin/session.mjs` and its module `host/session.mjs` (`openSession`), the supported
   scripting API. A headless play session runs from tokens: keys, dials, switches, waits, `power:off` and `restart`, shots,
@@ -425,9 +430,9 @@ The second round (base `ae63e25`) adds:
 - **The regression run of every release** (`emu/test/test_caduceus.mjs`, its pins in
   `emu/test/fixtures/caduceus-releases.json`; 4.2).
 - **A film's values below the pixels** (`emu/test/test_looks.mjs`; 4.6).
-- **The still path's coverage below S2, pinned per body** (`emu/test/test_storage.mjs` STILL_PATH, `docs/hle-gaps.md`
+- **The still path's coverage below S2, pinned per body** (`emu/test/test_storage.mjs` STILL_PATH, `docs/hle-gaps/4.3.md`
   4.3.12; 4.4).
-- **E147 in stills mode** (`src/fw/models.mjs` switch_idle, `docs/hle-gaps.md` 4.1.13). The lab started the OM-3's
+- **E147 in stills mode** (`src/fw/models.mjs` switch_idle, `docs/hle-gaps/4.1.md` 4.1.13). The lab started the OM-3's
   still / movie switch (UI_IN's position switch `0x1909`) at a movie position, so every E147 session ran the camera
   application in its movie mode (setting 44 = 1, X); sessions now start at the stills position. v0.29's flows pass as
   before (X: 4.2's recipe, and a 63-step flow whose EXIF is the same but for the dates and whose frames are the same
@@ -453,23 +458,23 @@ The third round (base `a68dca3`, 2026-11-14) adds:
   overrun of its lab time, where fixed 50 ms slices first added the overruns up: E143's `wait:1500` 1634.8 ms then,
   1534.8 ms now). The 2026-11-13 runs of this note used one-input waits; the recipe and every release's pins pass on the
   sliced waits (4.2).
-- **The still / movie switch** (`still_movie`, the page's key U, `switch:still_movie=K` with K 0..2; `docs/hle-gaps.md`
+- **The still / movie switch** (`still_movie`, the page's key U, `switch:still_movie=K` with K 0..2; `docs/hle-gaps/4.1.md`
   4.1.13): positions 0 and 1 give the application's movie mode (setting 44 = 1) once moved, 2 the stills mode
   sessions start in; a power cycle on the kept state carries it (X, `emu/test/test_smswitch.mjs`).
 - **A power-on without a card** (`--no-card`, the tokens `card:out` and `card:in`, `:2` for the second slot): the
   boot mounts nothing and the shooting screen shows "No Card"; a restart keeps the slot as the last session left it.
   S-MEDIA and S-CARD write the first slot's media word as the firmware does (2.3), so v0.29.1's films with no card need
-  no poke (4.2; `docs/hle-gaps.md` 4.8.3, `emu/test/test_nocard.mjs`).
+  no poke (4.2; `docs/hle-gaps/4.8.md` 4.8.3, `emu/test/test_nocard.mjs`).
 - **The boot-stage bits** (S-BOOTSTAGE, `emu/FIDELITY-NOTES.md` 7.19): bits 0 to 6, the sections whose static
   constructors the lab runs or which have none (2.2). Their v0.26.2 / v0.27 worker still waits, for bits 7 and 9.
-- **The camera's pipeline constructor for a still** (`docs/hle-gaps.md` 4.3.12): S-RECREQ's packet carries the
+- **The camera's pipeline constructor for a still** (`docs/hle-gaps/4.3.md` 4.3.12): S-RECREQ's packet carries the
   requester's still Command 16 and S-EXIFPRM writes the picture mode as TAKE's fill does, so on E147 at COLOR, MONO and
   ART the image library's create takes the constructor `0x504966f7` and the second step's stub `0x50496710`, after
   CreateParam's extension allocates its two buffers through MM natively. The 2026-11-13 hang at that allocation was
   the lab's: with Command 0 the buffer's size was 0, and MM's retry loop never ends for that request. On v0.29 at
   COLOR their `.hook_su` runs once per S2 and calls the stock set-up `0x504987bb` once, and the picture carries the
   film's ImageDescription (X, `emu/test/test_stillsetup.mjs --caduceus`). What their set-up code builds is not checked.
-- **TAKE's exposure in the shot's record** (S-EXIFPRM, `docs/hle-gaps.md` 4.3.13): StlRdy1's exposure-record fill run
+- **TAKE's exposure in the shot's record** (S-EXIFPRM, `docs/hle-gaps/4.3.md` 4.3.13): StlRdy1's exposure-record fill run
   natively on the settings the exposure plan publishes, TAKE_EXPOSE's shutter range and takepic's copy into the block,
   so the picture's ExposureTime is the session's plan (4.2's: 1/200 s, X). On E146 and E147 the plan then existed only
   once S1 had left the start screen; since the fourth round it exists from the start (below).
@@ -486,16 +491,16 @@ The fourth round (base `b36e3e5`, 2026-11-14) adds:
 - **A patch's own cache flush** (H-PATCHFLUSH, `emu/FIDELITY-NOTES.md` 7.16): a call of the kernel's flush whose calling
   instruction and return address lie on patched bytes is answered as the stock callers the lab lists are; a stock routine the patch calls
   that flushes on its own stays refused. Their halation pass needed it (4.6).
-- **The OM-3's display switch and TFT start** (H-CHAINREST, `docs/hle-gaps.md` 4.4.4): the switch failed the lab's
+- **The OM-3's display switch and TFT start** (H-CHAINREST, `docs/hle-gaps/4.4.md` 4.4.4): the switch failed the lab's
   re-entry check in either direction, and a TFT start published no frame before the first wait. Both were the lab's:
   the touch task did not run, and a settle ended inside the touch driver's 1 ms sleeps. With the touch task running
   and lab time run on through those sleeps, `eye`, `lv` and `switch:eye=V` switch both ways and a `shot:` right after
   the open has a frame (X, `emu/test/test_dispswitch.mjs`); a shot straight after the start has the exposure plan
   (1/200 s).
-- **The picture's shot in TAKE's table** (H-SHOTALLOC, `docs/hle-gaps.md` 4.3.13): api_rec's allocation and free run
+- **The picture's shot in TAKE's table** (H-SHOTALLOC, `docs/hle-gaps/4.3.md` 4.3.13): api_rec's allocation and free run
   natively around each picture, as the application's take buffer does; the EXIF parameters are that shot's record,
   and ImageParam's sources find its buffers, which hold no sensor image.
-- **The stock stage builders** (`emu/test/test_stages.mjs`, A-STAGEJOB, `docs/hle-gaps.md` 4.3.12): the stages their
+- **The stock stage builders** (`emu/test/test_stages.mjs`, A-STAGEJOB, `docs/hle-gaps/4.3.md` 4.3.12): the stages their
   hooks sit in (the COLOR stage and its HSL builder, the LUT builder, the tone step, the gamma stage, the YC packing,
   the grain builder, the register writer) called standalone on stock E147 (and E122, E143) with outputs and read sets
   pinned. Without `OM_CADUCEUS`, this is the stock side a hook's output is compared with (4.6).
@@ -656,7 +661,7 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   `.hook_su` runs, X at COLOR),
   ImageParam's body and the release, on a shot TAKE's own table holds (H-SHOTALLOC); the parameter set, the run, its
   stages and kinds do not run (S-JPEGENC), nor do TAKE's shot-record fill and takepic, of which S-EXIFPRM stands in for
-  the exposure copy (`docs/hle-gaps.md` 4.3.12, 4.3.13; X, pinned per body in `emu/test/test_storage.mjs`). The stages
+  the exposure copy (`docs/hle-gaps/4.3.md` 4.3.12, 4.3.13; X, pinned per body in `emu/test/test_storage.mjs`). The stages
   their hooks sit in are reached only by calls, on a job the test writes (4.6).
 - **A film with Grain at S2**: their work-list hook asks the stock texture builder, whose build is a request to the
   pipeline unit, and the lab has no model of the page it writes: the session stops there (4.6, X). So such a film is
@@ -674,18 +679,18 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   reported as not applied.
 - **The EXIF FNumber and ISO**: `0/10` and 25 are not filled in the lab. Their sources are read: FNumber from TAKE's
   lens fill and the lens step, ISO from setting 50522 handed back by the strobe sequence; both need TAKE's fills run
-  natively in order and the strobe sequence's init (`docs/hle-gaps.md` 4.3.13). ExposureTime is the session's exposure
+  natively in order and the strobe sequence's init (`docs/hle-gaps/4.3.md` 4.3.13). ExposureTime is the session's exposure
   plan (X, 4.2).
 - **Picture runs across a row end in formats other than 0x0B**, and a run past a picture's last row: the OSD engine
   refuses them (`BMP_TOKEN`, in the step's `osd_errors`, which fails the step); A-BMPWRAP covers format 0x0B only, the
   one their pictures use.
 - **The second slot's media word** where no media manager runs (camapp 1): S-MEDIA and S-CARD write the first slot's
-  only (`docs/hle-gaps.md` 4.8.3). The OM-3 has one slot.
+  only (`docs/hle-gaps/4.8.md` 4.8.3). The OM-3 has one slot.
 - **Their power-on film load (v0.26.2, v0.27)**: its worker waits for boot-stage bits 7 and 9, which need CPU 1 to run
   section 8's constructors (2.2, 4.2); the half press loads the films instead.
 - **Some of E147's keys**: OK on their custom Picture Mode row, which the camera takes as another event than the lab
   (their test 12; section 6), the ISO key and the other Fn-type keys (not wired on E147), and what tells the still /
-  movie switch's two movie positions apart (`docs/hle-gaps.md` 4.1.13).
+  movie switch's two movie positions apart (`docs/hle-gaps/4.1.md` 4.1.13).
 - **A call at a debug stop** reaching a lab hook other than memset, memcpy and `prop_get` ends as `CallHooked`, and a
   call at a watchpoint's stop is refused (`emu/README.md` "The debug API"). A stop is a main-loop visit an untraced run
   need not make, so the interrupt taken after it may differ; logging traces and a break at a hooked pc do not change the
@@ -772,7 +777,7 @@ reads with the film's values. It does not show what the development does with th
 
 **The hooks on their outputs (X, 2026-11-14).** `emu/test/test_lookhooks.mjs` (with `OM_CADUCEUS`; about 30 s)
 checks hue and lightness (`hl_pp`), Blacks and Whites (`tone`) and split toning with Tone Balance (`st_run`) on what
-they write, without pixels. The job layout is read from the stages (`docs/hle-gaps.md` 4.3.12, D) and agrees with
+they write, without pixels. The job layout is read from the stages (`docs/hle-gaps/4.3.md` 4.3.12, D) and agrees with
 their notes: C+4 the request R, C+12 the output O, C+48 the gamma stage's key, C+60 the LUT builder's flags. The test
 writes a minimal still job into a call's scratch: R's key 11 (COLOR), R+14 `0x1000`, an image size at R+1660 (their
 stage test's; the gamma stage divides by it) and C+60 = `0x4134063e`, the LUT builder's test mask (their `tonecall`'s;
@@ -807,7 +812,7 @@ where the film has values.
 
 **The stock side (X, 2026-11-14).** `emu/test/test_stages.mjs` (no `OM_CADUCEUS`; `bin/test.mjs` runs it on E122,
 E143 and E147) calls the same stages on stock E147 standalone, each builder on a job of its own, and pins their
-outputs and every job byte each reads (`docs/hle-gaps.md` 4.3.12). The hook test's job is the same kind of
+outputs and every job byte each reads (`docs/hle-gaps/4.3.md` 4.3.12). The hook test's job is the same kind of
 assumption, named there A-STAGEJOB (`emu/FIDELITY-NOTES.md` 8.2): the values are the stages' answers to that job, and
 a camera's job may hold other bytes where both leave 0 (on E147, 37 of the 117 bytes the stage list reads while they
 are 0 change an output when set, X).
@@ -843,12 +848,12 @@ block of the three other builders the set-up calls (at `0x5049883a`, `0x5049889c
 made at `0x504989a6` has 6 bytes and no such byte (D), as their `xb_tex` makes it. Let go, the builder does not come
 back in the lab: nothing is cached, so it builds (`0x504ae099`, the place their notes leave open), and the build is a
 kind-3 request with stage `0xf002` to the pipeline unit, which stops the session at the page that takes the stages'
-output block (`om1.imgpipe UNKNOWN write 0x9c201014`, at `0x50482e5c`; `docs/hle-gaps.md` 4.3.12). So in the lab **a
+output block (`om1.imgpipe UNKNOWN write 0x9c201014`, at `0x50482e5c`; `docs/hle-gaps/4.3.md` 4.3.12). So in the lab **a
 film with Grain does not finish S2**, at any level (X, Low and Med), the test pins that as the lab's limit, and the
 store of the texture at job+8324 is not reached.
 
 *The route at its sites, by calls* (`emu/test/test_lookcode.mjs`, with `OM_CADUCEUS`; 68 checks on v0.29 and v0.29.1,
-about 30 s). The job is written into each call's scratch from the stock code's reads (`docs/hle-gaps.md` 4.3.12, D):
+about 30 s). The job is written into each call's scratch from the stock code's reads (`docs/hle-gaps/4.3.md` 4.3.12, D):
 the still's context S with its parameters' key 11 and flags `0x1000` (as the lab's COLOR still has them, X), the job
 with key 11, the request R (key 11, output `0x1000`, kind 0, no effect) with its context C and register image,
 and, where a film asked for one, a texture object of the test's (19 patterned words) at job+8324. Everything else in
@@ -882,7 +887,7 @@ and set-up. What it does not show: the texture itself, the request the camera bu
 their state bytes in the code block (the texture flag, the request and the context they remember) as the last call
 set them, pointing into a scratch that is given back, so no shot is taken in that session. The stock grain (key 12's
 requests with stage `0x0901` or `0x0902`: the level byte +1751, the gain tables behind combiners 31 and 32, the seed
-at +188) is read in `docs/hle-gaps.md` 4.3.12 and not run here.
+at +188) is read in `docs/hle-gaps/4.3.md` 4.3.12 and not run here.
 
 *Halation on pixels.* `hl_run` (`0x50f6d3fc` in v0.29 and v0.29.1, found at run time as the one call with its frame
 in their code block) is called on YCbYCr 4:2:2 frames the test draws into the call's scratch, with a buffer record
@@ -929,14 +934,14 @@ window branch (the mapper, the window's cached view and the flush after each row
 1. **TAKE's shot** (S-RELSEQ, S-EXPOSE, S-TAKEFRAME): no take request and no RAW frame. Since 2026-11-14 the shot
    exists in TAKE's own table with its record and buffers (H-SHOTALLOC: api_rec's allocation and free natively, as the
    application's take buffer; X on E143, E146 and E147), ImageParam's four sources find its buffers, and TAKE's
-   exposure record reaches the shot's record (S-EXIFPRM runs its fill natively; `docs/hle-gaps.md` 4.3.13). The
+   exposure record reaches the shot's record (S-EXIFPRM runs its fill natively; `docs/hle-gaps/4.3.md` 4.3.13). The
    buffers hold no sensor image. Next (4.3.13's revised plan, I for the sizes): TAKE's own fills natively on that shot
    and TAKE's context, in the still states' order (days: FNumber, the lens fields, the WB mode and key), the strobe
    sequence's init (Sv, so ISO), then a declared S-RAWFRAME for the Bayer and thumbnail buffers, as the lab has no
    sensor readout; TAKE_EXPOSE's still request and TAKE's still states with their neighbours stood in, 1-2 weeks.
 2. **The white balance gains** (S-RECREQ in place of REC_PREPRO's step; REC_RAWNR's on E147): the shot record's four
    gains stay 0 and the library's parameter set divides by them (X, an E143 probe on H-SHOTALLOC's shot: fault 6 at
-   `0x505099e0`); on the camera a computation over TAKE's shot fields gives them (`docs/hle-gaps.md` 4.3.4, D on E143).
+   `0x505099e0`); on the camera a computation over TAKE's shot fields gives them (`docs/hle-gaps/4.3.md` 4.3.4, D on E143).
    Each of its inputs is now read to its writer (4.3.13, D on E143): six settings TAKE's fills read, two that exist
    (the preset gains, the thumbnail's handle), the key and the frame count from the still states' own code, two from
    the strobe sequence's answer, eight fields no fill of TAKE's writes (their writers ?), and the thumbnail's pixels,
@@ -945,26 +950,26 @@ window branch (the mapper, the window's cached view and the flush after each row
    own WB reads (`0x50442192`, `0x504666a3`) belong to this step is not read (?).
 3. **The image library's parameter set, the run and Jpeg_Result** (S-JPEGENC's three steps, on E147 as on E143 since
    2026-11-11, `emu/src/lab/rec.mjs`, D): the stage table, the work pool (a probe's allocator walk did not end on E143,
-   `docs/hle-gaps.md` 4.3.4, X) and the development stages whose builders their hooks patch (I; the work-list hook is
+   `docs/hle-gaps/4.3.md` 4.3.4, X) and the development stages whose builders their hooks patch (I; the work-list hook is
    reached from rec_jpeg_make_image through `0x5049272b` in a static call scan, D, and did not run, X). Size: the
-   library is about 275k instructions, 162k of them straight-line parameter packing (`docs/hle-gaps.md` 4.3, D); the
+   library is about 275k instructions, 162k of them straight-line parameter packing (`docs/hle-gaps/4.3.md` 4.3, D); the
    set and the run's set-up natively up to the pipeline unit's request: weeks after 1 and 2 (I). With 1 to 3 every data
    hook in the table runs where the camera runs it, and its records, LUTs and tables can be checked against LOOKS.BIN
    on the camera's job, not only on the job the call test writes.
 4. **The pipeline unit at `0x9c200000`**: one kind 0 request makes the developed image and the primary JPEG. Its
    protocol (the unit masks, the set-up, the go, the end's IRQ 288) is read and modelled for the play module's decode
-   only (S-IMGPIPE, `docs/hle-gaps.md` 4.8.13; D and X on E143, whose board E147 shares). The development's pages are
+   only (S-IMGPIPE, `docs/hle-gaps/4.8.md` 4.8.13; D and X on E143, whose board E147 shares). The development's pages are
    read as far as the writers that copy the stages' blocks to them (4.8.13 "The development's pages", D on E143 and
    E147: the stages' output O goes to the page `+0x1000` at its `+0x80`, the RGB gamma tables and the luminance LUT
    it points at to `+0xc800`), so a hook's records and tables can be followed to a page and an offset. The lab keeps
    no page for them: a development request's first write there is a bus error. Which unit-mask bits such a request
    sets and what the pages' words mean are not known (?), and the firmware gives no evidence of the pixel processing
-   (`docs/hle-gaps.md` 4.3, D), so a model of it is a declared stand-in, and a data look checked on its pixels would
+   (`docs/hle-gaps/4.3.md` 4.3, D), so a model of it is a declared stand-in, and a data look checked on its pixels would
    check that stand-in, not the camera. Size: months (I). Grainy Film's texture, which their Grain route asks the
    stock builder for, is built on this unit too (a kind-3 request): a film with Grain stops the lab's S2 at that
    page's first write (X, above). (Corrected 2026-11-14: this said the unit's registers and interrupts were not
    read.)
-5. **The JPEG codec at `0x99901000`**: driver and registers read (`docs/hle-gaps.md` 4.3.9, D on E143), fed by the
+5. **The JPEG codec at `0x99901000`**: driver and registers read (`docs/hle-gaps/4.3.md` 4.3.9, D on E143), fed by the
    unit, no buffer address of its own. Size: days after 4 (I).
 6. **S-IMGPRO's other request kinds**: only kind 14's fills are computed; Jpeg_Result's kind 13 copy is not. Size: days
    (I).
@@ -984,7 +989,7 @@ reaches a development stage's hook where the camera reaches it; the still set-up
 
 All four are made (2026-11-13).
 
-1. `docs/hle-gaps.md` 4.6 ("CPU 2's code and loader") said the lab's image already holds every segment and the copies
+1. `docs/hle-gaps/4.6.md` 4.6 ("CPU 2's code and loader") said the lab's image already holds every segment and the copies
    matter only to a cold boot (I). On the camera the bytes past each loader end are not loaded (their report, 2.1), so
    the copies and their order matter to any image whose code or data lies past an end or runs before its section is
    copied; on E147 the same structure is `load_section` `0x50024eb5`, the end switch `0x50024e4c` and the copied mask
@@ -1015,25 +1020,25 @@ front dial (section 3's table).
   loaded-ranges mode should use is a model choice, not a fact.
 - When the tasks that call into sections 9 and 10 run relative to their copies, the order behind their v0.20-t1 boot
   loop. The copies' own order is read: sections 1 to 8 at once, section 9 after stage 7's bit, section 10 after stage
-  8's, which CPU 1 sets (D, `docs/hle-gaps.md` 4.6.4).
-- What the per-section step's region set-up in the block `0x99700000` does (`docs/hle-gaps.md` 4.6.4; the string
+  8's, which CPU 1 sets (D, `docs/hle-gaps/4.6.md` 4.6.4).
+- What the per-section step's region set-up in the block `0x99700000` does (`docs/hle-gaps/4.6.md` 4.6.4; the string
   "[DbgSup-" follows its pointer table, D). The lab has no device there and does not do it (?).
 - Why the camera sends their custom Picture Mode row's OK as another event than the lab's (their test 12), and the
   ISO and other Fn-type keys, which are not wired on E147 in the lab. Their test 12 and 13 builds are not in
   `releases/`, so neither was re-run as built.
 - What tells the still / movie switch's positions 0 and 1 apart (setting 2188, `MODE_ACTION_DIAL`, is written 2 at 0
   and 1 at 1, X; its reader is not read; their notes call 0 S&Q, 8.3), and whether the camera's start sets setting 44
-  from the switch, which the lab's does not (`docs/hle-gaps.md` 4.1.13).
+  from the switch, which the lab's does not (`docs/hle-gaps/4.1.md` 4.1.13).
 - Whether the camera, too, brings a film picked without a later half press back as `Color Profile k` after a power
   cycle (4.2; the lab's order, I for the camera).
 - Which bits of the stage list's flags (the job's +60) the camera sets on a still, and what its request holds where
   the tests' jobs leave 0; the hook test takes their `tonecall`'s mask, the stage test all ones (4.6, ?). One
-  development job dumped from a camera would answer both (`docs/hle-gaps.md` section 8).
+  development job dumped from a camera would answer both (`docs/hle-gaps/8.md` section 8).
 - What the bus window's second register `0x9810004c` is, which E147's window mapper reads after its flush, and how the
   window's cached view (`0x78000000..0x7fffffff` by their source) maps (4.6, `docs/om1-vsc-spec.md`); both stand
   between a call and `hl_run`'s window branch.
 - Who sets the stages `0x0901` and `0x0902` and the level byte +1751 on a key-12 request (the stock grain's combiners 31
-  and 32, `docs/hle-gaps.md` 4.3.12), and what the texture's build `0x504ae099` writes on the pipeline unit's pages.
+  and 32, `docs/hle-gaps/4.3.md` 4.3.12), and what the texture's build `0x504ae099` writes on the pipeline unit's pages.
 - Why the firmware's `fopen` found `DEBUG.TXT` but not `DEBUG.ON` in the lab (their notebook; not tried on a camera).
 - Whether E143's SD updater accepts a modified main block as E147's does.
 
@@ -1049,13 +1054,13 @@ texture's build stops at the pipeline unit), 2 (the shot's buffers as TAKE's, H-
 the lab's, fixed; E143's own failure right after S2's rec view stays open, `docs/ROADMAP.md` "Debug API follow-ups" 7)
 and 6 (halation by a call, on a buffer in main DRAM) in the fourth (4.1, 4.6). What they left is below.
 
-1. **TAKE's fills natively on the allocated shot** (`docs/hle-gaps.md` 4.3.13's 1b and 1c): the mode bytes, StlRdy1's
+1. **TAKE's fills natively on the allocated shot** (`docs/hle-gaps/4.3.md` 4.3.13's 1b and 1c): the mode bytes, StlRdy1's
    exposure request, the shot-record fill (with E147's settings 63153 at COLOR and 63281 at MONO), the key, takepic,
    the lens fill and the third fill, in the still states' order on TAKE's own context, in place of S-EXIFPRM's copies;
    then the strobe sequence's init. Size: days each (I; read on E143, E146's and E147's Rdy builder and lens fill not
    yet). Payoff: FNumber, ISO and the lens fields in their pictures' EXIF, and the white balance's inputs (4.6 list 1
    and 2).
-2. **A camera's development job** (`docs/hle-gaps.md` section 8): one COLOR shot and one other mode dumped at the
+2. **A camera's development job** (`docs/hle-gaps/8.md` section 8): one COLOR shot and one other mode dumped at the
    stage wrapper by a patched build. Their project builds such patches and runs them on an OM-3. Size: minutes to ask,
    a day to digest; it depends on a third party, and nothing has been asked. Payoff: the hook and stage checks on a
    camera's job instead of the tests' (4.6).
@@ -1063,26 +1068,26 @@ and 6 (halation by a call, on a buffer in main DRAM) in the fourth (4.1, 4.6). W
    0's tables), the Fn lever and setting 534, and the still / movie switch's two movie positions (6). Size: days (I).
    Payoff: the Button Function paths users run.
 4. **The second slot's media word** where no media manager runs: a rule for the setter's second-slot store, then
-   S-MEDIA and S-CARD writing it (`docs/hle-gaps.md` 4.8.3). Size: a few days (I). Payoff: E143 and E146 only; the
+   S-MEDIA and S-CARD writing it (`docs/hle-gaps/4.8.md` 4.8.3). Size: a few days (I). Payoff: E143 and E146 only; the
    OM-3 has one slot.
 5. **The bus window inside a call**, for `hl_run`'s window branch: what the register `0x9810004c` is, the mapper's
    flush listed once its caller is read, and the window's cached view (6). Size: days to a week, if the register's
    role can be read (I). Payoff: low until a film sets halation.
 6. **CPU 1 for section 8's constructors**: the six constructors and the step that sets stage 8's bit, run on a CPU 1
-   of the lab's (`docs/hle-gaps.md` 4.6, 4.6.4), not by setting the bits. Size: weeks (I: the lab runs no CPU 1).
+   of the lab's (`docs/hle-gaps/4.6.md` 4.6, 4.6.4), not by setting the bits. Size: weeks (I: the lab runs no CPU 1).
    Payoff: v0.26.2's and v0.27's power-on load; S-STAGE9 and S-SECLOADED's bits 8 and 9 in the camera's order.
 7. **The boot order of sections** on E147: copy sections as the loader does, at its point in the boot, so code that
-   calls a later section early faults; sections 9 and 10 absent until stages 7 and 8 (2.2, `docs/hle-gaps.md` 4.6.4,
+   calls a later section early faults; sections 9 and 10 absent until stages 7 and 8 (2.2, `docs/hle-gaps/4.6.md` 4.6.4,
    FIDELITY 7.18). Size: weeks (it is CPU 2's boot job, and section 10's copy waits on 7). Payoff: the v0.20-t1 class of
    boot loop.
 8. **The still capture through development** to a recording image processor, compared with their camera logs. Size:
    months. Payoff: the largest: their looks on the camera's job, grain and halation, and every capture-path crash in
-   section 3. It splits (4.6, `docs/hle-gaps.md` 4.3.13's revised plan): TAKE's fills (1 above), S-RAWFRAME,
+   section 3. It splits (4.6, `docs/hle-gaps/4.3.md` 4.3.13's revised plan): TAKE's fills (1 above), S-RAWFRAME,
    TAKE_EXPOSE's still request and TAKE's still states (1-2 weeks), the white balance gains (days after them) and the
    image library's parameter set and run natively up to the pipeline unit's request (weeks), which runs every data hook
    on the camera's job; then a model of the pipeline unit, which the firmware gives no evidence for and which would be a
    declared stand-in (months).
-9. **The K3000 wheel plane** (`docs/hle-gaps.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and
+9. **The K3000 wheel plane** (`docs/hle-gaps/4.12.md` 4.12). Size: weeks. Payoff: the OM-3's colour wheel, theirs and
    stock.
 
 Leads for upstream, not sent (nothing has been posted to them): two places of their `research/NOTES.md`
@@ -1166,15 +1171,15 @@ every pin above takes the S2 picture off the card with their photo code in it.
 
 | Item | Their source | Our doc | Tag here |
 |---|---|---|---|
-| **The firmware's setting names.** Container block 2 (the large-data block, load `0x458c0000`, which the lab does not load) holds 52-byte names at body offset `0x28803f0` whose index is the setting id: 2,343 `MODE_*` names on E147 (ids 0 to 2342, `MODE_DRIVE` to `MODE_LABEL_PLAT_END`), then other name groups whose ids are not checked. E146's block 2 has the table at the same offset (2,226 names), E143's at `0x28c03f0` (2,205), with other ids (E143's 897 is `MODE_COLORTONE_DIAL_NEUTRAL`), so a name is per body. Names that settle or check our docs: 9 `MODE_WB`, 24 `MODE_EXPOSE`, 44 `MODE_MOVIE` (the application's movie mode, `docs/hle-gaps.md` 4.1.13, I until now), 50..53 `MODE_CUSTOM_SW_7..10` (the arrows, section 3), 111 `MODE_COLORTONE`, 534 `MODE_LEVER_SWITCH_TYPE`, 1578 `MODE_WB_STILL`, 1632 `MODE_CUSTOM_WB_KELVIN_1_STILL`, 2188 `MODE_ACTION_DIAL` | NOTES "Film WB: Custom WB Kelvin lost" ("decoded block 02, 52-byte names from 0x28803f0") | `docs/om1-settings-spec.md` section 10 (since 2026-11-17: the table found by its form on nine of the 19 bodies, the ids the docs cite named); the tools read it from the user's firmware at run time: the debug API's `setting` op, `bin/session.mjs`'s `setting:NAME` and `expect:setting:` (`emu/README.md` "The debug API", "Scripted sessions") | X (read from our `.BIN` files: E143, E146, E147; the rule on all 19) |
+| **The firmware's setting names.** Container block 2 (the large-data block, load `0x458c0000`, which the lab does not load) holds 52-byte names at body offset `0x28803f0` whose index is the setting id: 2,343 `MODE_*` names on E147 (ids 0 to 2342, `MODE_DRIVE` to `MODE_LABEL_PLAT_END`), then other name groups whose ids are not checked. E146's block 2 has the table at the same offset (2,226 names), E143's at `0x28c03f0` (2,205), with other ids (E143's 897 is `MODE_COLORTONE_DIAL_NEUTRAL`), so a name is per body. Names that settle or check our docs: 9 `MODE_WB`, 24 `MODE_EXPOSE`, 44 `MODE_MOVIE` (the application's movie mode, `docs/hle-gaps/4.1.md` 4.1.13, I until now), 50..53 `MODE_CUSTOM_SW_7..10` (the arrows, section 3), 111 `MODE_COLORTONE`, 534 `MODE_LEVER_SWITCH_TYPE`, 1578 `MODE_WB_STILL`, 1632 `MODE_CUSTOM_WB_KELVIN_1_STILL`, 2188 `MODE_ACTION_DIAL` | NOTES "Film WB: Custom WB Kelvin lost" ("decoded block 02, 52-byte names from 0x28803f0") | `docs/om1-settings-spec.md` section 10 (since 2026-11-17: the table found by its form on nine of the 19 bodies, the ids the docs cite named); the tools read it from the user's firmware at run time: the debug API's `setting` op, `bin/session.mjs`'s `setting:NAME` and `expect:setting:` (`emu/README.md` "The debug API", "Scripted sessions") | X (read from our `.BIN` files: E143, E146, E147; the rule on all 19) |
 | **The Creative Dial's families by name** (2.7): 897 `MODE_COLORTONE_DIAL`, 898 `..._NEUTRAL`, 899 `..._ART`, 900 `..._COLOR_CREATOR`, 901 `..._COLOR_CREATOR_2`, 902 `..._NON`, 988 `..._MONOCHROME_CREATOR`. So 898, which the power-on routine sets for dial value 3, is the standard picture modes' family, not "none" (their #65 notes log 898 at "the standard position (Vivid)", their report). COLOR's 18 film settings are `MODE_COLOR_CREATOR_2_*` (908 `..._CONTRAST_SET1`, 976..978 `..._TONE_CONTROL_HIGH / MIDDLE / LOW_SET1`, 928 `..._VIVID_SET1_1`) | NOTES "Issue #65"; the table above | 2.7 (corrected there) | X (names); their report (positions) |
-| **The mode dial and the shooting-mode code.** E147's positions in the lab are 0 S, 1 A, 2 P, 3..7 C5..C1, 8 B, 9 M. The settings object every manager call passes (a0; its byte +24 at `0x6242c3e8` in the lab, the address their notes give) holds the code of the firmware's mode-dial table: S 3, A 2, P 1, C5 `0x3f`, C4 `0x38`, C3 `0x37`, C2 `0x36`, C1 `0x35`, B `0x3e`, M 4, and 10 at the still / movie switch's positions 0 and 1. Setting 24 reads S 5, A 4, P 3, M 6, B 6 and 3 at each custom position of a blank camera; the dial's position index is the byte `0xa32d9d0c`. Their "C1..C5 = 53..57" holds for C1 to C4; C5 is `0x3f`, which the firmware's table names `MY_MODE5` (`src/fw/ports.mjs` E147 `mode_dial`, D): a lead for their mode grouping | NOTES "Custom modes and films", k2..k5, "Debug log dl8" | `src/fw/ports.mjs` mode dial names; `docs/hle-gaps.md` 4.1.13 | X (lab, stock E147) |
-| **The still / movie switch's positions.** The byte `0xa32d9d0d` is the position (0, 1, 2), 0 and 1 both give mode code 10, and setting 2188, `MODE_ACTION_DIAL`, is written 2 at 0 and 1 at 1. Their notes take 0 as S&Q and 1 as movie, which answers section 6's question by name; what the firmware does differently at 0 is still not read | NOTES "Custom modes ... k2", "Per-mode settings p1" | `docs/hle-gaps.md` 4.1.13; section 6 | X (byte, code, 2188); theirs (S&Q) |
+| **The mode dial and the shooting-mode code.** E147's positions in the lab are 0 S, 1 A, 2 P, 3..7 C5..C1, 8 B, 9 M. The settings object every manager call passes (a0; its byte +24 at `0x6242c3e8` in the lab, the address their notes give) holds the code of the firmware's mode-dial table: S 3, A 2, P 1, C5 `0x3f`, C4 `0x38`, C3 `0x37`, C2 `0x36`, C1 `0x35`, B `0x3e`, M 4, and 10 at the still / movie switch's positions 0 and 1. Setting 24 reads S 5, A 4, P 3, M 6, B 6 and 3 at each custom position of a blank camera; the dial's position index is the byte `0xa32d9d0c`. Their "C1..C5 = 53..57" holds for C1 to C4; C5 is `0x3f`, which the firmware's table names `MY_MODE5` (`src/fw/ports.mjs` E147 `mode_dial`, D): a lead for their mode grouping | NOTES "Custom modes and films", k2..k5, "Debug log dl8" | `src/fw/ports.mjs` mode dial names; `docs/hle-gaps/4.1.md` 4.1.13 | X (lab, stock E147) |
+| **The still / movie switch's positions.** The byte `0xa32d9d0d` is the position (0, 1, 2), 0 and 1 both give mode code 10, and setting 2188, `MODE_ACTION_DIAL`, is written 2 at 0 and 1 at 1. Their notes take 0 as S&Q and 1 as movie, which answers section 6's question by name; what the firmware does differently at 0 is still not read | NOTES "Custom modes ... k2", "Per-mode settings p1" | `docs/hle-gaps/4.1.md` 4.1.13; section 6 | X (byte, code, 2188); theirs (S&Q) |
 | **Setting ids by role** (their debug log dl9, found by walking the Super Control Panel, whose cursor setting 261 `MODE_SUPER_CONTROL_PANEL_CURSOR` takes the item's id): 24 mode, 1699 shutter and 1697 aperture as set (APEX x 256), 6 ISO (0 Auto, else Sv x 256), 2 exposure compensation, 85 AF target, 289 AF mode, 1712 subject detection, 16 / 17 flash and its compensation, 1 metering, 269 aspect, 157 stabiliser, 861 still quality, 2236 movie quality, 3265 drive; 1880..1883 Save Settings of C1..C4 (`MODE_AUTO_SET_MYSET1..4`), where their 1884 for C5 is `MODE_LOCK_SHOULDER_BUTTON` and C5's is 2176 `MODE_AUTO_SET_MYSET5` (E147's table, X); 570 and 1276 Button Function settings of a button the OM-3 lacks (`MODE_CUSTOM_SW_5`, `MODE_MOVIE_CUSTOM_SW_5`); 4000 / 4001 the exposure the AE worked out (their reading; past the table's `MODE_*` range, and 4000 reads `0x800` as 1699 does on a blank lab camera) | NOTES "Debug log dl9"; `research/BUTTONS.md` | `docs/om1-settings-spec.md` | X (the names given); theirs (the roles) |
 | **The GUI state word** `0x62ce5864` (u16, child << 8 \| parent; parents 1 COMMON, 2 REC, 3 / 11 menus, 4 MENU_LV with child 0x18 Picture Mode, 5..7 playback, 12 edit), whose address the firmware loads at `0x510dbf61` (`0x610fcf81`) and keeps in `0x603713a4`, our `menu.caller` fact | NOTES "Debug log dl9" | `src/fw/ports.mjs` E147 `menu` | X (the load is the block's only reference to the word, a scan); theirs (the codes) |
 | **The key path for a key with no record** (Delete, keycode 14, `API_DEL_KEY`, events `0x01000026..29`): the event-to-keycode table `0x512d20e0`; the 28-record key table `0x512d0ec8`, whose only references are the imm32 at `0x510620b4`, `0x5106212f` and `0x510621a6`; the dispatcher `0x51062002` (E143's `0x5104bc84`, already ported); the state machine's walk `0x51098fbb` and lookup `0x5109dcc0` (the current state's block, its parent's, then the global block `0x51318060`); the states 0x5100 stills live view, 0x5300 movie live view, 0x57xx playback, 0x5900..0x593e bracketing, 0x5a02 AF-ON held | NOTES "Delete button remap (#37)", steps 1 to 3 | section 7's follow-up 3 (E147's ISO and Fn-type keys) | X (the three references, a scan); theirs (the rest) |
-| **The colour-matrix stage.** The stage list `0x504f8694` calls `0x504f3782` (frame 84) at `0x504f86d6`, before its call of the RGB gamma stage at `0x504f86dd`; a second caller is at `0x504f96db`, and the function's row scaling is its call of `0x504f34cf` at `0x504f383a` (their Color Mix hook). Theirs: `0x504f3270` multiplies two 3 x 3 matrices (A x B, A acting after B); a COLOR request takes the default branch with R+1587 and R+1923 zero; R+1587 1 or 2 multiplies the table at run-time `0x606ad348`; the camera's live view and movie jobs go through the same caller (their camera result) | NOTES "Colour mix per film: engine and probe m1", "Colour mix: the Mix row" | `docs/hle-gaps.md` 4.3.12 "E147's stage list and its job", which names the second call and not the first | D (the calls); theirs (the matrices) |
-| **A shot's developments by job type.** `0x50534b38` (`0x60555b58`) maps the request's capture kind (u16 at +186): `0x2001` and `0x2006` give type `0x110` or `0x120` unless `0x50538ca2` answers 1 (then `0x1000`), `0x1008` and `0x1006` give 0, any other kind `0x1000`, the saved photo (D). Whether `0x10` or `0x20` comes from the request's u16 at +198 (2 gives `0x20`), not from the kind as their note has it (D). Theirs, through Caduceus for the E-P7: the camera clears an Art Filter job's multi-pass flags `0x40` and `0x80` for types `0x1xx` and `0x4x`, the shot's small extra developments (the review picture and the embedded preview among them), and their #65 freeze came from those developments carrying the Soft Focus flag. The lab makes one development a shot (S-JPEGENC) | NOTES "Reboot when resetting many films ...", DEVELOPER_NOTES "v0.30.2 release" | `docs/hle-gaps.md` 4.3.12, 4.3.13; 4.6 here | D (the mapper); theirs (which development each type is) |
+| **The colour-matrix stage.** The stage list `0x504f8694` calls `0x504f3782` (frame 84) at `0x504f86d6`, before its call of the RGB gamma stage at `0x504f86dd`; a second caller is at `0x504f96db`, and the function's row scaling is its call of `0x504f34cf` at `0x504f383a` (their Color Mix hook). Theirs: `0x504f3270` multiplies two 3 x 3 matrices (A x B, A acting after B); a COLOR request takes the default branch with R+1587 and R+1923 zero; R+1587 1 or 2 multiplies the table at run-time `0x606ad348`; the camera's live view and movie jobs go through the same caller (their camera result) | NOTES "Colour mix per film: engine and probe m1", "Colour mix: the Mix row" | `docs/hle-gaps/4.3.md` 4.3.12 "E147's stage list and its job", which names the second call and not the first | D (the calls); theirs (the matrices) |
+| **A shot's developments by job type.** `0x50534b38` (`0x60555b58`) maps the request's capture kind (u16 at +186): `0x2001` and `0x2006` give type `0x110` or `0x120` unless `0x50538ca2` answers 1 (then `0x1000`), `0x1008` and `0x1006` give 0, any other kind `0x1000`, the saved photo (D). Whether `0x10` or `0x20` comes from the request's u16 at +198 (2 gives `0x20`), not from the kind as their note has it (D). Theirs, through Caduceus for the E-P7: the camera clears an Art Filter job's multi-pass flags `0x40` and `0x80` for types `0x1xx` and `0x4x`, the shot's small extra developments (the review picture and the embedded preview among them), and their #65 freeze came from those developments carrying the Soft Focus flag. The lab makes one development a shot (S-JPEGENC) | NOTES "Reboot when resetting many films ...", DEVELOPER_NOTES "v0.30.2 release" | `docs/hle-gaps/4.3.md` 4.3.12, 4.3.13; 4.6 here | D (the mapper); theirs (which development each type is) |
 | **The settings manager's path** (theirs): the manager `0x50b9426f` (`0x60bb528f`), its writer tail `0x50ac91be`, the change notifier `0x500424f9`, which only a real change reaches, and the picture-mode message `0x503f9ff9` with 111, sent for ids 111, 897..901 and 988 whatever the value. The facade's vtable entries 18, 19 and 20 are a custom mode's Assign, Reset and Recall (their trace): the words at `0x50e3649c`, `0x50e364a0` and `0x50e364a4` hold `0x50b6662c`, `0x50b65a8f` and `0x50b661d3` | NOTES "RGB curves: live view refresh", "Custom modes ... k2", "k6", "Per-mode settings p1" | `docs/om1-settings-spec.md` | X (the words); theirs (the roles) |
 | **Interrupts masked, counted.** The firmware's lock `0x50054f53` with d0 = 0 sets the PSW's interrupt mask to 0 (4.6). Counting the instructions run between lock and unlock found a save running 212,851 instructions masked, their likeliest cause of one camera freeze; packing before the lock cut it to 10,062, and the camera test then passed | NOTES "Per-film R / G / B tone curves", tests 3 and 2b | 4.4 here ("Timing, the watchdog and the cache") | theirs (I for the cause) |
 | **Pictures where the OSD engine reads them** (their report): a picture descriptor of theirs pointing into a code tail (`0x60f9....`, cached) blanked the rest of the camera's menu, while every picture the camera has shown points into the heap (`0xa2......`); the lab drew both | NOTES "Issue #64 ... Pictures live in the heap" | 4.4 here ("Timing, the watchdog and the cache") | theirs; I (a cache or bus path the lab does not model) |
@@ -1216,7 +1221,7 @@ Contradictions with om-emu's docs: one. Section 2.7 called the Creative Dial fam
 3. **A count of instructions run with interrupts masked**, per step in the session record (the lock's PSW write to
    the unlock), with the longest window named. Size: a day (I). Payoff: their test-3 freeze class flagged before the
    camera; a stock baseline first, since the lab cannot say how long is too long.
-4. **The shot's extra developments** (job types `0x110` / `0x120`) in `docs/hle-gaps.md` 4.3.12's map of the still
+4. **The shot's extra developments** (job types `0x110` / `0x120`) in `docs/hle-gaps/4.3.md` 4.3.12's map of the still
    path: where E147 requests them and which is the review picture and which the embedded preview (D). Size: days (I).
    Payoff: their #65 class (an effect reaching the small developments) visible once the image library runs (4.6,
    list 3).
@@ -1235,3 +1240,55 @@ and 52 to 54 s each from v0.29-beta on (the no-card part), the section-6 control
 The flow's two new observations (`early`, `curves`) are taken only where a pin's flow asks for them, so the 19 older
 pins stand as they were. To pin the next release: `--pin vX --flow` with v0.30.3's flow (its row in
 `emu/test/fixtures/caduceus-releases.json`).
+
+## 9. Upstream since `78a809e`: v0.30.4-alpha to v0.40.2 (2026-11-22)
+
+How it was read: no checkout. The eight releases' assets (`patch.json`, `LOOKS.BIN`, `CURVES.BIN`) were fetched with
+`gh release download` into `~/.om-emu/thirdparty/caduceus-om3/<tag>/`, outside the tree, each checked against the
+sha256 GitHub lists for the asset, and run with `OM_CADUCEUS` pointing at a folder whose `releases/<tag>` link to
+them (the layout `test_caduceus.mjs` reads). The same files in upstream's `releases/` folders on main at `f3b84dc`
+(2026-11-22) have the same sha256, except that the five pre-release folders (v0.30.4-alpha, v0.40-alpha, -beta,
+-beta2, -beta3) hold no `CURVES.BIN`, while their release assets do, byte for byte v0.30.3's. Their pins therefore put
+v0.30.3's `CURVES.BIN` on the card, so a checkout and the asset folder give the same run. Their release notes (the
+GitHub release text, the same as the folder's `NOTES.md`) were read as data. Nothing of theirs is committed.
+
+| Release | What (their notes) | Runs / bytes changed |
+|---|---|---|
+| v0.30.4-alpha | the fast film switch reboot fixed (#72: which film each COLOR holds written once on leaving the list, not at every step), the colour wheel's page labels (#64, #70), looks kept out of video and S&Q (#68, #73) | 190 / 404,172 |
+| v0.40-alpha | crop modes (Image Aspect 5:4, XPan 65:24, 21:9), a white Border row, their own film grain with a Grain Size row, start-up safety checks, Picture Mode open 30 s (#75, #76) | 305 / 427,348 |
+| v0.40-beta | crops kept at switch-on (#83), frame lines at the crop, looks in live view per dial click, black borders, 14 screen-info rows | 317 / 442,187 |
+| v0.40-beta2 | three more screen-info rows; the Firmware Version screen's Caduceus line | 317 / 442,444 |
+| v0.40-beta3 | the debug log saved in the background (#85), Halation's shorter fade paused at the half press, a new `LOOKS.BIN` in custom modes (#86) | 317 / 445,440 |
+| v0.40 | v0.40-beta3's firmware under its release name | 317 / 445,441 |
+| v0.40.1 | round film grain; a film's WB Compensation set as the camera's own (#88) | 317 / 446,991 |
+| v0.40.2 | colour grain made on every row, less red-green, faster | 317 / 447,415 |
+
+**In the lab (X, base `6b111c6b`).** Each was pinned with `--pin` and v0.30.3's flow, and every one passes it as
+v0.30.3 does: the open under the loaded-ranges mode with no unloaded patched range, the copied mask `0x3ff`, the films
+loaded before any half press (`early`) and at the first S1, `OM3K` version 1 length 432 kept in store M (`curves`),
+FILM 1, 2 and 20 named `Portra 400`, `Portra 160` and `Natura 1600`, `FILM 2 Portra 160` and the photo code prefix
+in S2's picture, the film kept over a power cycle on a blank card and with no card, no poke. One observation changes,
+from v0.40-alpha on: the audit's `ported` gains `0x50040163` (E143 `0x5003f5dd`, the settings store's save,
+`src/lab/menu.mjs` S-NVRAM), whose first 8 bytes their patch turns into a jump to their own code. Which of their
+features that hook serves is not read here. 53 to 65 s each, three at once. So nothing breaks in this range: the flow
+sees no regression in their builds and hits no lab limit.
+
+What the flow cannot show for these releases: every feature this range adds (no flow sets an Image Aspect, a Border,
+a grain level, a screen-info row or a WB Compensation, or opens the Firmware Version page), and the two camera faults
+it fixes: #72's reboot (not reproduced by the lab, 8.2) and #85's wait behind the card (the lab has no card timing,
+4.4). The v0.40.3-beta pre-releases (one of them, beta2, boot-looped on the camera and was withdrawn) have no folder
+on main at `f3b84dc` and are not pinned.
+
+**Their `research/TESTING.md` at `f3b84dc`, against om-emu today.** Two of its statements about the lab are out of
+date. They are noted here and not sent upstream:
+
+- "The camera's `fopen` with `"w"` does not truncate a file. The emulator's stand-in card does." (its card file
+  system limit): not so since 8.2. The lab runs the firmware's own file system on the card (S-SDCARD), and a longer
+  `CADLOG.TXT` keeps its old tail as on their camera (X, 2026-11-17).
+- Their boots run through their own `session_ed1.mjs` "because it can set the photo/video switch", and moving them to
+  `session.mjs` waits "once it can set the photo/video switch". `bin/session.mjs` has had the switch since 2026-11-14
+  (`f054851b`; their pin `0819080` already has it in `bin/session.mjs` and `src/lab/play.mjs`): `switch:still_movie=K` moves it to position K (0..2) during a run, and
+  the position is carried over the power lever's off (S-NVRAM). `test_smswitch.mjs` checks both (E147, 14 of 14, X
+  on this base).
+
+To pin the next release: `--pin vX --flow` with v0.40.2's flow (its row in `emu/test/fixtures/caduceus-releases.json`).

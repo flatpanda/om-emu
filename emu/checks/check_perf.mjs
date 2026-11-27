@@ -751,8 +751,10 @@ function p10aPin() {
 // until PER_SCPU ran natively over the sub-CPU link (src/lab/scpulink.mjs): its start, whose reset pulse waits in two
 // loops of 250,000 passes (0x5005cef6, 0x5005cf03: 1.5 M instructions), and the four transactions (X); 127_561_187
 // until the store's module init ran before the DB init (H-STOREINIT, src/lab/menu.mjs): 3.5 M fewer (X), as the DB
-// init's reset then reaches the mode store's objects through their pointer words, not by a registry lookup per access (I)
-const FIXED_INSNS = 124_043_591;
+// init's reset then reaches the mode store's objects through their pointer words, not by a registry lookup per access (I);
+// 124_043_591 until the settings init chain ran whole in place of H-STOREINIT's store init alone (src/lab/menu.mjs
+// settings_chain, docs/hle-gaps/4.6.md 4.6.9): 18,016 more (X: OM_EMU_SETTINGS_CHAIN=0 gives that count)
+const FIXED_INSNS = 124_061_607;
 const CHECK_MENU = path.join(path.dirname(new URL(import.meta.url).pathname), 'check_menu.mjs');
 // check_menu --quick in a child with OM_STATS and OM_COMPOSITES, these machine options added to the run's:
 // [exit code, stdout without timings, stats, {session label: sha256 of its composite words}].

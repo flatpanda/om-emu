@@ -52,7 +52,7 @@ import { patchLine } from '../fw/patch.mjs';
 import { patchAudit } from './patchaudit.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
 import { CPU2_STAND_INS } from './cpu2.mjs';
-import { PLAY_NATIVE_STAND_INS } from './playmod.mjs';
+import { PLAY_NATIVE, PLAY_NATIVE_STAND_INS } from './playmod.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -341,10 +341,14 @@ export class Player {
     this.stop = false;
     this.stop_seen = false;          // the stop as the ?sync=1 waiters see it (set_stop)
     this.session = null;
-    this.camapp_components = false;  // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
-    this.camapp_native_tra = false;  // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
-    this.camapp_play_native = false; // with camapp 3 only: the play module natively (playmod.mjs; set by its tests)
+    const cm = Number(a.camapp ?? 1);
+    this.camapp_components = cm === 2 || cm === 3;   // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
+    this.camapp_native_tra = cm === 3;               // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
+    const pn = a.play_native ?? (cm === 3 ? 'auto' : 'off');
+    this.camapp_play_native = pn === 'on' || (pn === 'auto' && cm === 3 && PLAY_NATIVE); // with camapp 3: auto-on where PLAY_NATIVE holds
     this.cam_fe = false;             // --take probe: cam.c's second init against S-CAMFE (take.mjs H-CAMINIT2); off by default
+    this.usb_start = null;           // 'out': the session starts with no USB cable, PC13 high (play.mjs; set by its tests)
+    this.usb_host = false;           // S-USBHOST: a USB host behind the cable answers the driver's state query (set by its tests)
     this.phase = 'starting';
     this.error = null;
     this.status_seq = 0;
@@ -409,14 +413,15 @@ export class Player {
   opts() {
     const a = this.a;
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
-      ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
+      ...((a.rotate ?? 'auto') !== 'auto' ? { rotate: a.rotate } : {}),   // absent when auto (the default since 2026-11-23)
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
-      ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
+      ...((a.cpu2 ?? 'auto') !== 'auto' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs); absent when auto (native on E143)
       ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
       ...((a.held ?? []).length ? { held: a.held } : {}),   // keys held down at power-on (play.mjs PlaySession: opts.held)
       ...(this.off_positions !== null ? { carried: this.off_positions } : {}),   // a power-on after the lever's off (power)
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
-      ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}) };
+      ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}),
+      ...(this.usb_start !== null ? { usb_start: this.usb_start } : {}), ...(this.usb_host ? { usb_host: true } : {}) };
   }
   open_session() {
     const a = this.a;
@@ -460,7 +465,7 @@ export class Player {
   }
   // ---- publishing
   set_phase(phase, error = null) {
-    if (this.replaying && ['running', 'busy', 'waiting-gui'].includes(phase)) phase = 'replaying';
+    if (this.replaying && ['running', 'busy', 'waiting-gui', 'off'].includes(phase)) phase = 'replaying';
     this.phase = phase;
     if (error !== null) this.error = error;
     this.publish_status();
@@ -469,7 +474,7 @@ export class Player {
     const s = this.session, a = this.a;
     const idle_taken = {};
     for (const [k, v] of this.idle_taken) idle_taken[typeof k === 'number' ? '0x' + k.toString(16).padStart(4, '0') : String(k)] = v;
-    const doc = { phase: this.phase, error: this.error, queue: this.q.qsize() + this.held.length, idle: this.idle, last: this.last,
+    const doc = { phase: this.phase, ...(this.replaying ? { replaying: true } : {}), error: this.error, queue: this.q.qsize() + this.held.length, idle: this.idle, last: this.last,
       dropped: this.dropped.toObject(), frame_seq: this.frame_seq, pace: this.pace_ratio(), stand_ins: this.stand_ins_in_use(),
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
       idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
@@ -478,6 +483,7 @@ export class Player {
       ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
       ...(this.env.patch ? { patch: this.env.patch } : {}),                                              // a patch overlay only
       ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),                              // likewise, once the lab is up
+      ...(s?.lab?.sim?.strict ? { strict: s.lab.sim.strict.doc() } : {}),                                // --strict on only (src/lab/strict.mjs)
       ...(this.env.nvram && s?.lab?.store_log?.nvram ? { nvram: { loaded: [...s.lab.store_log.nvram.loaded], saves: s.lab.store_log.nvram.saves.length } } : {}) };   // S-NVRAM only: the stores restored, the saves
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
@@ -503,33 +509,40 @@ export class Player {
   }
   stand_ins_in_use() {
     const a = this.a;
-    const used = ['H-UIINRING', 'H-UIIN', 'S-KEYBITS', 'H-G4SET', 'H-DIALSTEP', 'H-JSINJECT', 'SWITCH', 'H-POWER', 'S-HEAP',
+    const used = [this.session?.uiin_init ? 'H-UIININIT' : 'H-UIINRING', 'H-UIIN', 'S-KEYBITS', 'H-G4SET', 'H-DIALSTEP', 'H-JSINJECT', 'SWITCH', 'H-POWER', 'S-HEAP',
       'S-TAKEOVER', 'H-CONNECT', 'H-EYESTATE', 'H-IPIINIT', 'A-IPI', ...(this.session?.cpu2 ? CPU2_STAND_INS : ['S-CPU2'])];
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', ...(this.session?.camapp?.play_native ? PLAY_NATIVE_STAND_INS : ['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW']), ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', ...(this.session?.lab?.store_chain ? [] : ['H-STOREINIT']), 'S-OUTDISP', 'S-THROUGH', ...(this.session?.camapp?.play_native ? PLAY_NATIVE_STAND_INS : ['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW']), ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');
     if (a.touch !== 'off') used.push('H-TPINIT', ...(this.session?.tp_start === false ? [] : ['H-TPSTART']), 'S-TPREG', 'S-TPINT', 'S-GPIO-TP', 'H-TOUCHGAP');
     if (a.touch === 'gui' && !this.session?.app_touch) used.push('S-CAFWD', 'S-TOUCHMAP');   // not where the application forwards them (play.mjs app_touch)
     used.push(a.us_clock === 'reads' ? 'H-USCOUNT' : 'A-USLAB');                              // the us clock from the reset
+    if (this.session?.lab?.sim?.m?.devices?.timer2) used.push('A-TMR2');                    // the E118 family's second timer unit
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view
-    if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
+    if (this.session?.dpc_init && !this.session?.lens) used.push('H-DPCINIT', 'A-DPC-1');  // the deferred calls' init at the bring-up (the lens's below)
+    if (this.session?.ad_init) used.push('H-ADINIT', 'A-ADC-1', 'A-ADC-2', 'A-ADC-3', 'A-ADC-4', 'A-ADC-5');   // the A/D driver's init and the converter (play.mjs)
     if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started
     if (MODEL_INFO.boot_drivers) used.push('H-DRVINIT');                                    // the reset path's early driver inits (display.mjs)
     if (fact('mm_init', null)) used.push('H-MMINIT');                                       // the boot chain's stage-3 module init (osd.mjs)
     if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
+    else if (this.session?.sio_map) used.push('H-SIOMAP');                                   // PER_SIO's channel map alone (play.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
+    if (this.session?.lab?.sasic_sends?.length) used.push('S-SASIC');                      // a send to the slave ASIC's queue answered (E134, menu.mjs)
     if (this.session?.start_key?.state !== undefined) used.push('H-STARTKEY');              // USTART5's MENU state step (play.mjs)
+    if (this.session?.mec?.runs) used.push('H-MECCOUNT');                                  // the mechanism driver's count (mec.mjs)
     if (this.session?.camapp?.erased) used.push('H-OBJDEL');                                 // a picture erased in playback (camapp.mjs)
     if (this.session?.camapp?.aflock_fed) used.push('S-AFLOCK');                             // an AF lock fed (E143)
     if (this.session?.camapp?.standby_answers) used.push('S-SEQSTANDBY');                    // the standby gate answered (E143)
     if (this.session?.camapp?.modpost_taken) used.push('S-MODPOST');                         // a direct module post taken (E143)
     if (this.session?.camapp?.takerdy_events) used.push('S-TAKERDY');                        // a take-ready finished (E143, camapp 3)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
+    if (this.session?.uiin_init) used.push('S-WAKEFACTOR');                                  // the power button's wake factor (play.mjs H-UIININIT)
+    if (this.session?.uiin_init?.keys) used.push('H-GIOKEYS');                              // UI_IN's GIO key pins read and armed (play.mjs, src/dev/gio.mjs)
     if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
     if (this.session?.lab?.sections_copied) used.push('S-SECLOADED');                      // the boot's sections copied (menu.mjs)
     if (this.session?.lab?.sim?.loads) used.push('S-STALERAM');                            // the loaded-ranges mode (sim.mjs)
@@ -553,11 +566,18 @@ export class Player {
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.uiin_scan) used.push('H-UIINSCAN');                                    // UI_IN's port scan over the link
     // the power manager natively, its IO expanders' stand-in where the body has them, and the power-off at the lever's
-    // off (power.mjs)
-    if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
+    // off (power.mjs): S-SHUTDOWN's call of shutDown while the USB cable is in; with it out the application calls it
+    // itself and H-POWER follows that call (play.mjs power_arm)
+    if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), ...(this.session.usb_cable_in() ? ['S-SHUTDOWN'] : []), 'S-PWRLOG', 'H-SCPUPOLL');
+    if (this.session?.power_manager?.later) used.push('H-PWRLATER');                    // the power manager's later inits (power.mjs, opt-in)
+    if (this.session?.lab?.pwr_sends?.length) used.push('H-PWRSEND');                      // the menu entry's queue 10 send to the power manager (menu.mjs)
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
+    if (this.session?.usb_host?.answers.length) used.push('S-USBHOST');                    // the USB state query answered
+    if (this.session?.usb_used) used.push('S-USBCABLE');                                   // a usb input ran
     if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
+    if (this.session?.camapp?.hdmi_aud_answered) used.push('S-HDMIAUD');                  // the HDMI driver's AUD_EXEC reply answered (camapp.mjs)
+    if (this.session?.camapp?.calib_answered) used.push('A-HDMICAL');                      // the calibration word taken as set (camapp.mjs)
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
     if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() > vsc.histKeptReads() ? ['A-VSCHIST-2'] : []));
@@ -567,7 +587,8 @@ export class Player {
     if (this.session?.camapp?.imgpro_inited) used.push('H-IMGPROINIT', 'S-STAGE9');          // camapp 3 (camapp.mjs)
     const imgpro = this.session?.lab?.sim?.m?.devices?.imgpro;                              // the imgpro unit (imgpro.mjs)
     if (imgpro?.touched) used.push('S-IMGPRO', ...(imgpro.runs ? ['A-IMGPRO-1'] : []));
-    if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
+    if (this.session?.audio_hw) used.push('H-AUDSTART', ...(this.session.audio_hw.stood_in() ? ['S-AUDCPU2'] : []), 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME',
+      ...(this.session.audio_hw.codec?.cpu2_calls ? ['A-WM8946-1'] : []));   // --audio on (auto on E143): the audio hardware (audiohw.mjs); with --cpu2 native both CPU 2 starts run natively and core 2's codec calls are served (A-WM8946-1)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), ...(this.session.storage.rec ? recStandIns(this.session.storage.rec) : ['S-RECFILE']));   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager; REC_FILE natively on E143, E146, E147, the E118 family and the E144 family but E145 and E132, REC_IMAGE on E143, E146 and E147, rec.mjs)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
     if (this.session?.resnand && this.session.sound_area === 'S-SOUNDRES') used.push('S-SOUNDRES');   // the lab-made sound area (soundres.mjs)
@@ -576,7 +597,7 @@ export class Player {
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0
     const media = this.session?.camapp?.media;
-    if (media?.f.ctrl && (media.formats || media.erases || media.ctrl)) used.push('S-MDACTRL');   // a Card Formatting or Erase All from the menu (media.mjs)
+    if (media?.f.ctrl && (media.formats || media.erases || media.unlocks || media.copies || media.ctrl)) used.push('S-MDACTRL');   // a Card Formatting, Erase All, Reset Protect or copy all from the menu (media.mjs)
     if (media?.ended) used.push('S-MDAEND');                                                 // the application's own media control's end (media.mjs)
     // a card taken out or put back (media.mjs): the first slot's, or the second slot's where no media manager runs
     const card2 = this.session?.storage?.second, media2 = !media?.manager() && (card2?.removals || card2?.insertions);
@@ -590,7 +611,7 @@ export class Player {
     if (this.session?.camapp?.take?.focus_tid) used.push('H-TAKEFOCUS');                     // --take probe: TAKE_FOCUS natively (take.mjs)
     if (this.session?.camapp?.take?.thr_takeover_set) used.push('S-THRTAKEOVER');            // --take probe under camapp 3 (take.mjs)
     if (this.session?.camapp?.take?.cam_inited) used.push('H-CAMINIT');                      // --take probe (take.mjs)
-    if (this.session?.camapp?.take?.cam_fe_inited) used.push('H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2');   // and cam_fe
+    if (this.session?.camapp?.take?.cam_fe_inited) used.push('H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2', 'A-CAMFE-3', 'A-CAMFE-4');   // and cam_fe
     if (this.session?.camapp?.take?.exp_tid != null) used.push('H-EXPINIT');                 // and --cpu2 native
     const stb = this.session?.camapp?.take;                                                  // --take probe: the strobe natively (take.mjs, shoe.mjs)
     if (stb?.stb_tids) used.push('H-STBINIT', 'S-HOTSHOE', ...(stb.shoe.mapped ? ['H-SIOMAP'] : []), 'A-HOTSHOE-1', 'A-HOTSHOE-2');
@@ -860,6 +881,8 @@ export class Player {
       this.set_phase('replaying');
       try { this.run_replay(replay); } finally { this.publish_audio(); this.replaying = false; }   // the replay's sound dropped
       if (this.session !== null) this.set_phase('running');
+      else if (this.phase !== 'error') this.set_phase('off');
+      else this.publish_status();
     }
     while (!this.stopping()) {
       if (!this.q.canBlock && !this.q.qsize() && !this.held.length && this.current === null) throw new Error('Player.run: no input queued and not stopping (headless)');
@@ -1129,6 +1152,7 @@ export class Player {
       return s.touch(act, x, y);
     }
     if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
+    if (t === 'usb') return s.usb_input(get(inp, 'action'));
     if (t === 'card') {                                              // slot: 1 (the default) or 2; size: a new second card's GiB
       const slot = has(inp, 'slot') ? get(inp, 'slot') : 1, size = has(inp, 'size') ? get(inp, 'size') : null;
       return s.card_input(get(inp, 'action'), slot, size);
@@ -1192,9 +1216,10 @@ export class Player {
     const s = this.session;
     if (act === 'down') act = 'off';
     if (act === 'off') {
+      s.power_arm();                                 // with no USB cable: the application's own shutdown followed (play.mjs)
       const rec = s.switch_input('power', 1 - s.bit_of('power'));
       const off = s.power_down();                    // the firmware's power-off to its last write, where the body runs it
-      if (off !== null) rec.power_off = { lab_ns: off.lab_ns, frames: off.frames, pins: off.pins, ready: off.ready, scpu: off.scpu, request_word: off.request_word };
+      if (off !== null) rec.power_off = { lab_ns: off.lab_ns, frames: off.frames, pins: off.pins, ready: off.ready, scpu: off.scpu, request_word: off.request_word, ...(off.follow && { follow: off.follow }) };
       // the physical controls stay where they are while the camera is off: the next power-on (control power) starts
       // there; a restart or camapp is a fresh start at the idle positions
       this.off_positions = s.positions();

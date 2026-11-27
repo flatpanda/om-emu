@@ -1,4 +1,4 @@
-// The EXP callback that writes the AE results (docs/hle-gaps.md 4.2.2), E143, round 1: how far TAKE_EXPOSE's AE
+// The EXP callback that writes the AE results (docs/hle-gaps/4.2.md 4.2.2), E143, round 1: how far TAKE_EXPOSE's AE
 // request for the through start runs natively, and where it stops; round 2 (4.2.3): with cam.c's init native. Addresses
 // are E143's (D unless tagged).
 //   expCallbackSession  two sessions with --take probe and --cpu2 native (camapp 1). Since round 2 the probe brings up
@@ -25,7 +25,7 @@
 //                       0x50585dc2). With cam.c's init (round 2) the driver takes both requests without its pool error
 //                       0x0a103000; 0x0a283000 is logged three times, once by request 8's queue count and twice by
 //                       request 7's posts (the movie sequence's queues are registered by the second init, which does
-//                       not run), and nothing fires the callbacks (docs/hle-gaps.md 4.2.3). On this path its
+//                       not run), and nothing fires the callbacks (docs/hle-gaps/4.2.md 4.2.3). On this path its
 //                       answer to EXP_MOVIE_POST comes after that wait (0x5058cbe7; 0x5058c84a answers 2, 0x5058c963
 //                       0), so TAKE_EXPOSE stays in its receive (0x505539af); the callback's status inputs
 //                       (0x62abd550) and (0x62abd558) are 0, which would give it status 2 (0x5058cd54). Mode 1: the
@@ -36,9 +36,10 @@
 //                       through mode lands in 0x62abd7a0, whose mask 1 makes the callback skip the writer
 //                       (0x505975ba). In neither does the request's callback or the AE result writer 0x50596187 run,
 //                       so S-EXPOSE stays
-//   camDriverSession    round 2 (docs/hle-gaps.md 4.2.3): cam.c natively (below)
-//   camFrontEndSession  round 3 (docs/hle-gaps.md 4.2.5): cam.c's second init against S-CAMFE (below); round 4 (4.2.6):
-//                       cam.c's request 6, the sensor's power-on, natively to the sensor's serial unit
+//   camDriverSession    round 2 (docs/hle-gaps/4.2.md 4.2.3): cam.c natively (below)
+//   camFrontEndSession  round 3 (docs/hle-gaps/4.2.md 4.2.5): cam.c's second init against S-CAMFE (below); round 4 (4.2.6):
+//                       cam.c's request 6, the sensor's power-on, natively past the sensor's serial unit to the
+//                       units' set-up (2026-11-22)
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -171,7 +172,7 @@ export async function expCallbackSession() {
   return { checks, bad };
 }
 
-// Round 2 (docs/hle-gaps.md 4.2.3): cam.c natively, in a default session (camapp 1, no probe, so the switch has no
+// Round 2 (docs/hle-gaps/4.2.md 4.2.3): cam.c natively, in a default session (camapp 1, no probe, so the switch has no
 // stand-in), every step from the test. (1) cam.c's first init 0x502a49ec (USTART's call at 0x50024aa2, H-CAMINIT's):
 // it returns 0, its only device accesses are the interrupt controller's for IRQs 146 and 147 (the attach through the
 // timer API 0x50064323 with 8 and 9, offsets 0x248 / 0x24c of each bank), and it builds the request pool: its base word
@@ -188,7 +189,7 @@ export async function expCallbackSession() {
 // (0x50153844) and queues its item, and is not completed either. The tenth call, the front end's init 0x5016efcd,
 // writes 0x98800340 (which the lab stub keeps) and then the camera clock gate 0x9b500800, which the lab does not model:
 // the session stops there.
-// Round 4 (docs/hle-gaps.md 4.2.6): what request 6's item is. The request is cam_seq_power.c's power-on (the module
+// Round 4 (docs/hle-gaps/4.2.md 4.2.6): what request 6's item is. The request is cam_seq_power.c's power-on (the module
 // the seventh call 0x5019c70f sets up), and this test's records carry the argument 1 (+3), with which the power-on's
 // first event queues cam_mec_ctrl.c's item 13 (0x5019c9bb..0x5019ca00) beside the sensor's power rails; the item asks
 // the mechanism driver's request 34 (0x5010914d from 0x501532d8), whose function 0x50109c7b never runs (that driver
@@ -288,7 +289,7 @@ export async function camDriverSession() {
   return { checks, bad };
 }
 
-// Round 3 (docs/hle-gaps.md 4.2.5): the probe with its cam_fe opt-in (camapp 1, --take probe, --cpu2 native) runs
+// Round 3 (docs/hle-gaps/4.2.md 4.2.5): the probe with its cam_fe opt-in (camapp 1, --take probe, --cpu2 native) runs
 // cam.c's second init 0x50155357 against S-CAMFE (H-CAMINIT2, src/lab/take.mjs; src/dev/camfe.mjs). (1) It writes
 // S-CAMFE's whole program and attaches the front end's handlers in the interrupt table 0xa32600c0 (IRQ n at +4 n; the
 // handlers below, X), cam_bright.c's per-bit callback tables are in RAM (0x629a7c64: AE1's 15 from 0x5015db6a;
@@ -303,7 +304,7 @@ export async function camDriverSession() {
 // (0x62a24244) and posts it, and nothing goes further: the sequence's frame step 0x5019981d (kind 10) never runs, so
 // the front end's entry 0x5016f2ae and cam_bright.c's job queue 0x50165b82 do not either, S-CAMFE takes no access, no
 // frame callback runs and EXP_MOVIE waits on its flag 21 for bit 0x1000.
-// Round 4 (docs/hle-gaps.md 4.2.6): cam.c's request 6, cam_seq_power.c's power-on of the sensor. (3) TAKE_FUNC_CP's
+// Round 4 (docs/hle-gaps/4.2.md 4.2.6): cam.c's request 6, cam_seq_power.c's power-on of the sensor. (3) TAKE_FUNC_CP's
 // start made it with the argument 0 and S-TAKECAM answered it: no event of the power sequence ran. (4) The test makes
 // it of the switch natively as TAKE makes it (argument 0, +72 TAKE's completion 0x502cd4d0): the handler 0x5019c8de
 // takes event 0x10000001 (the watchdog, rail 0, and with the argument 0 the posts of 0x10000010 and 0x10000008), then
@@ -311,16 +312,17 @@ export async function camDriverSession() {
 // 5, 0, 2 and 5 ms), 0x800 and 0x10800000, which turns the camera clocks on (0x5019d213: S-CAMFE takes the gates
 // +0x800 = 0x2000 and 1, +0x870 = 1, +0x008 = 0x700, cam_cpm.c's +0x9a0 / +0x9e0 |= 0x10 and the strobe +0xa08) and
 // port 16; 7 ms later 0x10001000 (port 13), 1 ms later 0x11000000 (ports 14 and 15), whose configuration of SSG1's
-// command unit stops the session at that unit's first register: 0x9b000a04 = 0x2100 written at 0x5019dcb6, 35 ms
-// after the request, with the SSG's register clock on (+0x810 = 1). The kind-7 sender 0x5019d460, the front end's
-// entry and TAKE's completion are not reached
+// command unit stopped the session at that unit's first register until 2026-11-22 (0x9b000a04 = 0x2100 at
+// 0x5019dcb6). Since S-CAMFE models the unit (4.2.6, 2026-11-22; test_camfe.mjs camFeSsgSession pins its batches) the
+// power-on goes on through 0x2000, 0x4000, 0x8000 and 0x10000 and stops in the units' set-up at the clock gate
+// 0x9b5008a0 (0x50160cfe). The kind-7 sender 0x5019d460, the front end's entry and TAKE's completion are not reached
 const IRQ_TABLE = 0xA32600C0;
 const POWER = {
   events: [0x10000001, 0x10000010, 0x10000008, 0x10000004, 0x10000020, 0x10000040, 0x10000080, 0x10000100, 0x10000200, 0x10000400,
-    0x10000800, 0x10800000, 0x10001000, 0x11000000],
+    0x10000800, 0x10800000, 0x10001000, 0x11000000, 0x10002000, 0x10004000, 0x10008000, 0x10010000],
   ports: [132, 44, 38, 39, 40, 186, 134, 133, 16, 13, 14, 15], port: 0x5002357C, sender: 0x5019D460, completion: 0x502CD4D0,
   clocks: [[0x9B500870, 1], [0x9B500008, 0x700], [0x9B5009A0, 0x10], [0x9B5009E0, 0x10], [0x9B500810, 1]],
-  stop: /stopped at 0x[0-9a-f]+ \(disasm 0x5019dcb6\) fault=2[\s\S]*om1\.camfe UNKNOWN write 0x9b000a04 size 4 value 0x00002100 [\s\S]*SSG1's command unit/,
+  stop: /stopped at 0x[0-9a-f]+ \(disasm 0x50160cfe\) fault=2[\s\S]*om1\.camfe UNKNOWN write 0x9b5008a0 size 4 value 0x00000001 /,
 };
 const FE_IRQS = { 15: 0x501A2478, 16: 0x501A24C2, 17: 0x501A250C, 18: 0x5019E218, 19: 0x501A2EC1, 22: 0x501A2F9F, 24: 0x50195B8E,
   25: 0x501A3BEA, 26: 0x50156528, 27: 0x501919B4, 31: 0x50191DF2, 32: 0x5015789D, 33: 0x501579AA, 34: 0x50157AB7, 35: 0x50157D21,
@@ -403,10 +405,10 @@ export async function camFrontEndSession() {
     ok(JSON.stringify(ports) === JSON.stringify(POWER.ports.map((p) => [p, 1])), `the ports it turns on, in order: ${ports.map(([p, v]) => `${p}=${v}`)} (want ${POWER.ports})`);
     const ms = (a, b) => (at.get(b) - at.get(a)) / 1e6, dt = [ms(0x10000001, 0x10800000), ms(0x10800000, 0x10001000), ms(0x10001000, 0x11000000)].map((x) => Math.round(x));
     ok(JSON.stringify(dt) === JSON.stringify([27, 7, 1]), `the rails take ${dt[0]} ms (want 27: 5 + 5 + 0 + 5 + 5 + 0 + 2 + 5), then ${dt[1]} ms and ${dt[2]} ms (want 7 and 1)`);
-    ok(POWER.clocks.every(([a, v]) => fe.regs.get(a) === v) && fe.writes - w1 === 8 && fe.reads - r1 === 3,
-      `S-CAMFE takes the power-on's clock enables (${POWER.clocks.map(([a]) => `${h8(a)} = ${h8(fe.regs.get(a) ?? 0xFFFFFFFF)}`)}; ${fe.writes - w1} writes, ${fe.reads - r1} reads, want 8 and 3)`);
+    ok(POWER.clocks.every(([a, v]) => fe.regs.get(a) === v) && fe.ssg.ends === 13,
+      `S-CAMFE takes the power-on's clock enables (${POWER.clocks.map(([a]) => `${h8(a)} = ${h8(fe.regs.get(a) ?? 0xFFFFFFFF)}`)}) and SSG1's command unit ends its ${fe.ssg.ends} batches (want 13; ${fe.writes - w1} writes, ${fe.reads - r1} reads)`);
     ok(stop !== null && POWER.stop.test(stop) && !reached.length && !seen.length && take.cam.errlogs.length === e1,
-      `it stops at SSG1's command unit (${String(stop).replace(/\s+/g, ' ').slice(0, 330)}); reached ${JSON.stringify(reached)} ${JSON.stringify(seen)} (want nothing), cam.c logs ${take.cam.errlogs.slice(e1).map(h8)}`);
+      `it stops in the units' set-up at the clock gate 0x9b5008a0 (${String(stop).replace(/\s+/g, ' ').slice(0, 330)}); reached ${JSON.stringify(reached)} ${JSON.stringify(seen)} (want nothing), cam.c logs ${take.cam.errlogs.slice(e1).map(h8)}`);
   } catch (e) { bad.push(`camFrontEndSession: ${e.message.slice(0, 600)}`); }
   pl.close_session();
   return { checks, bad };

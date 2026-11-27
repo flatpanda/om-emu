@@ -155,7 +155,7 @@ export { KeyError, AssertionError, ValueError, RuntimeError, FirmwareError };
 // call's mark. A later lab of the session is traced as NAME#2, NAME#3, ...; the inputs list the names in `labs`, and a
 // replay that opens others throws Divergence.
 export const CALLS2_FORMAT = 'om-emu-player-inputs/1';
-export const WORKLOAD_DIGEST = '13fa8f7471592f8a';
+export const WORKLOAD_DIGEST = '4562d7fe531f6c21';
 // The play parser's defaults and the keys the recording adds: the ctor's kwargs must have exactly
 // these keys.
 export const PLAYER_PARSER = { lang: 'en', device: 'tft', evf_layout: false, a15: 'auto', start: 'shooting', tab: '7,1,1', idle: 'wall',
@@ -163,7 +163,7 @@ export const PLAYER_PARSER = { lang: 'en', device: 'tft', evf_layout: false, a15
   debug_api: false, x_mutant: null, x_trim_keep: null };
 export const PLAYER_EXTRA_KEYS = ['no_wait_on_error'];
 // keys a later option added: a recording made before it lacks them, and the Player takes the option's default
-export const PLAYER_ADDED_KEYS = ['hdmi', 'audio', 'rotate', 'take', 'cpu2', 'creative_dial'];
+export const PLAYER_ADDED_KEYS = ['hdmi', 'audio', 'rotate', 'take', 'cpu2', 'camapp', 'play_native', 'creative_dial'];
 export const OUT_PLACEHOLDER = '<out>', REPLAY_PLACEHOLDER = '<replay>';
 export const WALL_PATHS = {
   step: [['seconds']],

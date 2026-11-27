@@ -1,4 +1,4 @@
-// OM-1 HDMI port (docs/hle-gaps.md 4.9, where the firmware addresses cited here are listed): the transmitter's byte
+// OM-1 HDMI port (docs/hle-gaps/4.9.md 4.9, where the firmware addresses cited here are listed): the transmitter's byte
 // registers (board hdmi.tx, 4 KiB), the lane word its register writer sets (hdmi.lanes) and its interrupt (hdmi.irq);
 // the hot-plug pin's level word and its GIO group's status and enable words (hdmi.hpd), which drive the group's
 // interrupt (hdmi.hpd.irq); and the sink at the far end of the cable: the lab's window holding the sink's EDID, and

@@ -62,14 +62,14 @@
 //                   HLS media side, on a 64 GiB card Card Formatting from the menu (the volume formatted again with
 //                   the file system it had, consistent, the counts reset) and the card out and in (unmounted, then
 //                   mounted again without a format, the counts back); what the firmware chose (exFAT on E143,
-//                   docs/hle-gaps.md 4.8.6: the layout, the cluster size), the lab times and the counts are reported
+//                   docs/hle-gaps/4.8.md 4.8.6: the layout, the cluster size), the lab times and the counts are reported
 //                   as notes
 //   storageHls      (firmware, --hls) the HLS media side alone on the body of OM_EMU_MODEL (the E118 family's and
 //                   the E144 family's: Format from Card Setup, then S2's picture on the formatted card; the card out,
 //                   the camera's no-card state, the card in, its count back, then S2's picture on it; E143's line:
 //                   Card Formatting, the card out and in)
 //   storageSlots    (firmware, --slot2) the second card slot on the body of OM_EMU_MODEL (card_fs.second_slot: E143,
-//                   E146; docs/hle-gaps.md 4.8.12): with one card the SD driver's detect, the drive status and the
+//                   E146; docs/hle-gaps/4.8.md 4.8.12): with one card the SD driver's detect, the drive status and the
 //                   media status give slot 2 empty, its port gets no command, S-CARD's media flags are 1 and 0, the
 //                   firmware's remaining shots are 0 with the save slot at slot 2 and S2 makes no file there, and
 //                   the first slot's card is refused for the second; with two cards both mount, each from its own
@@ -77,7 +77,9 @@
 //                   save slot (read back independently on that card alone), each card goes out and in while the
 //                   camera runs; a blank card put into the empty slot stays unformatted (out and in again too) until
 //                   Card Formatting formats it from the menu, and the player keeps it for its next session; the
-//                   double-slot save modes stop the session; on E143 under control camapp 3 the firmware's own media
+//                   double-slot save modes record on both cards (Dual Same; Dual Independent on E143 and E146, with
+//                   the slots' settings alike one image, different two, each card its own: docs/hle-gaps/4.8.md
+//                   4.8.14, 4.8.20, 4.8.24, 4.8.28); on E143 under control camapp 3 the firmware's own media
 //                   manager does the same: one card, its menu camapp 1's, a blank card in and out; two cards mounted
 //                   by it, S2 on the second, the second out and in
 //   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls] [--slot2]
@@ -120,7 +122,7 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
   E145: { model: 'TG-7', version: '0231', ...OM }, E132: { model: 'TG-5K', version: '0231', ...OLY },
   E122: { model: 'PEN-F', version: '0230', ...OLY }, E118: { model: 'E-M5MarkII', version: '0230', ...OLY, make: 'OLYMPUS IMAGING CORP.' },
   E120: { model: 'E-M10MarkII', version: '0230', ...OLY } };
-// The still path below S2 where REC_IMAGE runs natively (docs/hle-gaps.md 4.3.12): what of it runs in one shot, per
+// The still path below S2 where REC_IMAGE runs natively (docs/hle-gaps/4.3.md 4.3.12): what of it runs in one shot, per
 // body, [what, address, runs]; each address's first instructions read on its body (D; E146's and E147's placed by the
 // cross-build map). rec_ImgPro_CreateParam and its four calls, which fill the request's format word (+8), flags (+12)
 // and kind byte and apply the request's extensions; the extensions' test, from CreateParam and from the release; the
@@ -134,7 +136,7 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
 // constructors, the second step's call for the kind byte, the library's run and its generic kind handler (S-JPEGENC),
 // TAKE's exposure-record fill (StlRdy1's), its shot-record fill (StlRdy2's), takepic (its AF maker-note fill stood in
 // by S-AFMKNT), the lens fill and the third fill run once each, in H-TAKEFILLS (src/fw/facts.mjs takeExposure and
-// takeFills, docs/hle-gaps.md 4.3.13; takepic since 2026-11-17, before it never). TAKE's shot allocation and its free run once each,
+// takeFills, docs/hle-gaps/4.3.md 4.3.13; takepic since 2026-11-17, before it never). TAKE's shot allocation and its free run once each,
 // under api_rec's calls that H-SHOTALLOC makes as the application's CapBuf_TakeBuff does (src/fw/facts.mjs takeShot;
 // each body's pair read on its body, D). The per-shot EXIF fill inside the EXIF set is the
 // observers' control: it runs once. select: the stage-table fill, whose a0 is the create's handle with the request's
@@ -605,7 +607,7 @@ export async function storageSession() {
   const { SHOTS, MOVIE } = cardQueries(A);
   // the first picture's file: the DCF module's initial names (src/fw/facts.mjs fileSystem names)
   // the bodies whose DCF remain movie time answers 0 on the card (the E144 family but the E142 lineage, and E134: the
-  // blank store's 4K 60p mode has no rate in their tables, docs/hle-gaps.md 4.8.5; E134 X, its mode 1 at 60 and the
+  // blank store's 4K 60p mode has no rate in their tables, docs/hle-gaps/4.8.md 4.8.5; E134 X, its mode 1 at 60 and the
   // rate check's logs 0x3a040001 and 0x39000105): strictly, so an answer flags the table; S-SCENE's live view on the
   // E143 family only (its banks are E143's: on the E144 family 0x50534dd1's address is not the table's, X)
   const MOVIE_ZERO = ['E144', 'E139', 'E137', 'E125', 'E134'].includes(MODEL), LIVE_VIEW = BOARD.family === 'E143';
@@ -645,7 +647,7 @@ export async function storageSession() {
     ok(fsi !== null && fsi.free === free, `FSInfo's free count ${fsi?.free} is the FAT's ${free}`);
     ok(vol.total <= blank.sectors - vol.start, 'the partition fits the card');
     first = native(s);
-    ok(first.shots > 0 && (MOVIE_ZERO ? first.movie_ms === 0 : first.movie_ms > 0), `the firmware's remaining shots and movie time from the card${MOVIE_ZERO ? ' (the movie time 0, hle-gaps.md 4.8.4)' : ''}: ${JSON.stringify(first)}`);
+    ok(first.shots > 0 && (MOVIE_ZERO ? first.movie_ms === 0 : first.movie_ms > 0), `the firmware's remaining shots and movie time from the card${MOVIE_ZERO ? ' (the movie time 0, hle-gaps/4.8.md 4.8.4)' : ''}: ${JSON.stringify(first)}`);
   } catch (e) { bad.push(`8 GiB session: ${e.message.slice(0, 400)}`); }
   s.close();
   ok(saved !== null, 'the host kept the card the firmware wrote');
@@ -698,7 +700,7 @@ export async function storageSession() {
       pl.open_session();
       const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL], setRuns = [];
       const still = rec?.image && STILL_PATH[MODEL] ? { ...STILL_PATH[MODEL], runs: new Map(), requests: [] } : null;
-      // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
+      // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps/4.8.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
         ok(pl.stand_ins_in_use().includes('H-RECFILE') && !pl.stand_ins_in_use().includes('S-RECFILE'), `${MODEL}: REC_FILE natively, S-RECFILE not in use`);
@@ -740,7 +742,7 @@ export async function storageSession() {
         ok(version === body?.version && x.makernote?.header === body.notes && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
           `ExifVersion ${version} (${MODEL}'s ${body?.version}), the maker notes '${x?.makernote?.header}' (${MODEL}'s '${body?.notes}', ${x?.makernote?.length} bytes), IFD1's thumbnail slot of length 0: ${x?.ifd1?.get(0x202)}`);
         // REC_IMAGE's own task made the picture where REC is recFile's version, E143, E146 and E147 (src/lab/rec.mjs
-        // H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5); the E144 family's REC_IMAGE part is S-RECIMAGE's
+        // H-RECIMAGE, S-RECREQ; docs/hle-gaps/4.3.md 4.3.3, 4.3.5); the E144 family's REC_IMAGE part is S-RECIMAGE's
         if (rec.image) {
           const used = pl.stand_ins_in_use(), run = rec.images[0], y = run?.reply, fill = run?.fills;
           const hx8 = (v) => (v == null ? String(v) : `0x${(v >>> 0).toString(16).padStart(8, '0')}`);
@@ -748,7 +750,7 @@ export async function storageSession() {
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
           // S-JPEGENC from ImageParam's parameter set on, at the points the rule reads (fact rec_image encode; E146
           // and E147 since 2026-11-11): CreateParam, the create (its handle in the packet, on E146 and E147 in the
-          // image record), ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4, 4.3.9); the handle read
+          // image record), ImageParam's body and the release natively (docs/hle-gaps/4.3.md 4.3.4, 4.3.9); the handle read
           // at the rule's id the one ImageParam hands the set
           const steps = run?.steps;
           ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.id === steps.handle && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id (the set's handle) and the release native: ${JSON.stringify(steps)}`);
@@ -757,7 +759,7 @@ export async function storageSession() {
           // logged TAKE's 0x25000402 and MM's handle-to-address 0x08010004 for handle 0: four pairs a shot, on E146
           // and E147 the first lookup's log twice; that is what this check gives with H-SHOTALLOC taken out, X)
           ok(JSON.stringify(run?.errlog) === '[]', `no error log up to the parameter set's call (ImageParam's sources find the shot's buffers): ${JSON.stringify(run?.errlog)}`);
-          // H-SHOTALLOC (src/fw/facts.mjs takeShot; docs/hle-gaps.md 4.3.13): the shot api_rec's allocation gave, its
+          // H-SHOTALLOC (src/fw/facts.mjs takeShot; docs/hle-gaps/4.3.md 4.3.13): the shot api_rec's allocation gave, its
           // entry as TAKE's allocation left it (the flags of the Bayer and thumbnail handles 1, the record 4, and the
           // buffers 0x10 and 0x40, which ImageParam's sources look up; each handle not 0), its record the block the
           // EXIF set ran on (the packet's pExifParam) and the one TAKE's own lookup gives while it is allocated;
@@ -767,7 +769,7 @@ export async function storageSession() {
           ok(T && sh && used.includes('H-SHOTALLOC') && sh.id >= 1 && sh.id < T.record.ids && (sh.flags & 0x55) === 0x55 && [2, 10, 12, 16, 24].every((o) => h16(o) !== 0)
             && sh.record === setRuns[0] && sh.record === ((eb[T.record.at] | eb[T.record.at + 1] << 8 | eb[T.record.at + 2] << 16 | eb[T.record.at + 3] << 24) >>> 0) && flagsNow === 0,
             `H-SHOTALLOC: the shot ${sh?.id} of TAKE's table (ids below ${T?.record.ids}), its flags 0x${sh?.flags?.toString(16)} (want the bits 0x55), its handles ${[2, 10, 12, 16, 24].map((o) => `+${o} 0x${h16(o).toString(16)}`).join(' ')} (each not 0), its record ${hx8(sh?.record)} the EXIF set's block ${hx8(setRuns[0])}; the entry's flags after the shot ${flagsNow} (want 0: freed)`);
-          // the still path's coverage (STILL_PATH; docs/hle-gaps.md 4.3.12): each landmark's runs in the shot, the
+          // the still path's coverage (STILL_PATH; docs/hle-gaps/4.3.md 4.3.12): each landmark's runs in the shot, the
           // control (the per-shot EXIF fill) once, so an observer that never fires cannot pass
           const runs = still ? still.at.map(([what, , n]) => [what, n, still.runs.get(what)]) : [];
           const off = runs.filter(([, n, got]) => got !== n).map(([what, n, got]) => `${what} ${got} (want ${n})`);
@@ -782,16 +784,16 @@ export async function storageSession() {
           ok(y && y.status === 0 && y.free === 1 && y.header === HEADER && y.size === HEADER + stream.length && run.alive === 0, `REC_FILE's reply (S-RECREQ): ${JSON.stringify(y)}, pAlive ${run?.alive}`);
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
-          ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the record's +38174 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
+          ok(x?.exif?.get(0x8827) === 200 && x?.exif?.get(0x8831) === 200, `the ISO REC_IMAGE derives from the record's +38174, the strobe decision's Sv (setting 50522, StlRdy1's request since 2026-11-22; 25 when it was 0) (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
         }
         // the EXIF set natively where the rule reads it (E143, E146, E147; src/lab/rec.mjs S-EXIFPRM after H-RECPRECON,
-        // docs/hle-gaps.md 4.3.11): run once for the shot, on the packet's block, seen at its entry; in the file
+        // docs/hle-gaps/4.3.md 4.3.11): run once for the shot, on the packet's block, seen at its entry; in the file
         // (refs/exif.mjs) what it writes over the template's: X and Y resolution 350/1 (the template's 0/0), the
         // digital zoom ratio from the record's +38028 (100/100 since 2026-11-16: the shot-record fill's 100 where
         // setting 33729 is not 1, 0x503bbca3, H-TAKEFILLS; 0/100 on S-EXIFPRM's copies before), the time offsets; and its conversions of takepic's
         // shooting values. Tv and Av come from TAKE's exposure record, which S-EXIFPRM fills with TAKE's own fill from
         // the settings store and copies as takepic does, with TAKE_EXPOSE's shutter range (src/fw/facts.mjs
-        // takeExposure, docs/hle-gaps.md 4.3.13): on E143 S-EXPOSE's plan published them, Tv 2052 for the default
+        // takeExposure, docs/hle-gaps/4.3.md 4.3.13): on E143 S-EXPOSE's plan published them, Tv 2052 for the default
         // scene, which the set gives as 1/250 s (X); E146's and E147's own plan has Tv 1924, which their set gives as
         // 1/200 s (X). Until 2026-11-14 their start ended at a GUI state where S-EXPOSE does not plan, and this shot
         // (S1 and S2 from the start) found Tv 0, the set's 1 s; since then it ends on the shooting screen
@@ -964,7 +966,7 @@ async function walkToFormat(s, press) {
   walk.to(FORMAT_GOALS);
   return walk.log;
 }
-async function hlsFormat(card, tag, ok, bad, notes) {
+export async function hlsFormat(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsFormatFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -992,7 +994,7 @@ async function hlsFormat(card, tag, ok, bad, notes) {
     press(s, 'menu');
     const menu = frame(s);
     // (with one card a body whose second slot the lab models shows no "Select Card to Set Up" panel, X,
-    // docs/hle-gaps.md 4.8.12: the walker passes that panel only where it shows)
+    // docs/hle-gaps/4.8.md 4.8.12: the walker passes that panel only where it shows)
     notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, press)).join('; ')}`);
     const busy = frame(s), media = s.camapp.media, t0 = lab.lab_time();
     ok((media.ctrl !== null || media.formats === 1) && media.started?.cmd === media.f.ctrl.format && media.started.media === 0, `${tag}: Format Card, Yes: the media control's start reached S-MDACTRL with the format's command for the first card: ${JSON.stringify(media.started)}`);
@@ -1032,7 +1034,7 @@ async function hlsFormat(card, tag, ok, bad, notes) {
 // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card again
 // (without a format: the volume it had, read back the same) and the counts come back; then S2's picture lands on the
 // card
-async function hlsOutIn(card, tag, ok, bad, notes) {
+export async function hlsOutIn(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsOutInFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -1242,12 +1244,12 @@ function layout(p, v) {
 
 // (firmware) blank SDXC cards (64 and 128 GiB) in a player on the body of OM_EMU_MODEL (E143 by default; its card_fs
 // native). The firmware's code for a card above 32 GiB is not read; E143's format gives the card exFAT in an MBR
-// partition (X, docs/hle-gaps.md 4.8.6), and another body's may differ. So this checks only what holds whichever
+// partition (X, docs/hle-gaps/4.8.md 4.8.6), and another body's may differ. So this checks only what holds whichever
 // file system the firmware picks (the insertion formats the blank card and mounts it, the volume reads back
 // independently through refs/volume.mjs and is consistent, S2's picture file is found with its bytes, the firmware
 // counts remaining shots from the card) and reports what it finds as notes: the insertion's lab times, the partition
 // and the file system's layout, the remaining shots and the movie time (803 shots and 5:25 on the 8 GiB
-// card, docs/hle-gaps.md 4.8.2; the shooting screen draws the query's answer, modelcheck's count probe)
+// card, docs/hle-gaps/4.8.md 4.8.2; the shooting screen draws the query's answer, modelcheck's count probe)
 export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
   const bad = [], notes = [];
   let checks = 0;
@@ -1307,7 +1309,7 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
     try { pl.close_session(); } catch { /* closed */ }
   }
   // the HLS media side with an SDXC card where the body runs it (card_fs.hls): Card Formatting from the menu and the
-  // card out and in, each on a blank card the insertion formats (docs/hle-gaps.md 4.8.6)
+  // card out and in, each on a blank card the insertion formats (docs/hle-gaps/4.8.md 4.8.6)
   if (STORAGE.hls) {
     for (const gib of hlsSizes) {
       const tag = `${MODEL} ${gib} GiB`;
@@ -1319,7 +1321,7 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
 }
 
 // The second card slot (src/lab/storage.mjs S-SDCARD's slots, src/lab/media.mjs S-MEDIA and S-CARD's flags,
-// src/lab/camapp.mjs S-CARD's save slot; docs/hle-gaps.md 4.8.12) on the body of OM_EMU_MODEL (card_fs.second_slot:
+// src/lab/camapp.mjs S-CARD's save slot; docs/hle-gaps/4.8.md 4.8.12) on the body of OM_EMU_MODEL (card_fs.second_slot:
 // E143, E146). X unless tagged; the row's pixels are E143's (test_camapp.mjs FRAMES_SLOT_ROW pinned them between
 // camapp 3 and camapp 1 while one card answered both ports)
 const SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
@@ -1329,12 +1331,38 @@ const MS_NO_CARD = 1, MS_UNFORMATTED = 4, MS_CARD = 0x80, MS_MOUNTED = 0x1000;
 // the still Card Slot Settings' Save Settings by the menu's English texts (the icon codes the firmware draws before
 // them, @A030@: the still's, X), and the panel's six settings as it titles them, by position (@A032@ the arrow down,
 // @A033@ up; X, E143 and E146): Standard, Auto Switch, Dual Independent and Dual Same, each one's position its value
-// of setting 1129 (X for 4 and 5 here; the rest D, docs/hle-gaps.md 4.8.12's reading of the record controller)
+// of setting 1129 (X for 4 and 5 here; the rest D, docs/hle-gaps/4.8.md 4.8.12's reading of the record controller)
 const SAVE_GOALS = [{ row: ['@A030@Card Slot Settings'] }, { row: ['@A030@Save Settings'] }];
 // rec_file_record_DoubleSlot, validateAutoCardSwitch and the application's error factor of each slot (E143's, D:
-// docs/hle-gaps.md 4.8.10, 4.8.12 and 4.8.14), and the auto switch's own setting (1134: 1 in the lab's store, X)
+// docs/hle-gaps/4.8.md 4.8.10, 4.8.12 and 4.8.14), and the auto switch's own setting (1134: 1 in the lab's store, X)
 const DOUBLE_SLOT_E143 = 0x5053F97D, AUTO_SWITCH_E143 = 0x5107DCF5, SLOT_FACTOR_E143 = 0x603661A8, AUTO_ON = 1134;
 const SAVE_NAMES = ['Standard', 'Auto Switch', 'Dual Independent@A032@', 'Dual Independent@A033@', 'Dual Same@A032@', 'Dual Same@A033@'];
+// Dual Independent with the slots' settings different (docs/hle-gaps/4.8.md 4.8.24, E143): MODE_QUALITY_SLOT2 (1096,
+// the firmware's name table), a group of itself and MODE_RAW_SLOT2 (1097), set through the store's group setter with
+// one of its descriptor's allowed records: (0, 0), the quality SQ2 (MODE_SQ2_S / MODE_SQ2_Q are the quality data's
+// index 0), whose value-table entry the getter then reads (13, X); (1, 0), HQ, the store's default of both slots (the
+// getter's 11, X). The maker notes' AspectFrame (ImageProcessing 0x1113) and CompressionFactor (CameraSettings
+// 0x050d) of each card's file as the firmware's header maker writes them for HQ and SQ2 (X, exiftool and
+// olympusNote below)
+const QUALITY_SLOT2 = 1096, SQ2 = 0, SQ2_VALUE = 13, HQ = 1;
+const SLOT_FRAMES = [[0, 0, 5183, 3887], [0, 0, 3199, 2399]], SLOT_COMPRESSION = [[4, 1], [8, 1]];
+// An independent reader of an OM / Olympus maker note (the published layout: the 12-byte "OM SYSTEM" name, II, the
+// version, then an IFD at 16 whose offsets, and its sub-IFDs', count from the maker note's start; CameraSettings at
+// tag 0x2020, ImageProcessing at 0x2040): {frame: ImageProcessing's AspectFrame 0x1113, compression: CameraSettings'
+// CompressionFactor 0x050d [num, den]}, or null
+function olympusNote(jpeg) {
+  const x = readExif(jpeg), mn = x?.exif?.get(0x927C);
+  if (!mn || String.fromCharCode(...mn.subarray(0, 9)) !== 'OM SYSTEM' || mn[12] !== 0x49 || mn[13] !== 0x49) return null;
+  const u16 = (o) => mn[o] | mn[o + 1] << 8, u32 = (o) => (u16(o) | u16(o + 2) << 16) >>> 0;
+  const entry = (ifd, tag) => { for (let k = 0, n = u16(ifd); k < n; k++) { const e = ifd + 2 + 12 * k; if (u16(e) === tag) return { type: u16(e + 2), count: u32(e + 4), e }; } return null; };
+  const sub = (tag) => { const t = entry(16, tag); return t ? u32(t.e + 8) : null; };
+  const cs = sub(0x2020), ip = sub(0x2040);
+  const fr = ip !== null ? entry(ip, 0x1113) : null, cf = cs !== null ? entry(cs, 0x050d) : null;
+  return {
+    frame: fr && fr.type === 3 && fr.count === 4 ? [0, 1, 2, 3].map((i) => u16(u32(fr.e + 8) + 2 * i)) : null,
+    compression: cf && cf.type === 5 && cf.count === 1 ? [u32(u32(cf.e + 8)), u32(u32(cf.e + 8) + 4)] : null,
+  };
+}
 export async function storageSlots() {
   const bad = [], notes = [];
   let checks = 0;
@@ -1498,7 +1526,7 @@ export async function storageSlots() {
   } catch (e) { bad.push(`two cards: ${e.message.slice(0, 500)}`); }
   try { pl?.close_session(); } catch { /* closed */ }
 
-  // ---- the save settings from the camera's own menu (Card Slot Settings, Save Settings; docs/hle-gaps.md 4.8.14),
+  // ---- the save settings from the camera's own menu (Card Slot Settings, Save Settings; docs/hle-gaps/4.8.md 4.8.14),
   // both cards in (the first formatted by the firmware above, the second with its two pictures): the six settings'
   // names as the panel titles them, each position the setting's value; Dual Same (the arrow down, then up) records S2's
   // picture on both cards through REC_FILE's double-slot record, the same bytes under each card's own next DCF
@@ -1512,7 +1540,8 @@ export async function storageSlots() {
     const names = [], t4 = choose(s, 4, names);
     ok(J(names) === J(SAVE_NAMES) && t4 === SAVE_NAMES[4] && s.lab.get(MODE) === 4,
       `Save Settings: the panel's six settings ${J(names)} (want ${J(SAVE_NAMES)}); the fifth (${t4}) taken with OK sets ${MODE} = ${s.lab.get(MODE)} (want 4)`);
-    const two = (mode, before) => {
+    // (alike false: two images, one per card, whose bytes the caller checks)
+    const two = (mode, before, alike = true) => {
       const seen = [];
       if (ON_LAB_MODEL) s.lab.observe(DOUBLE_SLOT_E143, () => seen.push(s.lab.lab_time()), 'obs-test-double');
       shoot(s);
@@ -1521,25 +1550,60 @@ export async function storageSlots() {
       const v0 = vol(cardB), v1 = vol(cardA), e0 = f0 && v0?.find(file(f0.number)), e1 = f1 && v1?.find(file(f1.number));
       const d0 = e0 && v0.data(e0), d1 = e1 && v1.data(e1);
       ok(st.files.length === before + 2 && f0.path.startsWith(`${names0.drive}:`) && f1.path.startsWith(`${String.fromCharCode(names0.drive.charCodeAt(0) + 1)}:`) && d0 && d1
-        && d0.length === f0.size && d0.length === d1.length && d0.every((b, i) => b === d1[i]) && (!ON_LAB_MODEL || seen.length === 1),
-        `Dual Same (${MODE} = ${mode}): S2's picture on both cards, ${f0?.path} and ${f1?.path}, ${d0?.length} and ${d1?.length} bytes read back independently, the same bytes${ON_LAB_MODEL ? `; REC_FILE's double-slot record ran ${seen.length} time(s)` : ''}`);
+        && d0.length === f0.size && d1.length === f1.size && (!alike || (d0.length === d1.length && d0.every((b, i) => b === d1[i]))) && (!ON_LAB_MODEL || seen.length === 1),
+        `${alike ? 'Dual Same' : 'Dual Independent'} (${MODE} = ${mode}): S2's picture on both cards, ${f0?.path} and ${f1?.path}, ${d0?.length} and ${d1?.length} bytes read back independently${alike ? ', the same bytes' : ''}${ON_LAB_MODEL ? `; REC_FILE's double-slot record ran ${seen.length} time(s)` : ''}`);
       return [f0, f1];
     };
     const n0 = [s.camapp.card_images(0), s.camapp.card_images(1)];
     const [a, b] = two(4, 0);
-    // (the file layer numbers across the two drives, docs/hle-gaps.md 4.8.12: one number, the next after the larger)
+    // (the file layer numbers across the two drives, docs/hle-gaps/4.8.md 4.8.12: one number, the next after the larger)
     ok(a?.number === Math.max(...n0) + 1 && b?.number === a?.number && s.camapp.card_images(0) === n0[0] + 1 && s.camapp.card_images(1) === n0[1] + 1,
       `Dual Same: one DCF number on both cards (${a?.number} and ${b?.number}, the cards holding ${n0[0]} and ${n0[1]} pictures), both cards' DCF databases count it: ${s.camapp.card_images(0)}, ${s.camapp.card_images(1)}`);
     const t5 = choose(s, 5);
     ok(t5 === SAVE_NAMES[5] && s.lab.get(MODE) === 5, `the sixth (${t5}) sets ${MODE} = ${s.lab.get(MODE)} (want 5)`);
     two(5, 2);
+    // Dual Independent with the arrow up (docs/hle-gaps/4.8.md 4.8.20): TAKE's shot record fill writes the second slot's
+    // image settings natively; with the two slots' settings alike (the store's defaults) REC_IMAGE makes one image and
+    // REC_FILE's double-slot record writes it on both cards, as Dual Same. On E143 and E146 (the second slot's settings
+    // at the offsets src/fw/facts.mjs dualSlot reads; docs/hle-gaps/4.8.md 4.8.28 for E146)
+    const indep = MODEL === 'E143' || MODEL === 'E146';
+    if (indep) {
+      s.set(MODE, 3); idle(s, 300);
+      two(3, 4);
+      const ds = st.rec?.dual_settings ?? null;
+      ok(ds && ds.one.join() === ds.two.join(), `Dual Independent (${MODE} = 3): the shot record's first- and second-slot image settings ${J(ds)}, alike`);
+      // the slots' settings different (docs/hle-gaps/4.8.md 4.8.24): the second slot's quality SQ2 through the store's
+      // group setter (MODE_QUALITY_SLOT2 and MODE_RAW_SLOT2 the record (0, 0)), the first slot's left HQ: TAKE's fill
+      // writes the second slot's quality, size and compression, REC_IMAGE makes the image twice (SlotNo 0, then 1
+      // into BuffAddrDoubleSlot) and REC_FILE's double-slot record writes each on its own card under one DCF number.
+      // Read back independently: the encoder's stream (the lab's, S-JPEGENC) the same on both, the header the
+      // firmware's own for each slot, its maker notes' AspectFrame and CompressionFactor the slot's (X)
+      const set = s.set_group(QUALITY_SLOT2, [SQ2, 0]).set;
+      idle(s, 300);
+      const [g0, g1] = two(3, 6, false);
+      const d2 = st.rec?.dual_settings ?? null, enc = st.rec?.images?.at(-1)?.encodes ?? [];
+      ok(set.read_back === SQ2_VALUE && d2 && d2.two[0] === SQ2 && d2.one.join() === ds?.one.join() && d2.one.join() !== d2.two.join() && J(d2.types) === '[0,0]',
+        `Dual Independent, the second slot's quality set to SQ2 (${J(set)}): the shot record's first-slot settings ${J(d2?.one)} (as before), the second slot's ${J(d2?.two)}, both JPEG (${J(d2?.types)})`);
+      ok(enc.length === 2 && J(enc.map((e) => e.slot)) === '[0,1]' && enc[0].addr !== enc[1].addr,
+        `Dual Independent with the settings different: REC_IMAGE made the image twice, SlotNo ${J(enc.map((e) => e.slot))}, into two buffers: ${J(enc)}`);
+      const rd = (card, f) => { const v = vol(card), e = f && v?.find(file(f.number)); return e ? v.data(e) : null; };
+      const b0 = rd(cardB, g0), b1 = rd(cardA, g1), H = g0?.header ?? 0;
+      const m0 = b0 && olympusNote(b0), m1 = b1 && olympusNote(b1);
+      const same = b0 && b1 && b0.length === b1.length && b0.subarray(H).every((v, i) => v === b1[H + i]);
+      ok(b0?.length === g0?.size && b1?.length === g1?.size && g0?.number === g1?.number && same && !b0.every((v, i) => v === b1[i]),
+        `Dual Independent with the settings different: ${g0?.path} (${b0?.length} bytes) and ${g1?.path} (${b1?.length} bytes) read back independently, one DCF number (${g0?.number}, ${g1?.number}), the encoder's stream past the ${H}-byte header the same, the headers different`);
+      ok(J(m0?.frame) === J(SLOT_FRAMES[0]) && J(m1?.frame) === J(SLOT_FRAMES[1]) && J(m0?.compression) === J(SLOT_COMPRESSION[0]) && J(m1?.compression) === J(SLOT_COMPRESSION[1]),
+        `Dual Independent with the settings different: each card's maker notes hold its slot's size and compression: AspectFrame ${J(m0?.frame)} and ${J(m1?.frame)} (want ${J(SLOT_FRAMES)}), CompressionFactor ${J(m0?.compression)} and ${J(m1?.compression)} (want ${J(SLOT_COMPRESSION)})`);
+      notes.push(`Dual Independent with the settings different: ${g0?.path} and ${g1?.path}, ${b0?.length} bytes each; maker notes ${J(m0)} and ${J(m1)}`);
+      s.set_group(QUALITY_SLOT2, [HQ, 0]); idle(s, 300);
+    }
     // the arrow up with the second card out: the record controller names the first card alone (Media 0, Media2 none)
     pl.run_input({ type: 'card', action: 'remove', slot: 2 });
     idle(s, 1000);
     const k1 = s.camapp.card_images(0);
     shoot(s);
-    const f = st.files[4], e = f && vol(cardB)?.find(file(f.number));
-    ok(st.files.length === 5 && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
+    const nf = indep ? 9 : 5, f = st.files[nf - 1], e = f && vol(cardB)?.find(file(f.number));
+    ok(st.files.length === nf && f.path.startsWith(`${names0.drive}:`) && e?.size === f.size && s.camapp.card_images(0) === k1 + 1 && !vol(cardA)?.find(file(f.number + 1)),
       `Dual Same with the arrow up, the second card out: S2's picture ${f?.path} on the first card alone (${e?.size} bytes), its count ${s.camapp.card_images(0)}`);
     s.set(MODE, 4); idle(s, 300);
     let stop = null;
@@ -1549,7 +1613,7 @@ export async function storageSlots() {
   try { pl?.close_session(); } catch { /* closed */ }
   cardA.insert();
 
-  // ---- Auto Switch (docs/hle-gaps.md 4.8.14), with the first card full: a 3 GiB card the firmware formats, then
+  // ---- Auto Switch (docs/hle-gaps/4.8.md 4.8.14), with the first card full: a 3 GiB card the firmware formats, then
   // filled by the host's writer (src/lab/cardfs.mjs fill: one file over every free cluster, read back consistent),
   // in slot 1, the second card in slot 2. The setting from the menu; the application's own error factor of slot 1 is
   // set (E143), and at S2 its setRecordMedia moves the save slot (1130) to slot 2, where the picture goes, the full
@@ -1659,10 +1723,10 @@ export async function storageSlots() {
         // the second card out and in: the manager's own unmount and mount, with the sequence in its standby (101) and
         // the save slot at slot 1. The removal of the card the save slot names stops under camapp 3, at the sequence
         // parts' read of module 9's state (0x50c8a335, outside S-TAKEOVER's list), as the first slot's does
-        // (docs/hle-gaps.md 4.8.12, open). Before S2, not after it: the sequence parts hand a card switch's change on
+        // (docs/hle-gaps/4.8.md 4.8.12, open). Before S2, not after it: the sequence parts hand a card switch's change on
         // to the manager only in the phases 101, 102 and 103 (0x50c93ac7's test at 0x50c93b82..0x50c93ba7, D); in
         // 106, where S-TAKERDY's unanswered take-picture request leaves the sequence after S2, the phase's own case
-        // (vt +5024, 0x50cc00d4) takes it and the manager neither unmounts nor mounts the card (X, docs/hle-gaps.md
+        // (vt +5024, 0x50cc00d4) takes it and the manager neither unmounts nor mounts the card (X, docs/hle-gaps/4.1.md
         // 4.1.12)
         pl.run_input({ type: 'card', action: 'remove', slot: 2 });
         idle(s, 1500);
@@ -1706,6 +1770,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv.includes('--slot2')) {
     const x = await storageSlots();
     console.log(`the second card slot in play: ${x.checks - x.bad.length}/${x.checks}`);
+    x.notes.forEach((t) => console.log('   note:', t));
     x.bad.forEach((t) => console.log('  ', t));
     n += x.bad.length;
   }

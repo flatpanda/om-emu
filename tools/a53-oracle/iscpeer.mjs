@@ -3,7 +3,7 @@
 // This plays MN node(s) 0..3 against the A53 (node 4) over the ISC shared
 // memory + control block + doorbells. It implements isc_start's control-block
 // contract and isc_send / isc_receive's FIFO format exactly as decoded from the
-// A53's iscdrv.ko (see tools/a53-oracle/README.md and docs/hle-gaps.md 4.11.1);
+// A53's iscdrv.ko (see tools/a53-oracle/README.md and docs/hle-gaps/4.11.md 4.11.1);
 // the same encoding is what the MN firmware's own ISC library at 0x6034d018 /
 // 0x50aa324b uses, so this peer is interchangeable with CPU 1's half.
 //

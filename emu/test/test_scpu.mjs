@@ -21,7 +21,11 @@
 //              that is not a write of its own); the power manager's 0x14: a write with no reply and no message, the
 //              two slots' inserted and second bytes kept as the sub-CPU keeps them (byte 0 unread), 0xff again
 //              after a reset, the refusals (a size but 5, the PBH's battery inserted, a body with another sub-CPU
-//              image, the sibling writes 0x11 and 0x13) and the bodies that take it (E143, E146: the image's digest);
+//              image, the sibling write 0x13) and the bodies that take it (E143, E146: the image's digest); the
+//              battery information 0x11: slot 0's request {0, 0, kind, 0} for kinds 0..2 answered by the message
+//              0x11 of 57 bytes {0, 0, kind, 1, 0x33, 1, 51 zeros} through the poll (no pack answering), byte 0
+//              not 0 and a kind above 4 taken with no message, the refusals (kinds 3 and 4, slot 1, a body with
+//              another sub-CPU image, a quiet 0x11);
 //              the inbound direction: a message drops the message line while idle
 //              and the poll's reply carries it, a second waits in the queue, one during a transaction drops the line
 //              at once, one taken with the request line low waits for the release; 0x88 answers {result, busy} and
@@ -31,7 +35,7 @@
 //   scpuSession  (firmware; the model of OM_EMU_MODEL) a play session's start through the link: the stand-ins, the
 //              frames of PER_SCPU's start and the store init with their replies, IRQ 119 attached, the pins in
 //              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; S-SCPUDEV taking the power manager's
-//              0x14 on E143 and E146 only (docs/hle-gaps.md 4.7.6); H-UIINSCAN's 0x88 where the body has it;
+//              0x14 on E143 and E146 only (docs/hle-gaps/4.7.md 4.7.6); H-UIINSCAN's 0x88 where the body has it;
 //              the inbound path natively: 0x08 {0} polled and dispatched to the producer, PC13 high reported as 0x08
 //              {1} and decoded by UI_IN as the switch 0x0400; a body without the link's pins stops at its start; on
 //              a body that runs its power manager and power-off (power.mjs: E143, E146, E147): the power manager's start frames
@@ -168,7 +172,7 @@ function memoryTests(ok) {
   ok(hexOf(dateBytes(Date.UTC(2099, 11, 31, 23, 59, 59) / 1000, 7)) === hexOf(date(2099, 12, 31, 23, 59, 59, 7)), 'the date bytes');
 }
 
-// A scripted MN on the link, as PER_SCPU drives it (docs/hle-gaps.md 4.7.1): request low, wait for the ready line to
+// A scripted MN on the link, as PER_SCPU drives it (docs/hle-gaps/4.7.md 4.7.1): request low, wait for the ready line to
 // drop, clock the 10-byte frame, wait for it to rise; for a read, wait for it to drop, clock the length byte and the
 // rest, wait for it to rise; release. Long writes and reads by their chunks.
 function mnScript(dev) {
@@ -267,7 +271,7 @@ function devTests(ok) {
   sourceTests(ok, now);
 }
 
-// The power manager's 0x14 (docs/hle-gaps.md 4.7.6): {x, inserted 0, inserted 1, recommend 0, recommend 1}, slot 0 the
+// The power manager's 0x14 (docs/hle-gaps/4.7.md 4.7.6): {x, inserted 0, inserted 1, recommend 0, recommend 1}, slot 0 the
 // body's battery and slot 1 the PBH's; the sub-CPU keeps per slot the inserted byte (0, 1, else 0xff) and a second
 // one (0xff with the inserted byte 0, else 1 for recommend 1, 0 for 2, 0xff for any other), builds no reply and
 // sends no message; `kept` below is the two slots' [inserted byte, second byte]
@@ -296,13 +300,38 @@ function sourceTests(ok, now) {
   ok(throwsAs(() => m3.send(0x14, [0, 1, 1, 3, 3]), ScpuError), 'a 0x14 with the PBH\'s battery inserted stops the session: the grip\'s bring-up is not modelled');
   const [, m4] = on();
   ok(throwsAs(() => m4.send(0x13, [0]), ScpuError), 'the power manager\'s 0x13 stays refused');
-  const [, m5] = on();
-  ok(throwsAs(() => m5.send(0x11, [0, 0, 0, 0]), ScpuError), 'its battery request 0x11 stays refused');
   const [d6, m6] = on(false);
   ok(throwsAs(() => m6.send(0x14, [0, 1, 0, 3, 0]), ScpuError) && kept(d6) === '[[255,255],[255,255]]', 'a body whose sub-CPU image is not the one read has its 0x14 refused');
   ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x14] }), ScpuError), '0x14 cannot be a body\'s quiet write');
   const taking = Object.keys(MODELS).filter((m) => MODELS[m].scpu_lle?.sha256 === SOURCES_IMAGE);
   ok(JSON.stringify(taking) === JSON.stringify(['E143', 'E146']), `the bodies whose sub-CPU image is the one 0x14 is read from (src/lab/menu.mjs takes it on those): ${taking}`);
+  batteryTests(ok, on);
+}
+
+// The battery information 0x11 (docs/hle-gaps/4.7.md 4.7.19): the MN's {0, slot, kind, 0}; the sub-CPU's battery task
+// asks slot 0's pack, which on the lab board does not answer, and posts the message 0x11 of 57 bytes {0, slot, kind,
+// 1, 0x33, result 1, the cleared record's 51 bytes} (X: the image's answer to the battery check's request)
+const BAT_ANSWER = '3b11' + '000000013301' + '00'.repeat(51);
+function batteryTests(ok, on) {
+  const [dev, mn] = on();
+  ok(mn.send(0x11, [0, 0, 0, 0]) === null && dev.frames.at(-1).reply === null && mn.st.message === 0,
+    `0x11 {0, 0, 0, 0} is a write and the answer drops the message line: ${JSON.stringify(dev.frames.at(-1))}, message line ${mn.st.message}`);
+  ok(mn.send(0x8f, [], true) === BAT_ANSWER && mn.st.message === 1 && dev.log.at(-1) === `sent 0x11 ${BAT_ANSWER.slice(4)}`,
+    `the poll carries the message 0x11 of 57 bytes {0, 0, 0, 1, 0x33, 1, 51 zeros}: ${dev.frames.at(-1).reply}`);
+  ok(mn.send(0x8f, [], true) === '04000000', 'one answer per request: the next poll is empty');
+  mn.send(0x11, [0, 0, 2, 0]);
+  ok(mn.send(0x8f, [], true) === '3b11' + '000002013301' + '00'.repeat(51), 'kind 2 is answered alike, its kind byte echoed');
+  mn.send(0x11, [1, 0, 0, 0]);
+  ok(mn.st.message === 1 && /byte 0 not 0/.test(dev.log.at(-1)), `byte 0 not 0: taken with no message (0x80150a5): ${dev.log.at(-1)}`);
+  mn.send(0x11, [0, 0, 5, 0]);
+  ok(mn.st.message === 1 && /kind 5 logged/.test(dev.log.at(-1)), `a kind above 4: the battery task logs it and answers nothing: ${dev.log.at(-1)}`);
+  const [, m2] = on();
+  ok(throwsAs(() => m2.send(0x11, [0, 0, 3, 0, 0, 0]), ScpuError), 'kind 3 (the pack request of another form, 0x8019c44) is refused');
+  const [, m3] = on();
+  ok(throwsAs(() => m3.send(0x11, [0, 1, 0, 0]), ScpuError), 'slot 1 (the PBH\'s pack, its own UART) is refused');
+  const [, m4] = on(false);
+  ok(throwsAs(() => m4.send(0x11, [0, 0, 0, 0]), ScpuError), 'a body whose sub-CPU image is not the one read has its 0x11 refused');
+  ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x11] }), ScpuError), '0x11 cannot be a body\'s quiet write');
 }
 
 // The inbound direction, as PER_SCPU drives it: a message drops the message line, the MN polls [2, 0x8f] while the
@@ -433,13 +462,13 @@ export async function scpuSession() {
   const posted = sl.scpu_requests.map((r) => '0x' + r.request.slice(0, 2)), requests = posted.slice(0, posted.length - pm.filter((f) => f.cmd !== '0x8f').length);
   ok(frames[0]?.cmd === '0x85' && frames[0].data === '020000' && frames[0].reply === '0585028501', `${MODEL}: PER_SCPU's start sends 0x85 {2} first, answered [5, 0x85, 2, 0x85, 1]: ${JSON.stringify(frames[0])}`);
   ok(posted.length > 0 && JSON.stringify(cmds.slice(1).filter((c) => c !== '0x8f')) === JSON.stringify(posted), `${MODEL}: every request the API posted reaches the sub-CPU as a frame, in order (with PER_SCPU's polls between): ${JSON.stringify(cmds)} for ${JSON.stringify(posted)}`);
-  // the store init's requests (H-UIINSCAN's 0x88 waits at a site of its own, checked by the scan's bring-up; the power
+  // the store init's requests (H-UIINSCAN's or H-UIININIT's 0x88 waits at a site of its own, checked by the scan's bring-up; the power
   // manager's requests wait at their own, checked by its start)
   const waited = sl.scpu_requests.slice(0, requests.length).filter((r) => r.request.slice(0, 2) !== '88' && r.request.slice(40, 48) !== '00000000').length;   // a completion at +20
   ok(sl.scpu_waits.length === waited && sl.scpu_waits.every((w) => w.rc === 0), `${MODEL}: the requesters' waits return E_OK: ${JSON.stringify(sl.scpu_waits)}`);
-  const scan = s.uiin_scan ?? null, scans = MODEL_INFO.scpu?.port_scan ?? MODEL === 'E143';
+  const scan = s.uiin_scan ?? s.uiin_init?.scan ?? null, scans = MODEL_INFO.scpu?.port_scan ?? MODEL === 'E143';   // (H-UIININIT's own scan where the module init runs)
   ok(scans ? scan?.reply === '04880000' && scan.report && before.at(-1) === '0x88' : scan === null && !cmds.includes('0x88'),
-    `${MODEL}: H-UIINSCAN ${scans ? 'asks the port scan, answered {0, not busy}, the report enabled' : 'does not run (no port-scan request)'}: ${JSON.stringify(scan)}, ${JSON.stringify(cmds)}`);
+    `${MODEL}: ${s.uiin_init ? 'H-UIININIT' : 'H-UIINSCAN'} ${scans ? 'asks the port scan, answered {0, not busy}, the report enabled' : 'does not run (no port-scan request)'}: ${JSON.stringify(scan)}, ${JSON.stringify(cmds)}`);
   if (MODEL === 'E143') {
     ok(JSON.stringify(before) === JSON.stringify(['0x85', '0x06', '0x01', '0x86', '0x88']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back, then the port scan: ${JSON.stringify(frames)}`);
     ok(frames[2].data === 'e60701010000000500', `E143: the reset date's frame cut to 10 bytes, its status 10501 reaching the sub-CPU as 5: ${frames[2].data}`);
@@ -454,7 +483,7 @@ export async function scpuSession() {
   ok(pins.startsWith('r1 s1 r0 s0 q1 r1 q0 r0 r1 r0 r1 q1 '), `${MODEL}: the pins in PER_SCPU's order (r ready, s reset, q request): ${pins}`);
   ok(lab.nk.state(link.tid) === 4 && lab.scpu_dev.state === 'idle' && lab.scpu_dev.powered && !link.open, `${MODEL}: PER_SCPU waits, the sub-CPU idle with its gate open, the channel closed`);
   // the power manager's 0x14: taken where the sub-CPU's image is the one its handler is read from (E143's, which E146
-  // carries), refused on the other linked bodies (src/lab/menu.mjs; docs/hle-gaps.md 4.7.6)
+  // carries), refused on the other linked bodies (src/lab/menu.mjs; docs/hle-gaps/4.7.md 4.7.6)
   const sources = ['E143', 'E146'].includes(MODEL);
   ok(lab.scpu_dev.takesSources === sources, `${MODEL}: S-SCPUDEV ${sources ? 'takes' : 'refuses'} the power manager's 0x14 (takesSources ${lab.scpu_dev.takesSources})`);
   // (a log the body's entry expects is not PER_SCPU's: E147's card's file system asks the SCPU clock first, models.mjs)
@@ -471,7 +500,7 @@ export async function scpuSession() {
   return { checks, bad };
 }
 
-// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps.md 4.7.4; E143, E146,
+// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps/4.7.md 4.7.4; E143, E146,
 // E147): the firmware from the HFW's shutDown to the window's last write, the session closed after it; the sub-CPU's
 // 0x85 {1, 0, 0} answered, the sub-CPU in bkground (PC13 low) with its link stopped (pin 102 low, polled by the MN);
 // the IO expanders' power-off commands on a body with them (E143's and E146's: the GIO extension's two writes from the

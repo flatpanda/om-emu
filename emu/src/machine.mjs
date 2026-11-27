@@ -6,7 +6,7 @@ import { BOARD, boardKnows } from './fw/board.mjs';
 import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
-import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
+import { R, S, PC, PSW, MDR, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
 import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, setProbes, probeStep, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
 import { Intc, setIrqTrace } from './dev/intc.mjs';
 import { snapshotDevices, restoreDevices, devicesBytes } from './debug/snapshot.mjs';
@@ -19,6 +19,7 @@ import { Scpu } from './dev/scpu.mjs';
 import { Hdmi } from './dev/hdmi.mjs';
 import { AudioPort } from './dev/audio.mjs';
 import { LinkPins } from './dev/linkpins.mjs';
+import { GioKeyPins } from './dev/gio.mjs';
 import { LensSsc } from './dev/lensssc.mjs';
 import { Dml } from './dev/dml.mjs';
 import { Pdt } from './dev/pdt.mjs';
@@ -26,6 +27,8 @@ import { Ems1 } from './dev/ems1.mjs';
 import { Imgpro } from './dev/imgpro.mjs';
 import { ImgPipe } from './dev/imgpipe.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
+import { Timer2 } from './dev/timer2.mjs';
+import { Adc } from './dev/adc.mjs';
 import { Cores } from './core/cores.mjs';
 
 export { Unported, TbUndecidable };
@@ -85,9 +88,12 @@ export function onMachine(fn) {
 // unloaded (S-STALERAM: {gaps: [{lo, hi, ...}], fill, message(gap, pc)}, the run-time ranges of the image the boot does
 // not load, src/fw/sections.mjs bootLoads: their DRAM holds the byte fill instead of the image's, and an instruction
 // with a byte there is refused before it runs, UnloadedCode with message(gap, pc); reads and writes there are not
-// watched; null, the default: the whole image in DRAM, nothing changes).
+// watched; null, the default: the whole image in DRAM, nothing changes), fetchAudit (fn(pc, len), called as the fetch
+// guard is, after S-STALERAM's: it records and returns, src/lab/secready.mjs's watch, --sec-ready; null, the default:
+// none, and nothing changes), strict (the strict mode, src/lab/strict.mjs: {stores, reads, report}, src/core/mem.mjs
+// setStrict's; null, the default: off, nothing changes).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null, unloaded = null } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null, unloaded = null, fetchAudit = null, strict = null } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -122,6 +128,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   };
   mem.ctx.pc = () => R[PC] >>> 0;
   mem.ctx.insns = () => S.insns;
+  mem.ctx.mdr = () => R[MDR] >>> 0;
   // the debug hooks start off (mem.initMemory, resetCpu, resetInterp and the Intc constructor reset theirs)
   let inCont = false;                           // inside a continue: a stopping watchpoint ends it (S.kick)
   let lastStop = null;                          // the last run's end: {kind: 'break'|'fault'|'limit'|'paused'|'watch'|'undecidable', code}
@@ -161,6 +168,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const hdmiPort = hdmi ? new Hdmi(m, intc, HDMI_WINDOW, HDMI_DOORBELL) : null;
   // the sub-CPU link's GIO pins, on a board that gives them (src/dev/linkpins.mjs; the lab wires the sub-CPU)
   const linkPins = boardKnows('scpu_link') ? new LinkPins(m, intc, BOARD.scpu_link) : null;
+  // UI_IN's GIO key pins, on a board that gives them (src/dev/gio.mjs; the lab sets their levels, H-GIOKEYS)
+  const gioKeys = boardKnows('gio_keys') ? new GioKeyPins(m, intc, BOARD.gio_keys) : null;
   // the lens mount's controller, the FCS unit's words and the detect pin, and the deferred-call triggers, on a board
   // that gives them (src/dev/lensssc.mjs, src/dev/dpc.mjs; passive until the lab connects a lens or a post writes)
   const lensSsc = boardKnows('lens') ? new LensSsc(m, intc, bus, BOARD.lens) : null;
@@ -184,6 +193,13 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // until the firmware writes them), after the imgpro unit
   const imgpipe = boardKnows('imgpipe') ? new ImgPipe(m, lclock, intc, bus, BOARD.imgpipe) : null;
   const stub = new Stub(m);
+  // the E118 family's second timer unit, on a board that gives it (src/dev/timer2.mjs; passive until the firmware starts
+  // a channel), before the A/D converter among the lab clock's sources; it reads clock 19's divider words from the stub as the CPU would
+  const stubWord = (a) => { try { return stub.read(a, 4, true); } catch (e) { if (e === BUS) return null; throw e; } };
+  const timer2 = boardKnows('timer2') ? new Timer2(m, lclock, intc, BOARD.timer2, stubWord) : null;
+  // the A/D converter, on a board that gives it (src/dev/adc.mjs; passive until the firmware starts a conversion),
+  // after the second timer unit: the last of the lab clock's sources
+  const adc = boardKnows('adc') ? new Adc(m, lclock, intc, BOARD.adc) : null;
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
   // the second core (src/core/cores.mjs), which takes over the controller's request callbacks
@@ -211,7 +227,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     mem.U8.fill(unloaded.fill, copy + (g.lo - IMAGE_BASE), copy + (g.hi - IMAGE_BASE));
   }
   mem.markDirty(copy, rom.length);
-  setFetchGuard(unloaded?.gaps.length ? fetchGuard(unloaded) : null);
+  const stale = unloaded?.gaps.length ? fetchGuard(unloaded) : null;
+  setFetchGuard(stale && fetchAudit ? (pc, len) => { stale(pc, len); fetchAudit(pc, len); } : stale ?? fetchAudit);
+  if (strict !== null) mem.setStrict(strict);
   // The flash library's window (src/fw/board.mjs; E143 has none, its lab never reaches one): RAM holding the part of
   // the main block the boot copies there, which later builds call by address (E147: the image head at 0x3FFDEFE0,
   // a d32 call from flash into it, X; E144: file 0x1681fe0, 6 KiB at 0x47000800, the reset head's copy, D).
@@ -245,9 +263,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
     cores,
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}), ...(gioKeys ? { gio_keys: gioKeys } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}),
-      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}) },
+      ...(imgpro ? { imgpro } : {}), ...(imgpipe ? { imgpipe } : {}), ...(timer2 ? { timer2 } : {}), ...(adc ? { adc } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.
@@ -435,12 +453,12 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // happened after the snapshot (the whole machine state comes back).
     snapshot() {
       live(); notPaused('snapshot');
-      if (cores !== null) throw new Error('snapshot: not with a second core (src/core/cores.mjs keeps per-core state the snapshot does not hold)');
       if (failed !== null) throw new HostStopped('snapshot', failed);
       const cpuS = {};
       for (const k of Object.keys(S)) if (k !== 'intc') cpuS[k] = S[k];
       return { gen: myGen, mem: mem.memSnapshot(), R: R.slice(), S: cpuS, interp: interpState(),
         devices: snapshotDevices(this.devices, [m, ...Object.values(this.devices), rom], mem.buf),
+        cores: cores !== null ? cores.snapshot() : null,
         isc: isc.slice(), stderrLines: stderrLines.slice(), stderrBase, stats: { ...stats }, builtins: new Set(builtins), pendingDebug };
     },
     restore(snap) {
@@ -452,6 +470,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       setInterpState(snap.interp);
       flushDecode();
       restoreDevices(this.devices, snap.devices);
+      if (cores !== null) cores.restore(snap.cores);
       isc.set(snap.isc);
       stderrLines.length = 0; stderrLines.push(...snap.stderrLines); stderrBase = snap.stderrBase;
       Object.assign(stats, snap.stats);
@@ -459,14 +478,14 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       pendingDebug = snap.pendingDebug;
       failed = null; lastStop = null; lastWatch = null; mem.clearWatchHit();
     },
-    snapshotBytes(snap) { return snap.mem.data.length + devicesBytes(snap.devices) + 4 * snap.R.length; },
+    snapshotBytes(snap) { return snap.mem.data.length + devicesBytes(snap.devices) + 4 * snap.R.length + (snap.cores ? 4 * snap.R.length : 0); },
     // The CPU's whole context at a stop, for a nested harness run there and back (src/debug/call.mjs at a debug stop):
     // every CPU word with the ones getRegs leaves out (the flags' undefined bits, the PSW hazard), the run loop's flags
     // but the interrupt request (the controller's line, which the nested run does not roll back), the interpreter's
     // TB-start record, a pending debug stop and the last stop. Memory and devices are not in it.
     cpuContext() {
       live(); notPaused('cpuContext');
-      if (cores !== null) throw new Error('cpuContext: not with a second core (src/core/cores.mjs keeps per-core state)');
+      if (cores !== null && cores.cur !== 0) throw new Error('cpuContext: must be on core 0');
       const cpuS = {};
       for (const k of Object.keys(S)) if (k !== 'intc' && k !== 'irqReq') cpuS[k] = S[k];
       return { gen: myGen, R: R.slice(), S: cpuS, interp: interpState(), pendingDebug, lastStop, lastWatch };

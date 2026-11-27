@@ -233,7 +233,7 @@ which is why om-c's feature exists (I). In the lab, with S1 then S2 (X, probe se
 - The sound object's singleton getter `0x50b56569` (object `0x62afee0c`) is called only at S2, twice, from
   IOlyApiShooting `0x51059373` / `0x51059919` through `0x5108c19f`, which then call the object's vtable +68, a query.
 - The play method `0x50b569a4` is never called; the audio driver's MMIO blocks `0x9bb00000..0x9bb003c0` and
-  `0x9b700000..0x9b70011c` (`docs/hle-gaps.md` 4.5) are never accessed.
+  `0x9b700000..0x9b70011c` (`docs/hle-gaps/4.5.md` 4.5) are never accessed.
 - The sound table pointers `(0xa32db180)`, `(0xa32db19c)`, `(0xa32db32c)`, `(0xa32db1bc)` are 0, and their loader
   `0x501a8ca0` never runs.
 - om-c's hook site, the capture begin `0x50b8467c`, never runs either: the release path below it is stood in by
@@ -290,7 +290,7 @@ unverified on a camera.
 
 For om-emu this is a map of the operation-sound path from shooting to the play method and the resource tables, and it
 says that the lab's silence at S2 is the stock behaviour, not a lab gap (I, strong: no play call, no audio MMIO).
-Running the engine natively still needs the audio driver blocks and the sound data (`docs/hle-gaps.md` 4.5).
+Running the engine natively still needs the audio driver blocks and the sound data (`docs/hle-gaps/4.5.md` 4.5).
 
 ## 5. Their verification against om-emu's
 
@@ -316,7 +316,7 @@ runs pin the unaligned case.
 **Takes** (facts and addresses, attributed): the checked addresses of section 3 and 4 as leads; the setting-rule
 engine's formats, `app_check_mode`, the API slot names and the literal widening for the settings and menu specs; the
 lens-protocol ring extension and the `81 10` start command for S-LENSMCU; the OLNET_PRM channel path and the radio
-facts for `docs/a53-spec.md` and `docs/hle-gaps.md` 4.11; the sound path for 4.5; the independent digest check of the
+facts for `docs/a53-spec.md` and `docs/hle-gaps/4.11.md` 4.11; the sound path for 4.5; the independent digest check of the
 survey.
 
 **Does not take:**
@@ -336,7 +336,7 @@ survey.
 
 1. `docs/firmware-container.md` names flag `0x0107` "sounds"; on E143 that block (`blk0e560000`, load `0x08000000`) is
    the SCPU image (`docs/om1-scpu-spec.md`; D).
-2. `docs/hle-gaps.md` 4.4.2 says `0x502afe5a` returns 1 when ID byte 0 is 0 and byte 1 is not 0; the code returns 1
+2. `docs/hle-gaps/4.4.md` 4.4.2 says `0x502afe5a` returns 1 when ID byte 0 is 0 and byte 1 is not 0; the code returns 1
    when both are 0, and `0x502afea2` when byte 0 is 2 or 3 and byte 1 is 0 (D, `0x502afe5a..0x502afebb`).
 3. `docs/a53-spec.md` section 1 (bcmdhd, CYW43455) holds for E143 only: E146 ships brcmfmac with `cyfmac43455-sdio`,
    E147 brcmfmac with `cyfmac43439-sdio` (2.4 GHz only) and no `bcmdhd.ko`, though both `isc_olnet`s keep the old
@@ -347,7 +347,7 @@ survey.
 
 - What the OM-1's own operation sounds are: the type-2 resource area at NAND `0x4e420000` is outside the updater, in a
   window the flash guard leaves writable (4), and the lab plays a lab-made area in its place (2026-11-02,
-  `docs/hle-gaps.md` 4.5); what the play method's id `0x10501` lookup returns; what the vtable +68 query
+  `docs/hle-gaps/4.5.md` 4.5); what the play method's id `0x10501` lookup returns; what the vtable +68 query
   (isThroughSound, the fwmap labels) answers at S2 and why IOlyApiShooting asks it there.
 - Whether stock E143 uses settings 1021 and 827 at all.
 - A real ring lens's ID bytes, its flags byte and its answer to `81 10`; what record +119168 and +9444 bits mean;
@@ -363,7 +363,7 @@ survey.
 2. **The setting-rule engine in `docs/om1-settings-spec.md`**, with a firmware test of the 15282 run (15282 = 1 through
    the native setter turns 2035 / 2037 to 250; 15282 = 2 and a raw write as controls). Size: a day. Payoff: a
    documented and pinned mechanism behind the SH2 lens cap.
-3. **The operation-sound path in `docs/hle-gaps.md` 4.5** (section 4), and a search for the source of `0x4e420000`.
+3. **The operation-sound path in `docs/hle-gaps/4.5.md` 4.5** (section 4), and a search for the source of `0x4e420000`.
    Size: a day for the doc, open-ended for the data. Payoff: states that the silent S2 is stock and names what a native
    operation sound needs.
 4. **A Panasonic lens profile for S-LENSMCU**, chosen by option, with the default lens unchanged: maker byte 2, an
@@ -371,6 +371,6 @@ survey.
    a firmware test that the start completes and the poll stays `[00 06]`. Size: 1-2 days. Payoff: a second lens path
    in the lab and a test that the stock firmware ignores the ring.
 5. **`app_check_mode`, the API slot names and the literal widening in `docs/om1-menu-spec.md`**. Size: half a day.
-6. **OLNET_PRM and the channel path** in `docs/hle-gaps.md` 4.11. Size: half a day. Payoff: the parameter block a
+6. **OLNET_PRM and the channel path** in `docs/hle-gaps/4.11.md` 4.11. Size: half a day. Payoff: the parameter block a
    virtual Wi-Fi client would meet.
 7. **One line on SETLB in `docs/mn10300-isa-spec.md` 4.12** (section 5). Size: minutes.

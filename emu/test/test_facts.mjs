@@ -21,7 +21,8 @@
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
 //               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the built-in lens's focal length getter against
 //               BUILTIN_FOCAL_FOUND, the lens driver against LENS_DRIVER_FOUND and
-//               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the IIC driver's wait
+//               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the play module's start
+//               and view decode against PLAY_FOUND, the IIC driver's wait
 //               against IIC_FOUND, the
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
@@ -34,7 +35,7 @@
 //               layout against STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
 //               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
 //               SIO_FOUND, the GUI canvas, OSD banks
-//               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
+//               and kind-3 area against GUI_FOUND, MM's bank 0 on the E143 family against MM_BANK0_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
 //               init task and OlyTaWu against RTOS_FOUND and A(), the DB init's and the application's flash saves
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
 //               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the frame plane's
@@ -47,10 +48,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, MOUNT_STATE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, POWER_LATER_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileQueue, recFileInline, recHeader, recFileFrame, KCB0_E143, SECTIONS_E143,
   TAKE_REQUESTS_E143, takeRequests, OLYQEWR_E143, TAKE_EXPOSURE_E143, takeExposure, TAKE_SHOT_E143, takeShot,
-  TAKE_FILLS_E143, takeFills } from '../src/fw/facts.mjs';
+  TAKE_FILLS_E143, takeFills, mmBank0, AD_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -224,23 +225,35 @@ const TOUCH_START_FOUND = {
 // poll 0x5005e931, the last write 0x5004fa52 at 0x500459ee, the RAM log's write 0x5190a062, shutDown 0x50b08199
 // loading 0x10102 at +0x10; E147 the starter's 0x50024120 with 0x60042ce2, the sequence 0x50045807 calling no
 // expander, the sender 0x500599f7's poll 0x50059aa9, the last write 0x5004f78f at 0x50045923, the RAM log's write
-// 0x519123a8), and none on the bodies whose firmware holds no start of PWR_MAIN (X)
+// 0x519123a8; start_shutdown, the entry of the function loading startShutDown's trace, read by the rule 2026-11-24:
+// E146 0x50b01313, E147 0x50b0bba1, X), and none on the bodies whose firmware holds no start of PWR_MAIN (X)
 const POWER_SEQ_FOUND = {
   E143: POWER_OFF_E143,
   E146: {
     pwr: { init: 0x50045ABD, id_word: 0x60042D62 },
     shutdown: { object: 0x50B07B86, slot: 2, entry: 0x50B08199, mode: 1, reason: 1 },
-    flash_save: 0x50B017E1, log: { nand: [0x4E820000, 0x200000], ret: 0x5190A069 }, end: 0x500459F5,
+    flash_save: 0x50B017E1, start_shutdown: 0x50B01313, log: { nand: [0x4E820000, 0x200000], ret: 0x5190A069 }, end: 0x500459F5,
     ioexp: { body: { post: 0x50058507, flag: 0x6004319E }, pbh: { post: 0x50056960, flag: 0x600431AE } },
     poll: { at: 0x5005E931, pin: 102 },
   },
   E147: {
     pwr: { init: 0x500459F2, id_word: 0x60042CE2 },
     shutdown: { object: 0x50B124FA, slot: 2, entry: 0x50B12B11, mode: 1, reason: 1 },
-    flash_save: 0x50B0C09E, log: { nand: [0x4E820000, 0x200000], ret: 0x519123AF }, end: 0x5004592A,
+    flash_save: 0x50B0C09E, start_shutdown: 0x50B0BBA1, log: { nand: [0x4E820000, 0x200000], ret: 0x519123AF }, end: 0x5004592A,
     ioexp: null, poll: { at: 0x50059AA9, pin: 102 },
   },
   E144: null, E139: null, E134: null, E137: null, E142: null, E140: null,
+};
+// The power manager's later inits (power.later; src/fw/facts.mjs powerLater): E143's as H-PWRLATER ran them by hand
+// before the rule (D: 0x50044ed7 called at 0x50024d43, 0x50044f7d at 0x501e9943, the handler 0x5004408f, the setters
+// 0x50043c63 / 0x50043c6c writing 0xa32bfb58 / 0xa32bfb59), E146's and E147's as read by hand (D, 2026-11-23: E146
+// 0x50045ade called at 0x50024e10 and 0x50045b84 at 0x501eff40, the handler 0x50044c96; E147 0x50045a13 at
+// 0x50024d8f, which sends the check only, and 0x50045a40 at 0x501f7d10, the handler 0x50044c15, the setters
+// 0x500447e9 / 0x500447f2 writing the same bytes)
+const POWER_LATER_FOUND = {
+  E143: POWER_LATER_E143,
+  E146: { handler: 0x50044C96, early: 0x50045ADE, late: 0x50045B84, a: 0xA32BFB58, c: 0xA32BFB59 },
+  E147: { handler: 0x50044C15, early: 0x50045A13, late: 0x50045A40, a: 0xA32BFB58, c: 0xA32BFB59 },
 };
 // The touch task's command queue (touch_task; src/fw/facts.mjs touchQueue): E143's as the lab gives it
 // (src/fw/facts.mjs TOUCH_TASK_QUEUE_E143: the flag its loop waits on at 0x501e3ef2, the queue it receives from at
@@ -542,6 +555,24 @@ const REC_FILE_FOUND = {
       file_queue: 0x60041030, reply_queue: 0x60041096 },
   },
 };
+// The play module's start and view decode (play.tasks, play.decode; src/fw/facts.mjs playTasks, playDecode), where
+// recFile reads REC_FILE's parts: E143's as src/lab/playmod.mjs gave them by hand before the rules (D), E146's and
+// E147's as read in their code (D, 2026-11-22: USTART5's starts E146 0x501f0514.. / E147 0x501f82e4.., each
+// `movhu (W),d0; exth d0; call OlyTaSt` and the log of the task's name; the issue's calls E146 0x518c2dce / 0x518c3180,
+// E147 0x518cacb3 / 0x518cb065, the wait after each with the block's `mov 0x62d3b914,a0` (E146) between the play
+// module's traces; the request builder's stores E146 0x518c2f2e (`add 36,a2`), 0x518c2fd3, 0x518c2fdb, 0x518c3026:
+// a 64-bit source address and the fields after it 8 bytes on), none on the other 15 bodies
+const PLAY_FOUND = {
+  E143: { tasks: [[0x60042D58, 'PLAY_MAIN'], [0x60042D56, 'PLAY_LOAD'], [0x60042D54, 'PLAY_IMAGE'], [0x60042D5A, 'PLAY_SOUND'], [0x60042E12, 'PLAY_DECODE'], [0x60042E14, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x5048F331, issue_from: [0x518B4476, 0x518B4792], wait: 0x5048F6E4, wait_from: [0x518B4484, 0x518B47A0],
+      request: { src: 0, format: 8, width: 12, height: 14, area_width: 16, area_height: 18, work: 28, bytes: 36 }, dest: { addr: 0, format: 8, pitch: 10, width: 12, height: 14 } } },
+  E146: { tasks: [[0x60042D80, 'PLAY_MAIN'], [0x60042D7E, 'PLAY_LOAD'], [0x60042D7C, 'PLAY_IMAGE'], [0x60042D82, 'PLAY_SOUND'], [0x60042E3A, 'PLAY_DECODE'], [0x60042E3C, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x50481950, issue_from: [0x518C2DD5, 0x518C3187], wait: 0x50481D2A, wait_from: [0x518C2E0A, 0x518C31BC],
+      request: { src: 0, format: 16, width: 20, height: 22, area_width: 24, area_height: 26, work: 36, bytes: 48 }, dest: { addr: 0, format: 16, pitch: 18, width: 20, height: 22 } } },
+  E147: { tasks: [[0x60042D00, 'PLAY_MAIN'], [0x60042CFE, 'PLAY_LOAD'], [0x60042CFC, 'PLAY_IMAGE'], [0x60042D02, 'PLAY_SOUND'], [0x60042DBA, 'PLAY_DECODE'], [0x60042DBC, 'PLAY_LOADDRAW']],
+    decode: { issue: 0x50490246, issue_from: [0x518CACBA, 0x518CB06C], wait: 0x50490620, wait_from: [0x518CACEF, 0x518CB0A1],
+      request: { src: 0, format: 16, width: 20, height: 22, area_width: 24, area_height: 26, work: 36, bytes: 48 }, dest: { addr: 0, format: 16, pitch: 18, width: 20, height: 22 } } },
+};
 // REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as
 // src/lab/rec.mjs gave them by hand before the rule (REC_IMAGE_E143, D), E146's and E147's as read in their code (D,
 // 2026-11-10: REC_IMAGE task 28 at E146 0x5051ee03 / E147 0x5052def3 reading the queue word 0x6004328e / 0x60043200
@@ -570,7 +601,7 @@ const REC_IMAGE_FOUND = {
 };
 // TAKE's request protocol (take_requests; src/fw/facts.mjs takeRequests) where recFile reads: E143's as S-MODPOST's
 // and S-TAKERDY's E143 lists use it (src/lab/camapp.mjs MODPOST_E143's API_POST and TAKE_SEND, TAKERDY_E143's event
-// and offsets; D, docs/hle-gaps.md 4.1.11, 4.1.12), E146's and E147's as read in their code by hand (D, 2026-11-13:
+// and offsets; D, docs/hle-gaps/4.1.md 4.1.11, 4.1.12), E146's and E147's as read in their code by hand (D, 2026-11-13:
 // the API's direct post E146 0x503e8038 / E147 0x503f5d3e calling OlyQeWr, E146's 0x5002c1cb, at +36; TAKE's send E146
 // 0x502e635e / E147 0x502f7c24 at +10; the take API's control 0x40 `mov 5,a0` at E146 0x504137fb / E147 0x5042191a;
 // TAKE_FUNC 29's sender E146 0x5039fb54 / E147 0x503a9c28 with `mov 29,d0` and its parameter's mov imm32; TAKE_MAIN's
@@ -620,17 +651,24 @@ const TAKE_SHOT_FOUND = {
 // byte at the context's +3324 and calling the AF maker-note fill E146 0x509c965d from 0x503bd848 / E147 0x509ce3c7
 // from 0x503c7ad8, whose first call E146 0x508e26c6 / E147 0x508e6d7c stores the areas at +40312 and +40320 /
 // +40576 and +40584; the lens fill E146 0x503bda91 / E147 0x503c7d21, from E146 0x503b72c5 / E147 0x503c1555; the
-// third fill E146 0x503bdb54 / E147 0x503c7de4, from the function object's call E146 0x503b8532 / E147 0x503c27c2)
+// third fill E146 0x503bdb54 / E147 0x503c7de4, from the function object's call E146 0x503b8532 / E147 0x503c27c2;
+// 2026-11-22: StlRdy1's strobe request E146 0x503b87fa from 0x503b18b0 / E147 0x503c2a88 from 0x503bbb32, its
+// exposure request at the context's +3348 and the decision's status at +3344, the decision E146 0x501c1778 / E147
+// 0x501c975c, whose property read E146 0x501c6ee6 from 0x501c1812 / E147 0x501ceed0 from 0x501c97f6 indexes the table
+// E146 0x60350580 / E147 0x6035a038 of 122 rows, filled by E146 0x501c6eb6 / E147 0x501ceea0, which the strobe
+// module's boot init calls with d0 0 at E146 0x501c7062 / E147 0x501cf04c)
 const TAKE_FILLS_FOUND = {
   E143: TAKE_FILLS_E143,
   E146: { context: 0x62A77988, packet: 0x62A77980, mode: { build: 0x503C30D7, bytes: 0x62A7B964, copy: 0x503C4CDB, record: 0x62A7B97E, standby: 0x503B0E14 },
     ring: { get: 0x503BB6F1, free: 0x503BB75E }, record: { fn: 0x503BC37E, modes: [0x62A78840, 0x62A78894] },
     take: { capture: 0x503BD3D7, key: 0x503BB24E, count: 0x62A78664, after: 0x503BCE2B },
-    pic: { fn: 0x503BD6AB, mode: 3324, af: 0x509C965D, crop: [40312, 40320], lens: 0x503BDA91, third: 0x503BDB54 } },
+    pic: { fn: 0x503BD6AB, mode: 3324, af: 0x509C965D, crop: [40312, 40320], lens: 0x503BDA91, third: 0x503BDB54 },
+    strobe: { request: 0x503B87FA, at: 3348, status: 3344, decision: 0x501C1778, props: { fill: 0x501C6EB6, table: 0x60350580, count: 122 } } },
   E147: { context: 0x62A73DB0, packet: 0x62A73DA8, mode: { build: 0x503CCFEA, bytes: 0x62A76870, copy: 0x503CEBEE, record: 0x62A7688A, standby: 0x503BB07F },
     ring: { get: 0x503C597F, free: 0x503C59EC }, record: { fn: 0x503C660C, modes: [0x62A74C68, 0x62A74CBC] },
     take: { capture: 0x503C7667, key: 0x503C54DC, count: 0x62A74A8C, after: 0x503C70BB },
-    pic: { fn: 0x503C793B, mode: 3324, af: 0x509CE3C7, crop: [40576, 40584], lens: 0x503C7D21, third: 0x503C7DE4 } },
+    pic: { fn: 0x503C793B, mode: 3324, af: 0x509CE3C7, crop: [40576, 40584], lens: 0x503C7D21, third: 0x503C7DE4 },
+    strobe: { request: 0x503C2A88, at: 3348, status: 3344, decision: 0x501C975C, props: { fill: 0x501CEEA0, table: 0x6035A038, count: 122 } } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -819,13 +857,19 @@ const DETECT_FOUND = {
   E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
   E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1], E148: [0xA2750A68, 1],
 };
-// The second card slot (card.slots; src/fw/facts.mjs cardSlots; docs/hle-gaps.md 4.8.12): E143's as read by hand (D:
+// The second card slot (card.slots; src/fw/facts.mjs cardSlots; docs/hle-gaps/4.8.md 4.8.12): E143's as read by hand (D:
 // the SD driver's detect 0x508b0221 with its helper 0x508b0859, the GIO codes 0x0200000f / 0x02000010 through the
 // class-2 reader 0x50052e28 to the IO expander's input shadow 0xa32c5310, the command layer's port index +12, the
 // record controller's settings 1129 and 1130 at 0x50c73f16), E146's by the same reading of its code (D: 0x508ca01d,
-// 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others)
+// 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others). The
+// other two-slot bodies' UI_IN-level detects as read by hand (docs/hle-gaps/4.8.md 4.8.17, D: E139's detect 0x5066466d
+// with the helper 0x50664a3d `clr d0; retf`, E134's 0x50678449 and E125's 0x50622561 of their own, each asking for
+// 0x1506 and 0x1518; the port index +12 at their command layers) with the save settings their remaining-shots
+// queries load (D: E139 0x502f7d26 / 0x502f7d6c, E134 0x50313e68 / 0x50313eae, E125 0x503073b1 / 0x503073f7)
 const SLOTS_E143_FAMILY = (fn) => ({ port: 12, detect: { fn, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] }, record: { mode: 1129, slot: 1130 } });
-const SLOTS_FOUND = { E143: SLOTS_E143_FAMILY(0x508B0221), E146: SLOTS_E143_FAMILY(0x508CA01D) };
+const SLOTS_LEVEL = (fn, mode, slot) => ({ port: 12, detect: { fn, switches: [0x1506, 0x1518], pins: null }, record: { mode, slot } });
+const SLOTS_FOUND = { E143: SLOTS_E143_FAMILY(0x508B0221), E146: SLOTS_E143_FAMILY(0x508CA01D), E139: SLOTS_LEVEL(0x5066466D, 1129, 1130),
+  E134: SLOTS_LEVEL(0x50678449, 1130, 1131), E125: SLOTS_LEVEL(0x50622561, 1137, 1138) };
 // The card's file system seams (storage; src/fw/facts.mjs fileSystem): E143's as src/fw/models.mjs gave them by hand
 // before the rule (D, its storage entry; the tasks then by their entries 0x50894e37 and 0x5087cda8, whose starts read
 // the id words), and of a body of each lineage the bring-up, FILECLBK's entry and busy word, the NAND access and the
@@ -949,6 +993,15 @@ const GUI_FOUND = {
   E144: { stride: 1152, height: 768, banks: E144_BANKS, kind3: [0xAF3C3000, 1536] },
   E139: { stride: 1152, height: 768, banks: E144_BANKS, kind3: [0xAF270000, 1536] },
 };
+// MM's bank 0 pool construction (src/fw/facts.mjs mmBank0, the E143 family's dram_size rule mmDramSize: 512 MiB), as
+// read (D: E143 0x50533ba4 `mov 0xa31f4e9c,a0; mov 0xb8000000,d0; mov 0x1ffec00,d1; mov 0,a1; call 0x5053733b`, bank
+// 1's `mov 256,a1` at 0x50533bdc; X: the bank table 0x606dc498's entry 0 holds that pool, +8 0xb8000000, +12
+// 0x1ffec00, in a live-view session; E146's and E147's sites by the rule, X, 2026-11-23)
+const MM_BANK0_FOUND = {
+  E143: { pool: 0xA31F4E9C, base: 0xB8000000, block: 0x1FFEC00, at: 0x50533BA4 },
+  E146: { pool: 0xA31F4E58, base: 0xB8000000, block: 0x1FFEC00, at: 0x50510D83 },
+  E147: { pool: 0xA31F5208, base: 0xB8000000, block: 0x1FFEC00, at: 0x5051FF0C },
+};
 // The rec view component's state word and standby value (recview; D: E143 entryStandby 0x50c65ff2 -> 0x50c66a25 ->
 // 0x50ab5fe7, E142 0x508f1cee -> 0x508f2721 -> 0x5074b31c, whose word E142's getRecViewState gate 0x5074b283 reads)
 // and, read by form where the trace is not held, E120's (D: the standby entry 0x507913eb -> 0x50791b40 -> 0x50654c29,
@@ -1070,10 +1123,15 @@ const MM_INIT_FOUND = { E143: null, E144: null, E134: null, E122: 0x50483A1F, E1
 const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', 'a0'], E118: ['d1', 'a0'], E120: ['d1', 'a0'] };
 // The picture file API's object delete and attribute (erase; src/fw/facts.mjs pictureErase), as read (D: E144's code 33
 // at 0x502dfb7a and its fnode +89 read at 0x502dfe5a, E130's at 0x502d7564 and 0x502d7899, each after its API id's
-// load as E143's), and none on E118 and E120, which load neither id (X: a byte scan)
-const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3, erase_all: 0x502DFC28 },
-  E130: { object_delete: 0x502D7450, attribute: 0x502D7809, erase_all: 0x502D762C }, E146: { object_delete: 0x503F9B1B, attribute: 0x503F9E58, erase_all: 0x503F9C9D },
-  E147: { object_delete: 0x50407991, attribute: 0x50407CCE, erase_all: 0x50407B13 }, E118: null, E120: null };
+// load as E143's), and none on E118 and E120, which load neither id (X: a byte scan). The unlock all (id 0x70025) on
+// the 17 others, the rating-exclusive erase all (id 0x7004e) on E143, E146, E147 and E148 alone (X, 2026-11-22: the
+// rule on every body; E146 0x503fb432 and 0x503fe7db, E147 0x504092a8 and 0x5040c651, each the call its
+// executeUnlockAllStart and executeRatingExclusiveEraseAllStart make, D: E146 0x50cfc533 and 0x50cfc605, E147
+// 0x50d07afc and 0x50d07bce)
+const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3, erase_all: 0x502DFC28, unlock_all: 0x502E13BD, rating_erase: null },
+  E130: { object_delete: 0x502D7450, attribute: 0x502D7809, erase_all: 0x502D762C, unlock_all: 0x502D9143, rating_erase: null },
+  E146: { object_delete: 0x503F9B1B, attribute: 0x503F9E58, erase_all: 0x503F9C9D, unlock_all: 0x503FB432, rating_erase: 0x503FE7DB },
+  E147: { object_delete: 0x50407991, attribute: 0x50407CCE, erase_all: 0x50407B13, unlock_all: 0x504092A8, rating_erase: 0x5040C651 }, E118: null, E120: null };
 // The SD card's HLS media status word (media_status; src/fw/facts.mjs mediaStatus), as read (D: the setter's medium 4
 // store, E144 0x5084940a, E137 0x507b72ef, E130 0x506ff7fd, E122 0x506a75e9; the map had E137's, E130's and E122's 8
 // bytes low, on the second slot's word)
@@ -1085,7 +1143,7 @@ const MOUNT_STATE_FOUND = { E143: MOUNT_STATE_E143, E130: 0x62399B24, E122: 0x61
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
-  board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
+  board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 512 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143, task: GUI_TASK_FOUND.E143 },
   kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
@@ -1095,8 +1153,9 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true, focal: null }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null, slots: SLOTS_FOUND.E143 },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, sections: SECTIONS_E143, mm_init: null, dpc: { init: 0x50050279 }, adc: AD_E143, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, mount_state: MOUNT_STATE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
+  hdmi: { calib: null },
 };
 
 // The setting-name table in block 2 (src/fw/setnames.mjs nameTable): {offset in the body, count of MODE_ names}, as a
@@ -1161,7 +1220,7 @@ export function factsTests() {
   // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card) and
   // where the AF beep asks it for its sound (E143),
   // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
-  // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143), and rec_native, given
+  // at 0x4e3e0000, D: their loaders) and are given where they were checked (E143, E146, E147), and rec_native, given
   // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue, recFileInline: fact
   // rec_file) and its S2 was seen to record so: E142's REC_FILE runs natively by recFileQueue, E130's and E133's,
   // which port through it, by recFileInline, E145's by recFileQueue's inlined form and E129's and E132's, which port
@@ -1289,12 +1348,14 @@ export function factsTests() {
     if (Object.hasOwn(TOUCH_REGS_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_regs, TOUCH_REGS_FOUND[code]), `${code}: touch_regs ${hx(placed?.touch_regs ?? placed)}, found ${hx(TOUCH_REGS_FOUND[code] ?? 'none')}`);
     // the power-off's facts, where the rule reads them
     if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.off, POWER_SEQ_FOUND[code]), `${code}: power.off ${hx(placed?.power ?? placed)}, found ${hx(POWER_SEQ_FOUND[code])}`);
+    if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.later, POWER_LATER_FOUND[code]), `${code}: power.later ${hx(placed?.power ?? placed)}, found ${hx(POWER_LATER_FOUND[code] ?? 'none')}`);
     if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);
     // the lens driver, and the port's places of E143's lens flags and LENS_EXEC's queue word (the map's, which S-LENS and
     // the camera application's module queues use) at the rule's
     if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_file, REC_FILE_FOUND[code]), `${code}: rec_file ${hx(placed?.rec_file ?? placed)}, found ${hx(REC_FILE_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_image, REC_IMAGE_FOUND[code]), `${code}: rec_image ${hx(placed?.rec_image ?? placed)}, found ${hx(REC_IMAGE_FOUND[code] ?? 'none')}`);
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.play?.tasks, PLAY_FOUND[code]?.tasks) && same(placed?.play?.decode, PLAY_FOUND[code]?.decode), `${code}: play.tasks and play.decode ${hx(placed?.play ? { tasks: placed.play.tasks, decode: placed.play.decode } : placed)}, found ${hx(PLAY_FOUND[code] ?? 'none')}`);
     // recImage refuses a form it does not know rather than reading it: E143's image with REC_IMAGE's queue read made
     // `mov (Q),d2` (0x50541c4e: fc ae -> fc a2) and with the shared init's bind to entry 6 (0x5054dcca: mov 7,d0 -> 6)
     if (code === 'E143' && placed?.rec_file) {
@@ -1311,7 +1372,7 @@ export function factsTests() {
       ok(kept === true && set === true, `recImage: the create's handle kept in another form and another test after the set's call refused: ${kept}, ${set}`);
     }
     // TAKE's request protocol (take_requests, src/fw/facts.mjs takeRequests) where recFile reads: E143's equals the
-    // values S-MODPOST's and S-TAKERDY's E143 lists use; E146's and E147's as found (docs/hle-gaps.md 4.1.13)
+    // values S-MODPOST's and S-TAKERDY's E143 lists use; E146's and E147's as found (docs/hle-gaps/4.1.md 4.1.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_requests, TAKE_REQUESTS_FOUND[code]), `${code}: take_requests ${hx(placed?.take_requests ?? placed)}, found ${hx(TAKE_REQUESTS_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the event's `mov imm32,d1` made `mov imm32,d0`
     // (0x503c325b: fc cd -> fc cc) and with RdyTrig2Wait's row of command 11 made 13 (its command table's row, D)
@@ -1328,7 +1389,7 @@ export function factsTests() {
       ok(event === true && row === true, `takeRequests: the event's load into another register and RdyTrig2Wait without command 11 refused: ${event}, ${row}`);
     }
     // TAKE's exposure for a still's record (take_exposure, src/fw/facts.mjs takeExposure) where recFile reads: E143's
-    // equals the values S-EXIFPRM uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // equals the values S-EXIFPRM uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_exposure, TAKE_EXPOSURE_FOUND[code]), `${code}: take_exposure ${hx(placed?.take_exposure ?? placed)}, found ${hx(TAKE_EXPOSURE_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the fill's shutter read made another setting
     // (0x503bf6bf: 41002 -> 41003), with takepic's copy storing Tv through a3 (0x503bcdb7: movhu d0,(a0) -> (a3)) and
@@ -1345,7 +1406,7 @@ export function factsTests() {
       ok(tv === true && copy === true && range === true, `takeExposure: the fill without the shutter's read, takepic's copy through another register and the range copied through another register refused: ${tv}, ${copy}, ${range}`);
     }
     // TAKE's shot for a still (take_shot, src/fw/facts.mjs takeShot) where recFile reads: E143's equals the values
-    // H-SHOTALLOC uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // H-SHOTALLOC uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_shot, TAKE_SHOT_FOUND[code]), `${code}: take_shot ${hx(placed?.take_shot ?? placed)}, found ${hx(TAKE_SHOT_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the allocation's kind for the setting's value made 2
     // (0x5040f47d: mov 1,d0 -> mov 2,d0), with the lookup testing the entry's bit 2 (0x503afc54: btst 4,d1 -> btst
@@ -1361,7 +1422,7 @@ export function factsTests() {
       ok(kind === true && look === true && free === true, `takeShot: another kind for the setting's value, a lookup by another bit and the free handing on another register refused: ${kind}, ${look}, ${free}`);
     }
     // TAKE's own fills (take_fills, src/fw/facts.mjs takeFills) where recFile reads: E143's equals the values
-    // H-TAKEFILLS uses there; E146's and E147's as found (docs/hle-gaps.md 4.3.13)
+    // H-TAKEFILLS uses there; E146's and E147's as found (docs/hle-gaps/4.3.md 4.3.13)
     if (code === 'E143' || PORTS[code]) ok(same(placed?.take_fills, TAKE_FILLS_FOUND[code]), `${code}: take_fills ${hx(placed?.take_fills ?? placed)}, found ${hx(TAKE_FILLS_FOUND[code] ?? 'none')}`);
     // and refuses a form it does not know: E143's image with the frame count's step made a decrement (0x503b23e9:
     // inc d1 -> inc d0), with Standby's entry taking its block by d0 (0x503b09e2: mov d1,a1 -> mov d0,a1) and with
@@ -1383,6 +1444,13 @@ export function factsTests() {
       const lens = refused(0x503bd155, 0xf0, /does not read the settings 22257, 22289, 22305 in order/);
       const third = refused(0x503bd48f, 0xa0, /does not call the EXIF set 0x5042992d once/);
       ok(af === true && lens === true && third === true, `takeFills: takepic not calling the AF fill, the lens fill on another setting and the third fill past the EXIF set refused: ${af}, ${lens}, ${third}`);
+      // the strobe request opening with the packet in d2 (0x503b8127: mov a1,d3 -> mov a1,d2), the decision's status
+      // kept as a byte (0x503b8140: movhu d0,(d16,a2) 0x72 -> 0x52, movbu) and the property table's fill on 123
+      // rows (0x501c20c8: cmp 122,d2 -> cmp 123,d2)
+      const req = refused(0x503b8127, 0xd6, /does not open with its exposure request's setup/);
+      const kept = refused(0x503b8140, 0x52, /does not build, decide and keep the status/);
+      const props = refused(0x501c20c8, 0x7b, /no fill of the strobe module's property table 0x60350410 \(122 rows\)/);
+      ok(req === true && kept === true && props === true, `takeFills: the strobe request on another register, its status kept as a byte and the property fill on another count refused: ${req}, ${kept}, ${props}`);
     }
     // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
     // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)
@@ -1461,7 +1529,7 @@ export function factsTests() {
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
     // the card slots' detect states (cardDetect)
     ok(same([got.card?.detect?.table, got.card?.detect?.drives], DETECT_FOUND[code]), `${code}: card detect ${hx(got.card?.detect)}, found ${hx(DETECT_FOUND[code])}`);
-    // the second card slot (cardSlots): E143's and E146's, none elsewhere
+    // the second card slot (cardSlots): E143's, E146's, E139's, E134's and E125's, none elsewhere
     ok(same(got.card?.slots ?? null, SLOTS_FOUND[code] ?? null), `${code}: the second card slot ${hx(got.card?.slots ?? null)}, found ${hx(SLOTS_FOUND[code] ?? null)}`);
     // the card's file system seams (fileSystem): the fields found by reading each body's code
     const sf = STORAGE_FOUND[code];
@@ -1489,6 +1557,10 @@ export function factsTests() {
     if (placed?.store?.db_save !== undefined && PORTS[code]) ok(PORTS[code][0x503C5537] === placed.store.db_save, `${code}: A() of the DB init's flash save return ${hx(PORTS[code][0x503C5537])}, the rule's ${hx(placed.store.db_save)}`);
     if (TOUCH_ARGS_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_args, TOUCH_ARGS_FOUND[code]), `${code}: touch_args ${hx(placed?.touch_args ?? placed)}, found ${hx(TOUCH_ARGS_FOUND[code])}`);
     if (GUI_FOUND[code]) ok(same(got.gui, GUI_FOUND[code]), `${code}: gui ${hx(got.gui ?? got)}, found ${hx(GUI_FOUND[code])}`);
+    if (MM_BANK0_FOUND[code]) {
+      let mm; try { mm = mmBank0(img); } catch (e) { mm = e.message; }
+      ok(same(mm, MM_BANK0_FOUND[code]) && got.board?.dram_size === 512 << 20, `${code}: MM's bank 0 ${hx(mm)}, found ${hx(MM_BANK0_FOUND[code])}; dram_size ${hx(got.board?.dram_size)}, want 512 MiB`);
+    }
     if (Object.hasOwn(TOUCH_INT_FOUND, code)) ok(same(got.touch_int, TOUCH_INT_FOUND[code]), `${code}: touch_int ${hx(got.touch_int ?? got)}, found ${hx(TOUCH_INT_FOUND[code] ?? 'none')}`);
     if (RECVIEW_FOUND[code]) ok(same(got.recview, RECVIEW_FOUND[code]), `${code}: recview ${hx(got.recview ?? got)}, found ${hx(RECVIEW_FOUND[code])}`);
     for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);

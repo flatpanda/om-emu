@@ -62,12 +62,16 @@ export const FAMILIES = {
     // level is the sub-CPU's message line, PC2 of the sub-CPU (PER_SCPU's IRQ 320 callback 0x5005c8d9 acts on event
     // bit 3 with port bit 3 low and polls the sub-CPU then, D; the sub-CPU drives PC2 low to post a message,
     // 0x8012c42, and high when it answers the poll, 0x8012e9e, D; docs/om1-scpu-spec.md 3.1)
-    // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
+    // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps/4.7.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
     // (the wake / reset cause word, I) with its commit; 0x5004dffc writes 1 << n to 0x9c and 0x5004e02c reads its bit
     // n, and 0x5004dfd0 writes 127 there and commits, the sequence's last write (its meaning, a power cut, is I); no
-    // reader of 0x90 runs in the lab
+    // reader of 0x90 runs in the lab (its reader is the SCPU init's wake factor, 0x5004dda6..0x5004de3b, D: not run,
+    // src/lab/play.mjs S-WAKEFACTOR). Storage 0x04: a key code word UI_IN keeps there: its key step reads it
+    // (0x5004e501, from 0x5014e4d6, where a boot key 0x01000003 becomes 0x01000006 when the word holds 0x01000006) and
+    // clears it (0x5004e4f3(0), 0x5014e4f4), and its key list copy writes 0x01000006 there (0x5014e864), D; it starts
+    // at 0 (I: what the word holds across a power-off is not read). E146's and E147's readers are not read
     scpu: {
-      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c], [0x90, 0x90], [0x9c, 0x9c]],
+      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x04], [0x08, 0x3c], [0x90, 0x90], [0x9c, 0x9c]],
       events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320, message: 3 },
     },
     // The MN's GIO pins of the sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs; docs/om1-scpu-spec.md 3.1):
@@ -83,15 +87,18 @@ export const FAMILIES = {
       request: { pin: 103, word: 0x9B881BC0 },
       reset: { pin: 107, word: 0x9B881CC0 },
     },
-    // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps.md 4.9): the
+    // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps/4.9.md 4.9): the
     // transmitter's byte registers (the driver's register reader 0x501d55d8 and writer 0x501d5645), the writer's lane
     // word, IRQ 239 (the HDMI init 0x501d15e8 attaches 0x501d508a at level 5); the hot-plug pin 77's level word and
     // bit (the pin read 0x50002a35: bit 4 of the word (0x60025ff8)[77]) and its GIO record (slot 124 of the slot table
     // 0x60026788, record 0x600268f4 + 32 x 124): its group's status and enable words, the pin's type-0 bit and the
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
+    // UI_IN's GIO key pins (src/dev/gio.mjs, src/lab/play.mjs H-GIOKEYS): read for E143 only, given there (src/fw/models.mjs
+    // board); E146's and E147's key inits are not read
+    gio_keys: UNKNOWN,
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
     // the audio serial port and the SCA (src/dev/audio.mjs, built only with the machine's audio option;
-    // docs/hle-gaps.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
+    // docs/hle-gaps/4.5.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
     // (0x50aa9515 attaches 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e
     // attaches 0x50aab51d at level 5). E143's (D); E146's and E147's audio drivers are not read
     audio: { port: 0x9B700000, irq: 43, sca: 0x9BB00000, sca_irq: 45 },
@@ -118,22 +125,22 @@ export const FAMILIES = {
     // board, their drivers not read; passive until a start
     ems1: { base: 0x9BD80000, irq: 276 },
     // the imgpro unit at 0x9c600000, the image library's unit 7 (src/dev/imgpro.mjs, S-IMGPRO; docs/om1-imgpro-spec.md,
-    // docs/hle-gaps.md 4.3.1): its registers (every operand of its driver 0x5050a6b2..0x5050b547 and of the handler
+    // docs/hle-gaps/4.3.md 4.3.1): its registers (every operand of its driver 0x5050a6b2..0x5050b547 and of the handler
     // 0x5048bfe3: +0x000..+0x3b0) and IRQ 300, which the library's init attaches with that handler at level 4 on CPUs
     // 0..3 (0x5048c728..0x5048c799) and each request's go enables on the calling core (0x5050a8bd). E143's (D); E146
     // and E147 sit on the same board, their drivers not read; passive until a start
     imgpro: { base: 0x9C600000, irq: 300 },
-    // the image library's pipeline block and the JPEG codec (src/dev/imgpipe.mjs, S-IMGPIPE; docs/hle-gaps.md 4.8.13):
+    // the image library's pipeline block and the JPEG codec (src/dev/imgpipe.mjs, S-IMGPIPE; docs/hle-gaps/4.8.md 4.8.13):
     // the words the play module's view decode writes (the units' set-up 0x5048134d, the go 0x504814d2, the end
     // 0x504814ef, the codec's start 0x5050a2ba) and IRQ 288, which the library's init attaches with the handler
     // 0x5048bb88 at level 5 on CPUs 0..3 (0x5048c3a0..0x5048c40a). E143's (D); E146 and E147 sit on the same board,
     // their drivers not read; passive until a start
     imgpipe: { base: 0x9C200000, codec: 0x99900000, irq: 288 },
-    // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
+    // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps/4.4.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
     // (0x502c0e99, 0x502c0e9f; the unit's extent from FCS's operands, 0x50957687..0x5095799e), and the mechanism unit
-    // (0x9b900000, 271 registers, docs/hle-gaps.md section 7), whose power-on the lens attach calls (0x5010b957,
+    // (0x9b900000, 271 registers, docs/hle-gaps/7.md section 7), whose power-on the lens attach calls (0x5010b957,
     // 0x5010b978, 0x5010b9bb, 0x5010b9e8, 0x5010ba15); the lens-detect pin 172 (read by 0x502c0b0a, its word
     // (0x60025ff8)[172], the level in bit 4 as every GIO pin's, 0x50002a35). E143's (D); E146 and E147 sit on the
     // same board, their lens drivers not read (X: a scan of their main blocks finds the controller's base 7 and 9 times
@@ -148,13 +155,23 @@ export const FAMILIES = {
     // 0x50050279 attaches (53 and 54 on CPUs 0..3 through 0x50053fcd, 55..58 on the calling core through 0x50053f76;
     // the words 0x9b880044..0x9b880058, D; src/fw/facts.mjs deferredCalls reads the same on E143, E146 and E147, X)
     dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] },
+    // the A/D converter (src/dev/adc.mjs; docs/hle-gaps/4.7.md 4.7.20): its registers (the A/D driver's single-channel
+    // path 0x5004cce0..0x5004d3a0: +0x00..+0x74) and IRQ 319, which the driver's init 0x5004d3c3 attaches with the
+    // handler 0x5004d09c (0x5004ccc7). E143's (D); E146's and E147's inits attach IRQ 319 the same way (0x5004e749,
+    // 0x5004e4f5, D), their drivers' register paths not read; passive until a conversion starts
+    adc: { base: 0x98C00000, irq: 319 },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
     vector_page: 0x60030000,
-    // the DRAM's size (src/machine.mjs): 384 MiB, where the GUI's first OSD bank ends (0xb8000000, src/fw/facts.mjs
-    // dramSize, which reads the same on E146 and E147)
-    dram_size: 384 << 20,
+    // the DRAM's size (src/machine.mjs, the bus DRAM of src/dev/bus.mjs): 512 MiB, bus 0xa0000000 to the end of the
+    // window segment holding MM's bank 0 (0xb8000000..0xc0000000; src/fw/facts.mjs mmDramSize by the rule dram_rule
+    // names, which reads the same on E146 and E147). Until 2026-11-23 384 MiB, where the GUI's first OSD bank ends
+    // (dramSize), which left MM's bank 0 and the play module's buffer unbacked (docs/hle-gaps/4.3.md 4.3.14, 4.8.md 4.8.18)
+    dram_size: 512 << 20,
+    // which rule of src/fw/facts.mjs reads the bodies' dram_size: 'mm-bank0' (mmBank0, mmDramSize); the other families
+    // none ('gui': dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'mm-bank0',
     // the flash library's run-time window: null (E143 runs it from its image) or {base, size, image: [file offset,
     // length, at]} (RAM holding that part of the main block at base + at)
     library: null,
@@ -249,7 +266,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
     // the sub-CPU link's pins: not read for the family; E139 and E134, the bodies that run PER_SCPU, give theirs (pins
     // 77 / 76 / 57 in the family's GIO block, src/fw/models.mjs)
-    scpu_link: UNKNOWN,
+    scpu_link: UNKNOWN, gio_keys: UNKNOWN,
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
     hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
@@ -263,6 +280,8 @@ export const FAMILIES = {
     // so the region is the family's (I: no session has run with it on them)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
+    // which rule of src/fw/facts.mjs reads dram_size: 'gui' (dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'gui',
     // the stub's pages (as E143's), observed in E144 runs (X) and assumed for the family (I): the clock/reset block,
     // the block the display open writes 0x9a2000xx, the display interface 0x9b800000/0x9b801000 (TFT/EVF device
     // inits), the block 0x98f20000 the measurement 0x50003719 polls (its bit 1 of +0x40, 50 ms steps up to 700 ms),
@@ -272,8 +291,11 @@ export const FAMILIES = {
     // the encoder block 0x9bd00000, whose counter registers +0x00/+0x04 and +0x80/+0x84 E125's dial init clears for
     // each dial it sets up (0x500fedd1 -> 0x5010329c, the stores at 0x501032d8..0x501032f2; E139's encoder init
     // stores 0x9bd00000 at 0x50113c2b and E144's encoder position read reads +0x38/+0xb8, D), which E125's bring-up
-    // reaches (X) and the others' do not; a body that needs more gives its board.stub_pages with its evidence
-    stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000],
+    // reaches (X) and the others' do not; and two serial channels' blocks, 0x98200000 and 0x98600000, which the
+    // channels reach once PER_SIO's channel map is set at the play bring-up (H-SIOMAP, src/lab/play.mjs
+    // sio_map_bring_up): E144's camera application start reads 0x98200014 and E145's writes 0x98600028, each a denied
+    // access first (X, 2026-11-22); a body that needs more gives its board.stub_pages with its evidence
+    stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x98200000, 0x98600000],
     stub_presets: [],
     // the display waits' stand-ins (see FAMILIES.E143): E134's TFT open blocked natively in both (X)
     display_wait_stand_ins: true,
@@ -316,14 +338,24 @@ export const FAMILIES = {
     // us free-run channel 9, reload 0x3fffffff (0x500030af), read at 0x50001ecf. The tick init the boot calls for CPU 0
     // (0x5004d779) starts channel 1 at reload 999 on IRQ 58 (CPUs 1 and 2 start channels 2 and 3 from their own
     // inits, 0x5004d806, 0x5004d863). The software-timer init 0x50065e50 starts no channel (X: after it only channels 1
-    // and 9 run): its timers count in 2 ms units (0x50066238) on a second timer unit's channel 0 (0x9b800010, which the
-    // lab does not model: docs/model-survey.md finding 155), so soft_tick is null. The
+    // and 9 run): its timers count in 2 ms units (0x50066238) on a second timer unit's channel 0 (0x9b800010: timer2
+    // below, docs/model-survey.md finding 155), so soft_tick, a channel of this block, is null. The
     // hardware-timer init 0x5006ed9b walks 10 entries (the table 0x6012fa78) and its guard functions take an entry
     // index below 10 (`cmp 10,d2`, 0x5006eddb); hw_channels is the range the lab checks those indices against
     timer: {
       channels: 10, reload: 0x28, counter: 0x50, us_channel: 9, us_reload: 0x3fffffff, prescaler: 191,
       groups: [[1, 8, 0x78, 0x7c, null]], irq_base: 57, status_readable: false,
       kernel_ticks: [1], soft_tick: null, hw_channels: [0, 10], hw_entries: 10,
+    },
+    // the second timer unit in the stub page 0x9b800000 (src/dev/timer2.mjs, its evidence there; E122's driver tables
+    // 0x600267b0 and 0x6012d240, the same words on E118 and E120, X): channels 0..9 at ctl 0x10 + 12 n (reload +4),
+    // their status bits in +0xc4 and IE bits in +0xdc, on IRQ 24; clock 19, which the driver programs them in, from the
+    // clock block (32768 Hz / ((0x98800004 + 1) x 2) while 0x9880004c is 0, else 24 MHz / ((0x98800008 + 1) x 2), the
+    // clock query 0x5006e25d). The display interface's words 0x9b800000/0x9b800004, channels 10..14 (+0x88..+0xc0,
+    // their words +0xc8..+0xd8 and +0xe0..+0xf0) and the deferred-call triggers +0xf4..+0x100 stay outside it
+    timer2: {
+      base: 0x9B800000, ctl: 0x10, stride: 12, channels: 10, status: 0xC4, ie: 0xDC, irq: 24,
+      clock: { select: 0x9880004C, slow: [32768, 0x98800004], fast: [24000000, 0x98800008] },
     },
     // the VSC (src/dev/vsc.mjs kind 3): two channels of 0x2000 (channel 1's INTEN1/INTST1 at 0x9c00200c/0x9c002014, its
     // ISR's status read 0x5030a80e); no name table in the image (no "INTEN1" string, X), so the register file is the
@@ -366,7 +398,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
-    scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
+    scpu_link: UNKNOWN, gio_keys: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
     imgpro: UNKNOWN, imgpipe: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
@@ -374,6 +406,8 @@ export const FAMILIES = {
     // and E122 load no more of than E143 and E144 do (a few stray `fc xx imm32` matches per 64 KiB, X: a census)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
+    // which rule of src/fw/facts.mjs reads dram_size: 'gui' (dramSize, the end of the GUI's first OSD bank)
+    dram_rule: 'gui',
     // the stub's pages, as E122's start writes and reads them (X: each one a denied access first): the GIO pin words
     // 0x9b800000 / 0x9b801000 and the pull / mux block 0x99e20000 of the early driver init's pin configuration
     // (H-DRVINIT, 0x50001be9..0x50001d38, D), the clock block 0x98800000 (the clock query 0x5006e243 reads 0x9880004c),

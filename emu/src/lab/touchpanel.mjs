@@ -5,7 +5,7 @@
 // - 0x70, the E143 family's: the data at register 2 (d1), 11 bytes as the driver's report parser takes them: the
 //   number of touches, event << 6 | x >> 8, x, id << 4 | y >> 8, y, then 0, 0, 0xcf, 0xff, 0xff, 0xff, the event 0
 //   down, 1 up, 2 contact (move), y counted from the panel's bottom edge (as before: E143's TP read 0x501e4f2a from
-//   0x501e4fd9; docs/hle-gaps.md 4.4.2);
+//   0x501e4fd9; docs/hle-gaps/4.4.md 4.4.2);
 // - 0x48, the E144 family's and the E118 family's: 16-bit register addresses, the high byte in d1 and the low in a1
 //   (src/fw/facts.mjs touchArgs read_addr). After the INT (E144's touch task, its flag's bit 1 -> 0x5018af22 -> the
 //   report read 0x5018b4d7, D) the driver reads 10 bytes at 0x0000 and takes byte 0's low nibble as the number of

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // The accelerometer, the level gauge and Level Adjust in a play session (src/lab/acc.mjs, src/fw/models.mjs acc;
-// docs/hle-gaps.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 also gives the fact):
+// docs/hle-gaps/4.7.md 4.7.3), on the model of OM_EMU_MODEL (E143 by default; E146 and E147 also give the fact):
 //   L1  the probe ran natively through S-ACCREG: open (6, 107), the WHO_AM_I read answered with the value the probe
 //       wants, the two set-up writes, close; the probe's success halfword is 1; ACC_MAIN waits in its cycle; the
 //       stand-ins are listed
 //   L2  samples reach the cache: over 1 s of lab time (from 500 ms after the start) the counter moves once per ACC_MAIN
-//       cycle (11 to 13: A-ACC-2's 80 ms, some cycles stretched), the raw cache (the firmware's raw accessor) is the
-//       level sample, the firmware's pose-0 reference (0, -16384, 0), and the corrected cache equals it (blank factory
-//       data: the correction's gate is closed, D)
+//       cycle (11 to 13: A-ACC-2's 80 ms, some cycles stretched; 28 to 34 at E147's 30 ms), the raw cache (the
+//       firmware's raw accessor) is the level sample, the firmware's pose-0 reference (0, -16384, 0), and the
+//       corrected cache equals it (blank factory data: the correction's gate is closed, D)
 //   L3  the gauge follows a tilt: the gauge's getter (natively) reads the horizon within 0.2 degree of the roll and
 //       the vertical within 0.2 degree of pitch / 3, both valid, body orientation 0, for five tilts; and the TFT
 //       composite of the shooting screen's gauge (INFO) is green on the arc and the bar when level and loses the
@@ -15,20 +15,21 @@
 //   L4  Level Adjust's Adjust runs to completion: Setup page 6 row 3, Adjust, OK; within 2 s of lab time the GUI is at
 //       its message receive again, back on the shooting screen, and the store's user pose 0 holds the sample of the
 //       tilt it was adjusted at (x, y, z) and 250 (25.0 degC)
-// With --rotate on (PER_ROTATE natively, H-ROTINIT; run by --only, not by default):
+// With PER_ROTATE natively (H-ROTINIT; --rotate auto, the play default since 2026-11-23, which every group here
+// runs with; R1 and R2 run by --only, not by default):
 //   R1  PER_ROTATE's orientation with its own hysteresis: the session starts reporting index 1 (EXIF code 1); turned
 //       about the lens axis the orientation goes portrait past 50 degrees and comes back below 40 (48 and 42 hold the
 //       last one), either way round (EXIF 8 and 6), upside down at 180 (EXIF 3); pitched, the lens down past 60
 //       degrees and back below 50 (orientation 5, the reported index kept from portrait but not from upside down);
 //       one event 0x4020310 for each change of the reported index and none otherwise; the gauge's getter reads the
-//       orientation as its body and, in portrait, the roll from upright as its horizon. Without --rotate a tilt of 50
-//       degrees is refused and the orientation is not reported; with it, 181 is
+//       orientation as its body and, in portrait, the roll from upright as its horizon. With --rotate off a tilt of 50
+//       degrees is refused and the orientation is not reported; with PER_ROTATE, 181 is
 //   R2  the GUI follows: on the shooting screen with INFO's gauge, rolled 90 degrees the gauge is drawn for portrait
 //       (its arc at the left, its bar at the bottom: none of the landscape bar's green), rolled -90 the other way (the
 //       bar at the top, none of the landscape arc's green), upside down as level, rolled 95 the arc not green; level
 //       again as before
 // --mutants runs L2..L4 under the stand-in's mutants (acc-still: no sample is delivered; tilt-ignored: the tilt is not
-// applied), with --only R1,R2 those groups under no-rotinit (--rotate on's range with PER_ROTATE not started), and
+// applied), with --only R1,R2 those groups under no-rotinit (PER_ROTATE's range with PER_ROTATE not started), and
 // passes when each is caught.
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
 import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
@@ -46,15 +47,19 @@ import { show } from '../src/util/show.mjs';
 // the readers the check calls natively (D): the raw and the corrected cache's accessors ({x, y, z} to a0, the counter
 // in d0); the data-object read 0x500417da (E143) and the user pose kinds x, y, z, temperature (0x4eba.. , index =
 // pose) that Level Adjust's Adjust writes
-const READERS = { E143: { raw: 0x50049771, corrected: 0x50049795 }, E146: { raw: 0x5004A462, corrected: 0x5004A486 } };
+const READERS = { E143: { raw: 0x50049771, corrected: 0x50049795 }, E146: { raw: 0x5004A462, corrected: 0x5004A486 },
+  E147: { raw: 0x50049F09, corrected: 0x50049F2D } };
 const STORE_READ = A(0x500417DA), USER_POSE = [0x4EBA, 0x4ECA, 0x4EDA, 0x4EEA];
 // the gauge on the TFT's shooting screen (900 x 600, INFO's first page, X): the horizon's arc and the vertical's bar
 const ARC = [370, 395, 530, 452], BAR = [583, 228, 622, 370];
+// L2's counter moves in 1 s by ACC_MAIN's period: 80 ms 11 to 13 (below); E147's 30 ms (D) at most 34, and 28 with up
+// to three cycles stretched as on E143 (X: 31 on E147 with the native lens)
+const COUNTS = { 80: [11, 13], 30: [28, 34] };
 const TILTS = [[5, 0], [-3, 0], [0, 6], [2, -9], [-4.5, 7.5]];
 // R2's boxes (X, E143's TFT): the gauge for portrait with its arc at the left and its bar at the bottom (EXIF 8), and
 // the other way round's bar at the top (EXIF 6)
 const ARC_LEFT = [262, 226, 310, 372], BAR_TOP = [380, 168, 520, 200];
-// R1's steps, from level: [roll, pitch, the orientation word 0..5, the getter's EXIF code] (D, docs/hle-gaps.md 4.7.3)
+// R1's steps, from level: [roll, pitch, the orientation word 0..5, the getter's EXIF code] (D, docs/hle-gaps/4.7.md 4.7.3)
 const ROTATIONS = [
   [48, 0, 0, 1], [52, 0, 3, 8], [42, 0, 3, 8], [38, 0, 0, 1],          // portrait past 50 degrees, landscape below 40
   [-48, 0, 0, 1], [-52, 0, 1, 6], [-42, 0, 1, 6], [-38, 0, 0, 1],      // the other way round
@@ -126,13 +131,14 @@ function l2(mutant = null) {
     // after it, and the application's work on it held CPU 0 through one 129 ms ACC_MAIN cycle, 11 in the second (X).
     // 11 to 13 cycles a second: an 80 ms cycle (A-ACC-2) that other tasks' work stretches to about 100 ms comes a few
     // times a second with either lens; on E146 with the native lens three of them fall in the first second after the
-    // shooting screen, while the application shows the lens's focal length (X: 11 there, 12 with S-LENS; docs/hle-gaps.md
+    // shooting screen, while the application shows the lens's focal length (X: 11 there, 12 with S-LENS; docs/hle-gaps/4.4.md
     // 4.4.3)
     s.wait(500);
     const [, c0] = cache(lab, 'raw');
     s.wait(1000);
     const [raw, c1] = cache(lab, 'raw'), [corrected, c2] = cache(lab, 'corrected');
-    g.true('the counter moves once per ACC_MAIN cycle over 1 s', c1 - c0 >= 11 && c1 - c0 <= 13, `${c0} -> ${c1}`);
+    const [lo, hi] = COUNTS[MODEL_INFO.acc.cycle_ms ?? 80];
+    g.true(`the counter moves once per ACC_MAIN cycle over 1 s (${lo} to ${hi})`, c1 - c0 >= lo && c1 - c0 <= hi, `${c0} -> ${c1}`);
     g.eq('the raw cache is the level sample', raw, [0, -16384, 0]);
     g.eq('the corrected cache equals the raw one (blank factory data)', [corrected, c2], [raw, c1]);
     g.eq('the level sample is the pose-0 reference', s.acc.level, [0, -16384, 0]);
@@ -160,9 +166,10 @@ function l3(mutant = null) {
     g.true('pitch 9: the bar is not green, the arc is', pitched[1] === 0 && pitched[0] > 200, show(pitched));
     tilt(pl, 0, 0);
     g.eq('level again: the arc and the bar are green as before', gauge_pixels(s), level);
+    // the range by the session's PER_ROTATE (on by default on these bodies; R1 checks A-ACC-2's 45 with --rotate off)
     let refused = null;
-    try { tilt(pl, 50, 0); } catch (e) { refused = e.message; }
-    g.true('a tilt beyond 45 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
+    try { tilt(pl, s.acc.rotate ? 181 : 50, 0); } catch (e) { refused = e.message; }
+    g.true(`a tilt beyond the range is refused (${s.acc.rotate ? 'roll within 180' : 'A-ACC-2'})`, refused !== null && (s.acc.rotate ? /within 180/ : /A-ACC-2/).test(refused), show(refused));
   });
   return g;
 }
@@ -191,10 +198,10 @@ function r1(mutant = null) {
   const g = new Group('R1 rotation');
   let refused = null;
   withPlayer(null, (pl, s) => {
-    g.true('without --rotate: the orientation is not reported and H-ROTINIT not listed', s.acc.status().rotation === undefined && !pl.stand_ins_in_use().includes('H-ROTINIT'));
+    g.true('--rotate off: the orientation is not reported and H-ROTINIT not listed', s.acc.status().rotation === undefined && !pl.stand_ins_in_use().includes('H-ROTINIT'));
     try { tilt(pl, 50, 0); } catch (e) { refused = e.message; }
-    g.true('without --rotate: a tilt of 50 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
-  });
+    g.true('--rotate off: a tilt of 50 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
+  }, { rotate: 'off' });
   withPlayer(mutant, (pl, s, lab) => {
     const r = MODEL_INFO.acc.rotate, events = [];
     lab.observe(r.publish, (l, regs) => { if ((regs.d0 >>> 0) === r.event) events.push(l.sim.u32(r.index)); }, 'obs-rotate-event');
@@ -216,7 +223,7 @@ function r1(mutant = null) {
     refused = null;
     try { tilt(pl, 181, 0); } catch (e) { refused = e.message; }
     g.true('a roll of 181 degrees is refused', refused !== null && /within 180/.test(refused), show(refused));
-  }, { rotate: 'on' });
+  });
   return g;
 }
 function r2(mutant = null) {
@@ -240,7 +247,7 @@ function r2(mutant = null) {
     g.true('roll 95: the left arc not green', p95[2] === 0 && p95[1] === 0, show(p95));
     tilt(pl, 0, 0);
     g.eq('level again: as before', gauge_pixels(s, boxes), level);
-  }, { rotate: 'on' });
+  });
   return g;
 }
 

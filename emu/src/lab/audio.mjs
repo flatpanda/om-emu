@@ -13,7 +13,7 @@
 // lab time), and every other event at its own lab time, overlapping where it falls (S2's close click comes 1/125 s
 // after its open click, inside the 30 ms the open click lasts).
 //
-// The interface a native source uses (the firmware's own sound, docs/hle-gaps.md 4.5: for example 48 kHz stereo PCM16
+// The interface a native source uses (the firmware's own sound, docs/hle-gaps/4.5.md 4.5: for example 48 kHz stereo PCM16
 // tapped where the firmware copies a block of its output to the audio buffer) is the one S-SHUTTERSND uses:
 //   session.audio?.emit({ t_lab_ns: lab.lab_time(), rate: 48000, channels: 2, samples, source: 'native' })
 // with samples a copy (the event keeps the array: the guest memory it came from changes). session.audio is null when

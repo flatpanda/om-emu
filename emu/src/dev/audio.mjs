@@ -1,5 +1,5 @@
 // OM-1 audio serial port (board audio.port, IRQ audio.irq) and the SCA register page (board audio.sca, IRQ
-// audio.sca_irq); docs/hle-gaps.md 4.5, where the firmware addresses cited here are listed. Built only when the
+// audio.sca_irq); docs/hle-gaps/4.5.md 4.5, where the firmware addresses cited here are listed. Built only when the
 // machine's audio option is on (src/machine.mjs): without it these addresses stay the lab stub's, as before.
 //
 // The port is the audio driver's serial (I2S-like) port: double-buffered DMA from memory to the sound IC, TX (play)
@@ -39,7 +39,7 @@
 // interrupt of the slot before it finds TX disabled and the ISR stops (counted apart; I). The driver's direct play
 // (0x62af27d6 = 1) arms slot B with address 0 and length 0 beside the whole sound in slot A (0x50aad250, the TX open's
 // 0xc00, D); the driver's one TX disable, the period callback's stop, is not reached on that path (the play slot's
-// byte +133 stays -1, docs/hle-gaps.md 4.5, D), and command_play_end then waits for the TX done callback 0x50aad44b,
+// byte +133 stays -1, docs/hle-gaps/4.5.md 4.5, D), and command_play_end then waits for the TX done callback 0x50aad44b,
 // which only the ISR's stop calls (0x50aac83a..0x50aac850, 0x50aa923c..0x50aa9265, D): so the port ends that TX
 // itself (I, from that wait; X: with it the AF beep's release completes; that the real port raises an interrupt for the
 // empty slot instead is not excluded, ?). Clearing TX run lets the slot playing play to its end, with no interrupt

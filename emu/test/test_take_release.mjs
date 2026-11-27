@@ -1,4 +1,4 @@
-// The release route to TAKE_EXEC (src/lab/take.mjs rounds 2 to 4, --take probe; docs/hle-gaps.md 4.1.7, 4.1.8, 4.2.3),
+// The release route to TAKE_EXEC (src/lab/take.mjs rounds 2 to 4, --take probe; docs/hle-gaps/4.1.md 4.1.7, 4.1.8, docs/hle-gaps/4.2.md 4.2.3),
 // E143:
 //   releaseSession  two play sessions. Under control camapp 3 without the probe the sequence parts take S1 (event
 //                   826, Trig1Release, in phase 101) but refuse it at their S1 guard (0x50c8d4a4 -> 0x50bcdef7):
@@ -15,16 +15,16 @@
 //                   for it on EXP_MOVIE_POST. Since round 4 the session runs with --cpu2 native, so H-EXPINIT brings
 //                   EXP up (and H-CAMINIT cam.c's init): EXP_MOVIE takes the request natively, gives the camera driver
 //                   its requests 8 and 7 and waits on its flag 21 for bit 0x1000, which EXP's frame callback for the
-//                   event 0x300 sets and nothing in the lab fires (docs/hle-gaps.md 4.2.3); meanwhile RdyFcsRdy3 asks
+//                   event 0x300 sets and nothing in the lab fires (docs/hle-gaps/4.2.md 4.2.3); meanwhile RdyFcsRdy3 asks
 //                   TAKE_FOCUS 0x400 (RELEASE_IDLE_START, replied token 4), and TAKE_MAIN waits for TAKE_EXPOSE's
 //                   token 15 (pending bits 0x200). S2 (event 824) reaches no TAKE task; its DISPLAY commands go in
-//                   the DISPLAY task's order (docs/hle-gaps.md 4.1.9): the GUI's command 17, sent while the
+//                   the DISPLAY task's order (docs/hle-gaps/4.1.md 4.1.9): the GUI's command 17, sent while the
 //                   application's synchronous command 15 waits, is kept and run after it, then the display manager's
 //                   two command 18 requests. REC_FILE runs natively on S2 and the sequence goes to phase 106. The
 //                   power manager's sub-CPU command 0x14, which S1 brings at the manager's next cyclic tick with or
-//                   without S2 (docs/hle-gaps.md 4.7.6), is taken by S-SCPUDEV as the write it is, and the idle
+//                   without S2 (docs/hle-gaps/4.7.md 4.7.6), is taken by S-SCPUDEV as the write it is, and the idle
 //                   goes on: no lab stop
-//   camFeSession    round 5 (docs/hle-gaps.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below);
+//   camFeSession    round 5 (docs/hle-gaps/4.2.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below);
 //                   round 6 (4.2.6): cam.c's request 6, the sensor's power-on, stays with S-TAKECAM
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
@@ -98,7 +98,7 @@ export async function releaseSession() {
         ok(JSON.stringify(seen1) === JSON.stringify(['event 826 in phase 101', 'S1 guard 0']),
           `${tag}: S1 is event 826 in phase 101, refused at the S1 guard, no take request: ${JSON.stringify(seen1)}`);
       } else {
-        ok(!seen1.length && !s1.length, `${tag}: S1 reaches neither the sequence nor TAKE (${JSON.stringify(seen1)}, ${JSON.stringify(s1)})`);
+        ok(!seen1.length && JSON.stringify(s1) === JSON.stringify(probe ? [S1_KEY('Idle')] : []), `${tag}: S1 reaches neither the sequence nor TAKE but for its key callback's token 75 (${JSON.stringify(seen1)}, ${JSON.stringify(s1)})`);
       }
       if (probe) {
         const count = lab.call(QUEUE_COUNT, { d0: TAKE_EXEC }, null, null, 200000).d0;
@@ -121,7 +121,7 @@ export async function releaseSession() {
   return { checks, bad };
 }
 
-// Round 3 (H-TAKEFOCUS; docs/hle-gaps.md 4.1.8). TAKE_FOCUS's context (0xa33d9564: +5 its "focus" field, object
+// Round 3 (H-TAKEFOCUS; docs/hle-gaps/4.1.md 4.1.8). TAKE_FOCUS's context (0xa33d9564: +5 its "focus" field, object
 // 0xc021 through 0x509b1bc5(14); +12 its state) and ready byte (0xa33d955c, its module init sets it); TAKE_MAIN's four
 // RdyFcsRdy1 callbacks by entry and the token each posts to its mailbox (0x502ce7b7)
 const FOCUS_CTX = 0xA33D9564, FOCUS_READY = 0xA33D955C, FOCUS_STOP = 0x0F803003;
@@ -130,7 +130,11 @@ const CALLBACKS = { 0x503C2BCD: 5, 0x503C2BAC: 0, 0x503C2BDD: 2, 0x503C2BBB: 3 }
 export const START_FOCUS = ['TAKE_FUNC -> TAKE_FOCUS 0 sync (native)', 'TAKE_FOCUS <= 0', 'TAKE_FOCUS -> reply',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply'];
-export const S1_FOCUS = ['TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)', 'TAKE_MAIN -> FACE_FD 15 sync (answered)',
+// S1's key callback (H-UIININIT, docs/hle-gaps/4.7.md 4.7.17): UI_IN's key dispatch (0x5014c5e9) calls the callback
+// TAKE's init registers for key 0x02000100 (0x503c2737 -> 0x5014c420), 0x503c4104, which posts token 75 to TAKE_MAIN's
+// mailbox (0x503c411b) while 0x62a4cf1c is 0; TAKE_MAIN takes it and stays where it is
+export const S1_KEY = (state) => `TAKE_MAIN <= mailbox token 75 in ${state}`;
+export const S1_FOCUS = [S1_KEY('Idle'), 'TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)', 'TAKE_MAIN -> FACE_FD 15 sync (answered)',
   'TAKE_MAIN -> TAKE_FUNC 80 sync (native)', 'TAKE_FUNC <= 80', 'TAKE_FUNC -> reply',
   // RdyFcsRdy1: TAKE_FOCUS's RELEASE_READY_START, which posts tokens 5, 0, 2 and 3 to TAKE_MAIN's mailbox at once
   'TAKE_MAIN -> TAKE_FOCUS 768 (native)', 'TAKE_FOCUS <= 768',
@@ -158,11 +162,11 @@ export const S1_EXP = [...S1_FOCUS, 'TAKE_EXPOSE -> EXP_MOVIE 1289 (native)', 'T
 // 0x503ec117), the GUI's command 17 (return 0x507f66d1, task 168) while command 15 waits for the histogram's end, kept
 // by S-DISPQ from the send's own post (0x5002e411) and run when command 15's run ends, and the GUI's command 17 again;
 // the display manager's two command 18 requests (0x503eba07) after them, each with one reply to queue 6; until
-// 2026-11-10 (docs/hle-gaps.md 4.1.9) the GUI's 17 ran inside command 15's run and S2 stopped at the GUI's command 18
+// 2026-11-10 (docs/hle-gaps/4.1.md 4.1.9) the GUI's 17 ran inside command 15's run and S2 stopped at the GUI's command 18
 // post there (depth 1). The GUI's command 17 goes on about every 125 ms of the idle (S2_SENDS: the first three). Until
 // 2026-11-11 the idle after S2 stopped at the power manager's sub-CPU command 0x14 {0, 1, 0, 3, 0}, which S1 brings at
 // the manager's next cyclic tick (about 1.1 s after S1, with or without S2); S-SCPUDEV takes that write since
-// (PWR_14_FRAME, its one frame of the session after the start; docs/hle-gaps.md 4.7.6), keeping the two slots' bytes
+// (PWR_14_FRAME, its one frame of the session after the start; docs/hle-gaps/4.7.md 4.7.6), keeping the two slots' bytes
 // (S2_KEPT: the body's battery inserted, its recommend byte 3 kept as 0xff; the PBH's not inserted), and no stop
 // follows: the session rests with TAKE_MAIN in RdyFcsRdy3 and the sequence in phase 106 (S2_PHASE: from 103 within
 // 0.1 s of S2, X; phase 106's dispatcher is not read)
@@ -235,11 +239,11 @@ export async function focusSession() {
     // (the guard twice: phase 101's case for 826, 0x50c5cc94, calls the controller's vt[1306], which calls vt[111],
     // the guard, then vt[110] and, that one 0, vt[111] itself at 0x50c5cce7)
     // (round 4: S1's idle goes on past RdyFcsRdy3's entry, and the sequence takes event 794, TakeReadyFinish, in phase
-    // 102 while TAKE_MAIN still waits for TAKE_EXPOSE's token 15, docs/hle-gaps.md 4.2.3)
+    // 102 while TAKE_MAIN still waits for TAKE_EXPOSE's token 15, docs/hle-gaps/4.2.md 4.2.3)
     ok(JSON.stringify(seen) === JSON.stringify(['event 826 in phase 101', 'S1 guard 1', 'S1 guard 1', 'take API 0x20 from 0x50bc7c8e', 'event 794 in phase 102']),
       `S1 passes the S1 guard, CapTak_Take asks for the take, the sequence takes 794: ${JSON.stringify(seen)}`);
-    // (and from S1 on no lens frame but the lens state poll c1 80 the driver sends about every 100 ms, docs/hle-gaps.md
-    // 4.1.8, 4.4.2)
+    // (and from S1 on no lens frame but the lens state poll c1 80 the driver sends about every 100 ms, docs/hle-gaps/4.1.md
+    // 4.1.8, docs/hle-gaps/4.4.md 4.4.2)
     const lens = mcu ? mcu.frames.slice(f0).map(([f]) => f) : null;
     ok(JSON.stringify(calls) === JSON.stringify(['token 5 from TAKE_FOCUS', 'token 0 from TAKE_FOCUS', 'token 2 from TAKE_FOCUS', 'token 3 from TAKE_FOCUS'])
       && lens !== null && lens.every((f) => f.startsWith('c1 80 ')),
@@ -281,16 +285,16 @@ export async function focusSession() {
   return { checks, bad, notes };
 }
 
-// Round 5 (H-CAMINIT2, S-CAMFE; docs/hle-gaps.md 4.2.5): camapp 3 with --take probe, --cpu2 native and the probe's
+// Round 5 (H-CAMINIT2, S-CAMFE; docs/hle-gaps/4.2.md 4.2.5): camapp 3 with --take probe, --cpu2 native and the probe's
 // cam_fe opt-in, so cam.c's second init has run against S-CAMFE. S1 goes as in focusSession (the same record, S1_EXP,
 // and the sequence's events 826 and 794); EXP_MOVIE gives cam.c requests 8 and 7, which it now takes without an error,
 // the movie sequence keeps request 7's item (state 1, 0x62a24244) and nothing runs its frame step (0x5019981d), so
 // EXP_MOVIE still waits on flag 21 for bit 0x1000 and TAKE_MAIN in RdyFcsRdy3 for token 15; S-CAMFE takes no access
 // after the init. S2 goes as in focusSession: its DISPLAY sends the same, the power manager's 0x14 taken by S-SCPUDEV
-// and no stop (s2Rest; docs/hle-gaps.md 4.1.9, 4.7.6).
-// Round 6 (docs/hle-gaps.md 4.2.6): the sensor is never powered on here. TAKE_FUNC_CP's start makes cam.c's request 6
+// and no stop (s2Rest; docs/hle-gaps/4.1.md 4.1.9, docs/hle-gaps/4.7.md 4.7.6).
+// Round 6 (docs/hle-gaps/4.2.md 4.2.6): the sensor is never powered on here. TAKE_FUNC_CP's start makes cam.c's request 6
 // (cam_seq_power.c's power-on) with the argument 0 and S-TAKECAM answers it, as without cam_fe: natively the power-on
-// would stop at the sensor's serial unit (test_expcb.mjs camFrontEndSession) and TAKE's start would not end. So
+// would stop in the units' set-up (test_expcb.mjs camFrontEndSession) and TAKE's start would not end. So
 // through the start, S1 and S2 no event of the power sequence and no power rail step runs, the front end's entry is
 // not called and its records stay unarmed, which is why EXP_MOVIE's wait above cannot end in this session
 export async function camFeSession() {

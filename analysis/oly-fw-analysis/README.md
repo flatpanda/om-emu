@@ -93,7 +93,7 @@ controller initialisation, stopping at a read of `0x9b000000` at `0x602a6500` (t
 
 - **Doorbells and kick (D, rows 10-11).** `ipi_set` = bank `+0x308`, `ipi_clear` = `+0x30c`, `kick` = `+0x310`,
   `irq_ipi` = 120, per bank `0x99200000` / `0x99300000` / `0x99b00000` for CPU 0 / 1 / 2. It is the block E144 has at
-  `+0x408..+0x414` and E143 at `+0x808..` (`docs/hle-gaps.md` 4.6: kick `+0x810`), one step lower on this
+  `+0x408..+0x414` and E143 at `+0x808..` (`docs/hle-gaps/4.6.md` 4.6: kick `+0x810`), one step lower on this
   generation. `ctl`: `+0x314` is written at `0x6006ad66` and `0x601a8ac4`, its role is ?. `presented`: ?. The board
   comment "none of +0x408..+0x414: no IPI set/clear, kick or control register" was right about those offsets; the
   registers are at `+0x308..`.
@@ -105,7 +105,7 @@ controller initialisation, stopping at a read of `0x9b000000` at `0x602a6500` (t
   already makes for E143's store.
 - **Sections (D, row 6).** All eight sections are in place, so a flat image at `0x60021020` already holds them; the
   loader (USTART1's request at `0x601a72f0`, carried to CPU 1, read at `0x600421e1` / `0x600720e1`) needs only its
-  completion, the shortcut `docs/hle-gaps.md` 4.6 describes for E143's overlay loader.
+  completion, the shortcut `docs/hle-gaps/4.6.md` 4.6 describes for E143's overlay loader.
 - **Other boundaries their replay had to model** (their C, not checked here): three NAND bad-block table copies of
   8 KiB at `0x47ec0000`, `0x47ee0000`, `0x47f00000` (read at `0x60021c4f`); the ADC block `0x98c00000` (completion
   `+0x14`, channel 6 `+0x54`, channel 7 `+0x58`, IRQ 114); the input controller's level, event and wake words
@@ -158,8 +158,8 @@ Their decoder is an independent implementation of the scheme in `docs/firmware-c
 - **Processing jobs** (their `CREATIVE_PROCESSING_JOBS.md`, N): a job owns an embedded 1,132-byte request (kind 0;
   kind 3 is 624 bytes) and sixteen 52-byte operation records; COLOR is one development request, creative MONO three
   outer entries and four requests; a list of the per-unit builders (matrix, six-axis hue/saturation, gamma, chroma,
-  twelve-sector HSL, tone, sharpening, grain). This is the kind of parameter-block map `docs/hle-gaps.md` 4.3's seam
-  C2 step needs; the E143 and E147 counterparts are located since 2026-11-14 (`docs/hle-gaps.md` 4.3.12, "The
+  twelve-sector HSL, tone, sharpening, grain). This is the kind of parameter-block map `docs/hle-gaps/4.3.md` 4.3's seam
+  C2 step needs; the E143 and E147 counterparts are located since 2026-11-14 (`docs/hle-gaps/4.3.md` 4.3.12, "The
   still's stage builders on E122, E143 and E147": each builder's entry, frame and call sites on the three bodies;
   the matrix builder, by the lead alone the list's first call, is not in that table). Its offsets agree with this
   section's: the saturation set at request + 1076 (E122), + 1479 (E143) and + 1739 (E147), and the HSL builder's
@@ -194,7 +194,7 @@ Their decoder is an independent implementation of the scheme in `docs/firmware-c
   `set_mcon.cgi`, which read and write setting records by id; the raw setter changes stored records without refreshing
   the live copies, so their extension goes through the application setter instead (their N and physical). E143 holds
   the same three names in its main block (D: strings). For the "virtual smartphone over the firmware's own OI.Share
-  API" of `docs/hle-gaps.md` 4.11 this is the command set to target; their PEN-F parser addresses do not carry over,
+  API" of `docs/hle-gaps/4.11.md` 4.11 this is the command set to target; their PEN-F parser addresses do not carry over,
   as the OM-1's wireless side runs on CPU 1 and the A53.
 - USB: section 2.2.
 
@@ -317,7 +317,7 @@ opens on Picture Mode (cell 111) and direct Picture Mode (`0x0418`, panel 500) p
 (`docs/om1-menu-spec.md`), so the lab can show whether Color Creator 2 is offered, step its values through the store
 (ids 909-956), and, if its editor opens, screen-test a patched editor frame by frame. The COLOR builder does not run
 in a session: the 2026-10-23 coverage union (`bin/fwmap.mjs cover`) has no executed offset in
-`0x504f4c00..0x504f4e00` (X), as the capture stops at seam C (`docs/hle-gaps.md` 4.3). It can be driven as a function
+`0x504f4c00..0x504f4e00` (X), as the capture stops at seam C (`docs/hle-gaps/4.3.md` 4.3). It can be driven as a function
 slice with `bin/debug.mjs`, as `check_nd128` drives the ND selector, to read the coefficient records a patched builder
 writes; pixels stay out of reach.
 
@@ -426,7 +426,7 @@ says so:
 
 Two things there touch om-emu's still path. Their E-M10 note relays that an ordinary still is a direct Bayer-to-JPEG
 job with no complete YCC image in memory the CPU can reach (`docs/color/e-m10/PROCESSING.md`, an author's report on
-another body), which is what `docs/hle-gaps.md` 4.3.9 infers for E143 from the code. And three PEN-F documents that
+another body), which is what `docs/hle-gaps/4.3.md` 4.3.9 infers for E143 from the code. And three PEN-F documents that
 were already there at `539fcf1` and that the first reading did not compare, `docs/color/pen-f/SHARPENING.md`,
 `GRAIN.md` and `SHADING.md`, are with their probes the source of the call fixtures olyom-isp-bench runs on om-emu's
 CPU core (`analysis/olyom-isp-bench/README.md`).
@@ -470,7 +470,7 @@ report). Line numbers are theirs at `d565cb6`.
 - The browser player loaded the stock `.BIN` locally and sent only GET requests for static files
   (`OM_EMU.md:38-41`): an independent run of what `bin/webgate.mjs` checks.
 - The standalone debugger defaults to the ND128 candidate's image (`OM_EMU.md:71-72`), as `bin/debug.mjs` says.
-- A JPEG on the lab's card is no test of HSL, grain or vignette pixels (`OM_EMU.md:91-92`): `docs/hle-gaps.md` 4.3.9.
+- A JPEG on the lab's card is no test of HSL, grain or vignette pixels (`OM_EMU.md:91-92`): `docs/hle-gaps/4.3.md` 4.3.9.
 - The alignment fault caught what their GNU harness had let through in a UI patch (`OM_EMU.md:80-82`), the point of
   section 5 above.
 - Their HSL release as an overlay: 5,145 changed main-block bytes and 725 resource bytes (`pen-f/OM_EMU.md:87-90`),
@@ -497,7 +497,7 @@ report). Line numbers are theirs at `d565cb6`.
    save path is not read (?).
 5. *The COLOR editor's graphics on the PEN-F.* In their frames the stock wheel and polygon are absent, and so are
    menu background graphics (`pen-f/OM_EMU.md:41-42`, `OM_EMU.md:93-98`); they name the OM-3's C3D path
-   (`docs/hle-gaps.md` 4.12) as a plausible cause for the wheel and say they did not trace it. om-emu's documents say
+   (`docs/hle-gaps/4.12.md` 4.12) as a plausible cause for the wheel and say they did not trace it. om-emu's documents say
    nothing about either on E122, and neither was reproduced here. Finding the cause: days; a fix depends on it.
 6. *The front creative dial on the PEN-F.* The lab decodes its five positions from E122's tables (D: the code
    `0x1906`, five entries in UI_IN's group 10) and names none (`emu/src/lab/play.mjs`); their probe leaves it out
@@ -529,7 +529,9 @@ the release. Whether the camera enters the editor at the press or at the release
 `0x1208` with `0x1224` on E148, E144, E137, E142, E140, E125 and E130; `0x1224` on E118 and E120; `0x120b` twice and
 a second code-4 key on E139; `0x120b`, `0x1224` and seven more on E134); E143, E146, E133, E145, E129 and E132 have
 none. What a held level changes in those sessions was not looked at (?). Not fixed as of 2026-11-14; recorded as the
-lab's defect in `emu/FIDELITY-NOTES.md` 7.7.
+lab's defect in `emu/FIDELITY-NOTES.md` 7.7. Fixed 2026-11-22 (`docs/hle-gaps/4.7.md` 4.7.8): every type-2 entry idles
+released, E122 has the controls `picfn_left` / `picfn_right`, and with a real press edge E122's GUI enters
+SS_REC/ID_ST_SETVAL at the left input's release, not at its press (X).
 
 What it would take: two control rows wired where a body's table holds the codes, named as the firmware names them;
 the idle image giving every type-2 entry of the body's table its released level; and a session test on E122 whose

@@ -1,4 +1,4 @@
-// The pipeline block's and the JPEG codec's model (src/dev/imgpipe.mjs S-IMGPIPE; docs/hle-gaps.md 4.8.13) on a bare
+// The pipeline block's and the JPEG codec's model (src/dev/imgpipe.mjs S-IMGPIPE; docs/hle-gaps/4.8.md 4.8.13) on a bare
 // machine, and the lab's baseline JPEG decoder (src/lab/jpeg.mjs decodeJpeg) against the independent one
 // (refs/jpeg.mjs). The register writes are in the order the firmware's driver makes them for the play module's view
 // decode: the clock words and the unit masks (0x5048d48a, 0x5048134d), the program's words, the codec's start

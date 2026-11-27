@@ -14,7 +14,6 @@ export const OVERRIDES_E144 = {
   '0x50024ca6': { to: '0x500251a8', why: 'boot call of touch init (D: callers(0x50189dc3) = call@0x500251a8; play)' },
   '0x5002509e': { to: '0x50025560', why: 'publisher gate cmp 119 (D: 0x50025560 cmp 119,d1; bne 0x500255b9 (ret) - branch sense inverted vs E143 beq; play)' },
   '0x500256d9': { to: '0x500257d4', why: 'frame display mode set; E144 argument is a mode number 0..3 (E143 a bit mask, 4 = frames+indicator); porter UNMAPPED [comment/text] (D 0x500257d4: cmp 0/1/2/3, movbu d0,(0xa25f4fe8); sole caller TAKE 0x5028dd90; camapp)' },
-  '0x500257ce': { to: '0x500258f2', why: 'AF OSD upload. E144 signature: d1 = frame count (byte), a0 = frames (8 bytes each, copied to 0xa25f4ff4, count to 0xa25f53bc); d0 is ignored (the AF m (D 0x500258f2..0x5002596c; callers 0x506bde32 (clear, d1 0), 0x506be457 (count from (6,a0)); camapp)' },
   '0x5002587a': { to: null, fact: 'kernel.cpus', why: 'CPU3_REMOTE_CALL: the function CPU 3 runs to set DISP_FRAME\'s flag. E144: DISP_FRAME is static task 49 on CPU 0; the flag is set locally (0x500300c8  (D 0x50025841..0x5002599a; core.md: kcb[380]=3, no CPU-3 tables; camapp)' },
   '0x5002ccd7': { to: '0x500311d4', why: 'boot call site of the tick init (D callers(0x50034a3e) = 0x500311d4; display)' },
   '0x5002cd7b': { to: '0x50031257', why: 'boot call site of the hardware-timer init (D callers(0x50055dcd) = 0x50031257; display)' },

@@ -13,11 +13,14 @@
 //                         is cut; the bodies of a container's other blocks (the resource block's) are not read, so a
 //                         change there is not seen (the reason says so)
 //        'other-version'  a container whose main block's head names a MODELS body with another version field, and
-//                         whose block is no MODELS body's
+//                         whose block is no MODELS body's (another release, or a modified one with the field rewritten:
+//                         the head does not tell them apart, so neither is taken)
 //        'modified'       a container whose head names a MODELS body and its release's version, the main block at the
 //                         release's place and length (and the resource block's head where the release has it, no block
-//                         cut), with another sha256; or a bare block of the length of one or more bodies' main code block whose
-//                         sha256 is none of theirs
+//                         cut), with another sha256; a container laid out so whose main block is that body's stock
+//                         block under another version field (the release rebuilt with the field rewritten, as
+//                         E-M1-Miii's builder writes its test builds' numbers); or a bare block of the length of one or
+//                         more bodies' main code block whose sha256 is none of theirs
 //        'unknown'        anything else
 // kind 'container' | 'block' | null; model: the body's code ('stock': the digest's; else the head's; a bare modified
 // block: the one candidate, or null when several bodies share the length); version: that body's MODELS version;
@@ -89,6 +92,12 @@ function classifyMain(blocks, b, r, sha256, MODELS) {
       const not = notRelease(MODELS[owner]);
       if (not) return answer('unknown', 'container', `${not.cut ?? `a container whose blocks are not the release's (${not.placed})`}; its head and main code block are ${label(owner)}'s v${MODELS[owner].version} release's${cks}`, { ...base, model: owner });
       return answer('stock', 'container', `a container with ${label(owner)}'s v${MODELS[owner].version} release head and stock main code block (${MODELS[owner].bin}); the bodies of its ${blocks.length - 1} other block(s) are not read${cks}`,
+        { ...base, model: owner, version: MODELS[owner].version });
+    }
+    // the release's main code block, in its place, under another version field: the release's container rebuilt with
+    // the field rewritten (E-M1-Miii's builder writes a test build's number there, head and tail), so 'modified'
+    if (named === owner && !notRelease(MODELS[owner])) {
+      return answer('modified', 'container', `a container of ${label(owner)} v${MODELS[owner].version} whose only change to the main code block is its version field 0x${hex(b.ver, 4)} (the release's 0x${hex(rel.ver, 4)}; the stock main code block, in the release's place): modified firmware${cks}`,
         { ...base, model: owner, version: MODELS[owner].version });
     }
     return answer('unknown', 'container', `a container whose head (${headText}) is not the release's around ${label(owner)}'s v${MODELS[owner].version} stock main code block${cks}`, { ...base, model: named });

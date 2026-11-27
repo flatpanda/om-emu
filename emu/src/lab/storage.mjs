@@ -1,4 +1,4 @@
-// The card and the file system (docs/hle-gaps.md 4.8, 4.8.4): an SD card in the first slot behind the firmware's SD
+// The card and the file system (docs/hle-gaps/4.8.md 4.8, 4.8.4): an SD card in the first slot behind the firmware's SD
 // command layer, and the firmware's own storage stack above it, natively: sdmem, sd_mount, sdmem_format, logsec, dosfat
 // (FAT / exFAT), the DCF modules, fileif, and the file tasks FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS
 // entry runs it (card_fs native: E143, E146, E147, E144, E139, E137, E142, E140, E125, E130, E133, E145, E134, E129,
@@ -30,8 +30,9 @@
 //               its data and its status written into the command (at its fields, storage.command_fields: the E118
 //               family's lie 4 to 12 bytes lower than E143's) and its completion called at once, as the layer itself
 //               does for a busy port; sd_mount's card init, the transfers and the format run natively above it.
-//               On a body with the second slot's facts (src/fw/models.mjs card_fs.second_slot: E143, E146; fact
-//               'card.slots', src/fw/facts.mjs cardSlots, docs/hle-gaps.md 4.8.12) the lab has two card slots, and
+//               On a body with the second slot's facts (src/fw/models.mjs card_fs.second_slot: E143, E146, E139,
+//               E134, E125; fact 'card.slots', src/fw/facts.mjs cardSlots, docs/hle-gaps/4.8.md 4.8.12) the lab has two
+//               card slots, and
 //               each command goes to the card of its port (the command's port index, storage.slots.port): the first
 //               slot's card to port 0, the second slot's to port 1, an empty slot answering nothing. The second slot
 //               is empty unless the host gives a second card (env.card2, node's OM_EMU_CARD2 / OM_EMU_CARD2_SIZE) or
@@ -40,8 +41,10 @@
 //               expander's input shadow, which the expander's task would fill from the chip and S-IOEXP's does not
 //               (src/lab/power.mjs), so the lab writes the pin's bit there, 0 with a card in the slot and 1 without
 //               (D: the detect answers "no card" for a pin that does not read 0); and its card switch, the same pin
-//               as UI_IN names it (I), is at the no-card level in S-KEYBITS' image (src/lab/play.mjs). On the other
-//               bodies the one card answers every port and no pin is written, as before
+//               as UI_IN names it (I), is at the no-card level in S-KEYBITS' image (src/lab/play.mjs). On E139, E134
+//               and E125 (since 2026-11-22, docs/hle-gaps/4.8.md 4.8.17) the detect reads that UI_IN level alone (D), so
+//               the switch in S-KEYBITS' image is the slot's detect and no pin is written. On the other bodies the
+//               one card answers every port and no pin is written, as before
 //   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
 //               family's flash, the E118 family's two file-layer records in flash) behind its access
 //               (storage.nand.access): it reads erased (0xff) on a camera that
@@ -50,7 +53,7 @@
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
 //               would start, sends its first request to the image engine (0x5048ee61 on E143, a kind 14 fill on the
 //               imgpro unit 0x9c600000, whose model S-IMGPRO the IRQ attach of camapp 3's H-IMGPROINIT serves only
-//               after the mount: docs/hle-gaps.md 4.3.1), and the movie module it asks does not run
+//               after the mount: docs/hle-gaps/4.3.md 4.3.1), and the movie module it asks does not run
 //   S-RECFILE   (on no body since 2026-11-16: REC_FILE runs natively in its task from REC_IMAGE's packet on all 19,
 //               src/lab/rec.mjs) the picture's file at a release's
 //               END_SHOOTING_PICTURE
@@ -90,10 +93,10 @@ import { SdCard, SECTOR, NO_RESPONSE } from './sdcard.mjs';
 import { A, MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, CARD_SLOTS_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, CARD_SLOTS_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts-const.mjs';
 
 export class StorageError extends FirmwareError {}
-// The card slots of a body with the second slot's facts (docs/hle-gaps.md 4.8.12, D): slot n is drive n, the SD host's
+// The card slots of a body with the second slot's facts (docs/hle-gaps/4.8.md 4.8.12, D): slot n is drive n, the SD host's
 // port n (the drive-to-port map 0x508accba gives 0 and 1 themselves) and the file layer's letter 'C' + n (0x508a8149,
 // X for C and D); the detect pin's level without a card (the detect answers 1, no card, for a pin that does not read
 // 0, 0x508b0859); the drive status of a slot whose detect answers so (0x508a835f)
@@ -116,9 +119,10 @@ export function storageFacts() {
 }
 // The second card slot where the MODELS entry gives it (card_fs.second_slot): the rule's facts (src/fw/facts.mjs
 // cardSlots, fact 'card.slots'; a body whose forms the rule does not read has none, and fact() throws here)
+// (pins null: a body whose detect reads UI_IN's level alone, E139, E134 and E125, docs/hle-gaps/4.8.md 4.8.17)
 function slotFacts() {
   const f = fact('card.slots', CARD_SLOTS_E143);
-  if (f.detect.pins.length !== SLOTS || f.detect.switches.length !== SLOTS) throw new StorageError(`${MODEL}: src/fw/facts.mjs cardSlots read ${f.detect.pins.length} card-detect pins, want ${SLOTS}`);
+  if ((f.detect.pins !== null && f.detect.pins.length !== SLOTS) || f.detect.switches.length !== SLOTS) throw new StorageError(`${MODEL}: src/fw/facts.mjs cardSlots read ${f.detect.pins?.length} card-detect pins and ${f.detect.switches.length} switches, want ${SLOTS}`);
   return f;
 }
 // The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family and the E144 family but E148):
@@ -145,7 +149,7 @@ const DCF_FNODE = 5, DCF_FNODE_AT = 8, DCF_FNODE_FLAG = 1;
 const ERASED = 0xff, WRITE_CHUNK = 32768;
 const SWITCH_BYTE = 16;           // S-SDSWITCH: the request's switch byte (src/fw/facts.mjs fileSystem card_switch, D)
 // the word of the lab's FILECLBK messages, its low half a count; a reply of REQUEUE puts the message back on the queue
-// (`cmp 0xfff0,d0` at the reply's caller, docs/hle-gaps.md 4.8.8, D)
+// (`cmp 0xfff0,d0` at the reply's caller, docs/hle-gaps/4.8.md 4.8.8, D)
 const REQUEST_TAG = 0x4C41 << 16, REQUEUE = 0xFFF0;
 // S-RECFILE's REC requests (record(); STORAGE_LIB rec, src/fw/facts.mjs; D from E143's recorder 0x519f9dd7 and the
 // builders it calls, unless tagged). The DCF block (64 bytes, 0x519f9df5; kept from the open to the registration):
@@ -268,7 +272,7 @@ export class Storage {
     this.s.settle('H-FILECLBK');
     if (!this.idle()) throw new StorageError(`H-FILECLBK: FILECLBK (task ${tid}) is not waiting on its queue after its start`);
     // an empty first slot: no insertion's requests (the firmware's media manager sends an empty slot's port nothing at
-    // its start, X: the second slot under control camapp 3, docs/hle-gaps.md 4.8.12), the drive left as the bring-up
+    // its start, X: the second slot under control camapp 3, docs/hle-gaps/4.8.md 4.8.12), the drive left as the bring-up
     // left it
     if (this.card.present) this.insert();
     else {
@@ -293,9 +297,12 @@ export class Storage {
   }
   // S-SDCARD's card-detect pins: each slot's bit of the body IO expander's input shadow (f.slots.detect.pins), 0 with a
   // card in the slot. The words are the expander driver's, which does not run in the lab (S-IOEXP): a bit that no
-  // longer holds what the lab wrote was written by the firmware, and the session stops
+  // longer holds what the lab wrote was written by the firmware, and the session stops. A body whose detect reads
+  // UI_IN's level alone (pins null: E139, E134, E125) has no pin: its detect follows the card switches' levels in
+  // S-KEYBITS' image, which the session sets (play.mjs card_switch)
   detect_pins() {
     const sim = this.lab.sim, pins = this.f.slots.detect.pins;
+    if (pins === null) return;
     if (this.pins) pins.forEach(([word, bit], i) => {
       if (((sim.u32(word) >>> bit) & 1) !== this.pins[i]) throw new StorageError(`S-SDCARD: slot ${i + 1}'s card-detect pin (${h8(word)} bit ${bit}) no longer reads ${this.pins[i]}: the firmware wrote the IO expander's input shadow`);
     });
@@ -351,7 +358,7 @@ export class Storage {
     return [lab.sim.read(param, size), ms];
   }
   // A dosfat request: its error, in the block where dosfat stores it (storage.fat_error, +48), else the status
-  // FILECLBK replies with (the E118 family's dosfat does not store it, docs/hle-gaps.md 4.8.8, D)
+  // FILECLBK replies with (the E118 family's dosfat does not store it, docs/hle-gaps/4.8.md 4.8.8, D)
   _fat(code, label, who) {
     const blk = this.lab.alloc(new Uint8Array(128), 4);
     this.lab.sim.write(blk + 4, pack('<HH', 0, DRIVE));
@@ -422,7 +429,7 @@ export class Storage {
   }
   // The second slot's insertion: the one request the firmware's media manager sends for the slot's mount, the DCF
   // numbering mount of drive 1 (X under control camapp 3: FILECLBK 0x31 {0, drive 1} from the API sender and no
-  // other request for the drive; docs/hle-gaps.md 4.8.12), which mounts the volume and reads the card's lists itself.
+  // other request for the drive; docs/hle-gaps/4.8.md 4.8.12), which mounts the volume and reads the card's lists itself.
   // A card with no file system stays as the manager leaves it, not formatted and not mounted (X: the drive status
   // 0x8704, the media status's bit 2); Card Formatting from the menu formats it
   insert_second(who = 'S-CARD') {
@@ -430,6 +437,15 @@ export class Storage {
     if (!st?.card?.present) throw new StorageError(`${who}: drive ${SECOND}: the insertion's request with no card in the second slot`);
     this.renumber(who, SECOND);
     this.refresh(SECOND);
+    // A card whose first sector holds a partition table (the MBR's 0x55aa) is one the firmware's mount takes (X: E139
+    // and E125 here, test/test_slot2_rule.mjs; E143 and E146 in test_storage.mjs --slot2's two cards). Left unmounted,
+    // the drive's file requests went a way the lab does not run: on E134 the file layer forwards drive 1's requests to the slave ASIC over CCI (file_cci_com.c's
+    // command 0x81 through sys_sasic_cmd_snd 0x5003a38c, which refuses with the slave's link flag 0; X, with no
+    // command on port 1; docs/hle-gaps/4.8.md 4.8.29), so the session stops here rather than show the card unmounted
+    const mbr = st.card.data.get(0);
+    if (!st.mounted && mbr && mbr[510] === 0x55 && mbr[511] === 0xaa) {
+      throw new StorageError(`${who}: drive ${SECOND}: the firmware left the second card unmounted (drive status ${h8(st.drive_status)}, ${this.port_commands[SECOND]} commands on its port) though it holds a partition table: its file requests do not reach the lab's card`);
+    }
     st.inserted = true;
     this.log.push(['drive', `drive ${SECOND}: status ${h8(st.drive_status)}${st.mounted ? '' : ', not mounted'}`]);
   }

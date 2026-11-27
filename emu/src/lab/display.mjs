@@ -20,7 +20,7 @@ import { deepEqual } from '../util/equal.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { gui_palette } from './osdfmt.mjs';
-import { TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../fw/facts.mjs';
+import { TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../fw/facts-const.mjs';
 
 // the model's VSC (src/fw/board.mjs; E143: 0x9bb80000, channels of 0x8000, the output block 0x9bb98000)
 // kinds 2 and 3 (LATER): the TFT and the EVF on channel 0, no output block; kind 3 has one timing bank for both
@@ -63,8 +63,13 @@ export function deviceMask(device) {
   return mask;
 }
 export const PERIODS_US = [16683, 20000, 10000, 8341];
-// E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps.md 4.9; D)
+// E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps/4.9.md 4.9; D)
 export const HDMI_CHANNEL = 0, HDMI_MASK = 0xFF000004, HDMI_PERIOD_FN = A(0x501D5996), HDMI_VTOTAL_FN = A(0x501D5A67);
+// a getter's form: `and 0xff000000,d0; lsr 24,d0; mul 80,d0; add table,d0; mov d0,a0; mov (field,a0),d0` (fc e0 00 00 00
+// ff, f8 c4 18, f9 14 50, fc c0 imm32, f1 e0, f8 00 field), the period's field 4, the vertical total's 40 (E143; E146
+// 0x501dba41 / 0x501dbb12, E147 0x501e339e / 0x501e346f, the same form, D)
+const HDMI_GETTER = [0xfc, 0xe0, 0x00, 0x00, 0x00, 0xff, 0xf8, 0xc4, 0x18, 0xf9, 0x14, 0x50, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe0, 0xf8, 0x00];
+const HDMI_PERIOD_FIELD = 4, HDMI_VTOTAL_FIELD = 40;
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
 // the vsync event flag id word of each channel (E143 ch0 HDMI, ch1 EVF, ch2 TFT; kind 2 ch0 TFT and EVF, ch1 HDMI)
 const VSYNC_E143 = [A(0x6004305E), A(0x600430DE), A(0x60043178)];
@@ -714,7 +719,7 @@ export class DisplayLab extends OsdLab {
       // with the kernel native (a lab task), two reads are not the run's and go where they went before it: another
       // task's (a native task the run woke and that preempted the run's task) and the run's own read of another
       // queue (a reply the body waits for). The HDMI open does both: it posts AUD_EXEC, which runs and reads its
-      // queue again, and then reads AUD_EXEC's reply (docs/hle-gaps.md 4.9)
+      // queue again, and then reads AUD_EXEC's reply (docs/hle-gaps/4.9.md 4.9)
       if (runner !== null && (this.lt.current() !== runner || (r.d0 & 0xFFFF) !== queue)) { if (saved) saved[0](hle, r); else this.passthrough(r); return; }
       if ((r.d0 & 0xFFFF) !== queue) throw new FirmwareError(`OlyQeRd on queue ${r.d0 & 0xFFFF} from ${where(r.mdr)}`);
       n += 1;
@@ -922,7 +927,7 @@ export class DisplayLab extends OsdLab {
     this.time_log_boot = { steps: log, table: h8(table), enabled, attached, running, ie: h8(timer.ie()) };
     return this.time_log_boot;
   }
-  // H-GIOSLOTS (the HDMI port, src/dev/hdmi.mjs; docs/hle-gaps.md 4.9): the reset of the GIO interrupt slots that the
+  // H-GIOSLOTS (the HDMI port, src/dev/hdmi.mjs; docs/hle-gaps/4.9.md 4.9): the reset of the GIO interrupt slots that the
   // GIO init ends with (src/fw/models.mjs hdmi.gio_slots), natively and before the display init. The GIO init does not
   // run in the lab, so without the reset the display init's registration of the hot-plug pin finds no free slot and
   // gives up without a word (X); after it the registration takes slot and handler and attaches the pin's group IRQ
@@ -974,14 +979,27 @@ export class DisplayLab extends OsdLab {
       else if (!K3) this.vsc.set_line_ns(d.channel, line);
     }
   }
-  // The HDMI channel's line time (E143, docs/hle-gaps.md 4.9): once the firmware has opened the HDMI device (mask, the
+  // The HDMI channel's line time (docs/hle-gaps/4.9.md 4.9): once the firmware has opened the HDMI device (mask, the
   // opened word's HDMI part), its frame period and vertical total are fields of the firmware's own format table (the
   // format in the mask's bits 24..31; getters HDMI_PERIOD_FN and HDMI_VTOTAL_FN, D), as the panels' period word and
-  // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above)
+  // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above). On
+  // a body whose two getters, as the port places them, have the form HDMI_GETTER with their fields (E143, E146, E147;
+  // until 2026-11-23 E143 only)
   hdmi_line(mask) {
-    if (MODEL !== 'E143') throw new FirmwareError(`hdmi_line: the HDMI channel's timing is read for E143 only, not ${MODEL}`);
+    for (const [fn, field] of [[HDMI_PERIOD_FN, HDMI_PERIOD_FIELD], [HDMI_VTOTAL_FN, HDMI_VTOTAL_FIELD]]) {
+      refuseUnmapped(fn, 'hdmi_line');
+      const b = this.sim.read(runtime(fn), HDMI_GETTER.length + 1);
+      if (!HDMI_GETTER.every((x, k) => x === null || b[k] === x) || b[HDMI_GETTER.length] !== field) {
+        throw new FirmwareError(`hdmi_line: ${h8(fn)} is not the HDMI format table's getter of field ${field} on ${MODEL}`);
+      }
+    }
     if (!(mask & HDMI_MASK)) throw new FirmwareError(`hdmi_line: mask 0x${(mask >>> 0).toString(16)} names no HDMI device`);
-    const period = this.call(HDMI_PERIOD_FN, { d0: mask }).d0 >>> 0, vtotal = this.call(HDMI_VTOTAL_FN, { d0: mask }).d0 >>> 0;
+    // inside another lab call (the DISPLAY run that opened the device ends inside one: play.mjs _dispq_run) the getters
+    // run on the free nested-run slot, not on the outer call's trampoline and stack
+    if (this.call_depth && this.depth >= TASK_STACKS.length) throw new IndexError('hdmi_line: no free nested-run slot');
+    const at = this.call_depth ? [TASK_CALLERS[this.depth], TASK_STACKS[this.depth]] : null;
+    const get = (fn) => this.call(fn, { d0: mask }, null, null, 5000, null, at).d0 >>> 0;
+    const period = get(HDMI_PERIOD_FN), vtotal = get(HDMI_VTOTAL_FN);
     if (!period || !vtotal) throw new FirmwareError(`hdmi_line: format ${mask >>> 24}: period ${period} us, vtotal ${vtotal}: no line time (no default)`);
     const line = Math.floor(period * 1000 / vtotal);
     this.line_ns.set('hdmi', { period_us: period, vtotal, line_ns: line, format: mask >>> 24 });
@@ -1227,7 +1245,7 @@ export class DisplayLab extends OsdLab {
     return !!flags[off >> 2] && (this.sim.u32(VSC_CHANNEL[c] + 0x2000 + off) & 0x11) === 0;
   }
   // IMG1 of channel c latched onto a frame the pipeline block's decode wrote (img_decoded: the play module native,
-  // src/lab/playmod.mjs; docs/hle-gaps.md 4.8.13) and drawn one source pixel per output pixel: no horizontal resize
+  // src/lab/playmod.mjs; docs/hle-gaps/4.8.md 4.8.13) and drawn one source pixel per output pixel: no horizontal resize
   // (RSZ1 bit 0 clear) and no vertical one (bit 4 clear, or RSZ4 the channel's unit, A12). The firmware's own DISPLAY
   // cmd 5 attaches it, so no attach of the lab's records it; the guard then measures the fetched span against the
   // frame the newest such run wrote there. null for any other plane
@@ -1320,7 +1338,7 @@ export class DisplayLab extends OsdLab {
       if (p === 2 && (header.assumed & A19_BIT)) continue;             // A19: the face/AF frame plane reads its own buffer
       // IMG2 or IMG3 latched with RSZ1 bits 0 and 4 clear: one source pixel per output pixel, so no second tap and no
       // edge question for A6 (no attach records these planes: under camapp 3 DISPLAY cmd 5 shows the through image's
-      // bank as IMG2 behind the menu, docs/hle-gaps.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
+      // bank as IMG2 behind the menu, docs/hle-gaps/4.2.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
       // on A12)
       // kind 2's IMG2 / IMG3 have no attach either: vsccompose2.mjs draws them only at 1:1 and refuses a scaled one
       if (p > 0 && BOARD.vsc.kind === 2) continue;

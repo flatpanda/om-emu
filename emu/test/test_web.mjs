@@ -36,7 +36,7 @@ import { createHash } from '../src/util/sha256.mjs';
 import { rgbaOf, yccToRgb } from '../web/frame.mjs';
 import { Driver, IDLE_WAIT_MS } from '../web/driver.mjs';
 import { CONTROL_ROWS } from '../src/lab/playui.mjs';
-import { CONTROLS, Tables } from '../src/lab/play.mjs';
+import { CONTROLS, Tables, rotateOn } from '../src/lab/play.mjs';
 import { PlayApi, readBody } from '../src/lab/playapi.mjs';
 import { Player, ResultBox } from '../src/lab/player.mjs';
 import { PlayerProxy } from '../host/proxy.mjs';
@@ -151,7 +151,7 @@ export function controlsTests() {
 // docs/om1-input-spec.md section 2, "The mode change"); the order is kept, so the page's inputs stay as they were. The
 // touch is on the shooting screen's touch-mode icon, which the camera application, forwarding the touch itself with the
 // native lens, turns to its next mode (X); at (90, 30), the wireless icon, it opens Wi-Fi Connection (X), so the touch
-// is no longer there (docs/hle-gaps.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and
+// is no longer there (docs/hle-gaps/4.4.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and
 // mode_label: the position it ends at and that position's name (the mouse group: the dial's arrows at their centres,
 // then E143's P on its ring, position 8: src/fw/facts.mjs MODE_DIAL_E143).
 const KEY = (id) => [{ type: 'key', id, action: 'down' }, { type: 'key', id, action: 'up' }];
@@ -564,7 +564,7 @@ export async function cardTests() {
     return { status: res.status, type: h.get('content-type'), h, body: res.body, doc: () => JSON.parse(new TextDecoder().decode(res.body)) };
   };
   const s = await get(api, '/api/session');
-  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'auto', rotate: 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
+  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'auto', rotate: rotateOn(undefined) ? 'on' : 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
   const c = await get(api, '/api/card'), cd = c.doc();
   ok(c.status === 200 && JSON.stringify(cd.slot) === JSON.stringify({ present: true, mounted: false, session: false, file: 'kept.omsd', kind: 'SDHC', sectors: 16777216 }) && cd.files?.length === 4 && cd.volume?.type === 'FAT16',
     `GET /api/card: ${c.status} ${JSON.stringify(cd).slice(0, 300)}`);

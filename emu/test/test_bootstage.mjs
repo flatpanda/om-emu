@@ -1,5 +1,6 @@
-// The boot's stage bits (src/lab/menu.mjs S-BOOTSTAGE, stage_bits; docs/hle-gaps.md 4.6.4), on the bodies whose section
-// loader src/fw/facts.mjs sectionLoader reads (E143, E146, E147):
+// The boot's stage bits (src/lab/menu.mjs S-BOOTSTAGE, stage_bits; docs/hle-gaps/4.6.md 4.6.4), on the bodies whose section
+// loader src/fw/facts.mjs sectionLoader reads with the E143 family's reset head (E143, E146, E147; the flash-copy
+// family's loader, head null, has another boot job and keeps bit 0):
 //   bootstageImage   (the model's block, no lab) the boot job the bits follow, read from the image: CPU 2's USTART_L2
 //                    copies section n (load_section, the fact's loader) and posts the per-section step for it, in
 //                    order 1..10, each post to CPU 0 but section 8's, to CPU 1, with the stage wait for 7 before
@@ -32,7 +33,7 @@ const at = (img, o, bytes) => bytes.every((b, i) => b === null || img[o + i] ===
 // The boot job as the image gives it (base: the run-time base): {events: 'L1 P0:1 ...', step, cases: [[n, {table, n} | 'empty' | 'entry']], or}
 export function bootJob(img, base) {
   const f = sectionLoader(img), { stage } = bootState(img);
-  if (f === null || stage === null) return null;
+  if (f === null || f.head === null || stage === null) return null;     // head null: the flash-copy family's loader, another boot job
   let test = null;
   for (let o = 0; o + TEST_LEN <= img.length; o++) {
     if (img[o] === 0xfc && img[o + 1] === 0xa5 && u32(img, o + 2) === stage && at(img, o + 6, TEST_TAIL)) { if (test !== null) throw new Error('two stage tests'); test = o; }

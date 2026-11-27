@@ -175,7 +175,13 @@ export class Engine {
     }
     const lut = (w[0] & 0x800) !== 0, inlineLut = (w[0] & 0x1000) !== 0;
     const map = new Uint8Array(256);
-    if (bits <= 8) {                      // the run-length formats' colour index goes through the inline table
+    if (bits <= 8 && !lut && !inlineLut) {
+      // a run-length bitmap with neither table: its colour index is the palette index. E137's bitmap executor
+      // 0x50bfe446 sends the 16-entry inline table only when its request carries one and otherwise sets neither bit
+      // (D); its Highlight & Shadow curve screen draws its grid (picture 0x1039, format 0x0A, 262 x 266, indices 9
+      // and 12) so, and the camera shows the grid (X, a photo). That the engine then reads the index straight is I
+      for (let i = 0; i < 256; i++) map[i] = i;
+    } else if (bits <= 8) {               // the run-length formats' colour index goes through the inline table
       if (!lut || !inlineLut) return this.fail(E.BMP_LUT, w[0], fmt);
       for (let i = 0; i < 16; i++) map[i] = w[4 + (i >> 2)] >>> (8 * (i % 4));
     } else if (inlineLut) {

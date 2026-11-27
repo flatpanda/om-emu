@@ -1,4 +1,4 @@
-// CPU 2 natively (--cpu2 native, E143, off by default; docs/hle-gaps.md 4.6.1): the machine's second core
+// CPU 2 natively (--cpu2 native, E143, off by default; docs/hle-gaps/4.6.md 4.6.1): the machine's second core
 // (src/core/cores.mjs) run from CPU 2's entry through its kernel to its idle loop, then beside CPU 0 for the session.
 //   H-CPU2RELEASE  the two words CPU 2 waits for before its kernel and its init task's starts, which CPU 0 writes in
 //                  code the lab does not run: the release flag (0xa3258360) = 1 (CPU 0's reset head, 0x50000282..329)
@@ -43,18 +43,25 @@ const h8 = (v) => '0x' + fx(v >>> 0, 8);
 const D = (v) => runtime(A(v));                  // a code address in the disassembly notation, at run time
 
 export const CPU2_ENTRY = A(0x50008F01), RELEASE = A(0xA3258360);
+// per-CPU queue-to-flag binding table initializer (D: 0x5002bfb9 sets 0xa3258350[0..3] to each core's own table
+// 0xa3256e80, 0xa3257c90, 0xa3257f90, 0xa32581d0; without it both CPU 0 and CPU 2 dereference NULL + (q-1)*12 in low
+// RAM and CPU 2's queue 0x200a clobbers CPU 0's queue 0x000a, PWR_MAIN)
+const QUEUE_FLAG_INIT = A(0x5002BFB9);
+export function initQueueFlagTables(lab) { lab.call(QUEUE_FLAG_INIT, null, null, null, 20000); }
 // core 2's return trampoline: an offset of the lab's CALLER page no other harness code uses (0x400 is display.mjs's
 // DOORBELL_STUB, 0x480 irq.mjs's STORE_STUB)
 export const RETURN2 = A(0xA2100600);
+// core 2's call-then-return trampoline (finish_after), beside it
+export const AFTER2 = A(0xA2100640);
 export const KCB2 = A(0x60043B34);
 const STARTBITS = A(0x97F00000), TICK_MAGIC = A(0x97F00088), MAGIC = 0x77777777;
 export const CMD_BLOCK = A(0x97F0009C), CMD_BLOCK_SIZE = 0x78, IDLE_LOOP = A(0x5003883A);
 // the task entries core 2 may start: its init task's starts (D: 0x50008fbb..0x50009079)
 export const CPU2_TASKS = new Map([[A(0x50008FBB), 'BOOT_CPU2'], [A(0x5002CED4), 'CPUCONN2'], [A(0x50036489), 'CPUCALL2'],
   [A(0x5002E2CB), 'CONTEST_CPU2'], [A(0x50024572), 'USTART_L2'],
-  // CPUCONN's proxy for a call from CPU 0 (cores spec 5.1: entries 0x5002cf2d/4d/6e/8f by source), and the task
-  // AUD_MAIN starts on CPU 2 through it (AUD_LEVEL_MONITOR 0x200e, cores spec 4)
-  [A(0x5002CF2D), 'CPUCONN proxy (CPU 0)'], [A(0x50AAA99E), 'AUD_LEVEL_MONITOR'],
+  // CPUCONN's proxy for a call from CPU 0 (cores spec 5.1: entries 0x5002cf2d/4d/6e/8f by source), and the tasks
+  // AUD_MAIN starts on CPU 2 through it (AUD_LEVEL_MONITOR 0x200e, AUD_WAKEUP 0x2017 entry 0x50a62d5a; cores spec 4)
+  [A(0x5002CF2D), 'CPUCONN proxy (CPU 0)'], [A(0x50AAA99E), 'AUD_LEVEL_MONITOR'], [A(0x50A62D5A), 'AUD_WAKEUP'],
   // the tasks CPU 0's boot stages start on CPU 2 through OlyTaSt (H-CPU2TASKS, cores spec 4)
   [A(0x5046AAB2), 'WB_MOV'], [A(0x5045FCDD), 'MVR_MAIN'], [A(0x5050CC2A), 'SDET'], [A(0x51015F1D), 'OSD_DRAW_CPU2']]);
 export const CPU2_STAND_INS = ['H-CPU2RELEASE', 'H-CPU2CACHE', 'H-CPU2UART', 'K-BOOTSYNC2', 'K-STARTBITS', 'H-CPU2POLL',
@@ -109,17 +116,38 @@ export class Cpu2 {
   take_log() { const out = this.log; this.log = []; return out; }
   // finish the function core 2 stopped at as if it returned at once (its caller's CALL frame), with d0 = result
   finish(api, d0 = null) {
-    const R = api.R, mdr = R[11] >>> 0, here = R[9] >>> 0;
-    const b = api.read(mdr - 7, 7), s = b.subarray(2);
-    let mask, size;
-    const le32 = (x, o) => (x[o] | x[o + 1] << 8 | x[o + 2] << 16 | x[o + 3] << 24) | 0, le16 = (x, o) => ((x[o] | x[o + 1] << 8) << 16) >> 16;
-    if (b[0] === 0xDD && ((mdr - 7 + le32(b, 1)) >>> 0) === here) { mask = b[5]; size = b[6]; }
-    else if (s[0] === 0xCD && ((mdr - 5 + le16(s, 1)) >>> 0) === here) { mask = s[3]; size = s[4]; }
-    else throw new FirmwareError(`cpu2: the stop at ${h8(disasm(here))} was not reached by CALL (mdr ${h8(mdr)})`);
+    const R = api.R, [mask, size] = this.call_frame(api);
     api.write(RETURN2, new Uint8Array([0xDF, mask, size]));
     if (d0 !== null) R[0] = d0 | 0;
     R[9] = RETURN2 | 0;
     return 'go';
+  }
+  // the CALL that reached core 2's stop: its ret's [register mask, frame size]
+  call_frame(api) {
+    const R = api.R, mdr = R[11] >>> 0, here = R[9] >>> 0;
+    const b = api.read(mdr - 7, 7), s = b.subarray(2);
+    const le32 = (x, o) => (x[o] | x[o + 1] << 8 | x[o + 2] << 16 | x[o + 3] << 24) | 0, le16 = (x, o) => ((x[o] | x[o + 1] << 8) << 16) >> 16;
+    if (b[0] === 0xDD && ((mdr - 7 + le32(b, 1)) >>> 0) === here) return [b[5], b[6]];
+    if (s[0] === 0xCD && ((mdr - 5 + le16(s, 1)) >>> 0) === here) return [s[3], s[4]];
+    throw new FirmwareError(`cpu2: the stop at ${h8(disasm(here))} was not reached by CALL (mdr ${h8(mdr)})`);
+  }
+  // finish the function core 2 stopped at as if it called fn (a run-time address, reached by `calls`, with the
+  // registers regs {index: value}) and then returned 0 (PlayLab's finish_after on core 2; its own trampoline, as fn may
+  // reach a stop that finishes through RETURN2)
+  finish_after(api, fn, regs = {}) {
+    const R = api.R, [mask, size] = this.call_frame(api), rel = (fn - AFTER2) | 0;
+    api.write(AFTER2, new Uint8Array([0xFC, 0xFF, rel & 0xFF, (rel >>> 8) & 0xFF, (rel >>> 16) & 0xFF, rel >>> 24, 0x00, 0xDF, mask, size]));
+    for (const [k, v] of Object.entries(regs)) R[k] = v | 0;
+    R[9] = AFTER2 | 0;
+    return 'go';
+  }
+  // more stops for core 2 after its boot (another module's seam): [run-time pc, name, handler(api)]
+  add_stops(rows) {
+    for (const [pc, name, fn] of rows) {
+      if (this.table.has(pc)) throw new FirmwareError(`cpu2: a second stop at ${h8(disasm(pc))} (${name}; ${this.table.get(pc)[0]})`);
+      this.table.set(pc, [name, fn]);
+    }
+    this.cores.addStops(rows.map(([pc]) => pc));
   }
   // core 2's running task: its TCB's id (kcb[96] -> TCB, +16)
   current_task(api) {

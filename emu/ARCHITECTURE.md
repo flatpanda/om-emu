@@ -103,11 +103,12 @@ In order of authority:
 - **Proportional reset and snapshot cost.** `DIRTY` tracking makes reset and snapshot scale with what was written
   (`src/core/mem.mjs`).
 - **Self-modifying code and the decode cache.** Self-modifying code is invalidated by physical offset in 256-byte
-  chunks with bounded swap-remove reverse lists, which makes the `0x6` / `0xA` DRAM aliases correct by construction.
-  The decode cache is structure-of-arrays typed arrays (monomorphic, GC-free), and `CODEPG` keeps non-code writes fast
-  (`src/core/interp.mjs`). The SCPU's Cortex-M4 does the same with a version per 256-byte page of each backing buffer
-  (flash and its boot alias share theirs): a write makes a code page's version new, and a decoded instruction hits only
-  at the version it was decoded at (`src/core/m4/dcache.mjs`, `bus.mjs`).
+  chunks using per-chunk version numbers (the `0x6` / `0xA` DRAM aliases share backing offsets, making invalidation
+  correct by construction without reverse-list bookkeeping). The decode cache is structure-of-arrays typed arrays
+  (monomorphic, GC-free), and `CODEPG` keeps non-code writes fast (`src/core/interp.mjs`). The SCPU's Cortex-M4 does
+  the same with a version per 256-byte page of each backing buffer (flash and its boot alias share theirs): a write
+  makes a code page's version new, and a decoded instruction hits only at the version it was decoded at
+  (`src/core/m4/dcache.mjs`, `bus.mjs`).
 - **Precise faults.** Every instruction completes all its memory accesses before it writes registers, with a defined
   count rule, so the state after a fault is well defined and a retry is reliable (`src/core/cpu.mjs`). A 400,000-state
   `step()` against `run(1)` differential found no divergence and caught an injected mutant (`test/test_core.mjs`).
@@ -152,10 +153,10 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | Finding | Status |
 |---|---|
 | F01 CPU, interpreter and memory are realm singletons | open, conditional: one machine per realm suffices today |
-| F02 the lab drives the machine through gdbstub text, and the harness digests hash that traffic | open: a typed machine port is roadmap phase 2 |
+| F02 the lab drives the machine through gdbstub text, and the harness digests hash that traffic | partly fixed (2026-11-26): `Simulator` adds a binary register fast path and `HLE` caches incremental breakpoint tables (~1.4x–2x speedup alongside F28's versioned decode cache); a full typed machine port is roadmap phase 2 |
 | F03 interrupt delivery follows a TB-layout look model, not instruction boundaries | defect fixed (an undecidable case no longer kills the machine); the look model itself is phase 3 |
 | F04 harness device commands travel through a single-stepped guest store | open, phase 2 |
-| F05 device configuration lives in debug-window bytes without write notification | open: rebase a running VSC channel when `LINE_NS` changes |
+| F05 device configuration lives in debug-window bytes without write notification | fixed (2026-11-26): `src/dev/vsc.mjs` tracks `curLineNs` per channel and rebases `frameStart` in `chanSync` when `LINE_NS` or `LINE_NS_EVF` changes on a running channel (`test/test_vsc_rebase.mjs`) |
 | F06 the machine owns no simulated time; the lab clock moves only through VSC doorbells | open, phase 4 |
 | F07 the product runtime reproduces CPython, glibc and http.server behaviour | fixed: plain JS values throughout (`src/util/py*` is gone, `test/test_pure.mjs` keeps it so), plain JSON on the HTTP API and in the session logs, node's own errors and stacks |
 | F08 the checks report bare boolean predicates (`checks/lib/pred.mjs`) | fixed: every comparison is `eq(got, want)` (`checks/lib/eq.mjs`); per site results with the first failing pairs, beside the RNG tape, in each run's output directory (`bin/checks.mjs`) |
@@ -175,10 +176,10 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F22 the debug-window and doorbell ABI is defined on both the device and the harness side | open, phase 2 |
 | F23 no single owner of machine state | open, conditional |
 | F24 snapshots are live object graphs; lab sessions have no checkpoints | open: measure start-up cost first |
-| F25 every snapshot copies the ROM view and all eagerly dirtied windows | open, conditional |
+| F25 every snapshot copies the ROM view and all eagerly dirtied windows | fixed (2026-11-26): `memSnapshot` / `memRestore` skip unmutated read-only `K_ROM` pages (`test/test_mem_snapshot.mjs`) |
 | F26 the only instruction clock is a register the harness rewrites | open, phase 4 |
 | F27 one device interrupt can be delivered by two different mechanisms | open, phase 4 (native delivery) |
-| F28 the decode cache helps only inlined forms | open: measure first |
+| F28 the decode cache helps only inlined forms | partly fixed (2026-11-26): `src/core/interp.mjs` replaces SMC reverse lists with 256-byte chunk version numbers, paired with `HLE` incremental breakpoint caching and `Simulator`'s binary register fast path (~1.4x–2x speedup); expanding cached forms stays open |
 | F29 error classification uses several overlapping mechanisms | fixed (`FirmwareError` is a `RuntimeError`; the class tree is tested) |
 | F30 status, frame and log synchronisation is implemented twice | open, conditional |
 | F31 the debug API cannot attach to a running session | fixed: the live route (`src/debug/live.mjs`: debug inputs on the play session's queue, `POST /api/debug`, `bin/debug.mjs --attach`); its limits in `docs/ROADMAP.md` "Debug API follow-ups" |
@@ -187,7 +188,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F37 VSC register tables load lazily from fixed image offsets | comment fixed; open, conditional |
 | F38 IRQ line updates are mixed into view publication | open, conditional |
 | F39 scenario runner and play workload exist in both `bin/` and `web/` | open, conditional |
-| F40 the checks and gates hard-code Linux facilities | open, phase 2 |
+| F40 the checks and gates hard-code Linux facilities | fixed (2026-11-26): `bin/checks.mjs` `--measure` detects GNU vs BSD/macOS `/usr/bin/time` portably (`test/test_checks_time.mjs`) |
 | C01 the CPU stops on every exceptional event and has no architectural exception path | open, phase 3 (strictness faults, exception entry) |
 | C02 the SoC has four CPUs; emu structurally has one | open: CPU 2 and CPU 3 are served by stand-ins at single call sites |
 | C03 no hardware anchor below the ISA level | open, phase 5 (camera evidence) |

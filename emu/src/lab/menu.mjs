@@ -13,17 +13,17 @@ import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { EXEC_SLOTS, GUI_GUARDS, KIND3_RECORD, NRECORDS, REGISTRY, STRIDE, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
-import { ScpuDev, ScpuMemory, SOURCES_IMAGE } from './scpudev.mjs';
+import { ScpuDev, ScpuMemory, SOURCES_IMAGE, SCAN_IDLE } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
-import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
 import { packRegs, sectionsFact } from './sim.mjs';
 import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds, settingsChain, SETTINGS_CHAIN_E143, objectNameId } from '../fw/facts.mjs';
 import { bootLoads } from '../fw/sections.mjs';
+import { dpcInit, sioStart, powerTaskStart } from './bodystart.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -58,6 +58,11 @@ export const SETUP_TAB = 7;
 export const PROP_GUI_SITES = [A(0x503EFF61)];
 export const DROPPED_SENDS = [[A(0x600431D8), 10, A(0x50045474)]];
 export const LAB_PRI = 60, GUI_START_MS = 2000, GUI_START_SLICE_MS = 100;
+// the kernel prints a bring-up may make after the power module's start (power_start): the USB charger detection's
+// result, which the GUI's read of the power source makes (E129 0x50003132: "USBTOP_MAC_IF:" with the USB block's word
+// 0x98f20038 at 0x500031d5, then "BC:SDP" at 0x500031f7 for its bit 16 clear, D); the block is a lab-stub page
+// (src/fw/board.mjs FAMILIES.E144 stub_pages), and a play session's start prints the same two (X, E129)
+export const POWER_START_PRINTS = [['printf_d', 'USBTOP_MAC_IF:'], ['puts2', 'BC:SDP\n']];
 export const EV_WRAPPERS = new Set(['OlyEvSt', 'iOlyEvSt', 'OlyEvWt', 'OlyEvCl', 'OlyEvDl']);
 // the boot's state the lab's start leaves unset (src/fw/facts.mjs bootState): UI_IN's boot key (S-BOOTKEY,
 // src/lab/play.mjs) and the stages' ready word (S-BOOTSTAGE); read where used
@@ -66,6 +71,15 @@ export const REGISTRY_INIT = A(0x50040AEB), SETTINGS_DB_INIT = A(0x503C5473), GE
 // the property store's module init and its three object words (src/fw/facts.mjs propStore; H-STOREINIT): read where the
 // store starts
 export const propStoreInit = () => fact('prop_store', PROP_STORE_E143);
+// the settings init chain (E143's 0x503dae30, called once from the boot at 0x501e9060): 14 inits called while each
+// returns 0, then three unconditional calls (docs/hle-gaps/4.6.md 4.6.8, 4.6.9). The body's chain is read from its
+// image by src/fw/facts.mjs settingsChain from the property store's init (E143, E146, E147, E144, E148, E139: one;
+// the other bodies: none, X); on E143 the rule's reading is checked against E143's own
+export function settingsChainOf(rom) {
+  const chain = settingsChain(rom, propStoreInit().init);
+  if (ON_LAB_MODEL && JSON.stringify(chain) !== JSON.stringify(SETTINGS_CHAIN_E143)) throw new MenuError(`settingsChain: E143's chain read as ${show(chain)}, not ${show(SETTINGS_CHAIN_E143)}`);
+  return chain ?? null;
+}
 export const API_SET = A(0x50AC4AFE), API_WRITE = A(0x50B4F28B), DESC_LOOKUP = A(0x503DA999), CUSTOM_LOOKUP = A(0x503C681F);
 export const KEY_SELECTORS = new Map([[A(0x503C589B), 64], [A(0x503C58B9), 141]]);
 export const DIAL_INIT = A(0x5014B7C7), DIAL_TABLE_PTR = A(0xA32DAAB0), DIAL_BOARD = BOARD.core_byte;
@@ -142,6 +156,38 @@ export function nvramUnsupported() {
 // 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); the sub-CPU's RTC keeps it (src/lab/scpudev.mjs
 // ScpuMemory), in S-NVRAM's file when there is one
 export const PANEL_FLAG = A(0x60043188);                                   // the panel driver's serial completion flag id (E143's EVF panel; S-PANELDONE)
+// uITRON event-flag wait modes (OlyEvWt's a1, low byte; D: wai_flg / twai_flg, as in mdet.mjs and scenarios/kernel.mjs)
+export const TWF_ANDW = 0, TWF_ORW = 1;
+// Whether a uITRON event-flag wait (waiptn, wfmode) is already satisfied by flgptn and returns without blocking.
+// A zero wait pattern or an unknown wait mode is never satisfied (wai_flg returns E_PAR).
+export function flagSatisfied(flgptn, waiptn, wfmode) {
+  const cur = flgptn >>> 0, want = waiptn >>> 0;
+  if (want === 0) return false;
+  if (wfmode === TWF_ORW) return ((cur & want) >>> 0) !== 0;
+  if (wfmode === TWF_ANDW) return ((cur & want) >>> 0) === want;
+  return false;
+}
+// Read an event flag's current flgptn from the native kernel's FLGCB table (kcb[212][idx - 1] + 20, allocated when
+// u16 at +0 is non-zero; kcb[60] + 10 holds the CPU's flag-id bound; D: wai_flg). Returns null when the native kernel
+// is absent, the flag belongs to another CPU, the id is out of range, or the slot is unallocated.
+export const KCB_LIMITS = 60, KCB_FLGCB = 212, FLG_LIMIT_OFF = 10, FLGCB_PTN = 20;
+export function readFlagPattern(nk, sim, flgid) {
+  if (!nk || !sim || typeof nk.kcb !== 'function') return null;
+  const id = flgid & 0xFFFF;
+  const cpu = (id >> 12) & 7, idx = id & 0xFFF;
+  if (cpu !== nk.cpu || idx < 1) return null;
+  const limits = nk.kcb(KCB_LIMITS);
+  if (!limits) return null;
+  const lim = sim.read(limits + FLG_LIMIT_OFF, 2);
+  if (idx > (lim[0] | lim[1] << 8)) return null;
+  const table = nk.kcb(KCB_FLGCB);
+  if (!table) return null;
+  const flgcb = sim.u32(table + 4 * (idx - 1));
+  if (!flgcb) return null;
+  const hdr = sim.read(flgcb, 2);
+  if ((hdr[0] | hdr[1] << 8) === 0) return null;
+  return sim.u32(flgcb + FLGCB_PTN);
+}
 export const NATIVE_HOOK_LIMIT = 2000000;
 // the static constructor tables the lab runs after the memory managers' (src/lab/osd.mjs mm_ctors), as [table, count]
 // (src/fw/facts.mjs ctorTables): the modules' tables after the first and before the last, E143's modules 6 and 7 (the
@@ -155,6 +201,11 @@ export const RPC_ORIGINS = [['finder-style', [A(0x5120CC98), A(0x5120CC9A)]], ['
 export const RES_BITMAPS_CALLERS = [A(0x51251C22), A(0x51251C53)];   // the bitmaps record's loads (E143 record 37)
 
 const h8 = (v) => '0x' + fx(v >>> 0, 8);
+// S-SASIC (_sync_send): the slave ASIC's queue and the task that reads it, by their names in the object-name table
+// (E134: queue 221, task 145, entry 0x5003994a, which the boot starts at 0x500218aa and logs as "SASIC"; D,
+// docs/hle-gaps/4.8.md 4.8.29), and a task's dormant state (kernel.mjs TTS)
+export const SASIC_SLAVE_NAMES = ['SASIC_SLAVE', 'SYS_SASIC_SLAVE'];
+const TTS_DMT = 0x10;
 const h4 = (v) => '0x' + fx(v >>> 0, 4);
 const RT = IMAGE_BASE;
 const u16i = (img, a) => img[a - RT] | img[a - RT + 1] << 8;
@@ -248,6 +299,10 @@ export class MenuLab extends T.TextDisplayLab {
     this.native_calls = [];
     this.ctor_results = [];
     this.dropped_sends = [];
+    this.modack_sends = [];             // S-MODACK's synchronous sends to a body's modack_queues (_sync_send)
+    this.sasic_sends = [];              // S-SASIC's synchronous sends to the slave ASIC's queue (_sync_send)
+    this.power_started = null;          // power_start
+    this.gui_sleep_ms = 0;              // H-GUISLEEP (gui_sleep)
     this.gui_props = new Tally();
     this.value_sites = new Map();
     this.phase = 'init';
@@ -358,6 +413,11 @@ export class MenuLab extends T.TextDisplayLab {
             return;
           }
           if ((r.d0 & 0xFFFF) === panel && this.in_display_run() && (standIns || (this.panel_done && this.call_depth >= 2))) {
+            const cur = readFlagPattern(this.nk, this.sim, panel);
+            if (cur !== null && flagSatisfied(cur, r.d1 >>> 0, r.a1 & 0xFF)) {
+              inner(hle, r);
+              return;
+            }
             this.route_log.add([name, 'S-PANELDONE']);
             this.panel_answered += 1;
             if (r.a0) this.sim.write(r.a0, pack('<I', r.d1 >>> 0));
@@ -488,11 +548,13 @@ export class MenuLab extends T.TextDisplayLab {
       this.init_loaded = []; this.bringup_prints = []; this.init_prints_seen = [];
       return [];
     }
+    this.power_start();                              // H-DPCINIT, S-SIOIIC, H-PWRTASK where the body has the power task
     const out = this.alloc(new Uint8Array(16), 4);
     const prints0 = this.kernel.events.filter((e) => e[0] === 'print').length;
     this.call(GUI_CREATOR, { a0: out }, null, null, 200000);
     this.creator_out = [this.sim.u32(out), this.sim.u32(out + 4)];
     this.bringup_settle = this.settle('GUI bring-up');
+    this.gui_sleep();                                // H-GUISLEEP
     this.harvest();
     this.harvest_gui_records();
     const bitmaps = R.layout(this.block).images[1];
@@ -511,10 +573,10 @@ export class MenuLab extends T.TextDisplayLab {
     // The empty task is the display task init's task whose entry returns at once (E143's EMPTY_TASK, `retf [],0`, D):
     // the one bare-return entry started, wherever it lies (E134's, where the port places E143's at another
     // bare return, X); none where the build has no such task (the E118 family: E143's unplaced, no bare return started,
-    // X)
+    // X). The power task is the lab's where power_start started it (H-PWRTASK)
     const started = this.lt.started.slice(1).map(K.disasm_of);
     const bare = started.includes(EMPTY_TASK) ? [EMPTY_TASK] : this.lt.started.slice(1).filter((e) => this.lt._bare_return(e)).map(K.disasm_of);
-    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
+    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), ...(bare.length === 1 ? bare : bare.length === 0 && isUnmapped(EMPTY_TASK) ? [] : [EMPTY_TASK]), GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : []), ...(this.power_started ? [fact('power.task')] : [])];
     const sortNum = (xs) => [...xs].sort((a, b) => a - b);
     const own = started.filter((t) => wantStarted.includes(t)), more = started.filter((t) => !wantStarted.includes(t));
     if (JSON.stringify(sortNum(own)) !== JSON.stringify(sortNum(wantStarted)) || new Set(more).size !== more.length) problems.push(`tasks started: ${show(started.map(hex))}${own.length < wantStarted.length ? `, not ${show(wantStarted.filter((t) => !own.includes(t)).map(hex))}` : ''}`);
@@ -526,7 +588,8 @@ export class MenuLab extends T.TextDisplayLab {
     if (this.state() !== STATE_POWER_ON) problems.push(`GUI state ${this.state_name(this.state())}, not 0x0102 POWER_ON`);
     const prints = this.kernel.events.filter((e) => e[0] === 'print').slice(prints0);
     this.bringup_prints = prints.map((e) => [e[1], e[2]]);
-    if (this.bringup_prints.length) problems.push(`kernel prints: ${show(this.bringup_prints.slice(0, 4))}`);
+    const unexpected = this.bringup_prints.filter(([fn, text]) => !(this.power_started && POWER_START_PRINTS.some(([f, t]) => f === fn && t === text)));
+    if (unexpected.length) problems.push(`kernel prints: ${show(unexpected.slice(0, 4))}`);
     const bad = this.ctor_results.filter((c) => c.status !== 'ok');
     if (bad.length) problems.push(`${bad.length} static constructors failed: ${show(bad.slice(0, 2))}`);
     this.check_engine(this.init_log, 'bring-up');
@@ -558,6 +621,45 @@ export class MenuLab extends T.TextDisplayLab {
   gui_await() {
     const created = () => [...this.nk.tasks()].some(([, [e]]) => e === GUI_TASK);
     for (let ms = 0; !created() && ms < GUI_START_MS; ms += GUI_START_SLICE_MS) this.elapse(GUI_START_SLICE_MS, 'H-GUIBYAPP start');
+  }
+  // The power module's start before the lab's own creation of the GUI, on a body with the power task (fact
+  // 'power.task': E144, E148, E137, E142, E140, E145, E129, E132), with play's steps (src/lab/bodystart.mjs) in play's
+  // order: H-DPCINIT on a board with the deferred-call triggers, S-SIOIIC where the body has PER_SIO devices (the
+  // TG-5's charger, S-CHARGER), H-PWRTASK. The GUI's POWER_ON entry reads the power source (H-GUISLEEP below); on the
+  // TG-5s that read sets up the internal charger for the source found: a request to the charger's channel (E129
+  // 0x5003face -> 0x500520f2 with 9 and the callback 0x5003fdd6) whose completion the GUI then waits for on a flag
+  // (0x604212aa, 3000 ms, 0x5003fc32, D). Without one of the three the GUI did not reach POWER_ON (X, E129: without
+  // H-PWRTASK the session stopped at a sub-CPU command, 0x20041001, the lab does not answer; without S-SIOIIC, or
+  // without H-DPCINIT (no transfer reached S-SIOIIC), the flag's wait ran past GUI_START_MS). E145 reaches POWER_ON
+  // without them (X) and takes them as play does. In time mode only: the power task then sleeps in lab time (E145,
+  // E144, E137, X), which a settle outside time mode refuses; outside it the lab starts none, as before (E144, E148,
+  // E137, E142 and E140 open the menu so, X; E145, E129 and E132 need time mode). power_started: null, or what ran
+  // ({dpc, sio: the SioBus or null, tid: the power task})
+  power_start() {
+    this.power_started = null;
+    if (!this.time_mode || fact('power.task', null) == null) return;             // (null or undefined: no power task)
+    const dpc = this.sim.m.devices.dpc ? dpcInit(this, MenuError) : false;
+    const sio = MODEL_INFO.sio_devices ? sioStart(this) : null;
+    const tid = powerTaskStart(this, (label) => this.settle(label), MenuError);
+    this.power_started = { dpc, sio, tid };
+  }
+  // H-GUISLEEP (time mode, the lab's own creation of the GUI): the creator's settle can end with the GUI task asleep in
+  // lab time before its message loop (the settle's "timed" entry). On E145, E129 and E132 the GUI's set-up enters
+  // POWER_ON, whose entry reads the power source through the measurement on API 0xa0004 (E145: POWER_ON's entry
+  // 0x50d9347a -> 0x50deebcf -> the source query 0x506f04fd -> 0x506a8bb6 -> 0x502ce4c1 -> 0x5003ffef, X), which
+  // sleeps between its register writes (S-LABSLEEP's measurement); the caller word GUICALLER is stored only after that
+  // entry returns (E145 0x50c380a2), so the state read 0 (docs/model-survey.md finding 162). Lab time runs in
+  // GUI_START_SLICE_MS slices while the GUI task is in a timed wait, at most GUI_START_MS, as H-GUIBYAPP's gui_await
+  // does for the application's creation (X: E145 100 ms, E129 and E132 1600 ms); a creation that settles with the GUI
+  // task waiting untimed (E143 and the 15 other bodies, X) runs none. gui_sleep_ms: the lab time it ran
+  gui_sleep() {
+    this.gui_sleep_ms = 0;
+    if (!this.time_mode) return;
+    const asleep = () => this.nk.timed_waiters().some((t) => this.nk.entry(t) === GUI_TASK);
+    while (asleep() && this.gui_sleep_ms < GUI_START_MS) {
+      this.elapse(GUI_START_SLICE_MS, 'H-GUISLEEP');
+      this.gui_sleep_ms += GUI_START_SLICE_MS;
+    }
   }
   // H-GUIBYAPP: after the application's start has created the GUI (its own call of the creator, 0x510609ce ->
   // GUI_CREATOR, from CA_MAIN's code): its records, its GUI task and timer task, one of each.
@@ -714,10 +816,10 @@ export class MenuLab extends T.TextDisplayLab {
     // backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of these sites, and the lab
     // does not start its PER_SCPU. The sub-CPU is S-SCPUDEV, or its own firmware (scpu_native). S-SCPUDEV takes the
     // power manager's 0x14 on the bodies whose sub-CPU image is the one its handler is read from (scpu_lle's digest
-    // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps.md 4.7.6)
+    // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps/4.7.md 4.7.6)
     if (SCPU_BACKUP) {
       this.scpu_dev = this.scpu_native() ? this.scpu_m4(nvram)
-        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE });
+        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE, scan: this.scan_idle ?? SCAN_IDLE });
       this.store_log.scpu_frames = this.scpu_dev.frames;
       this.scpu_link = new ScpuLink(this, this.scpu_dev);
       this.scpu_link.bring_up();
@@ -740,16 +842,24 @@ export class MenuLab extends T.TextDisplayLab {
     if (JSON.stringify(reg.prints) !== JSON.stringify(wantPrints) || reg.errlog.length) {
       throw new MenuError(`registry bootstrap: prints ${show(reg.prints)}, errlog ${show(reg.errlog)}; expected ${show(wantPrints)} and none`);
     }
-    // H-STOREINIT: the property store's own module init, the settings init chain's fifth (src/fw/facts.mjs propStore),
-    // which the boot runs after the registry bootstrap and before the DB init (E143: the chain 0x503dae30 at 0x501e9060,
-    // the DB init through 0x501eac35 at 0x501e907b, D); the lab runs none of the chain's other inits. It keeps the mode
+    // The settings init chain, which the boot runs after the registry bootstrap and before the DB init (E143: the
+    // chain 0x503dae30 at 0x501e9060, the DB init through 0x501eac35 at 0x501e907b, D), or, where it does not run
+    // (settings_chain null), H-STOREINIT: the property store's own module init alone, the chain's sixth call (src/fw/
+    // facts.mjs propStore; the chain's other inits do not run then). The store's init keeps the mode
     // store's three data pointers (the banks, the recalled rows, the working copy); without them a mode change staged
     // the working copy from address 0 and wrote zeros into every setting it holds (X: 612 settings read 0 once the
     // dial had left P, docs/om1-settings-spec.md section 2.2)
-    const ps = propStoreInit(), si = this.native(ps.init, null, `property store init ${h8(ps.init)}`);
+    // By default the whole chain runs natively in that place where the body's image holds it (settings_chain): all
+    // fourteen steps, the store's init the sixth, and the three after them; E143's comparison with the narrow call (the
+    // settings by the getter at the start and after a mode change, the frames, the lab time: the same; the memory each
+    // step writes, docs/hle-gaps/4.6.md 4.6.9, X)
+    const ps = propStoreInit(), chain = this.settings_chain();
+    const si = chain ? this.native(chain.entry, null, `settings init chain ${h8(chain.entry)}`)
+      : this.native(ps.init, null, `property store init ${h8(ps.init)}`);
+    this.store_chain = chain;
     const objects = [0, 4, 8].map((k) => this.sim.u32(ps.objects + k));
     if (si.d0 !== 0 || si.prints.length || si.errlog.length || objects.includes(0)) {
-      throw new MenuError(`H-STOREINIT ${h8(ps.init)}: d0 ${si.d0}, prints ${show(si.prints)}, errlog ${show(si.errlog)}, object words ${h8(ps.objects)}: ${objects.map(h8).join(' ')}`);
+      throw new MenuError(`${chain ? `settings init chain ${h8(chain.entry)}` : `H-STOREINIT ${h8(ps.init)}`}: d0 ${si.d0}, prints ${show(si.prints)}, errlog ${show(si.errlog)}, object words ${h8(ps.objects)}: ${objects.map(h8).join(' ')}`);
     }
     const db = this.native(SETTINGS_DB_INIT, null, 'settings-DB init 0x503c5473');
     if (nvram) this.nvram_clock();
@@ -780,12 +890,13 @@ export class MenuLab extends T.TextDisplayLab {
   // E143, E146, E147: the same region set-up and the highest section done, a word only the step reads; D). E129's
   // settings flash read waits for bit 0 (2 ms sleeps, no timeout, D), and without it the store's registry bootstrap
   // blocked (X); the other bodies' starts test the bits at most. The addresses are in docs/model-survey.md (E129) and
-  // docs/hle-gaps.md 4.6.4 (E143, E146, E147)
+  // docs/hle-gaps/4.6.md 4.6.4 (E143, E146, E147)
   boot_stage() {
     if (bootFacts().stage === null) return;          // a build without the stage test (the E118 family's)
     const word = bootFacts().stage, bits = this.stage_bits(), v = this.sim.u32(word);
     if (v & bits) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} holds ${h8(v)} before the store's start`);
     this.sim.write(word, pack('<I', (v | bits) >>> 0));
+    this.sim.secReady?.staged(bits);                 // --sec-ready: the watch's records from here on say so (src/lab/secready.mjs)
     this.boot_staged = true;
     this.stage_bits_set = bits;
   }
@@ -793,16 +904,19 @@ export class MenuLab extends T.TextDisplayLab {
   // whose section loader src/fw/facts.mjs sectionLoader reads (E143, E146, E147) stage n is section n: CPU 2's
   // USTART_L2 copies the sections in order and after each posts the per-section step for it, to CPU 0 but for section
   // 8's, which goes to CPU 1; it waits for stage 7's bit before posting section 8's step and for stage 8's before
-  // section 9's, and posts section 10's after that (D; the addresses in docs/hle-gaps.md 4.6.4). The step's work the lab has to do is the section's static constructors (its table in the
+  // section 9's, and posts section 10's after that (D; the addresses in docs/hle-gaps/4.6.md 4.6.4). The step's work the lab has to do is the section's static constructors (its table in the
   // section's loaded range, src/fw/facts.mjs ctorTables; sections 1, 4 and 9 have empty tables, 3, 5 and 10 none):
   // section 2's run at the lab's start (src/lab/osd.mjs mm_ctors), 6's and 7's in run_static_ctors (CTOR_TABLES), 8's
   // are CPU 1's and do not run. So the bits are those of the sections in order up to the first whose constructors the
   // lab has not run (all of them ok): 0x7f where run_static_ctors ran, 0x1f where it did not; section 8's bit and
   // those after it stay clear (their steps follow section 8's on the camera). Elsewhere the stage step is another form
-  // (E129's, docs/model-survey.md), read for stage 1 alone: bit 0
+  // (E129's, docs/model-survey.md), read for stage 1 alone: bit 0. So too on the flash-copy family's loader (fact
+  // sections.head null: E125, E130, E133, E137, E140, E142): there the boot calls the per-section step from other
+  // places (stage 1's from the boot task, the others' from module code; E142's addresses in src/fw/facts.mjs
+  // sectionLoader, D) and the lab reads neither their order nor their constructor blocks
   stage_bits() {
     const f = sectionsFact();
-    if (f === null) return 1;
+    if (f === null || f.head === null) return 1;
     const tables = fact('ctors', CTORS_E143), ran = new Set([tables[0][0], ...this.ctor_tables_ran()]);
     let bits = 0;
     for (const s of bootLoads(this.env.rom, IMAGE_BASE, f).sections) {
@@ -818,16 +932,19 @@ export class MenuLab extends T.TextDisplayLab {
   }
   // S-SECLOADED: the boot's sections copied, one bit per section in the section loader's copied mask (fact
   // 'sections.copied', src/fw/facts.mjs sectionLoader), as load_section sets bit n - 1 after section n's copy on CPU 2
-  // (USTART_L2), which the lab does not run (docs/hle-gaps.md 4.6.3): the lab's image is in place from the machine's
-  // creation, every section of it (S-STALERAM leaves out only what lies past a section's end). The count is the image's
-  // own, the cases of its end switch (patched firmware's as it is). No instruction of the stock builds reads the word (X:
-  // E143, E146, E147), so their runs do not change; code a patch adds may (caduceus-om3's half-press gate tests it for
-  // every section, their editor.s pr_gate). Before the store's start, beside S-BOOTSTAGE, which sets the stages' ready
+  // (USTART_L2; on the flash-copy family the boot task's calls, src/fw/facts.mjs sectionLoader), which the lab does
+  // not run (docs/hle-gaps/4.6.md 4.6.3): the lab's image is in place from the machine's creation, every section of it
+  // (S-STALERAM leaves out only what lies past a section's end). The count is the image's own, the cases of its end
+  // switch (patched firmware's as it is: 10 on E143, E146, E147 and E137, 9 on E125, E130, E133, E140 and E142). On
+  // E143, E146 and E147 no stock instruction reads the word (X); on the flash-copy family the per-section step waits
+  // for its bit (D), a step the lab does not run either. Code a patch adds may read it (caduceus-om3's half-press
+  // gate tests it for every section, their editor.s pr_gate; caduceus-ep7's SD loader tests E142's nine bits before
+  // its stores, X: test/fieldfail-cases-ep7-e139.mjs ep7-test7a-section3-store). Before the store's start, beside S-BOOTSTAGE, which sets the stages' ready
   // word for the sections whose per-section step the lab performs (stage_bits). no_secloaded (set
   // in lab_created): the stand-in left out, a negative control
   sections_loaded() {
     const f = sectionsFact();
-    if (f === null || this.no_secloaded) return;     // a build without the loader the rule reads (the E144 and E118 families)
+    if (f === null || this.no_secloaded) return;     // a build without the loader the rule reads (E144, E139, E118 ...)
     const count = sectionEnds(this.env.rom, IMAGE_BASE, f.switch, 'S-SECLOADED').length, word = this.sim.u32(f.copied);
     if (word !== 0) throw new MenuError(`S-SECLOADED: the copied mask ${h8(f.copied)} holds ${h8(word)} before the store's start`);
     this.sim.write(f.copied, pack('<I', (2 ** count - 1) >>> 0));
@@ -835,14 +952,28 @@ export class MenuLab extends T.TextDisplayLab {
   }
   // The sub-CPU's own firmware at the far end of the link (src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6),
   // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to
-  // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage,
-  // node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
+  // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage) and
+  // constructor (env.ScpuM4; node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
+  // The settings init chain run whole in H-STOREINIT's place: {entry, steps, tail} (settingsChainOf) where the body's
+  // image holds it, by default; null for the narrow H-STOREINIT, where the image holds no chain the rule reads or the
+  // host turns it off (env.settings_chain, node's OM_EMU_SETTINGS_CHAIN: '0' off, '1' on, refused where no chain is
+  // read; docs/hle-gaps/4.6.md 4.6.8, 4.6.9)
+  settings_chain() {
+    const want = this.env.settings_chain ?? globalThis.process?.env?.OM_EMU_SETTINGS_CHAIN;
+    if (want !== undefined && want !== '0' && want !== '1') throw new MenuError(`OM_EMU_SETTINGS_CHAIN ${show(want)}: '0' (the narrow H-STOREINIT) or '1' (the chain whole)`);
+    if (want === '0') return null;
+    const chain = settingsChainOf(this.env.rom);
+    if (chain === null && want === '1') throw new MenuError(`OM_EMU_SETTINGS_CHAIN=1: ${MODEL_INFO.name}'s image holds no settings init chain src/fw/facts.mjs settingsChain reads`);
+    return chain;
+  }
   scpu_native() { return !!MODEL_INFO.scpu_lle && (this.env.scpu ?? globalThis.process?.env?.OM_EMU_SCPU) === 'native'; }
   scpu_m4(nvram) {
     if (nvram) throw new MenuError('OM_EMU_SCPU=native with S-NVRAM: the sub-CPU\'s own backup domain (its RTC and backup registers) is not kept between sessions; use one or the other');
     const image = this.env.scpuImage;
     if (!image) throw new MenuError(`OM_EMU_SCPU=native: the host passed no SCPU image (env.scpuImage: ${MODEL_INFO.name}'s ${MODEL_INFO.scpu_lle.block}; node: checks/lib/env.mjs scpuEnv)`);
-    return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle });
+    const ScpuM4 = this.env.ScpuM4;
+    if (!ScpuM4) throw new MenuError('OM_EMU_SCPU=native: the host passed no ScpuM4 constructor (env.ScpuM4; node: checks/lib/env.mjs scpuEnv)');
+    return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle, board: { drive: this.scan_idle ?? SCAN_IDLE } });
   }
   // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the
   // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters: M and E for their
@@ -1092,13 +1223,49 @@ export class MenuLab extends T.TextDisplayLab {
     if (q === this._queue(D.DISPLAY_QUEUE)) return super._sync_send(hle, r);
     for (const [qa, c, ra] of DROPPED_SENDS) {
       if (q === this._queue(qa) && cmd === c && site === ra) {
+        // H-PWRSEND: where the power manager runs (H-PWRSTART, src/lab/power.mjs), its queue's send goes to it
+        if (this.pwr_main_tid != null && this.lt?.tid != null && this.nk.state(this.pwr_main_tid) !== 0x10) {
+          this.kernel.events.push(['send', `queue ${q} cmd ${cmd} (H-PWRSEND, native)`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+          (this.pwr_sends ??= []).push([q, cmd, h8(site)]);
+          this.passthrough(r);
+          return;
+        }
         this.kernel.events.push(['send', `queue ${q} cmd ${cmd}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
         this.dropped_sends.push([q, cmd, h8(site)]);
         hle.finish(r, { d0: 0 });
         return;
       }
     }
+    // S-MODACK's synchronous sends (src/lab/camapp.mjs, the play session's), for the module queues a body's
+    // src/fw/models.mjs modack_queues names, whose tasks do not run in the lab: E_OK, nothing written back (I). E132's
+    // menu open asks CATEGORY_MAIN (0xe6) through 0x50299470 (from 0x5029ca1c, the queue word 0x60421552, D), which
+    // a play session's S-MODACK answers so (X: its menu opens)
+    if ((MODEL_INFO.modack_queues ?? []).some(([id]) => id === q)) {
+      this.kernel.events.push(['send', `queue ${q} cmd ${cmd}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+      this.modack_sends.push([q, cmd, h8(site)]);
+      hle.finish(r, { d0: 0 });
+      return;
+    }
+    // S-SASIC: the slave ASIC's queue (SASIC_SLAVE_NAMES, read in the object-name table: E134's 221, no other body's
+    // table names it), whose task the boot starts and the lab does not (docs/hle-gaps/4.8.md 4.8.29)
+    const sasic = this.sasic_ids();
+    if (sasic && q === sasic.queue && this.nk && this.nk.state(sasic.task) !== TTS_DMT) return this.passthrough(r);   // its task runs
+    if (sasic && q === sasic.queue) {
+      const msg = r.a0 ? unpack('<II', this.sim.read(r.a0, 8)) : [];
+      this.kernel.events.push(['send', `queue ${q} cmd ${cmd} (S-SASIC)`, `param 0x${r.a0.toString(16)} [${msg.map(hex).join(', ')}]`, where(r.mdr)]);
+      this.sasic_sends.push([q, cmd, msg, h8(site)]);
+      hle.finish(r, { d0: 0 });
+      return;
+    }
     throw new MenuError(`synchronous send to queue ${q} cmd ${cmd} (param 0x${r.a0.toString(16)}) from ${where(r.mdr)}: not a DISPLAY message and not an S-SEND drop; its receiver does not run in the lab`);
+  }
+  // S-SASIC's queue and task ({queue, task}, both by name in the object-name table), or null where the table names
+  // neither; read once, at the first send no other path takes
+  sasic_ids() {
+    if (this._sasic !== undefined) return this._sasic;
+    const [queue, task] = SASIC_SLAVE_NAMES.map((n) => objectNameId(this.image, n));
+    if ((queue === null) !== (task === null)) throw new MenuError(`S-SASIC: the object-name table names ${queue === null ? 'the task and not the queue' : 'the queue and not the task'} (${SASIC_SLAVE_NAMES.join(', ')})`);
+    return (this._sasic = queue === null ? null : { queue, task });
   }
   _s_res(hle, r) {
     if (RES_BITMAPS_CALLERS.map(runtime).includes(r.mdr)) {

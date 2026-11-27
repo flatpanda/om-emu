@@ -85,9 +85,43 @@ function invocation(check, run, { extraEnv = {}, dirName = run.id } = {}) {
 // The run's declared output files, as paths
 export const filesOf = (run, dir) => (run.files ?? []).map((f) => path.join(REPO, subst([f], path.relative(REPO, dir))[0]));
 
+const BSD_TIME_PLATFORMS = new Set(['darwin', 'freebsd', 'openbsd', 'netbsd']);
+
+// Command tuple [bin, argv] for running node with optional /usr/bin/time instrumentation.
+// Linux uses GNU time (-o file -f '%e %M', KiB); macOS and BSD use BSD time (-l on stderr).
+export function timeCommand(args, { timeFile = null, platform = process.platform, execPath = process.execPath } = {}) {
+  if (!timeFile) return [execPath, args];
+  if (platform === 'linux') return ['/usr/bin/time', ['-o', timeFile, '-f', '%e %M', execPath, ...args]];
+  if (BSD_TIME_PLATFORMS.has(platform)) return ['/usr/bin/time', ['-l', execPath, ...args]];
+  throw new Refusal(`--measure: unsupported platform ${platform} (no /usr/bin/time)`);
+}
+
+// Parse peak RSS in KiB from /usr/bin/time output (timeFile on Linux, stderr on macOS/BSD), or null if absent/malformed.
+export function parseTimeRss(text, { platform = process.platform } = {}) {
+  if (typeof text !== 'string') return null;
+  if (platform === 'linux') {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const last = trimmed.split(/\r?\n/).pop();
+    const m = /^\s*\d+(?:\.\d+)?\s+(\d+)\s*$/.exec(last);
+    if (!m) return null;
+    const kib = Number(m[1]);
+    return Number.isFinite(kib) ? kib : null;
+  }
+  if (BSD_TIME_PLATFORMS.has(platform)) {
+    let last = null;
+    for (const m of text.matchAll(/^\s*(\d+)\s+maximum resident set size\s*$/gim)) last = m[1];
+    if (last === null) return null;
+    const raw = Number(last);
+    if (!Number.isFinite(raw)) return null;
+    return platform === 'darwin' ? Math.round(raw / 1024) : raw;
+  }
+  return null;
+}
+
 export function runJs(check, run, { timeFile = null, extraEnv = {}, dirName = run.id } = {}) {
   const { dir, env, args } = invocation(check, run, { extraEnv, dirName });
-  const cmd = timeFile ? ['/usr/bin/time', ['-o', timeFile, '-f', '%e %M', process.execPath, ...args]] : [process.execPath, args];
+  const cmd = timeCommand(args, { timeFile });
   const l0 = load1(), t0 = performance.now();
   const r = spawnSync(cmd[0], cmd[1], { cwd: REPO, env, encoding: 'utf8', maxBuffer: 1 << 28 });
   return { rc: r.status, stdout: r.stdout, stderr: r.stderr, wall: (performance.now() - t0) / 1000, load: [l0, load1()], dir };
@@ -118,20 +152,28 @@ export function verdict(run, js) {
 
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
 function measure(sels, n) {
+  const platform = process.platform;
+  const useFile = platform === 'linux';
   const tf = path.join(os.tmpdir(), `om-emu-checks-time-${process.pid}.txt`);
-  for (const sel of sels) {
-    const js = [];
-    for (let k = 0; k < n; k++) {
-      const r = runJs(sel.check, sel.run, { timeFile: tf });
-      const [, rss] = fs.readFileSync(tf, 'utf8').trim().split(/\s+/).slice(-2);
-      js.push({ wall: r.wall, load: r.load, rss: Number(rss), rc: r.rc });
+  try {
+    for (const sel of sels) {
+      const js = [];
+      for (let k = 0; k < n; k++) {
+        if (useFile) fs.rmSync(tf, { force: true });
+        const r = runJs(sel.check, sel.run, { timeFile: tf });
+        const raw = useFile ? (fs.existsSync(tf) ? fs.readFileSync(tf, 'utf8') : '') : r.stderr;
+        const rss = parseTimeRss(raw, { platform });
+        if (rss === null) throw new Refusal(`--measure: could not parse peak RSS from /usr/bin/time output for ${sel.run.id}`);
+        js.push({ wall: r.wall, load: r.load, rss, rc: r.rc });
+      }
+      fs.rmSync(path.join(JS, sel.run.id), { recursive: true, force: true });
+      const f = (xs) => `${median(xs).toFixed(2)} [${Math.min(...xs).toFixed(2)}-${Math.max(...xs).toFixed(2)}]`;
+      const loads = js.flatMap((x) => x.load);
+      console.log(`${sel.run.id}: ${f(js.map((x) => x.wall))} s, peak RSS ${f(js.map((x) => x.rss / 1024))} MB, load ${Math.min(...loads).toFixed(2)}-${Math.max(...loads).toFixed(2)}, rc ${[...new Set(js.map((x) => x.rc))].join('/')}`);
     }
-    fs.rmSync(path.join(JS, sel.run.id), { recursive: true, force: true });
-    const f = (xs) => `${median(xs).toFixed(2)} [${Math.min(...xs).toFixed(2)}-${Math.max(...xs).toFixed(2)}]`;
-    const loads = js.flatMap((x) => x.load);
-    console.log(`${sel.run.id}: ${f(js.map((x) => x.wall))} s, peak RSS ${f(js.map((x) => x.rss / 1024))} MB, load ${Math.min(...loads).toFixed(2)}-${Math.max(...loads).toFixed(2)}, rc ${[...new Set(js.map((x) => x.rc))].join('/')}`);
+  } finally {
+    if (useFile) fs.rmSync(tf, { force: true });
   }
-  fs.rmSync(tf, { force: true });
 }
 
 async function main(argv) {

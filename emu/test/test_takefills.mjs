@@ -1,4 +1,4 @@
-// H-TAKEFILLS (src/lab/rec.mjs take_fills; src/fw/facts.mjs takeFills; docs/hle-gaps.md 4.3.13): TAKE's own fills of
+// H-TAKEFILLS (src/lab/rec.mjs take_fills; src/fw/facts.mjs takeFills; docs/hle-gaps/4.3.md 4.3.13): TAKE's own fills of
 // a still's shot natively, in the still states' order, on H-SHOTALLOC's shot and TAKE's context, in place of the parts
 // of S-EXIFPRM that wrote what they write.
 //   takeFillsSession  (firmware; the body of OM_EMU_MODEL: E143 by default, E146, E147, the bodies whose rule reads
@@ -19,7 +19,11 @@
 //                     (the frame count 1). Last (E143), the control for S-AFMKNT: takepic run natively without it on
 //                     the third picture's shot reaches its AF maker-note fill's `calls (a1)` (0x508c9cdd) with a1 0,
 //                     the word 0xa33b262c TAKE_FOCUS's release-take start sets (0x509a847a -> 0x508ca329), which the
-//                     default session does not run.
+//                     default session does not run. Since 2026-11-22 StlRdy1's request to the strobe sequence runs
+//                     too (once, after H-STBPROP's fill of the strobe module's property table, which leaves no row
+//                     without its pointer), its status 0 and no error log (take_fills throws on one): Sv (E143
+//                     +38174; E146 and E147 348 bytes lower) is the decision's answer, setting 50522 (non-zero), where
+//                     S-EXIFPRM's record has 0.
 //   node emu/test/test_takefills.mjs [--session]     (OM_EMU_MODEL=E143 | E146 | E147)
 // Negative controls (X, 2026-11-16, E143): with the frame count's step taken out of take_fills the record is the
 // same but the count stays 0 (the count check fails); with the shot-record fill's call taken out exif_param's check
@@ -30,10 +34,14 @@ const tester = () => {
   return { bad, ok: (cond, what) => { checks++; if (!cond) bad.push(what); }, get checks() { return checks; } };
 };
 const h8 = (v) => `0x${(v >>> 0).toString(16).padStart(8, '0')}`;
-// the halfwords of the record the fills change against S-EXIFPRM's copies (X); E143's fields (D, docs/hle-gaps.md 4.3.13)
-// (40 on each before takepic, the lens fill and the third fill ran, 2026-11-16)
-const DIFFS = { E143: 110, E146: 110, E147: 110 }, KEY = 38532, AE_SETTING = 41082, AE_AT = 38190, COUNTER = 25380, CTX_TIMER = 3128, COUNT = 3088;
+// the halfwords of the record the fills change against S-EXIFPRM's copies (X); E143's fields (D, docs/hle-gaps/4.3.md 4.3.13)
+// (40 on each before takepic, the lens fill and the third fill ran, 2026-11-16; 110 before the strobe request ran,
+// 2026-11-17)
+const DIFFS = { E143: 119, E146: 119, E147: 119 }, KEY = 38532, AE_SETTING = 41082, AE_AT = 38190, COUNTER = 25380, CTX_TIMER = 3128, COUNT = 3088;
 const AF_CALLS = 0x508C9CDD, AF_WORD = 0xA33B262C, TAKEPIC = 0x503BCD51;
+// Sv in the record (takepic's copy of TAKE's context's Sv, D) and the setting the strobe decision answers it from
+// without a flash mode (docs/hle-gaps/4.3.md 4.3.13)
+const SV = { E143: 38174, E146: 37826, E147: 37826 }, SV_SETTING = 50522;
 const LENS_FLAG = 37982, LENS_BIT = 0x1000, FOCAL = 38792, FOCAL_12MM = 120, WB = [[37992, 33057], [37988, 33073]];
 
 export async function takeFillsSession() {
@@ -63,8 +71,13 @@ export async function takeFillsSession() {
     const size = rec.R.exif.size, snaps = [], orig = rec.exif_param.bind(rec);
     rec.exif_param = (shot) => { const out = orig(shot); snaps.push({ rec: sim.read(shot.record, size), count: u16(F.take.count), ctx: sim.u32(F.context + CTX_TIMER) >>> 0, counter: setting(COUNTER) }); return out; };
     // the runs of takepic, the lens fill, the third fill and the AF maker-note fill's stand-in, in the second picture
-    const P = F.pic, runs = { pic: 0, lens: 0, third: 0, af: 0 }, call0 = lab.call.bind(lab);
-    lab.call = (fn, ...a) => { for (const k of ['fn', 'lens', 'third']) if (fn === P[k]) runs[k === 'fn' ? 'pic' : k] += 1; return call0(fn, ...a); };
+    const P = F.pic, runs = { pic: 0, lens: 0, third: 0, af: 0, strobe: 0, props: 0 }, call0 = lab.call.bind(lab);
+    lab.call = (fn, ...a) => {
+      for (const k of ['fn', 'lens', 'third']) if (fn === P[k]) runs[k === 'fn' ? 'pic' : k] += 1;
+      if (fn === F.strobe.request) runs.strobe += 1;
+      if (fn === F.strobe.props.fill) runs.props += 1;
+      return call0(fn, ...a);
+    };
     const hook0 = lab.hook.bind(lab);
     lab.hook = (at, stub, name, ...a) => hook0(at, name === 'S-AFMKNT' ? (h, r) => { runs.af += 1; return stub(h, r); } : stub, name, ...a);
     rec.fills = null;
@@ -81,6 +94,14 @@ export async function takeFillsSession() {
     t.note = `${diffs.length} halfwords of the record differ: ${diffs.map((o) => `+${o}`).join(' ')}`;
     ok(diffs.length > 0 && diffs.every((o) => o < X.time || o >= X.time + 10), `the fills change the record beyond the clock (${t.note})`);
     ok(diffs.length === DIFFS[MODEL], `${DIFFS[MODEL]} halfwords differ (X, 2026-11-17, on E143, E146 and E147; E146's and E147's TAKE fields 348 bytes lower): ${diffs.length}`);
+    // StlRdy1's strobe request: once, after H-STBPROP's fill; Sv the decision's answer, setting 50522
+    const h16r = (r, at) => r[at] | r[at + 1] << 8, S = F.strobe;
+    const empty = Array.from({ length: S.props.count }, (_, k) => k).filter((k) => !sim.u32(S.props.table + 8 * k + 4));
+    ok(runs.strobe === 1 && runs.props === 1 && rec.stb_props && !empty.length && pl.stand_ins_in_use().includes('H-STBPROP'),
+      `StlRdy1's strobe request ${h8(S.request)} once (${runs.strobe}) after H-STBPROP's fill ${h8(S.props.fill)} once (${runs.props}), the table ${h8(S.props.table)}'s ${S.props.count} rows each with a pointer (${empty.length} without)`);
+    ok(h16r(b.rec, SV[MODEL]) !== 0 && h16r(b.rec, SV[MODEL]) === setting(SV_SETTING) && h16r(a.rec, SV[MODEL]) === 0,
+      `Sv +${SV[MODEL]} ${h16r(b.rec, SV[MODEL])} is the strobe decision's answer, setting ${SV_SETTING} (${setting(SV_SETTING)}); S-EXIFPRM's ${h16r(a.rec, SV[MODEL])}`);
+    t.note += `; Sv +${SV[MODEL]} ${h16r(b.rec, SV[MODEL])}, the strobe status +${S.status} ${u16(F.context + S.status)}`;
     const area = (at) => Array.from({ length: 4 }, (_, k) => b.rec[at + 2 * k] | b.rec[at + 2 * k + 1] << 8).join(',');
     ok(runs.pic === 1 && runs.lens === 1 && runs.third === 1 && runs.af === 1 && rec.exif_sets === 2 && pl.stand_ins_in_use().includes('S-AFMKNT'),
       `takepic, the lens fill and the third fill natively once each with S-AFMKNT once (${JSON.stringify(runs)}), the EXIF set once per picture (${rec.exif_sets})`);

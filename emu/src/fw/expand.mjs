@@ -21,11 +21,16 @@ const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >
 
 // The run-time image: the expanded block, or rom itself when it holds no container and the board copies no data out
 // of it. base and preload default to the model this process runs (src/fw/model.mjs, src/fw/board.mjs); given, they
-// make the result a function of its inputs alone (bin/port.mjs expands another build than the lab's). Throws when a
-// container does not decode to its raw size or would overrun the block.
-export function expandImage(rom, { base = IMAGE_BASE, preload = BOARD.preload } = {}) {
-  return relocate(expand(rom), base, preload);
+// make the result a function of its inputs alone (bin/port.mjs expands another build than the lab's). expanded: rom is
+// already expandBlobs' image (a patch overlay's run-time image, src/fw/patch.mjs applyPatches' image block), so only
+// the preload rows are copied. Throws when a container does not decode to its raw size or would overrun the block.
+export function expandImage(rom, { base = IMAGE_BASE, preload = BOARD.preload, expanded = false } = {}) {
+  return relocate(expanded ? rom : expand(rom), base, preload);
 }
+// The block with its containers decoded in place and nothing else: the image a patch addressed in run-time addresses
+// is applied to (E-M1-Miii's mods.json, src/fw/patch.mjs), before the preload rows copy out of it. A function of rom
+// alone; rom itself when it holds no container.
+export const expandBlobs = (rom) => expand(rom);
 // The reset head's copies of image data to RAM past the image (src/fw/board.mjs preload; E144: the boot data and the
 // chunks linked at 0x61e3xxxx), rows [file offset, length, run-time address]: the image grows to cover them, each at
 // its run-time offset (address - base), so every reader of the image by run-time address sees what the code sees,

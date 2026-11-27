@@ -70,7 +70,7 @@ The encoding is the long-known Olympus `oly_fw_manip` scheme (community tool wit
 - Flags: `0x0000` code, plain; `0x0100` code, scrambled; `0x0101` languages, strings and fonts; `0x0102` images;
   `0x0103` the camera's sounds, in the TG-7's update only (E145, load `0x471a0000`: an index of 16-byte entries
   `{address, size, 0, 0}` after the head, then RIFF WAVE files, PCM, 2 channels, 48 kHz, 16 bits, 512-aligned, X;
-  the OM-1 line's sound area at `0x4e420000` is in no update, `docs/hle-gaps.md` 4.5); `0x0106` large data; `0x0107`
+  the OM-1 line's sound area at `0x4e420000` is in no update, `docs/hle-gaps/4.5.md` 4.5); `0x0106` large data; `0x0107`
   the SCPU's image at `0x08000000` (`docs/om1-scpu-spec.md`); `0x010e` miscellaneous.
 - In the camera's NAND each block sits at its head's load address as head + descrambled body + tail, the form the
   resource loader `0x501a8ca0` reads its indexes in (D, X on E143; `emu/src/fw/nand.mjs`).

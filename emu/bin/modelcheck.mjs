@@ -109,7 +109,10 @@ const PROBE_XFAIL = {};
 // (0x50c96925), on the GUI's camera events: the start, the shooting information's 3 s timer, the return from
 // playback, INFO, a shot; not on an S1 that changes nothing on the screen nor at idle (X: E118, E120, E122,
 // docs/model-survey.md finding 61). INFO cycles the four views of the shooting screen back to the first on both
-// panels (X); PLAY and back redraws too, and stalled on E120's and E122's EVF before finding 70
+// panels (X); PLAY and back redraws too, and stalled on E120's and E122's EVF before finding 70. "Back to its frame"
+// is judged on the pixels a window (window_) finds stable before the first press: since the E118 family's second timer
+// unit runs the GUI's software timers (docs/hle-gaps/4.7.md 4.7.14), E120's shooting screen blinks its ISO-A LOW item
+// with a 500 ms period (X: TFT [22,208,67,242], EVF [35,334,108,389]), which a press's 1.35 s does not land in phase
 const REDRAW_MAX = 8, PROBE_REDRAW = { E118: 'info', E120: 'info', E122: 'info' };
 // the bodies whose EVF runs the whole path, playback included. The E118 family's kind-3 compositor draws the EVF's
 // playback (the plane's level 0xb2 drawn as full, docs/om1-vsc-spec.md section 12; X: PLAY, INFO and PLAY on the
@@ -121,7 +124,7 @@ const EVF_PLAY = new Set(['E118', 'E120', 'E122', 'E148', 'E144', 'E139', 'E134'
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
-// (0x5032553f) divide by 0 at 0x5032574f, the firmware's own result for this state (docs/hle-gaps.md 4.8.7, D): the
+// (0x5032553f) divide by 0 at 0x5032574f, the firmware's own result for this state (docs/hle-gaps/4.8.md 4.8.7, D): the
 // blank store's movie mode, UHD 4K at 60p, has no rate in E144's table, so the first rate query fails and leaves its
 // size 0, which this build does not test (E143's, E139's, E137's and E125's do); the second query answers from
 // constants for an exFAT volume, so the exFAT branch runs and divides by that size. The manual leaves a divide by 0's
@@ -166,7 +169,7 @@ if (OVERLAY) {
   }
 }
 const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
-  ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}) };
+  ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: loadImage() } : {}) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];
@@ -184,7 +187,7 @@ const rec = (k) => {
 // idle to lab time t in slices that end at each of the camera's timed events due before t: src/lab/camapp.mjs tick
 // posts them only at an idle slice's end, so one slice to t would post them as late as the step's end (X: E146's and
 // E147's TFT S2 then got END_RECVIEW at the end of its 1200 ms and composed 1.2 ms later, before the GUI's redraw,
-// its OSD planes blank; docs/hle-gaps.md 4.3.5)
+// its OSD planes blank; docs/hle-gaps/4.3.md 4.3.5)
 const idle = (t) => {
   for (let due; (due = s.camapp.timed.find(([d]) => d > lab.lab_time())?.[0]) !== undefined && due < t;) s.idle_slice(due);
   s.idle_slice(t);
@@ -217,11 +220,11 @@ const press = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(lab.lab_time() + 
 // PROBE_REDRAW's key, where the body has one: pressed until the screen is back to its frame and GUI state before the
 // first press, n times; redraw() then presses it n times and checks the GUI state came back
 const cycle = () => {
-  const bytes = () => s.frame('boundary', true)[2].slice(), f0 = bytes(), state = lab.state();
+  const f0 = window_(), state = lab.state();
   for (let n = 1; n <= REDRAW_MAX; n++) {
     press(REDRAW);
-    const f = bytes();
-    if (lab.state() === state && f.length === f0.length && f.every((v, i) => v === f0[i])) return { n, state };
+    const [fw, fh, raw] = s.frame('boundary', true), px = new Uint32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + 4 * fw * fh));
+    if (lab.state() === state && px.length === f0.val.length && px.every((v, i) => !f0.stable[i] || v === f0.val[i])) return { n, state };
   }
   throw new Error(REDRAW + ' did not bring the screen back to its frame in ' + REDRAW_MAX + ' presses');
 };

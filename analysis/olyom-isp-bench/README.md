@@ -22,7 +22,7 @@ day of the bench's head. These are facts as the two repositories state them, no 
 from the bench, attributed, and none of its code.
 
 Related notes: [fishcu/oly_fw_analysis](../oly-fw-analysis/README.md), whose probes the bench's call fixtures come
-from, [Caduceus for OM-3](../caduceus-om3/README.md), `docs/hle-gaps.md` 4.3.12 and 4.8.13.
+from, [Caduceus for OM-3](../caduceus-om3/README.md), `docs/hle-gaps/4.3.md` 4.3.12 and `docs/hle-gaps/4.8.md` 4.8.13.
 
 **Addresses.** The bench writes PEN-F code addresses in run-time form (block offset + `0x60021020`); om-emu's
 notation is block offset + `0x50000000` (`docs/README.md` "Addresses"), so theirs - `0x10021020`. Code addresses
@@ -40,7 +40,7 @@ here, **D** read in the firmware (or in their source, where said), **I** inferen
    E147. So the still's stages can be checked standalone, below the pixels, without the native shooting path.
 3. **What such a number is.** "The function on an otherwise-zero job", never "the camera's value": bytes of the job
    that the fixture leaves 0 change the outputs (X). No camera-side job exists to say what a real request holds
-   (`docs/hle-gaps.md` section 8, the row that needs code run on a camera).
+   (`docs/hle-gaps/8.md` section 8, the row that needs code run on a camera).
 4. **The pixel layer is outside om-emu's evidence rule.** 11 of its 15 pixel models are labelled assumed and 4
    documented, where "documented" means research notes, a static reading of a proprietary desktop program and fits
    to that program's exports. om-emu uses none of that as evidence.
@@ -78,7 +78,7 @@ here, **D** read in the firmware (or in their source, where said), **I** inferen
   +48 (the picture mode), +56 (`0xffffffff`), and the request's halfwords +10 (the mode), +12 (a stage word) and +28
   (`0x200`). The layout is the firmware's own (D, E122): the image library's record filler writes the record's +12
   as the register image's +524, its +16 as the image's +5736, +48 as the request's key and +56 as `0xffffffff`
-  (`0x50492921..0x5049295d`; `docs/hle-gaps.md` 4.8.13). The README says the fixtures are those of oly_fw_analysis'
+  (`0x50492921..0x5049295d`; `docs/hle-gaps/4.8.md` 4.8.13). The README says the fixtures are those of oly_fw_analysis'
   probes (`README.md:53-54`).
 - **The three om-emu files.** `vendor/om-emu/cpu.mjs`, `mem.mjs` and `olyfw.mjs`, imported by `src/native.js:3-4`
   and `src/firmware.js:2` and bundled into `dist/index.html`. They are byte for byte om-emu's `emu/src/core/cpu.mjs`,
@@ -108,7 +108,7 @@ The page labels each stage twice, "Values" and "Pixels", in four classes: Firmwa
 
 The page says of its register values that they "are captured, not applied by real hardware" (`src/index.html:52`),
 and its README that the camera's ISP hardware is not emulated (`README.md:58-59`). That is om-emu's position too
-(`docs/hle-gaps.md` 4.3): the firmware yields parameter values and, since this study, the page of the unit each is
+(`docs/hle-gaps/4.3.md` 4.3): the firmware yields parameter values and, since this study, the page of the unit each is
 copied to (4.8.13), not the operation.
 
 ## 3. Claims tested
@@ -119,7 +119,7 @@ copied to (4.8.13), not the operation.
 | 2 | "PEN-F firmware 3.1" (`README.md:31-33`; `src/firmware.js:21`) | Not a gate: any main block of 21,364,672 bytes is taken as "PEN-F 3.1 layout, modified". The E-M5 II 4.1 and E-M10 II 1.4 blocks have that length; the E-M5 II file is accepted, all 55 function rows fail and the tables read from fixed addresses are garbage, with no error | X, rerun (E118); X, the study (E120) |
 | 3 | `test/realfw.mjs` prints every function's output for a real PEN-F 3.1 file (`README.md:79-80`) | Holds: 62 lines, 55 function rows, none failed | X, rerun |
 | 4 | "stages marked Firmware show the values a real PEN-F 3.1 `.BIN` produces" (`README.md:31-33`) | The function outputs hold: all 55 rows byte for byte and step for step through om-emu's `call` op in an E122 session (the study); rerun here for eight (six-axis modes 1 and 3, the YC packing at three settings, chroma mode 12, grain level 2, tone mode 3: equal values, 187, 283, 544, 544, 619, 56, 144 and 98 instructions as the bench counts). "A camera produces these values" does not follow: section 4 | X |
-| 5 | The fixture writes a job as the camera would see it (implied by 4) | Does not hold as stated. The study's sweep found 22 request and record bytes the fixture leaves 0 that change an output or make a call fault. Rerun for the YC packing at COLOR, sharpness 0, Sv 1280 (coring 7, gain 37, 544 instructions): the request's +0x431 = 1 gives coring 0 and gain 70 in 547; +0x430 = 1 gain 30; the record's +0x63 = 1 gain 0 and the first limit 0. The 22 are the bench's fixture's: om-emu's own job (A-STAGEJOB, which sets every flag bit) leaves other bytes 0, and for the stage list alone 43 of the 66 it reads while 0 change an output (`docs/hle-gaps.md` 4.3.12). Whether a camera's request has zeros there is ? | X |
+| 5 | The fixture writes a job as the camera would see it (implied by 4) | Does not hold as stated. The study's sweep found 22 request and record bytes the fixture leaves 0 that change an output or make a call fault. Rerun for the YC packing at COLOR, sharpness 0, Sv 1280 (coring 7, gain 37, 544 instructions): the request's +0x431 = 1 gives coring 0 and gain 70 in 547; +0x430 = 1 gain 30; the record's +0x63 = 1 gain 0 and the first limit 0. The 22 are the bench's fixture's: om-emu's own job (A-STAGEJOB, which sets every flag bit) leaves other bytes 0, and for the stage list alone 43 of the 66 it reads while 0 change an output (`docs/hle-gaps/4.3.md` 4.3.12). Whether a camera's request has zeros there is ? | X |
 | 6 | Only mapped regions exist and anything else is a reported fault (`src/native.js:1-2`) | Holds for unmapped accesses and unimplemented instructions. The mapped block's tail is `0xff` in the file though part of it is RAM the boot fills on the camera, and reads there return `0xff` without a fault; the seven functions do not read it | X, the study |
 | 7 | Sharpness +1 and +2 give the gain of 0 | Reproduced, and explained (D, E122): the gain is (K0 x LUT[clamp(base + sharpness, 0, 10)]) >> 8 with COLOR's base 5 and the table 256 from index 5 up, so on this path a positive sharpness changes nothing. oly_fw_analysis documents the table and says it does not prove equal photographs | X, D, the study |
 | 8 | "at the camera's register values both paths produce identical shaper output" and "`wsGain` reduces to `gain = KEDGE` exactly" (`README.md:65-66`) | Holds at the level of the two shaper functions, for ES 0, ESVX = ESVY = 64 and KEDGE up to 255 (851,105 cases, none differ); above 255 it clamps while the slider runs to 512. The rendered picture of the two paths differs by default (136,167 of 640,000 bytes, at most 16) because the bench path's brightness gain defaults to 1, and is identical at 0. It says nothing about the camera | X, rerun |
@@ -136,7 +136,7 @@ Not looked at: the E-P7 project its README also names (not read for this note; n
 **Facts**, each read or run again on om-emu's side and attributed to the bench and to oly_fw_analysis as the lead:
 
 - The PEN-F's seven entry points with their call sites, masks and frames (section 1), and the family on E143 and
-  E147 (`docs/hle-gaps.md` 4.3.12 and 4.8.13 for the stage list, the YC packing, the job record and the wrapper that
+  E147 (`docs/hle-gaps/4.3.md` 4.3.12 and `docs/hle-gaps/4.8.md` 4.8.13 for the stage list, the YC packing, the job record and the wrapper that
   calls them; the per-stage table, its read sets and values are 4.3.12's, pinned by `emu/test/test_stages.mjs`).
   om-emu's own values for the family (six of the bench's functions, its tone selector through the selector's wrapper,
   and five more builders) are what `OM_EMU_MODEL=E122 node
@@ -172,17 +172,17 @@ Not looked at: the E-P7 project its README also names (not read for this note; n
 **Not taken:** `src/pipeline.js` as a model of the pipeline unit, any pixel formula, the measured kernel, the
 register field names of the table in section 2, the desktop program's arithmetic, the bench's setting keys, and any
 code or table. A stand-in development for the lab's JPEG is not planned: it would make the lab's picture look more
-like a camera's development while every formula in it stayed an assumption (`docs/hle-gaps.md` 4.3.9, "Whether the
+like a camera's development while every formula in it stayed an assumption (`docs/hle-gaps/4.3.md` 4.3.9, "Whether the
 lab can run it").
 
 ## 5. Where it corrects om-emu's notes
 
-1. `docs/hle-gaps.md` 4.3.9 and `analysis/caduceus-om3/README.md` 4.6 item 4 said the pipeline unit's registers and
+1. `docs/hle-gaps/4.3.md` 4.3.9 and `analysis/caduceus-om3/README.md` 4.6 item 4 said the pipeline unit's registers and
    interrupts were not read and the lab refused its first write. 4.8.13 had read and modelled the block for the play
    module's decode. Both now say so, and 4.8.13 lists the development's pages (made 2026-11-14).
 2. `analysis/oly-fw-analysis/README.md` recorded that project without a licence and called om-emu a full-system
    emulator; its section 8 has the state at that project's head (made 2026-11-14).
-3. `docs/hle-gaps.md` section 8 had no row for the one thing the calls cannot show, a camera's job (made
+3. `docs/hle-gaps/8.md` section 8 had no row for the one thing the calls cannot show, a camera's job (made
    2026-11-14).
 4. `emu/web/play.html`'s Card panel says a picture's file is S-RECFILE's. On E143, E146 and E147 REC_FILE runs
    natively and the stream is S-JPEGENC's (`emu/src/lab/playui.mjs` STAND_INS). Found by the study; not changed in
@@ -191,22 +191,22 @@ lab can run it").
 
 ## 6. Open questions
 
-- What a camera's request and job record hold where the fixture has zeros, on any body (`docs/hle-gaps.md` section
+- What a camera's request and job record hold where the fixture has zeros, on any body (`docs/hle-gaps/8.md` section
   8).
 - The meaning of the request's +0x431 on the PEN-F, which the YC packing reads and which moves the gain from 37 to
   70 and the coring from 7 to 0 (X); and whether a positive sharpness acts elsewhere on a real shot.
 - Which unit-mask bits a development request sets, and what the pages' words mean to the hardware (4.8.13).
 - On E143 and E147 the six-axis sets for the keys 1, 3 and 4 are the PEN-F's plus E143's set for the key 11, which is
   all zero on the PEN-F, and the chroma control writes four words for MONO where the PEN-F writes one (X, on
-  om-emu's job, `docs/hle-gaps.md` 4.3.12): body values or artefacts of the job is ?.
+  om-emu's job, `docs/hle-gaps/4.3.md` 4.3.12): body values or artefacts of the job is ?.
 
 ## 7. Follow-ups, ranked
 
 1. **Stock stage baselines through the `call` op** on E122, E143 and E147: the stage functions on a job the test
    writes, the job a named assumption with its read set pinned, expectations from om-emu's own runs. Size: days.
    Payoff: a patch's stage output has "what stock gives" beside it; a regression on the core and the `call` op.
-   Made 2026-11-14: `emu/test/test_stages.mjs` (twelve builders, `docs/hle-gaps.md` 4.3.12).
-2. **A camera's job** (`docs/hle-gaps.md` section 8). Size: minutes to ask, a day to digest; it depends on a third
+   Made 2026-11-14: `emu/test/test_stages.mjs` (twelve builders, `docs/hle-gaps/4.3.md` 4.3.12).
+2. **A camera's job** (`docs/hle-gaps/8.md` section 8). Size: minutes to ask, a day to digest; it depends on a third
    party. Payoff: the stage checks stop resting on an assumed job.
 3. **Grain on E147 at the stage level**, for Caduceus for OM-3: read the grain builder's job fields first. Size:
    days; the path to its second hook point is not known. Payoff: one more look checked below the pixels. Partly made

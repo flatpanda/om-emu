@@ -171,6 +171,7 @@ export function sessionUnits() {
     ['trace:PC[,PC...][:stack=N]', 'trace:0x50436558,0x60457578:stack=4', 'trace'], ['trace:mem:ADDR:LEN[:r|w|rw]', 'trace:mem:0x10:4:rw', 'trace'], ['trace:off', 'trace:off', 'trace'],
     ['break:PC[,PC...]', 'break:0x50436558', 'break'], ['break:mem:ADDR:LEN[:r|w|rw]', 'break:mem:0x10:4', 'break'], ['break:off', 'break:off', 'break'], ['until resume', 'resume', 'resume'],
     ['card:out', 'card:out', 'card'], ['card:in', 'card:in', 'card'], ['card:out:2', 'card:out:2', 'card'], ['card:in:2', 'card:in:2', 'card'],
+    ['tilt:roll=R[,pitch=P]', 'tilt:roll=52', 'tilt'],
   ];
   const flat = head.replace(/\n\/\/ ?/g, ' ');       // the header's lines joined: a form may run over a line's end
   for (const [form, example, kind] of FORMS) {

@@ -23,7 +23,7 @@ const D = {
   REQUEST: 0x018, LEVEL_MASK: 0x01C, ERR_TOTAL: 0x020, IPI_WRITES: 0x024, DOORBELL_RESULT: 0x028, IPI_REPEATS: 0x02C,
   PRESENT_NOW: 0x040, PENDING: 0x060, IPI_REQ: 0x070, XCPU_TOTAL: 0x07C, ERR_RING: 0x100, ERR_SLOTS: 16,
   LINES: 0x1000, LEVELS: 0x2000, TEST: 0x3000, PRESENTED_RING: 0x4000, ACCEPTED_RING: 0x5000, RING_SLOTS: 256,
-  XCPU_RING: 0x6000,
+  XCPU_RING: 0x6000, XCPU_RING_SLOTS: 2048,
 };
 const GATE_OFF = 0, GATE_PC = 1, GATE_ANY = 2;
 const MUT_HIGHEST_LEVEL = 23, MUT_HIGHEST_IRQ = 27, MUT_IPI_NO_CLEAR = 31;
@@ -142,7 +142,7 @@ export class Intc {
     if (this.pending[b] & value) this.dset(D.IPI_REPEATS, this.dget(D.IPI_REPEATS) + 1);
     this.pending[b] |= value;
     if (b !== 0) {
-      const total = this.dget(D.XCPU_TOTAL), slot = D.XCPU_RING + (total % D.RING_SLOTS) * 16;
+      const total = this.dget(D.XCPU_TOTAL), slot = D.XCPU_RING + (total % D.XCPU_RING_SLOTS) * 16;
       this.dset(slot, b); this.dset(slot + 4, value); this.dset(slot + 8, ctx.pc()); this.dset(slot + 12, ctx.insns() % 4294967296);
       this.dset(D.XCPU_TOTAL, total + 1);
     }

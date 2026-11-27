@@ -102,11 +102,18 @@ function g1_bus(lab) {
   lab.bus_write(0x98D4D800, new Uint8Array(256));
   n += 1;
   check(lab.sim.u32(D.BUS_WINDOW_REG) === 0x17161514);
-  check(CD.cpu(lab, LOAD, 0xB8000000).fault === 2);
+  // The reset segment 0x17 is DRAM on a 512 MiB body (MM's bank 0, src/fw/facts.mjs mmDramSize): the window's first
+  // word loads. Segment 0x12 (bus 0x90000000) is backed by nothing: through the window a load faults and the debugger
+  // read fails.
+  check(CD.cpu(lab, LOAD, 0xB8000000).fault === 0);
+  const unbacked = lab.bus_map(0x90000000);
   try {
-    lab.sim.read(0xB8000000, 4);
-    throw new AssertionError('debugger read of an unbacked window segment succeeded');
-  } catch (e) { if (e?.name !== 'RuntimeError') throw e; }
+    check(CD.cpu(lab, LOAD, unbacked).fault === 2);
+    try {
+      lab.sim.read(unbacked, 4);
+      throw new AssertionError('debugger read of an unbacked window segment succeeded');
+    } catch (e) { if (e?.name !== 'RuntimeError') throw e; }
+  } finally { lab.bus_unmap(); }
   check(CD.cpu(lab, STORE, 0x9810005C, 0x17161514).fault === 2);
   check(CD.cpu(lab, STORE, D.BUS_WINDOW_REG, 0x13161515).fault === 2);
   check(lab.sim.u32(D.BUS_WINDOW_REG) === 0x17161514);

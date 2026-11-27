@@ -1,4 +1,4 @@
-// The lens serial controller (board lens.ssc, IRQ lens.irq; docs/hle-gaps.md 4.4.1, where the firmware addresses
+// The lens serial controller (board lens.ssc, IRQ lens.irq; docs/hle-gaps/4.4.md 4.4.1, where the firmware addresses
 // cited here are listed) and the lens at its far end (src/lab/lensmcu.mjs S-LENSMCU, or anything with its seam:
 // frame(f) -> the lens's reply bytes). The controller is a frame engine: the driver (LENS_SSC, 0x502c0e4e..0x502c2193)
 // loads a frame's header, its data and the reply's destination into registers and starts it; the engine sends the
@@ -45,7 +45,7 @@
 //
 // Two units the lens path writes a few words of (board lens.units, {name, base, size, words}): the FCS unit, whose
 // +0x000 and +0x068 the lens open clears (0x502c0e99, 0x502c0e9f; the unit's role, ?), and the mechanism unit at
-// 0x9b900000 (docs/hle-gaps.md section 7), which the lens attach powers through the mechanism's reference-counted
+// 0x9b900000 (docs/hle-gaps/7.md section 7), which the lens attach powers through the mechanism's reference-counted
 // power-on (0x502c86bb -> 0x5010fd7a -> 0x501090e9 -> 0x5010b937: +0x000 and +0x004 cleared, then 0x5010b996
 // +0x020, +0x024, +0x028 from its table; the power-off 0x5010ba1e writes +0x004 and +0x000). Those words are storage;
 // any other access to the units, and a debugger write, is UNKNOWN.

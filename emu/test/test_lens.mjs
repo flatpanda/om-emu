@@ -1,5 +1,5 @@
 // The lens on the mount natively (src/dev/lensssc.mjs, src/dev/dpc.mjs, src/lab/lensmcu.mjs, src/lab/lens.mjs;
-// docs/hle-gaps.md 4.4.2):
+// docs/hle-gaps/4.4.md 4.4.2):
 //   lensUnits    without firmware: the controller (a lens-less mount's detect pin reads high, a mounted one low; a
 //                start with no lens, or of a mode the driver does not use, is a bus error; a frame's header, its data
 //                for the data-carrying modes only, the reply into the receive FIFO or by DMA into memory, the count,
@@ -105,7 +105,7 @@ function mcuTests(ok) {
   ok(ch.length === 66 + 16 * n + 72 + 5 * n + 4 + 720 + 44 + 72 + 1, `id 64: the block's length ${ch.length}`);
   ok(f(0xc1, 0xfe).length === n + 1 && f(0x81, 0xe4).length === 2 * n + 1 && f(0xc2, 0xf3).length === 34 * n + 1, 'ids 71, 76, 7: per zoom step');
   ok(f(0x60, 0xf0, 0, 0, new Uint8Array(5), 9761, false) === null, 'type 3 command 101: no reply');
-  // (docs/hle-gaps.md 4.1.8: the type-1 request 0x502b7e8a, data count 0)
+  // (docs/hle-gaps/4.1.md 4.1.8: the type-1 request 0x502b7e8a, data count 0)
   ok(f(0xa0, 0xb0, 0xfe, 0, undefined, 33, false) === null && f(0xa0, 0xb1, 0, 0, undefined, 33, false) === null
     && throwsAs(() => f(0xa0, 0xb0, 0x01, 0, undefined, 33, false), LensError), 'type 1, the AF mode set: no reply; another sub-code is refused');
   ok(mcu.setFocal(25) && mcu.focal() === 25 && !mcu.setFocal(26), 'the zoom ring takes the nearest step, and a change only once');
@@ -171,9 +171,11 @@ export async function lensSession() {
   ok(JSON.stringify(fl) === JSON.stringify([24, 80, 2 * LENS_1240.zoom[step]]), `the 35 mm focal lengths the driver derives: ${fl}`);
   // the bring-up's three 0x100000ff logs (0x5089d53e, 0x5089d853) are the session's without the native lens too (X:
   // master 93016b8's play session logs the same three); H-RESINIT's sound 0 load on the erased sound area logs
-  // 0x1f000003 (src/lab/resnand.mjs)
+  // 0x1f000003 (src/lab/resnand.mjs); H-UIININIT's A/D channel open logs 0x28001511 (0x5014ce00, the A/D driver's init
+  // not run), which play.mjs checks is the init's one log and keeps in its record (docs/hle-gaps/4.7.md 4.7.17)
   const { SOUND_ERASED_LOG } = await import('../src/lab/resnand.mjs');
-  const bringUp = (c) => c === 0x100000ff || (s.resnand && !s.resnand.image && c === SOUND_ERASED_LOG);
+  const uiinLog = new Set((s.uiin_init?.errlog ?? []).map(([c]) => parseInt(c, 16)));
+  const bringUp = (c) => c === 0x100000ff || (s.resnand && !s.resnand.image && c === SOUND_ERASED_LOG) || uiinLog.has(c);
   const unexpected = (from) => lab.kernel.errors.slice(from).filter(([c]) => !EXPECTED_ERRLOG.has(c) && !(from === 0 && bringUp(c))).map(([c, , , w]) => `0x${c.toString(16)} at ${w}`);
   ok(unexpected(0).length === 0, `no error log: ${unexpected(0)}`);
   const e0 = lab.kernel.errors.length;

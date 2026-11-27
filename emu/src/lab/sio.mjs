@@ -1,4 +1,4 @@
-// PER_SIO's serial controller in the lab for the channels a body's devices sit on (S-SIOIIC; docs/hle-gaps.md 4.7.5,
+// PER_SIO's serial controller in the lab for the channels a body's devices sit on (S-SIOIIC; docs/hle-gaps/4.7.md 4.7.5,
 // docs/model-survey.md finding 24, which gives E132's addresses for what is read here). The controller's register
 // blocks (lab-stub pages on the E144 family's board), its interrupts and its driver's per-mode starts are not
 // modelled; PER_SIO's channel API and its IIC layer run natively above it, and so does the driver's completion
@@ -22,7 +22,7 @@
 // A device's read or write it does not model stops the session in the device (src/lab/charger.mjs); the other
 // indices' starts run natively (the TG-5's panel, channel 2: its bytes reach the lab-stub page and S-PANELDONE).
 import { MODEL_INFO, fact, refuseUnmapped } from '../fw/model.mjs';
-import { SIO_E143 } from '../fw/facts.mjs';
+import { SIO_E143 } from '../fw/facts-const.mjs';
 import { FirmwareError, where } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { bytesHex } from '../util/bytes.mjs';

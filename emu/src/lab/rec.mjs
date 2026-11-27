@@ -1,7 +1,7 @@
 // REC_FILE natively on E143, E146 and E147, on the E144 family's E144, E148, E139, E134, E137, E142, E140 and
 // E125 and on E145 (its loop inlining the start and the finish), on E130, E133, E129 and E132, whose REC is the
 // version before the family's (E132 recording through rec_file_destination_record), and on the E118 family's E122,
-// E118 and E120 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 131 to 136,
+// E118 and E120 (src/fw/models.mjs rec_native; docs/hle-gaps/4.8.md 4.8.10, docs/model-survey.md findings 131 to 136,
 // 156): S2's picture file recorded by REC_FILE's own task from the packet REC_IMAGE posts it, with the file's header
 // made by REC_IMAGE's own header maker. Addresses and offsets are E143's (D unless tagged); each body's are the ones
 // the rule reads (fact 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue, on E130, E133, E129
@@ -15,14 +15,14 @@
 // REC_IMAGE's and one the object-name list's, so nothing else posts to it (D). REC_FILE (task 27, 0x5053f1a4) waits on
 // flag 265 (0x60043182) for the pattern 3: 2 the queue (its receive 0x5054dd40, 316 bytes, then the handler 0x5053f354,
 // which returns to 0x5053f20d), 1 REC's packet ring (its receive 0x5054ebc8(1), then the same handler, returning to
-// 0x5053f249). The queue post after the image is not a normal JPEG's (E143, docs/hle-gaps.md 4.3.3, D): REC_IMAGE's
+// 0x5053f249). The queue post after the image is not a normal JPEG's (E143, docs/hle-gaps/4.3.md 4.3.3, D): REC_IMAGE's
 // 0x505422f1 posts there only where 0x5054ca14 gives 0 (Mode 4097 with the record's +38006 not 0 and 0x5054bf6c not 0,
 // which needs the record's +38764 to be 22); a normal JPEG goes into the ring (0x5054eaf0, 120 slots of 316 bytes at
 // 0xa3323a38) and REC_FILE's flag is set across the cores (0x5054de46, by REC's bind table 0xa332ce5c, entry 7:
 // REC_FILE's flag, pattern 1, core 0, then cpu_conn 0x50035afd). E146 and E147 (D): the packet is 276 bytes with other
 // offsets (their dump's), and REC_IMAGE keeps the image's address and size not in it but in an image record of 52
 // bytes that the packet's +180 points at, which REC_IMAGE's task keeps on its stack and inits itself; REC_FILE is
-// task 27 and REC_IMAGE task 28 there too, and a normal JPEG takes the same ring (docs/hle-gaps.md 4.3.5).
+// task 27 and REC_IMAGE task 28 there too, and a normal JPEG takes the same ring (docs/hle-gaps/4.3.md 4.3.5).
 // The E144 family's REC version (D on E144, docs/model-survey.md findings 118 to 123): the packet is 300 bytes, every
 // field in it; REC_FILE (task 31 on E144) waits on its queue alone, with no event flag, and REC_IMAGE's
 // rec_make_image_finish posts a still's packet to that queue (S-RECIMAGE's post is that route there); the EXIF init
@@ -71,9 +71,9 @@
 //               bound to its flag (0x5002c285), its 13 settings from id 50674 on reset to their defaults (0x50041dbc;
 //               X: the values the lab's store holds already), properties copied from the settings store (0x5004188b)
 //               and the white-balance preset table 0xa31f1bd0 (0x5039950e), whose rows the EXIF set's gains read
-//               (docs/hle-gaps.md 4.3.11)
+//               (docs/hle-gaps/4.3.md 4.3.11)
 //   H-SHOTALLOC (where the rule reads it, fact 'take_shot', src/fw/facts.mjs takeShot: E143, E146, E147;
-//               docs/hle-gaps.md 4.3.13) the picture's shot in TAKE's shot table, as the camera application takes it
+//               docs/hle-gaps/4.3.md 4.3.13) the picture's shot in TAKE's shot table, as the camera application takes it
 //               before its take-picture request and gives it back afterwards: CapBuf_TakeBuff's call of api_rec's
 //               take-buffer allocation (API 0x20019), natively before S-EXIFPRM, which has TAKE's own allocation
 //               pick a free id and take the shot's buffers from MM by the kind the settings give (X on the three:
@@ -86,18 +86,31 @@
 //               no sensor image: nothing in the lab writes the Bayer, thumbnail or other buffers, so a reader of
 //               their pixels gets what MM's memory holds (the lab's DRAM, zero unless something else wrote there).
 //               TAKE's lock of the entry for the take (its +26, TAKE_MAIN's on taking the request) is not set: TAKE_MAIN
-//               does not run
+//               does not run. Since 2026-11-22 the Bayer buffer can hold S-RAWFRAME's pattern (below)
+//   S-RAWFRAME  (with H-SHOTALLOC's shot, where the body's bytes have the form rawframe.mjs reads: E143, E146, E147; src/lab/rawframe.mjs;
+//               docs/hle-gaps/4.3.md 4.3.14) the shot's Bayer buffer, which the sensor's DRAM capture fills on the
+//               camera, filled with a lab pattern right after the allocation: its handle by TAKE's Bayer lookup and
+//               its address by MM's, natively as rec_ImgProCtrl_Src_Bayer asks them, its geometry the one that
+//               reader gives a normal still (12 bits, stride 5360, 5208 x 3912) and the frame's 31,452,480 bytes
+//               inside MM's block of the handle (A-RAWFRAME-1: the packing). No other buffer of the shot is written.
+//               In use only where that block is memory of the lab's (rec.raw_skip says why not): MM's bank 0 starts at
+//               0xb8000000, inside the E143 family's 512 MiB of DRAM since 2026-11-23 (src/fw/board.mjs dram_size;
+//               before, 384 MiB, it was not in use by default; docs/hle-gaps/4.3.md 4.3.17)
 //   H-TAKEFILLS (where the rule reads them, fact 'take_fills', src/fw/facts.mjs takeFills: E143, E146, E147, with
-//               H-SHOTALLOC's shot; docs/hle-gaps.md 4.3.13) TAKE's own fills of the shot natively, before the rest of
+//               H-SHOTALLOC's shot; docs/hle-gaps/4.3.md 4.3.13) TAKE's own fills of the shot natively, before the rest of
 //               S-EXIFPRM, in the still states' order on TAKE's context (0x62a4a358) and a take-picture packet of the
 //               lab's (+0 the shot's id, +8 the flags 0 of api_rec's takePicture for a single still, +60 the exposure
 //               record): RdyStart's mode bytes (0x503c28c7 on the packet), RdyFcsTake's copy (0x503c4509), Standby's
 //               entry (0x503b09dd) with the copy and no packet, which copies them into the context and clears the
 //               frame count (its tail, which takes the packet into the still states, 0x503b0de6, is not run: I, the
 //               entry's own no-packet path); StlRdy1's exposure record from TAKE's ring (0x503baeb6; TAKE_MAIN's init
-//               of the slots' indices does not run, so each shot takes slot 0) filled (S-EXIFPRM's fill, its request
-//               to the strobe sequence 0x503b8126 not run: docs/hle-gaps.md 4.3.13 item 1c); the packet word
-//               (0x62a4a350) set to the packet, as Standby's tail keeps it; StlRdy2's shot-record fill (0x503bba51:
+//               of the slots' indices does not run, so each shot takes slot 0) filled (S-EXIFPRM's fill); the packet
+//               word (0x62a4a350) set to the packet, as Standby's tail keeps it; since 2026-11-22 StlRdy1's request to
+//               the strobe sequence (0x503b8126(context, packet), StlRdy1's function's last call at 0x503b139d: the
+//               exposure request at the context's +3144 built, the strobe sequence's still decision 0x501bc976 asked,
+//               its status kept at +3140, which must be 0, and its answer copied back: Sv into the context's +3346,
+//               which takepic copies into +38174; the request's +204 and the context's +3352, which takepic copies
+//               into +6720 and +38160; docs/hle-gaps/4.3.md 4.3.13 item 1c), after H-STBPROP; StlRdy2's shot-record fill (0x503bba51:
 //               the template's copy, the settings fields, the shutter range); StlTake's capture fill (0x503bcaa2: the
 //               camera's clock read into +37800 among its fields), the key (0x503baa2d), the frame count's step
 //               (0x503b23e3) and the fill after the key (0x503bc4fe); since 2026-11-17 then takepic (0x503bcd51, as
@@ -108,6 +121,14 @@
 //               calls' d0, another mode's shot id, is read only where the context's mode byte (+3122; E146 and E147
 //               +3324) is 4, which a single still's mode bytes do not give (refused). Each must log no error. The
 //               ring slot is freed after the EXIF set (0x503baf23, StlEnd's)
+//   H-STBPROP   (with H-TAKEFILLS, where the rule reads the strobe parts: fact 'take_fills' strobe.props) the strobe
+//               module's fill of its property table's pointers (0x501c20b0(0): the table 0x60350410, 122 rows {id,
+//               size, pointer}, each pointer fetched from the property store, 0x500417b0), the call the strobe
+//               module's boot init makes at 0x501c225c (boot mark 1_H, 0x501c2238, which the lab does not run; the
+//               rest of it writes the pin block 0x9b800000, which the lab stub refuses, X), natively once before the
+//               first strobe request. Without it the module's property read (0x501c20e0, the still decision's call
+//               at 0x501bca10) finds a row's pointer 0, fetches it and logs 0x24000615 (0x501c2209..0x501c2220; X,
+//               twice in the first request). docs/hle-gaps/4.3.md 4.3.13
 //   S-AFMKNT    (with H-TAKEFILLS) takepic's AF maker-note fill (0x509b08f0, one caller: takepic's 0x503bceee), the AF
 //               module's: its first call (0x508c9bfe) writes the record's crop areas +40858 and +40866 from the AF
 //               point (0x509b01ec, which reads TAKE_FOCUS's context, the pointer 0xa33d9560 that TAKE_FOCUS's
@@ -120,7 +141,7 @@
 //               reads TAKE_FOCUS's context through a null pointer and its callback faults or, with the word set,
 //               logs 0x0f807001 for the missing buffer (X, E143 probes). The stand-in answers the call: the two crop
 //               areas the full frame {0, 0, 1, 1} (I, S-EXIFPRM's before it; the areas are checked against the
-//               rule's rec_file crop), the AF fields left as the template's. docs/hle-gaps.md 4.3.13
+//               rule's rec_file crop), the AF fields left as the template's. docs/hle-gaps/4.3.md 4.3.13
 //   S-EXIFPRM   (with H-TAKEFILLS: nothing of the shot's record since 2026-11-17: takepic's copy, the EXIF set and,
 //               through S-AFMKNT, the crop areas are TAKE's own fills'; exif_param checks the settings fields and
 //               takepic's copy against the exposure record)
@@ -135,14 +156,14 @@
 //               0x5054a031..0x5054a0ad's arithmetic (x + 1) * width / xden - 1); the fields REC_IMAGE reads that
 //               TAKE's fill takes from the settings store (below); then, where the rule reads it (exif.set: E143, E146,
 //               E147), the EXIF set natively (0x5042992d, takepic's call at 0x503bd48e with a0 the block;
-//               docs/hle-gaps.md 4.3.11): the dates (0x5042c16a..0x5042c196: 0x5012bd20 with the format 0x4200 into
+//               docs/hle-gaps/4.3.md 4.3.11): the dates (0x5042c16a..0x5042c196: 0x5012bd20 with the format 0x4200 into
 //               DateTimeOriginal +4089, copied to CreateDate +4109 and DateTime +1364), the digital zoom ratio +4228
 //               (EXIF 0xa404; X: 0/100, which the header maker 0x504287f1 divides by its denominator), the maker
 //               notes' white-balance gains from H-RECPRECON's table (TAKE's arithmetic block 0x5039821c, 18 calls,
 //               X; with the table's zeros it divides by zero at 0x50398ca5, X) and the shooting values from takepic's
 //               fields (0x503bcdac..0x503bcee1: Tv +38164 and Av +38178 from its exposure record, Sv +38174 from
 //               TAKE's state); before it, where the rule reads them (fact 'take_exposure', src/fw/facts.mjs
-//               takeExposure: E143, E146, E147; docs/hle-gaps.md 4.3.13), TAKE's exposure as its still states make
+//               takeExposure: E143, E146, E147; docs/hle-gaps/4.3.md 4.3.13), TAKE's exposure as its still states make
 //               it: StlRdy1's exposure record (96 bytes, a slot of TAKE's ring on the camera, here a record of the
 //               lab's) filled natively by its fill (with the still's flags on E143; E146 and E147 a fill of the
 //               record alone) from the settings store (Tv 41002, 41034, Av 41018, 41082), where the exposure plan
@@ -151,10 +172,11 @@
 //               and takepic's copy of the record's +6, +8, +10, +56, +58 and +60 into +38164, +38172, +38178,
 //               +38170, +38176 and +38180 (the copy alone, not takepic). The fill's own stores do not reach +56, +58
 //               or +60 (D), so those copy the lab record's 0; what the camera's ring slot holds there is not read
-//               (?: docs/hle-gaps.md 4.3.13). So on E143 ExposureTime is the plan's
+//               (?: docs/hle-gaps/4.3.md 4.3.13). So on E143 ExposureTime is the plan's
 //               shutter as the set gives it (1/250 s for S-SCENE's default scene, X); E146 and E147 start at a GUI
 //               state where S-EXPOSE does not plan, so a shot before S1 has left it finds the settings 0 (1 s), a
-//               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's), and FNumber
+//               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's; with H-TAKEFILLS's strobe
+//               request since 2026-11-22 the strobe decision's Sv, ISO 200, X), and FNumber
 //               0/10 (the lens flag +37982 bit 12 is takepic's lens step's, not run; 0x5042c460); focal length, the
 //               lens and the image size the template's.
 //               Where the rule reads no EXIF set (the E144 family, recFileInline's and the E118 family's versions) it
@@ -171,10 +193,10 @@
 //               picture mode +38037 (id 38017, or 40209 where it gives 6, as TAKE's fill reads them), the code +38008
 //               (49169) and the art parameter +38772 (17601; E146 and E147 +37689, +37660, +38224), so that the
 //               image library's create takes the constructor the picture mode selects, as on the camera: on E147 at
-//               the creative dial's COLOR, MONO and ART positions not the still constructor (docs/hle-gaps.md 4.3.12)
+//               the creative dial's COLOR, MONO and ART positions not the still constructor (docs/hle-gaps/4.3.md 4.3.12)
 //   REC_IMAGE's own task makes the packet's file buffer and header and hands it to REC_FILE natively, from the packet
-//   REC_PREPRO's task posts it (H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3; on E146 and E147 since 2026-11-10, at
-//   the addresses the rule reads, fact 'rec_image', src/fw/facts.mjs recImage, docs/hle-gaps.md 4.3.5, where the post
+//   REC_PREPRO's task posts it (H-RECIMAGE, S-RECREQ; docs/hle-gaps/4.3.md 4.3.3; on E146 and E147 since 2026-11-10, at
+//   the addresses the rule reads, fact 'rec_image', src/fw/facts.mjs recImage, docs/hle-gaps/4.3.md 4.3.5, where the post
 //   to REC_IMAGE's queue is REC_RAWNR's, the task REC_PREPRO posts a normal still to there, D):
 //   H-RECSHARED REC's shared objects' init (0x5054dbe8: the packet rings' heads 0xa33235fc and slots 0xa3323a38, the
 //               flag bind table 0xa332ce5c with REC_FILE's flag at entry 7, its done byte 0xa332ce59), natively before
@@ -184,7 +206,7 @@
 //   H-RECIMGPRO the image library's IRQ attach (0x5048c3a0), its request ids' bitmap clear (0x5048ba3a) and the imgpro
 //               unit's init (0x5050a6b2) natively before the first picture where the application's start did not run
 //               them (camapp 3's H-IMGPROINIT does): REC's header clear asks the unit for a fill (below), whose end
-//               comes as IRQ 300 (docs/hle-gaps.md 4.3.1)
+//               comes as IRQ 300 (docs/hle-gaps/4.3.md 4.3.1)
 //   H-RECIMAGE  REC_IMAGE (static task 28, 0x50541c45) started with act_tsk after REC_FILE (I: which call starts it is
 //               not read); it waits on its queue REC_EXEC_IMAGE 70 (its id at 0x60043250; its receive 0x505398bf, 316
 //               bytes) and handles each packet in its own task: rec_bracket_entry and _update (0x5053b1dc, 0x5053b39c:
@@ -204,7 +226,7 @@
 //               ObjResponse queue (0x5053984b from its handler, 0x5053f3bb), which no requester owns in the lab
 //               (ObjResponse 0): the reply is taken there and answered as sent. Lab time runs until the reply and until
 //               REC_IMAGE and REC_FILE wait on their inputs again. (S-RECIMAGE on E146 and E147 retired 2026-11-10:
-//               REC_IMAGE runs natively there, its rec_jpeg_exec in its own task; docs/hle-gaps.md 4.3.5)
+//               REC_IMAGE runs natively there, its rec_jpeg_exec in its own task; docs/hle-gaps/4.3.md 4.3.5)
 //   S-RECIMAGE  (the E144 family) REC_IMAGE's part (its task does not run there: its addresses are not read by a rule):
 //               the packet as REC_IMAGE hands a single-slot JPEG to REC_FILE (the fields below), REC_IMAGE's
 //               rec_jpeg_exec run natively on it, which allocates the file's buffer from REC's pool 3 (0x5054bb12),
@@ -214,7 +236,7 @@
 //               BuffSize1 to Addr / Size (0x50549a00); then REC_IMAGE's post 0x5053990f natively, and lab time runs
 //               until REC_FILE has handled the packet (its handler's return, 0x5053f20d). On the E144 family that post
 //               to REC_FILE's queue is the route rec_make_image_finish takes for a still (docs/model-survey.md finding
-//               119); on E143 a normal JPEG goes through REC's ring (above, docs/hle-gaps.md 4.3.3). Where the body
+//               119); on E143 a normal JPEG goes through REC's ring (above, docs/hle-gaps/4.3.md 4.3.3). Where the body
 //               keeps the image in an image record (E146 and E147, not the E144 family) the record first: REC_IMAGE's
 //               own init of it on a record the lab allocates. On the E118 family the packet is REC_IMAGE's for a
 //               still as far as REC_FILE and rec_jpeg_exec read it (Mode 4097, HandleTarget 1, pExifParam, Media 0,
@@ -233,7 +255,7 @@
 //               (0x50542528), the run (0x50542407: 0x50492758, 0x504929e9), rec_ImgPro_Jpeg_Result (0x50542ce1) and the
 //               release (0x5054322e) (D). Where REC_IMAGE runs natively (E143; E146 and E147 at the points the rule
 //               reads, fact 'rec_image' encode, since 2026-11-11) all run natively but three steps from the first
-//               the lab cannot run (docs/hle-gaps.md 4.3.4, 4.3.9): ImageParam's call of the library's parameter set
+//               the lab cannot run (docs/hle-gaps/4.3.md 4.3.4, 4.3.9): ImageParam's call of the library's parameter set
 //               (0x50542c97 to 0x50491c9f) is skipped with the status 0, the run returns 0, and Jpeg_Result writes the
 //               stream and Size. The set divides the request's white balance R and B gains by the smaller of its two
 //               G gains (0x505099e0 from 0x50509ac9), which ImageParam copies from the shot record's +37810.. and
@@ -246,7 +268,7 @@
 //               HeaderSize + the library's primary size and then copies 51200 bytes from the record's +41052 after
 //               the primary with a kind 13 request to the imgpro unit, Size grown by as much (D); the lab makes
 //               neither (with the lab's PlayPic 1 it would add the preview's length too, X, D). What the run would do
-//               (docs/hle-gaps.md 4.3.9): it builds one request of the image library's kind 0 (D), whose pipeline
+//               (docs/hle-gaps/4.3.md 4.3.9): it builds one request of the image library's kind 0 (D), whose pipeline
 //               unit at 0x9c200000 starts the JPEG codec at 0x99900000 / 0x99901000, which takes no buffer address of
 //               its own (D), so the primary is made in the development's pass from the shot's Bayer source (I); the
 //               lab has neither the unit nor the source, so the run stays stood in, with the lab's stream. On the
@@ -268,7 +290,8 @@ import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { MODEL_INFO, fact, A } from '../fw/model.mjs';
-import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143 } from '../fw/facts.mjs';
+import { REC_FILE_E143, REC_IMAGE_E143, TAKE_EXPOSURE_E143, TAKE_SHOT_E143, TAKE_FILLS_E143, DUAL_SLOT_E143 } from '../fw/facts-const.mjs';
+import { geometry as rawGeometry, rawFrame } from './rawframe.mjs';
 
 export class RecError extends FirmwareError {}
 
@@ -287,9 +310,9 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // tags; the E144 family, by recFileQueue: the packet of 300 bytes, REC_FILE's queue with no flag, no cache flush and
 // no fill (cflush and fill null), one file context or two, the clock read clock_read; E130, E133, E129 and E132, by
 // recFileInline: the packet of 284 bytes, no Media2 or RecordDevice (E132 RecordDevice), the context on
-// rec_make_file's stack, REC_FILE's reply) are the rule's values; docs/hle-gaps.md 4.8.10
+// rec_make_file's stack, REC_FILE's reply) are the rule's values; docs/hle-gaps/4.8.md 4.8.10
 export const REC_NATIVE = MODEL_INFO.rec_native === true;
-// REC_IMAGE's task natively (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5), wherever
+// REC_IMAGE's task natively (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps/4.3.md 4.3.3, 4.3.5), wherever
 // REC_FILE runs natively in recFile's REC version (E143, E146, E147; the E144 family's keeps S-RECIMAGE), at the
 // addresses the rule reads (fact 'rec_image', src/fw/facts.mjs recImage, with their evidence; E143's REC_IMAGE_E143
 // there, the values given here by hand before the rule):
@@ -305,7 +328,7 @@ export const REC_NATIVE = MODEL_INFO.rec_native === true;
 //   settings  the settings read (d0 the id, a0 0 the store, d1 0), TAKE's at each of the reads below
 //   take      TAKE's fill of the shot's record from the settings store: [setting id, record offset, bytes] as it reads
 //             each (0x503bbd26..0x503bbd98 the bracket, 0x503bc035..0x503bc044 the aspect)
-//   encode    S-JPEGENC's points inside rec_jpeg_make_image (docs/hle-gaps.md 4.3.4, 4.3.9; E143's were given here by
+//   encode    S-JPEGENC's points inside rec_jpeg_make_image (docs/hle-gaps/4.3.md 4.3.4, 4.3.9; E143's were given here by
 //             hand, REC_ENCODE_E143, until 2026-11-11, while E146 and E147 kept rec_jpeg_make_image as a whole):
 //             rec_ImgPro_ImageParam's call
 //             set_call (a call d32, 7 bytes) of the image library's parameter set (set), which divides the request's
@@ -322,15 +345,25 @@ export const recImageFacts = () => fact('rec_image', REC_IMAGE_E143);
 // (S-RECIMAGE's below)
 const STILL = 4097;          // Mode: REC_MAIN's still (0x5053a349); REC_IMAGE makes its image
 const NO_MEDIA = 0xFFFF;     // Media2: no second slot (0x5053dd14)
+// Dual Independent's second image at the offsets the rule reads (fact 'dual_slot', src/fw/facts.mjs dualSlot, with
+// their evidence; docs/hle-gaps/4.8.md 4.8.24, 4.8.28): SlotNo (E143 the packet's +313; E146 and E147 the image
+// record's +49, slot.record the packet's word that points at it) and BuffAddrDoubleSlot / BuffSizeDoubleSlot (+168,
+// +172; E146 +156, +160), where rec_jpeg_exec stores the image's Addr and Size for SlotNo 1 when the double-slot test
+// answers; the shot record's first- and second-slot image settings (one, two) and the two slots' file types (types,
+// which REC_IMAGE copies to ExifFileType and ExifFileTypeDoubleSlot)
+const dualFacts = () => fact('dual_slot', DUAL_SLOT_E143);
+// a slot's file type for a JPEG quality: TAKE's fill writes 0 there for a quality other than RAW (4) and TIFF (3) where
+// MODE_RAW is not 1 (D: E143 0x503bbb62, E146 0x503bc48f)
+const TYPE_JPEG = 0;
 const CARD = 1;              // RecordDevice bit 0: the card (0x50540392, 0x50540418)
 const JPEG = 1;              // FileType: the extension and DCF kind tables' index 1 (0x5053fee3; JPG, kind 1)
 const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117) where
                              // H-SHOTALLOC does not allocate one (the bodies without REC_IMAGE natively)
-// Command: the requester's command, which REC_MAIN copies from its message (docs/hle-gaps.md 4.3.4) and dispatches on:
+// Command: the requester's command, which REC_MAIN copies from its message (docs/hle-gaps/4.3.md 4.3.4) and dispatches on:
 // its still handler, the one that sets Mode 4097 (0x5053a349), is Command 16's case for the request's Mode 4113, and
 // its receive refuses a command below 16 (D on E143, E146 and E147). rec_ImgPro_CreateParam's extension sizes its
 // first buffer by it (16: 240 MiB); with the clear's 0 that size is 0, for which MM's bank allocation asks more blocks
-// than the bank has and retries without end (X on E147 at COLOR; docs/hle-gaps.md 4.3.12)
+// than the bank has and retries without end (X on E147 at COLOR; docs/hle-gaps/4.3.md 4.3.12)
 const STILL_COMMAND = 16;
 // ImgAspect, S-RECIMAGE's (the E144 family): 1, which E143's aspect setting 12417 holds in the lab's store and its
 // maker notes give as 4:3 (X, exiftool); where REC_IMAGE runs natively it sets it from the record's aspect (S-EXIFPRM)
@@ -350,7 +383,7 @@ const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
 // I: the fills read +0, +8 and +60, D) and the exposure record's word, which StlRdy1's entry keeps at +60 (0x503b12e0)
 const TAKE_PACKET = 64, TAKE_PACKET_RECORD = 60;
 // the crop areas' {x, y, xden, yden} as the full frame (I, by REC's arithmetic (x + 1) * width / xden - 1): S-EXIFPRM's,
-// and S-AFMKNT's in the AF maker-note fill's place, which writes them on the camera (docs/hle-gaps.md 4.3.13)
+// and S-AFMKNT's in the AF maker-note fill's place, which writes them on the camera (docs/hle-gaps/4.3.md 4.3.13)
 const AF_AREA = [0, 0, 1, 1];
 // HeaderSize: rec_jpeg_make_header's (0x5054a5b9), and the header area rec_jpeg_exec reserves before the encode: its
 // buffer's size estimate adds it (0x5054a7b3) and its clear covers it (0x5054986f); the encoder's stream follows it
@@ -385,6 +418,7 @@ export class RecFile {
     this.precon_init = false;      // H-RECPRECON run (H-EXPINIT had not run IMG_PRECON's init)
     this.exif_sets = 0;            // the EXIF set's native runs (S-EXIFPRM, where the rule reads it)
     this.take_fill_runs = 0;       // H-TAKEFILLS' runs
+    this.stb_props = false;        // H-STBPROP run (the strobe module's property table filled)
     // TAKE's exposure for the shot's record (S-EXIFPRM, where the EXIF set runs natively: fact 'take_exposure',
     // src/fw/facts.mjs takeExposure)
     this.exposure = this.image && this.exif_set() ? fact('take_exposure', TAKE_EXPOSURE_E143) : null;
@@ -393,7 +427,8 @@ export class RecFile {
     // TAKE's own fills of the shot (H-TAKEFILLS, where the exposure and the shot are read: fact 'take_fills',
     // src/fw/facts.mjs takeFills)
     this.fills = this.exposure && this.shot ? fact('take_fills', TAKE_FILLS_E143) : null;
-    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot}
+    this.raw = undefined;          // S-RAWFRAME's geometry with H-SHOTALLOC's shot (raw_geometry(): read at first use)
+    this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take, shot, raw: S-RAWFRAME's fill}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
     // rule's record steps; recFileInline's version has no file context either, but its registration's, context)
@@ -474,6 +509,16 @@ export class RecFile {
     const entry = sim.read(T.record.table + T.record.entry * id, T.record.entry);
     return { id, record, flags: entry[0] | entry[1] << 8, entry };
   }
+  // S-RAWFRAME (src/lab/rawframe.mjs): the Bayer buffer's geometry by the firmware's own reader where H-SHOTALLOC
+  // allocates the shot and the body's bytes have the form rawframe.mjs reads, else null (raw_skip the reason)
+  raw_geometry() {
+    if (this.raw === undefined) {
+      const G = this.shot ? rawGeometry(this.lab.sim) : { skip: 'no shot of TAKE\'s (H-SHOTALLOC not in use)' };
+      this.raw = G.skip ? null : G; this.raw_skip = G.skip ?? null;
+      if (G.again) { this.raw = undefined; return null; }     // (before MM's init: asked again later)
+    }
+    return this.raw;
+  }
   // H-SHOTALLOC's end: the application's free of the shot (api_rec's free natively), after which TAKE's entry is free
   shot_free(shot) {
     const T = this.shot, lab = this.lab;
@@ -485,12 +530,12 @@ export class RecFile {
   // take-picture request's packet (a block of the lab's: +0 the shot's id, +8 the flags 0 of api_rec's takePicture
   // for a single still, +60 the exposure record, as TAKE_MAIN keeps them): RdyStart's builder of the mode bytes from
   // the packet, RdyFcsTake's copy of them, Standby's entry with them and no packet (its context part; the tail that
-  // takes the packet into the still states is not run); StlRdy1's exposure record taken from TAKE's ring and filled
-  // (its request to the strobe sequence not run, docs/hle-gaps.md 4.3.13 item 1c), the packet word set to the packet
-  // (Standby's tail's keep); StlRdy2's shot-record fill (the template's copy, the settings fields, the shutter range);
-  // StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
+  // takes the packet into the still states is not run); StlRdy1's exposure record taken from TAKE's ring and filled,
+  // the packet word set to the packet (Standby's tail's keep) and StlRdy1's request to the strobe sequence (after
+  // H-STBPROP, once; its status must be 0; docs/hle-gaps/4.3.md 4.3.13 item 1c); StlRdy2's shot-record fill (the
+  // template's copy, the settings fields, the shutter range); StlTake's capture fill (the camera's clock read into the record among them), the shot's key, its step of the
   // frame count and its fill after the key; takepic with S-AFMKNT for its AF maker-note fill, the lens fill and the
-  // third fill with the EXIF set (docs/hle-gaps.md 4.3.13). Each call must log nothing. Returns {record}, the exposure
+  // third fill with the EXIF set (docs/hle-gaps/4.3.md 4.3.13). Each call must log nothing. Returns {record}, the exposure
   // record (freed into the ring by exif_param at its end, as StlEnd frees it)
   take_fills(shot) {
     const lab = this.lab, sim = lab.sim, F = this.fills, T = this.exposure, e0 = lab.kernel.errors.length;
@@ -512,6 +557,18 @@ export class RecFile {
     run("StlRdy1's exposure fill", T.record.fill, { a0: record, ...(T.record.flags !== null && { d0: T.record.flags }) });
     sim.write(pk + TAKE_PACKET_RECORD, pack('<I', record));
     sim.write(F.packet, pack('<I', pk));
+    // StlRdy1's request to the strobe sequence, as its function ends (d0 the context, a1 the packet word's packet),
+    // after H-STBPROP's fill of the strobe module's property table (once, as its boot init fills it)
+    const S = F.strobe;
+    if (!this.stb_props) {
+      run("H-STBPROP: the strobe module's property table fill", S.props.fill, { d0: 0 });
+      const empty = []; for (let k = 0; k < S.props.count; k++) if (!sim.u32(S.props.table + 8 * k + 4)) empty.push(k);
+      if (empty.length) throw new RecError(`H-STBPROP: the fill ${h8(S.props.fill)} left ${empty.length} rows of the table ${h8(S.props.table)} without a pointer (rows ${empty.slice(0, 8).join(', ')})`);
+      this.stb_props = true;
+    }
+    run("StlRdy1's request to the strobe sequence", S.request, { a0: F.context, a1: pk });
+    const sb = sim.read(F.context + S.status, 2), status = sb[0] | sb[1] << 8;
+    if (status !== 0) throw new RecError(`H-TAKEFILLS: the strobe sequence's decision ${h8(S.decision)} answered StlRdy1's request with the status ${status} (TAKE's context +${S.status})`);
     const [b1, b2] = F.record.modes;
     run("StlRdy2's shot-record fill", F.record.fn, { d0: shot.id, a0: u8(b1), d1: u8(b2) });
     run("StlTake's capture fill", F.take.capture, { d0: shot.id, a0: F.context });
@@ -604,9 +661,9 @@ export class RecFile {
   // The picture's file from the lab's JPEG (a JFIF file, src/lab/jpeg.mjs): S-EXIFPRM, then S-RECREQ and REC_IMAGE
   // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. media: the packet's Media, the
   // drive REC_FILE records on (0, or 1 for the second slot's card: DevRec_Rec's apiRecInfo.slot[0], which REC_MAIN
-  // copies there, docs/hle-gaps.md 4.8.12). media2 and mode: the packet's Media2 and RecordMediaMode (apiRecInfo's
+  // copies there, docs/hle-gaps/4.8.md 4.8.12). media2 and mode: the packet's Media2 and RecordMediaMode (apiRecInfo's
   // slot[1] and the save mode, setting 1129, which REC_MAIN copies there too): with both cards in a double-slot mode
-  // Media 0, Media2 1, and REC_FILE's double-slot record writes the file on both (docs/hle-gaps.md 4.8.14); else Media2
+  // Media 0, Media2 1, and REC_FILE's double-slot record writes the file on both (docs/hle-gaps/4.8.md 4.8.14); else Media2
   // none. Returns the files' records {path, size, folder, number, cluster, stamp, clock, header, date}, Media's first
   record(jpeg, media = 0, media2 = NO_MEDIA, mode = 0) {
     const lab = this.lab, sim = lab.sim, R = this.R, P = R.packet.fields, who = this.image ? 'S-RECREQ' : 'S-RECIMAGE';
@@ -615,7 +672,27 @@ export class RecFile {
     if (this.image && !this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
     const stream = encoderStream(jpeg);
     const shot = this.shot_alloc();
+    // S-RAWFRAME: the shot's Bayer buffer filled with the lab's pattern, before S-EXIFPRM and REC_PREPRO's place
+    const raw = shot && this.raw_geometry() ? rawFrame(lab, shot, this.raw) : null;
     const { x, clock, date, take, exposure } = this.exif_param(shot);
+    // Dual Independent (RecordMediaMode 2, 3): REC_IMAGE's double-slot test (0x5053dd22, D, docs/hle-gaps/4.8.md 4.8.14)
+    // makes a second image for the second slot where the shot record's second-slot image settings (+38000, +38016,
+    // +38020; TAKE's shot record fill writes them for 2 and 3, 0x503bbb6f..0x503bbc23) differ from the first slot's
+    // (+37998, +38014, +38018, which REC_IMAGE's task copies to REC's 0xa33232a2..a6 at 0x5053ddfa); with them alike
+    // it is one image recorded on both cards, as Dual Same. Different, REC_IMAGE's task runs the image twice, the
+    // second time with SlotNo 1 into BuffAddrDoubleSlot (docs/hle-gaps/4.8.md 4.8.24): image_native's second encode.
+    // The double-slot test also wants neither file RAW (ExifFileType +288, ExifFileTypeDoubleSlot +290, which
+    // REC_IMAGE copies from the shot record's +37896 and +37898); RAW on two cards is not read, so a slot whose file
+    // type is not JPEG (0) stops there. The addresses here are E143's; each body's offsets are the rule's (dual_slot)
+    let second = false;
+    if ((mode === 2 || mode === 3) && media2 !== NO_MEDIA) {
+      if (!shot || !this.fills) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) on a body whose shot record TAKE's own fill does not write (H-TAKEFILLS, H-SHOTALLOC): the second slot's image settings are not made`);
+      const DS = dualFacts(), h = (o) => { const b = sim.read(x + o, 2); return b[0] | b[1] << 8; }, one = DS.one.map(h), two = DS.two.map(h);
+      const types = DS.types.map(h);
+      this.dual_settings = { one, two, types };
+      second = one.some((v, i) => v !== two[i]);
+      if (second && types.some((t) => t !== TYPE_JPEG)) throw new RecError(`${who}: Dual Independent (RecordMediaMode ${mode}) with the slots' file types ${types.join(', ')} (the shot record's +${DS.types.join(', +')}; ${TYPE_JPEG} JPEG): RAW or TIFF on two cards is not read (docs/hle-gaps/4.8.md 4.8.24)`);
+    }
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', shot ? shot.id : SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
@@ -633,7 +710,8 @@ export class RecFile {
       if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
       put('FileType', '<B', JPEG);
     }
-    const { header, size } = this.image ? this.image_native(pk, stream, take, exposure, shot) : this.image_lab(pk, stream);
+    const { header, size, size2 = size } = this.image ? this.image_native(pk, stream, take, exposure, shot, second) : this.image_lab(pk, stream);
+    if (raw) this.images[this.images.length - 1].raw = raw;
     if (shot) this.shot_free(shot);
     // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
     // for 1: 0x5053ff29..0x5053ff37, D; its fnode and DCF block, storage.mjs REC's layouts); where rec_make_file keeps
@@ -645,9 +723,10 @@ export class RecFile {
     if (!this.frame && R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
     // the double-slot record fills the context of each drive (rec_file_record_DoubleSlot 0x5053f97d: Media's context
     // and the other, 0x5053fa3b..0x5053fa55, D) and records the same buffer on both where the second slot's own
-    // (BuffAddrDoubleSlot) is 0, as a single encode leaves it (0x5053e40f..0x5053e421, D)
+    // (BuffAddrDoubleSlot) is 0, as a single encode leaves it (0x5053e40f..0x5053e421, D); after a second image the
+    // second drive's file is that image's (BuffSizeDoubleSlot)
     const drives = media2 === NO_MEDIA ? [media] : [media, media2];
-    const files = drives.map((d) => {
+    const files = drives.map((d, k) => {
       const ctx = this.frame || kept ? null : R.contexts[d];
       if (!this.frame && !kept && ctx === undefined) throw new RecError(`REC_FILE: no file context of Media ${d} is read on this body (fact rec_file contexts)`);
       const file = {
@@ -656,7 +735,8 @@ export class RecFile {
             : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`, d)),
         clock, header, date,
       };
-      if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size} on drive ${d}, the packet's ${size}`);
+      const want = k ? size2 : size;
+      if (file.size !== want) throw new RecError(`REC_FILE: the fnode's size ${file.size} on drive ${d}, the packet's ${want}${k ? ' (BuffSizeDoubleSlot)' : ''}`);
       return file;
     });
     this.pictures += 1;
@@ -709,8 +789,12 @@ export class RecFile {
   // S-RECREQ's post of the packet pk to REC_IMAGE's queue (REC_PREPRO's post; on E146 and E147 REC_RAWNR's),
   // REC_IMAGE's task natively with S-JPEGENC's encode (the lab's stream), REC_FILE natively, S-RECREQ's reply taken;
   // lab time runs until the reply and both tasks wait again. Returns {header, size} as REC_FILE's packet has them at
-  // its reply
-  image_native(pk, stream, take, exposure, shot) {
+  // its reply. two: Dual Independent with the slots' settings different (record): REC_IMAGE's task makes the image a
+  // second time for the second slot (docs/hle-gaps/4.8.md 4.8.24: its switch sets SlotNo 1 and puts the second slot's
+  // settings in the shot record's first-slot fields, then the image's make and mode step run again), so S-JPEGENC
+  // encodes twice, the second time with SlotNo 1, and REC_FILE's packet has the second image at BuffAddrDoubleSlot /
+  // BuffSizeDoubleSlot (returned as size2)
+  image_native(pk, stream, take, exposure, shot, two = false) {
     const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, P = R.packet.fields, I = this.image, who = 'S-RECREQ';
     const imgpro = lab.sim.m.devices.imgpro, runs0 = imgpro?.runs ?? 0;
     const alive = lab.alloc(new Uint8Array(4), 4);
@@ -722,10 +806,12 @@ export class RecFile {
     // (E146, E147), the record's the packet points at. Inside rec_jpeg_make_image, at the rule's points: ImageParam's
     // call of the library's parameter set skipped with the status 0, the run returning 0 and Jpeg_Result writing the
     // stream and Size, the rest of rec_jpeg_make_image natively
-    const E = I.encode, M = J.image;
+    const E = I.encode, M = J.image, DS = two ? dualFacts() : null;
+    // SlotNo: the packet's, or where the body keeps it in REC_IMAGE's image record (E146, E147), the record's
+    const slotNo = (at) => sim.read((DS.slot.record === null ? at : sim.u32(at + DS.slot.record) >>> 0) + DS.slot.at, 1)[0];
     const c = sim.read(runtime(E.set_call), 7);
     if (c[0] !== 0xDD || ((E.set_call + (c[1] | c[2] << 8 | c[3] << 16 | c[4] << 24)) >>> 0) !== E.set) throw new RecError(`S-JPEGENC: ${h8(E.set_call)} is not ImageParam's call of the parameter set ${h8(E.set)}`);
-    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, handle: 0, released: 0, addr: null, reply: null, errlog: null };
+    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, handle: 0, released: 0, addr: null, reply: null, errlog: null, encodes: [] };
     const ours = (at, what) => { if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: ${what} on a packet ${h8(at)} that is not S-RECREQ's`); };
     // the image: the packet, or REC_IMAGE's image record the packet points at
     const image = (at) => (M.record ? sim.u32(at + M.record.at) >>> 0 : at);
@@ -735,9 +821,11 @@ export class RecFile {
       sim.write(img + M.size, pack('<I', J.header + stream.length));
       run.encoded += 1; run.addr = addr;
       run.task = lab.lt.current() === lab.nk.tcb(I.task.id) ? I.task.id : null;
+      // (each encode's SlotNo: read only where a second image is made)
+      run.encodes.push({ addr, size: J.header + stream.length, slot: two ? slotNo(at) : null, task: run.task });
     };
     const hooked = [I.reply.fn, E.set_call, E.run, E.result, E.release];
-    // the firmware's error logs from the post to the parameter set's call (ImageParam's sources, docs/hle-gaps.md
+    // the firmware's error logs from the post to the parameter set's call (ImageParam's sources, docs/hle-gaps/4.3.md
     // 4.3.4): [code, caller] each; and the handle ImageParam hands the set (d0, loaded from the image right before the
     // call, the rule's form), which the run's read at the rule's id must match
     const e0 = lab.kernel.errors.length;
@@ -754,7 +842,8 @@ export class RecFile {
     lab.hook(I.reply.fn, (h, r) => {
       if (disasm(r.mdr) !== I.reply.from) throw new RecError(`S-RECREQ: REC's reply ${h8(I.reply.fn)} from ${where(r.mdr)}: only REC_FILE's (return ${h8(I.reply.from)}) is taken`);
       const p = r.a0 >>> 0;
-      run.reply = { status: r.d0 & 0xFFFF, header: u32(p, 'HeaderSize'), addr: u32(p, 'BuffAddr1'), size: u32(p, 'BuffSize1'), aspect: sim.read(p + P.ImgAspect, 1)[0], free: sim.read(p + P.Free, 1)[0] };
+      run.reply = { status: r.d0 & 0xFFFF, header: u32(p, 'HeaderSize'), addr: u32(p, 'BuffAddr1'), size: u32(p, 'BuffSize1'), aspect: sim.read(p + P.ImgAspect, 1)[0], free: sim.read(p + P.Free, 1)[0],
+        ...(two && { addr2: sim.u32(p + DS.addr) >>> 0, size2: sim.u32(p + DS.size) >>> 0 }) };
       h.finish(r, { d0: 1 });
     }, 'S-RECREQ');
     try {
@@ -774,10 +863,15 @@ export class RecFile {
     const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take, exposure,
       shot: shot && { id: shot.id, record: shot.record, flags: shot.flags, entry: shot.entry } };
     this.images.push(record);
-    if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.id !== run.handle || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
-      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
+    // one encode, or two with SlotNo 0 then 1 (the second image's Addr and Size the packet's BuffAddrDoubleSlot and
+    // BuffSizeDoubleSlot at REC_FILE's reply), each in REC_IMAGE's task
+    const n = two ? 2 : 1, [e1, e2] = run.encodes;
+    record.encodes = run.encodes;
+    const second = !two || (e1?.slot === 0 && e2?.slot === 1 && y.addr2 === e2.addr && y.size2 === y.header + stream.length && e2.addr !== e1.addr);
+    if (run.encoded !== n || run.set !== n || run.run !== n || !run.id || run.id !== run.handle || run.released !== n || run.encodes.some((e) => e.task !== I.task.id) || y.status !== 0 || y.header !== J.header || y.addr !== e1?.addr || y.size !== y.header + stream.length || !second || record.alive !== 0) {
+      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times (want ${n})${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}, the encodes ${JSON.stringify(run.encodes)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)}, BuffSize1 ${y.size}${two ? `, BuffAddrDoubleSlot ${h8(y.addr2)}, BuffSizeDoubleSlot ${y.size2}` : ''} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
     }
-    return { header: y.header, size: y.size };
+    return { header: y.header, size: y.size, ...(two && { size2: y.size2 }) };
   }
   // The E144 family, and E130, E133, E129 and E132 (no REC_IMAGE task natively): S-RECIMAGE (rec_jpeg_exec in the
   // lab's call on the packet pk, S-JPEGENC's encode and the fill where the body has one), REC_IMAGE's post to REC_FILE's queue,
@@ -860,9 +954,10 @@ export class RecFile {
 }
 // The stand-ins a RecFile uses (src/lab/player.mjs's list): with REC_IMAGE natively (H-RECIMGPRO where the
 // application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
-// H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
+// H-EXPINIT did not run IMG_PRECON's init; S-RAWFRAME and A-RAWFRAME-1 with H-SHOTALLOC where its geometry and MM's
+// block are found), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', ...(rec.shot ? ['H-SHOTALLOC'] : []), ...(rec.shot && rec.raw_geometry() ? ['S-RAWFRAME', 'A-RAWFRAME-1'] : []), ...(rec.fills ? ['H-TAKEFILLS', 'H-STBPROP', 'S-AFMKNT'] : []), 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

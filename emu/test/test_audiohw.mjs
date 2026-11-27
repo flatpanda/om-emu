@@ -1,4 +1,4 @@
-// The audio hardware (--audio on; src/dev/audio.mjs, src/lab/wm8946.mjs, src/lab/audiohw.mjs; docs/hle-gaps.md 4.5):
+// The audio hardware (--audio on; src/dev/audio.mjs, src/lab/wm8946.mjs, src/lab/audiohw.mjs; docs/hle-gaps/4.5.md 4.5):
 //   audioHwUnits    without firmware: no port without the machine's audio option; the port's register file and
 //                   interrupt enables; TX enable rising sets status bit 4 and IRQ 43 follows status & +0x50; a write
 //                   of 1s clears status bits; a start plays slot A then slot B, each fetched from memory as it starts,
@@ -284,7 +284,8 @@ export async function audioHwSession() {
   const attached = lab.kernel.events.filter((e) => e[0] === 'irq_attach').map((e) => e[1]);
   ok(attached.includes(`irq=${BOARD.audio.irq} level=3`) && attached.includes(`irq=${BOARD.audio.sca_irq} level=5`), `AUD_MAIN's driver init attaches IRQ 43 at level 3 and IRQ 45 at level 5: ${JSON.stringify(attached.slice(-6))}`);
   const used = pl.stand_ins_in_use();
-  ok(['H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x)), 'the status lists H-AUDSTART, S-AUDCPU2, S-WM8946, A-AUDIO-1 and H-AUDTIME');
+  ok(['H-AUDSTART', 'S-WM8946', 'A-WM8946-1', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x)) && !used.includes('S-AUDCPU2'),
+    `the status lists H-AUDSTART, S-WM8946, A-WM8946-1, A-AUDIO-1 and H-AUDTIME (CPU 2 native): ${used.filter((x) => /AUD|WM89/.test(x))}`);
   // the path, observed
   const seq = [], posts = [], isr = [], periods = [];
   let copies = 0, gains = new Set(), cmd3 = 0;

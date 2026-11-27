@@ -254,10 +254,10 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    S2) and its EVF the same at the bottom right, where an orange 0 stood, and the count probe passes on every body of
    the default set, the E143 and E144 families included (X: frames; modelcheck). E144's and E125's screens also show the
    slot icon and, newly drawn, an orange movie time `0:00:00` (the blank store's movie mode, which these bodies cannot
-   record: `docs/hle-gaps.md` 4.8.5).
+   record: `docs/hle-gaps/4.8.md` 4.8.5).
    Forcing the drive status to `0x680` had given the same screen (X). The golden sessions that show the shooting screen
    record the count; every compose that changed differs from the one before only in the count's box (X).
-19. **E143's card is a real one** (2026-10-23, `docs/hle-gaps.md` 4.8.2). On the lab's build the file system runs
+19. **E143's card is a real one** (2026-10-23, `docs/hle-gaps/4.8.md` 4.8.2). On the lab's build the file system runs
    natively on an SDHC card at the SD command layer, which the firmware formats (FAT32) and mounts itself; the card
    driver's detect state now comes from the DCF process's card-in (3 after its lists, X) and S-CARD's count and movie
    time answers are retired there: E143's TFT top bar shows `803` and `[05:25]` on the 8 GiB card (X: frames). The
@@ -282,7 +282,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    window's offset 4, which the family's board does not model (X, a trial). With both: E133 passes modelcheck, E129's
    store starts, E143's frames of start, S1, S2 and PLAY are as before, and the ten other bodies' modelcheck output is
    the same line for line (X).
-21. **The deferred calls on the E144 family** (2026-10-29, `docs/hle-gaps.md` 4.4.2). The family's deferred calls
+21. **The deferred calls on the E144 family** (2026-10-29, `docs/hle-gaps/4.4.md` 4.4.2). The family's deferred calls
    interrupt their core through IRQs 29..34, one trigger word each at `0x9b800030..0x9b800044` (E143's 53..58 at
    `0x9b880044..`): a post (E132 `0x5004a236`, E143 `0x500503d4`) puts the call on its core's ring, enables the IRQ
    for its core and writes 1 to the word; the init, which the boot head runs before the kernel (E132 `0x5004a115` from
@@ -343,7 +343,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    1440 x 480, 1440 x 404, ...; the EVF rows the same, D). So the display path runs at two samples per panel pixel
    and the frames' 1440 samples per line carry 720 pixels: they look stretched twice horizontally, and halving them
    gives the panel's picture (I). Why the panel takes two samples per pixel is not read (?).
-23. **E134's card waits for its lamps' module** (2026-10-29, `docs/hle-gaps.md` 4.8.7). On a native card E134's
+23. **E134's card waits for its lamps' module** (2026-10-29, `docs/hle-gaps/4.8.md` 4.8.7). On a native card E134's
    S-RECFILE fopen never completed: FILECLBK blocked in a send with no timeout (`0x50030432(queue, -1)` at
    `0x5010c35f`) to the queue of the halfword `0x6004192e` (117), after 53 sends that nothing read (X, round 3). The
    queue is not UI_IN's, as recorded then: the sender is the lamp request `0x5010c328` ({lamp id, u16, word}, a
@@ -359,8 +359,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    FAT32 `NO NAME` at 8192 with 32 KiB clusters, 826 shots, S2's file read back, on the TFT and the EVF; a blank
    64 GiB card exFAT, no label, at 32768 with 128 KiB clusters, 6,618 shots (X: `bin/modelcheck.mjs`, with and without
    `--card-size 64`). Its movie time from the card is 0, as on the E144 family: the blank store's mode 1 at 60 fps
-   (X: the getters) and the rate check's logs `0x3a040001` and `0x39000105` (X; `docs/hle-gaps.md` 4.8.5).
-24. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps.md` 4.7.5). Three stops, each read where it
+   (X: the getters) and the rate check's logs `0x3a040001` and `0x39000105` (X; `docs/hle-gaps/4.8.md` 4.8.5).
+24. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps/4.7.md` 4.7.5). Three stops, each read where it
    lies; E129 and E132 are in `bin/modelcheck.mjs`'s default set (`MODELS` `checked`), their cards native.
    - *The charger's transfers.* The start's charger request writes register 1 = 0xa2 and reads it back over PER_SIO's
      channel 9, an IIC channel at 400 kHz (address 0x1b), and waited 3000 ms for a completion no controller gave
@@ -391,7 +391,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      table has no counterpart of, so S-MODACK did not answer it and the screen stayed (X). E145 has the same check as
      a stub that returns 0 (D). `src/fw/models.mjs` modack_queues gives S-MODACK E132's CATEGORY_MAIN and
      LOGGER_MAIN (target 43, queue 0xdf; without its answer the session stops once the clock is set, the
-     application's queue 6 full, X, why is ?; that stop no longer reproduces, `docs/hle-gaps.md` 4.3.2, X: what
+     application's queue 6 full, X, why is ?; that stop no longer reproduces, `docs/hle-gaps/4.3.md` 4.3.2, X: what
      changed is ?, and that the guard then named queue 6 for LOGGER_MAIN's full queue is I).
      The start then ends in the date and time setting with Set and no
      Cancel (X: frames): modelcheck's prompt answer is UP and OK on each of the five fields (2017.01.01 00:00), the
@@ -403,7 +403,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      other bodies' are black, and their text is pink (X); whether that is the panel's palette or the lab's
      composition is not read (?). S1 shows the GUI's AF target brackets; S-AFOSD gives the TG-5s no upload (they
      have no mode-3 frame plane, finding 22).
-25. **The native lens on E146 and E147** (2026-10-29, `docs/hle-gaps.md` 4.4.3). Their lens drivers are E143's but
+25. **The native lens on E146 and E147** (2026-10-29, `docs/hle-gaps/4.4.md` 4.4.3). Their lens drivers are E143's but
    for the addresses of their variables and entry points, the debug log's line numbers and the order of a few
    instructions in one send (X: LENS_SSC, the edge unit's handler, the init chain, the power-on and detect paths and
    type 6's frame switch walked instruction by instruction from the map's places). A rule reads the addresses the lab's
@@ -417,7 +417,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    starts LENS_ASKDATA but not LENS_MAIN in E143's shape, and E142, E140, E133, E130 and the E118 family miss another
    of its shapes (X), so they keep S-LENS. modelcheck is unchanged on E146 and E147.
 
-26. **The power-off across the OM-1 line** (2026-10-29, `docs/hle-gaps.md` 4.7.4). The power manager's start and the
+26. **The power-off across the OM-1 line** (2026-10-29, `docs/hle-gaps/4.7.md` 4.7.4). The power manager's start and the
    power-off are read by one rule (`src/fw/facts.mjs` powerOff, fact `power.off`) from shapes the three OM-1-line builds
    share: the boot starter's start of the task named PWR_MAIN, the SCPU window's last write (`mov 127,d0; mov
    d0,(0x98e0009c)`) and the 0x85 sender called right before it, the shell's "sdk api shutdown" with its usage text,
@@ -692,7 +692,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the 1024 x 768 device from the 640 x 480 canvas (X). The lab's other EVF masks (the through permit, the IMG fit,
    H-RESEND's check) were not met (the family runs no through image).
 
-41. **The E118 family's card and file system** (2026-10-30, `docs/hle-gaps.md` 4.8.8). The movie time's divide by 0
+41. **The E118 family's card and file system** (2026-10-30, `docs/hle-gaps/4.8.md` 4.8.8). The movie time's divide by 0
    (finding 31) was not the movie module's: the object `0x618c0ff0` is the file system's volume object, which the
    file layer's init creates (`0x5056fc92` -> `0x5056900d`, its store `0x5056ef9c`, D) and whose free count at +8164
    the FAT's cache flush sets to -1 (`0x5056f488..0x5056f490`, as E143's `0x50888202..`); the movie time divides by
@@ -900,7 +900,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    its shooting screen on the TFT and the EVF (P, 1", -.-, 0.0 and the exposure scale, ISO-A LOW, S-IS AUTO, L N, FHD F
    60p, 00:00:00, 999: 22 values on the TFT, 14 on the EVF, X). In the lab E120 stays in POWER_ON.
 
-50. **E118's card and the sub-CPU's card line** (2026-10-30, `docs/hle-gaps.md` 4.8.8). With E118's card native the
+50. **E118's card and the sub-CPU's card line** (2026-10-30, `docs/hle-gaps/4.8.md` 4.8.8). With E118's card native the
    file system's bring-up (H-FILEINIT, a lab call) ended in more than 2,000,000 stand-in calls: 1,999,982 of them
    OlyTaSS(1) from the sleep wrapper `0x505768bd` (X: the callers of the hle's stand-ins, the stack at the sleep). The
    sleep is the poll of the SD driver's switch of a card line (`0x5057e30c`, from the SD init's `0x5057e06c` with d0 1,
@@ -1344,7 +1344,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    scan), and its EVF played back before. The scheduler now also runs at S1 and S2 (armed there before, never raised);
    the family's modelcheck results are unchanged, and `bin/modelcheck.mjs` runs the three's EVF through the whole
    path (EVF_PLAY). `test/test_vsc3.mjs` checks the compare on E122's and E118's boards.
-71. **REC's whole-file recorder on five bodies** (2026-11-02, `src/fw/facts.mjs` recorder, `docs/hle-gaps.md` 4.8.9).
+71. **REC's whole-file recorder on five bodies** (2026-11-02, `src/fw/facts.mjs` recorder, `docs/hle-gaps/4.8.md` 4.8.9).
    E143's `0x519f9dd7` records a file from a buffer through REC_FILE's own steps: three blocks of 64, 100 and 116
    bytes, then the lock, the camera's clock read (`0x5012b7cd`), the DCF open (FILECLBK code `0x32`), the cluster
    reservation (`0xf1`), the chain write (`0x54`), the directory entry (`0x66`), the registration (`0x33`), the cancel
@@ -1534,7 +1534,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    finding 17). No E143 output
    changes (its bound is the lab's 12); on the 15 a state of those parents prints its name where it printed `?`.
 83. **REC_FILE's task on E146 and E147, and the E144 family's REC** (2026-11-08, `src/fw/facts.mjs` recFile, fact
-   `rec_file`, `docs/hle-gaps.md` 4.8.10). The rule reads every address and layout `src/lab/rec.mjs` uses by REC's
+   `rec_file`, `docs/hle-gaps/4.8.md` 4.8.10). The rule reads every address and layout `src/lab/rec.mjs` uses by REC's
    own trace table (each function by the trace call it holds), REC_FILE's receive with the file name `rec_file.c`,
    the packet dump and the EXIF module's template copy, date set, tag table and crop-area pick (D): on E143 the values
    given by hand before it, on E146 and E147 their own, on none of the other 15 (X). E146 and E147 differ from E143
@@ -1671,7 +1671,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x514ab553`; playbuff_get_img_info E143 `0x518bfc7e`, E130 `0x50bc5008`, E144 `0x514bee9c` (by the maps and the play
    module's trace strings, which these three hold where their API layer has no names). X on E130 and E144 as in finding
    90: 0 calls, the handle word 0, the API's answer 1. No body reads a picture's Exif in playback, then (but E143 under
-   `control camapp 3` with the play module's opt-in, since `docs/hle-gaps.md` 4.8.11, X): S-PLAYCOMP and
+   `control camapp 3` with the play module's opt-in, since `docs/hle-gaps/4.8.md` 4.8.11, X): S-PLAYCOMP and
    S-PLAYSEQ answer from one record (camapp.mjs still_record), E143's, E146's and E147's although their files hold the
    firmware's Exif (finding 83). The family differs only in PlyCom's route, its getStillInfo and getNumber being E143's
    mode-3 branch alone (a synchronous request through the transaction where the others call a wrapper), and is at
@@ -1698,7 +1698,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    / `0x503027e3` / `0x5030a56e` and the parse `0x5051390a` / `0x504ecb06` / `0x50428d91` / `0x50302b6a` / `0x5030a8f5`
    (each by the trace string it loads, or by the maps and its first bytes). None runs in the lab (finding 90; E143's
    load, analysis, file read and dispatcher run under `control camapp 3` with the play module's opt-in since
-   `docs/hle-gaps.md` 4.8.11, X); running
+   `docs/hle-gaps/4.8.md` 4.8.11, X); running
    them needs the play module's handle, its play buffer and image record, which the PLAY tasks and the component's start
    make, and the picture's Exif in the file (finding 93).
 93. **The record's Exif writer on the family: S2's file has none** (2026-11-10, D unless tagged). S-RECFILE writes the
@@ -1721,7 +1721,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the modes 4100, 4107, 4103 and 4108, reads a block at +124 (E118 +188) at offsets past 18000 (+18572, +18578, +18580,
    +18595, +19304; what the block is, ?), keeps the buffer at +200 and calls the header maker where +14 is 0 (E122
    `0x50515b67`). The stop: a native Exif in the family's file needs its header maker run as E143's (H-EXIFINIT,
-   S-EXIFPRM, S-RECIMAGE, `docs/hle-gaps.md` 4.8.10) with its own packet, parameter block and EXIF init read, and the
+   S-EXIFPRM, S-RECIMAGE, `docs/hle-gaps/4.8.md` 4.8.10) with its own packet, parameter block and EXIF init read, and the
    play side then needs finding 92's load run or stood in; neither is done, and the same holds for E130 and the E144
    family. (Superseded for the stop: findings 102 to 104 run the family's header maker, S-RECHDR, and finding 106
    reads the play side; findings 118 to 121 give eight E144-family bodies the firmware's Exif.)
@@ -1927,7 +1927,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    CORPORATION' and 'E-M10MarkII' on E120 (from the settings store as on E143, I; E118's Make is not a string of its
    main block, X); the clock set through the clock setting, the clock read gives it to the time record and the format
    `2026:11:08 12:34:56`. The EXIF set called natively on the copied block divides by zero (`div` at `0x50212ef5`, by a
-   halfword read through a pointer on the stack, in TAKE's state; X), as E143's does (hle-gaps 4.8.10), so the lab
+   halfword read through a pointer on the stack, in TAKE's state; X), as E143's does (hle-gaps/4.8.md 4.8.10), so the lab
    formats the dates as it does and the exposure fields stay the template's.
 104. **S2's file carries the firmware's Exif on the family** (2026-11-10, X: `test/test_storage.mjs` per body, 29 of 29
    checks on each; `src/lab/recheader.mjs`, `src/fw/models.mjs` exif_native). At the first picture H-EXIFINIT runs the
@@ -2170,7 +2170,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    in the lab the record is found (E118 `0x61b121fc`) and its 117 bytes are 0 (X); what fills it on a camera is not read
    (the panel's adjustment data, I).
 118. **The E144 family's REC version: REC_FILE on its queue alone** (2026-11-10, `src/fw/facts.mjs` recFileQueue, fact
-   `rec_file`, `docs/hle-gaps.md` 4.8.10; D on E144 unless tagged; finding 83's stop). REC_FILE (task 31,
+   `rec_file`, `docs/hle-gaps/4.8.md` 4.8.10; D on E144 unless tagged; finding 83's stop). REC_FILE (task 31,
    `0x503f5dc0`) receives REC's packet of 300 bytes from its queue (the word `0x60041864`, id 73) through REC's
    receive wrapper (`0x503f1206`: the kernel's receive with "rec.c", no timeout), with no event flag and no bind. For
    each packet its loop calls a trace, rec_file_start_process (`0x503f73c2`), where NoRecord (+282) is 1 the buffers'
@@ -2183,7 +2183,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    ImgAspect +283, Free +286, FileType +298 (+296 on E134, E137 and E125). REC_IMAGE's rec_make_image_finish
    (`0x503f8c55`) posts a still's packet to REC_FILE's queue itself (`0x503f8da9`: Mode 4097 by its table
    `0x605791a4`, Status not 40662 and the shot's record's +28600 not 5) with "REC post_msg" (`0x503f1256`, 300 bytes),
-   where E143's goes through REC's ring (`docs/hle-gaps.md` 4.3.3): S-RECIMAGE's post is the camera's route here. The
+   where E143's goes through REC's ring (`docs/hle-gaps/4.3.md` 4.3.3): S-RECIMAGE's post is the camera's route here. The
    other seven run the same loop as task 30 or 31; E139, E134 and E125 (the double-slot bodies) first call
    `0x503f2402` (E139's) with a 92-byte record of the task's stack (sp + 304) and, where its +88 is 1,
    rec_make_file_DoubleSlot (`0x503f3e0c`) in the destination record's place (I: the second slot's record); E137, E142
@@ -2279,7 +2279,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    application's event manager natively. X on E122: the card formatted (4,198 SD writes), FILECLBK's reply status 0 for
    token `0xf0040000`, the handler's event `0xf0040000`, the bar full. During the format FILECLBK slept 500 ms once
    where logsec's mount path finds UI_IN's last code `0x1506` (`0x50562b6b` -> `0x5057b8b1(500)`; E143's 740 ms at
-   `0x508ac202`, hle-gaps 4.8.3).
+   `0x508ac202`, hle-gaps/4.8.md 4.8.3).
 125. **The end goes to the camera base, whose thread does not run (S-MDAEND)** (2026-11-10, D unless tagged). On the
    reply the handler sends the progress at 100, then two requests to the camera base through `0x5073c573`, which gens
    them (OMReactive's gen `0x5092fe44`) to the inner reactive of StateTransitionFactory's singleton (`0x61602c58`):
@@ -2308,12 +2308,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    layer registers with UI_IN (`0x50562ce6`) and the SD driver asks UI_IN's level getter for (`0x50582a1d` ->
    `0x50177e44`, the port's place of E143's `0x5014c015`); one slot. S-MEDIA runs unchanged at these. X on E122: out,
    the firmware's own no-card state, "No Card" with the card icon struck through and the count 0 and `00:00:00` in
-   orange (E143 draws no such screen, hle-gaps 4.8.3), the drive status 1, and the SD driver's supply request {32, 255,
-   1} answered by S-SDPOWER; in, {32, 255, 1} and {32, 0, 1} (what 0 and 255 select is ?, hle-gaps 4.8.4), the mount
+   orange (E143 draws no such screen, hle-gaps/4.8.md 4.8.3), the drive status 1, and the SD driver's supply request {32, 255,
+   1} answered by S-SDPOWER; in, {32, 255, 1} and {32, 0, 1} (what 0 and 255 select is ?, hle-gaps/4.8.md 4.8.4), the mount
    after 275 ms of lab time, 1470 and `00:37:19` back (the frames; finding 128 has the checks). The player's card input
    had stopped before (a TypeError): its lookup of the switch's control row read the UI_IN code of each fwswitch row,
    and a row a body's tables do not wire has none (`src/lab/play.mjs` card_input; fixed). That this is E147's "control
-   row without a UI_IN code" (hle-gaps 4.8.7) is I; E147 was not tried again.
+   row without a UI_IN code" (hle-gaps/4.8.md 4.8.7) is I; E147 was not tried again.
 127. **The rule and its reach** (2026-11-10, `src/fw/facts.mjs` mediaHls, fact `media`; `test/test_facts.mjs`
    MEDIA_FOUND). The rule starts at the process's handler and reads each part by its form (the comment at the rule has
    them): the handler's sends and start, the reception's creator and synchronous slot, operator new, the mount
@@ -2365,7 +2365,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    it (I, from the paths): the API sender posts only to its table's queues, and the camera application's
    synchronous-send stand-in returns E_OK to a queue without a running receiver whether S-MODACK names it or not; on
    E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
-   (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
+   (D; beside the C3D module's code, I; docs/hle-gaps/4.1.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
    pass (X).
 131. **The REC version before the E144 family's: E130's REC_FILE** (2026-11-11, `src/fw/facts.mjs` recFileInline, fact
    `rec_file`; D on E130 unless tagged; finding 123's stop). REC_FILE is static task 30 (`0x503d9350`, a stack of 2048
@@ -2415,7 +2415,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    2, the fnode's +88 the DCF kind by the table `0x60911f08`, 1 for FileType 1, +44 the first cluster, +48 the size;
    code 0x33) and the unlock `0x503df6f9`; after a failed step the cancel (`0x503dfd18`, code 0x36), else, unless the
    packet's +165 is set, the shot's DCF checkout (`0x503dfcd1` to `0x505c4b29`), whose miss is REC's warning
-   `0x1e001001`, as on E143 (`docs/hle-gaps.md` 4.8.10). The recorder calls the camera's clock read before the open
+   `0x1e001001`, as on E143 (`docs/hle-gaps/4.8.md` 4.8.10). The recorder calls the camera's clock read before the open
    (`0x500de2e8`, the function after the clock setting `0x500de2c8`); rec_make_file takes the time from the shot's
    record.
 133. **E130's rec_jpeg_exec, header maker and EXIF module** (2026-11-11; D on E130 unless tagged). rec_jpeg_exec
@@ -2857,15 +2857,15 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      byte and the packet's +144 bit 13) its +212 gets +18720 and its +210 a value of +18574 and +4758 (not read);
      else, a still's Mode 4097 among them, +212 gets +18720 plus a term of +4758 and +210 gets +4758
      (`0x5050d9d6..0x5050da37`; I: 256 log2(+4758 / 256), from the constants 256.0 and 0.30103; E143's SvAdj and
-     GainAdj in form, +38174 and +6594 in `docs/hle-gaps.md` 4.3.4, where after_trig too takes +38174 alone, 4.3.5;
+     GainAdj in form, +38174 and +6594 in `docs/hle-gaps/4.3.md` 4.3.4, where after_trig too takes +38174 alone, 4.3.5;
      +4758 is the template's 256 in the lab, X). With that byte not 1 after_trig is given the packet's +212 as
      `0x5050da91` leaves it from rec_bracket_update's argument (`0x5050da41..0x5050da7a`, not read). For Mode 4097
      (`0x50517407` 0) after_trig stores `0x505b6264(Sv)` in the tag (`0x5050dc18..0x5050dc22`). `0x505b6264` takes the
      Sv in APEX units times 256 (X on E122: 1024 gives 50, 1280 100, 1536 200, 2048 800, 3072 12800, and 0 to 512 its
-     floor 25, E143's 25 in `docs/hle-gaps.md` 4.3.5). TAKE writes +18720 from its state's +1478 (`0x502336e9`).
+     floor 25, E143's 25 in `docs/hle-gaps/4.3.md` 4.3.5). TAKE writes +18720 from its state's +1478 (`0x502336e9`).
    - *Whether the lab can deliver them.* Not as on E143, because E143 delivers none of the three from a capture
      stand-in either: there the clock gives the dates, ExposureTime and FNumber stay the template's 0 and S-EXPOSE's
-     values reach none of the record's exposure fields honestly (`docs/hle-gaps.md` 4.3.4), and the ISO's 25 is the
+     values reach none of the record's exposure fields honestly (`docs/hle-gaps/4.3.md` 4.3.4), and the ISO's 25 is the
      template's Sv run through REC_IMAGE's own task (4.3.5). On the family the dates are delivered the same way;
      the other three stay the template's for three reasons.
      (1) The EXIF set does not run: it divides by zero in a white balance helper of TAKE's state (`0x50212ef5`, the
@@ -2892,7 +2892,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    not 0). The checkout's pending entry (the HLS media check-in, as on E143). The image's size and the thumbnail in
    the Exif. What the lab's packet leaves 0 that REC_MAIN would set (ObjResponse, the reply's two words, the callback
    at +28, which rec_file_record calls with 90 for the modes 4108, 4099 and 4100 only, `0x5051020e`).
-149. **E147's two stops on the HLS side, and its seams** (2026-11-11, `src/fw/models.mjs` E147 card_fs.hls; hle-gaps
+149. **E147's two stops on the HLS side, and its seams** (2026-11-11, `src/fw/models.mjs` E147 card_fs.hls; hle-gaps/4.8.md
    4.8.7's two failures; D unless tagged). *Format Card's Yes.* The symptom (X): with E143's keys after MENU (OK, OK,
    UP, OK, UP, OK) the application made no media control request (no TRA 1509 in S-TRAACK's log, S-MDACTRL not
    started), and the frames show the keys at work elsewhere: the first OK opens Card Formatting itself, with no
@@ -2906,7 +2906,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    getter asks a media API (`0x503fab11`, E143's `0x503f0b4d`) for the media 0 and 1 and answers 2 on E147 (page 668
    is opened, `0x51179157(8, 668)`) and 10 on E143 (578): the OM-3 has one slot (its file layer one drive, `cmp 1,a2`
    at `0x50896d7a`, E143's 2); that the lab's E143 counts its second slot, which holds no card, is S-CARD's mount
-   state for it (hle-gaps 4.8.3, I; since hle-gaps 4.8.12 the second slot is empty by default and E143's OK opens
+   state for it (hle-gaps/4.8.md 4.8.3, I; since hle-gaps/4.8.md 4.8.12 the second slot is empty by default and E143's OK opens
    the card's Format Card at once, X there). With the keys of E147's own path (OK, UP, OK, UP, OK) the request reaches
    S-MDACTRL (TRA 1509, command 1, media 0) and the format runs (X), which rules the other two out. The fix is not
    another list of keys: the path is found on the screen (finding 153).
@@ -2966,7 +2966,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      at once, it calls the command's API through the dispatcher (`0x5084aba0`; X: at once in the lab, whose card is
      mounted: the dispatcher is called once at Yes and `0x502d3982` not at all). At the format's reply with status 0
      it sets the slots' format flags itself, 15261 and 15262 for the media kinds 4 and 8 whose status has bit 0 clear
-     and whose mount state is 8 (`0x5084a5f2..0x5084a636`), which on E143 is the function component's end (hle-gaps
+     and whose mount state is 8 (`0x5084a5f2..0x5084a636`), which on E143 is the function component's end (hle-gaps/4.8.md
      4.8.3); posts the progress at 100 and the result (kind 72); and sends the camera base two requests: 611 (+32 1;
      its closure has no function) and 590 (+32 a code from `0x50849bc7`, +36 1), whose closure holds `0x5084a2b1`
      and the result callback. `0x5084a2b1` is E122's `0x506a7c9e` (the callback's post, then `0x508f84f7(15, 0)`,
@@ -2996,7 +2996,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    The mount notification is read as it was (`0x5084a059`, id 712, sent the states 2, 4 and 8 at `0x509379c4`,
    `0x50937930` and `0x50937841`). The rule reads every part on all 15 images that hold the class (X: the E118
    family's values unchanged, `test/test_facts.mjs`; E144's against the values read by hand above), so E133, E145,
-   E129 and E132 have the fact too; their sessions are not tried (finding 154). hle-gaps 4.8.7's "no
+   E129 and E132 have the fact too; their sessions are not tried (finding 154). hle-gaps/4.8.md 4.8.7's "no
    `CmpCst_Function.cpp`" on E144 is wrong: its block holds the file name at `0x60c543f5` with 109 loads (E143 160,
    E148 163; X), a function component without the media control.
 152. **The family's HLS side in play** (2026-11-11, X: `test/test_storage.mjs --hls` per body, 21 of 21 checks on each
@@ -3043,20 +3043,20 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E122 a frame around the row. The rule is kept honest by what follows the last key: the media control's start with
    the format's command for media 0, which the tests check; a walk to another row would start nothing or another
    command, which stops the session. X: the keys it finds are E143's and E146's old six (OK, OK at the card choice,
-   UP, OK, UP, OK; with one card no card choice since hle-gaps 4.8.12),
+   UP, OK, UP, OK; with one card no card choice since hle-gaps/4.8.md 4.8.12),
    five on E147 and E148 (no card choice), RIGHT, OK, DOWN, OK, UP, OK on the E118 family after a
    picture, and on the E144 family five DOWNs, RIGHT, OK, (OK at the card choice,) DOWN, OK, UP, OK. It is not a
    decode of the menu's tables: the E144 and E118 families' Menu_Viewer tables stay undecoded, and the walker knows
    an item only by its name on the screen.
 154. **Left open** (2026-11-11). The second slot on every body (E139, E134 and E125 show the card choice; the walker
-   takes the first card, and the rule reads the first switch alone; on E143 and E146 modelled, hle-gaps 4.8.12);
+   takes the first card, and the rule reads the first switch alone; on E143 and E146 modelled, hle-gaps/4.8.md 4.8.12);
    the media control's other commands (All Erase is
    on the family's screen, not driven) and the handlers' other ends, which stop the session; the E144 family's first
    step for a media whose status has bit 7 clear (`0x502d3982`, not read, not reached in the lab); the camera base's
    own work for 611 and 590, and where the family returns after a Format on the camera (the lab's is the shooting
    screen, as the E118 family's, ?); E133, E145, E129 and E132, whose facts the rule now reads but whose
    `card_fs.hls` is not set (not tried); an SDXC card on any of these bodies' HLS sides (not tried; E144 stops with
-   one before its application starts, hle-gaps 4.8.7); why the card's mount after an insertion takes 55, about 290 or
+   one before its application starts, hle-gaps/4.8.md 4.8.7); why the card's mount after an insertion takes 55, about 290 or
    about 800 ms by body; the walker's limits (the items' English names, a cursor marked by the row's band, a draw log
    kept to its last 2,000 entries: a screen whose full clear has left the log is refused); `bin/nav.mjs` and the
    browser player have no such walk.
@@ -3117,7 +3117,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    ISR are not read), after which the family's Yes would be expected to send request 21 and ERASE_YES_UNTIMED to go;
    the place.mjs fallback that took a tied vote's data bytes as code, which can misplace other words (E122's re-port
    at `4e08ef9` also changed six other places, `0x50416123`, `0x5019868e` and `0x50c9d778` among them, X; not
-   checked here).
+   checked here). The fallback is closed (2026-11-23, `docs/hle-gaps/4.8.md` 4.8.25): a split vote in the copy moves
+   with its neighbours, which give `0x616022d8` and `0x615e04a4` without the rule; the six other places were not of
+   it (round 5's literals). 2026-11-23: the second timer unit is modelled (`src/dev/timer2.mjs`, docs/hle-gaps/4.7.md
+   4.7.14: IRQ 24, ISR `0x50064440`, clock 19 at the lab's 16384 Hz); E122's tick count advances, its Yes erases
+   through the dialog and its protect blink ends, E118's and E120's OK sends request 21 (refused, no erase fact), and
+   ERASE_YES_UNTIMED is retired (X).
 156. **REC_FILE natively on E145 and E132** (2026-11-16, `src/fw/facts.mjs` recFileQueue and recFileInline, fact
    `rec_file`; D unless tagged; finding 136's stop). *E145.* recFileQueue reads the family's version with the loop
    inlined where the image holds the packet dump's string and neither the start's nor the finish's one trace lies in a
@@ -3184,6 +3189,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      reads the texts on the canvas and each row's band on the frame at the pixels that sample it
      (`src/lab/menuwalk.mjs` canvasOf, the compositors' sampling). One to one on the other bodies' TFTs (X: E143's
      channel 2, E144, E148, E122).
+     The GUI's layout on that canvas is the TFT connect's (layout 0 by CCommon::resetCoordinate on the TG-5s, where
+     WinMain's 1 is 80 canvas pixels wider): nav, which had not sent the connect, lost the value column and cut "Set"
+     until 2026-11-24 (`docs/hle-gaps/4.7.md` 4.7.22).
    - *Short tabs.* The TG-5s' Shooting Menu 2 has two rows and their Custom Menu one (X, frames), where the walker
      read a tab with no goal only as a list of three rows or more; and their pages' title and footer, drawn alike at
      the same left edge 431 pixels apart, made a "list" of two. A screen with no goal is now read by its longest list
@@ -3222,7 +3230,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x502edd6c`, E129 `0x500e476b` at `0x502d9732`, E132 `0x500e470e` at `0x502dba13`, the denominator 100
    (FocalLengthIn35mm +4232 / +1928 the same way from `0x500f4eb5`, E129 `0x500e4a40`, E132 `0x500e49e3`, divided by
    100). Where E143's takes the mounted lens's record (the lens step `0x5011fcf4`, the record's +4184,
-   `docs/hle-gaps.md` 4.3.3), E145's lens fill (`0x50286d72`, E143's `0x503bd137`) has no such branch. G answers
+   `docs/hle-gaps/4.3.md` 4.3.3), E145's lens fill (`0x50286d72`, E143's `0x503bd137`) has no such branch. G answers
    hundredths of a mm from a zoom table. E145 (through `0x500f4943`): the zoom number of the position word `0x61c67b3e`
    (`0x500f1bea`: how many of the table `0x601b1f38`'s 21 positions 0, 3, 8, 13 .. 100 are at or below it; 1 at 0), the
    row of the table `0x601b278c`, 56 bytes a zoom number, its column by setting 17649 (`0x500f4ba1`); column 0 runs 450,
@@ -3248,7 +3256,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (the set does not run on them: with REC_FILE native, finding 156, E145's S2 file carries the template's 0/10, X,
    exiftool `0.0 mm`); a zoom other than the wide end; the column's setting 17649 (the converter lens).
 159. **The picture file API's erase all, by the rule** (2026-11-16, `src/fw/facts.mjs` pictureErase, fact
-   `erase.erase_all`; `src/lab/media.mjs` S-MDACTRL's erase all; hle-gaps 4.8.15). Answers findings 129's, 142's and
+   `erase.erase_all`; `src/lab/media.mjs` S-MDACTRL's erase all; hle-gaps/4.8.md 4.8.15). Answers findings 129's, 142's and
    154's "All Erase, not driven" for the bodies whose HLS function component runs the media control. E143's
    api_picfile.c erase all (`0x503fdaf6`, API id `0x70010`, D) opens as its siblings of finding 140 do and posts
    FILECLBK the DCF edit's ALL_DELETE (code 37, `0x25`). The rule finds the one load of the id on the 16 bodies whose
@@ -3301,8 +3309,47 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    timed wait). On E137, E142, E140, E125, E130, E133 and E122 the frame stays blank: their GUI's updates are display
    requests of type 3 (E137's from `0x507d537c`, E122's from `0x502c076a`, X), which stay pending until an image sync
    that only the application sends (S-DISPSYNC in play, `src/lab/camapp.mjs`); nav runs no application. Open: that
-   release in nav; E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
+   release in nav (done 2026-11-23, finding 162's note); E118 and E120, whose GUI takes `0x9624` in POWER_ON and stays there (why is not read); the bring-up
    of E145, E129 and E132; nav's menu fields (`var226`, E143's viewer record, observed on E143 only).
+
+161. **The second card slot on E139, E134 and E125: the detect is UI_IN's level** (2026-11-22, `src/fw/facts.mjs`
+   cardSlots, fact `card.slots`; `docs/hle-gaps/4.8.md` 4.8.17). E143's and E146's SD detect reads a pin of the body IO
+   expander; the other two-slot bodies read the card switch's UI_IN level alone (D): E139 through E143's detect form
+   with a helper that answers 0 (`0x5066466d`, `0x50664a3d`), E134 and E125 through a detect of their own
+   (`0x50678449`, `0x50622561`), each asking for `0x1506` (port 0) and `0x1518` (port 1). None has E143's record
+   controller form; the save mode and slot are the settings their remaining-shots query reads (E139 1129 / 1130, E134
+   1130 / 1131, E125 1137 / 1138, D). X (scratch sessions): the second slot empty by default, a second card at the
+   start mounted from port 1 and S2 on the save slot's card on E139 and E125; E134's second card stops at a
+   synchronous send to queue 221 from the access lamp's callback (open). Since 2026-11-24 (4.8.29): queue 221 is the
+   slave ASIC's (`SASIC_SLAVE`, task 145 `SYS_SASIC_SLAVE`, D), answered by S-SASIC; the second card's file requests
+   go to the slave ASIC over CCI (`file_cci_com.c` command `0x81`, X), which the lab does not run (open).
+
+162. **`bin/nav.mjs` on E145, E129, E132, E118 and E120** (2026-11-22, `src/lab/menu.mjs` power_start and gui_sleep,
+   `src/lab/nav.mjs` gui_connect, `src/lab/bodystart.mjs`; hle-gaps/4.7.md 4.7.9). Answers finding 160's open items for
+   these five. X (`test/test_nav.mjs`, time mode, TFT): the bring-up ends at POWER_ON, OPEN reaches SS_MENU (`0x1102`),
+   DOWN keeps it and draws, MENU, MENU close to `0x0104` on all five; their frame stays the start's, as on the seven
+   SYNC_HELD bodies (the GUI's updates wait for the application's image sync).
+   - *E145, E129, E132: state 0.* The GUI's set-up enters POWER_ON, whose entry reads the power source through a
+     measurement that sleeps (E145 `0x50d9347a` -> `0x5003ffef`, D); the caller word holding the state is stored after
+     the entry returns (E145 `0x50c380a2`, D), and nav's settle returned with the GUI task asleep (X). H-GUISLEEP runs
+     lab time while it sleeps (E145 100 ms, E129 and E132 1600 ms, X). On the TG-5s the read goes on to set the
+     internal charger up (PER_SIO's channel 9, E129 `0x500520f2`, and a 3000 ms completion wait, D), which needs play's
+     H-DPCINIT, S-SIOIIC (S-CHARGER) and H-PWRTASK: each one's absence kept the GUI out of POWER_ON (X, E129). Nav now
+     runs play's own steps (`src/lab/bodystart.mjs`, play's bring-up calls the same functions) before the GUI's
+     creation on every body with the power task (E144, E148, E137, E142, E140 and the three), in time mode only (the
+     power task sleeps after its start, X; outside time mode the five others open the menu as before, X). The two USB
+     charger detection prints ("USBTOP_MAC_IF:", "BC:SDP", from the lab-stub USB block) are accepted after it, as a
+     play session's start prints them (X, E129).
+   - *E132's OPEN* asks CATEGORY_MAIN (queue `0xe6`, a synchronous send from `0x5029ca1c`, D), whose task does not run;
+     nav answers E_OK as play's S-MODACK does for the body's modack_queues.
+   - *E118, E120: POWER_ON after OPEN.* Their GUI task drops every message until `0x9601` (E118 `0x50b93340`, E120
+     `0x509140a9`, D; no other image has the compare before its take, X), which the application's start sends in play
+     (`{0x9601, 0xfffe, 0, 2}`, X on E118). H-GUICONNECT posts it once after the bring-up (lOutput 2 on the TFT, 7 on
+     the EVF). Controls (X): without H-GUISLEEP the three end at state 0, without the power module's start E129 and
+     E132 do, and without H-GUICONNECT OPEN leaves E118 and E120 at POWER_ON.
+   Open: nav's release of the display sync on these and the seven other bodies (since 2026-11-23 released,
+   S-DISPSYNC in nav, `docs/hle-gaps/4.7.md` 4.7.15: the menu's frames follow OPEN and DOWN on the twelve, X); E145,
+   E129 and E132 need `--time`.
 
 
 
@@ -3333,8 +3380,8 @@ card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. 
 2026-10-29 both run the lens natively by default, as E143 does (finding 25). Since 2026-11-08 REC_FILE's own task
 records S2's file on both, with the firmware's Exif header (finding 83).
 Since 2026-11-11 Delete's eraseCurrent runs natively on both (H-OBJDEL, findings 137 to 140), E147's Card Formatting
-and card input natively at E143's seams (finding 149), E146 has its second card slot (hle-gaps 4.8.12), and
-S-JPEGENC keeps the parameter set's call, the run and Jpeg_Result on both, as on E143 (hle-gaps 4.3.9).
+and card input natively at E143's seams (finding 149), E146 has its second card slot (hle-gaps/4.8.md 4.8.12), and
+S-JPEGENC keeps the parameter set's call, the run and Jpeg_Result on both, as on E143 (hle-gaps/4.3.md 4.3.9).
 
 **E144 (OM-5).** Boots natively to its shooting screen (kernel, display open, settings store, camera application, GUI;
 the kind-2 VSC compositor draws the OSD planes), takes S1, and the player settles running with the shooting screen in

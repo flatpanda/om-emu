@@ -1,4 +1,4 @@
-// The power manager and the camera's power-off natively (docs/hle-gaps.md 4.7.4), on a body whose src/fw/models.mjs
+// The power manager and the camera's power-off natively (docs/hle-gaps/4.7.md 4.7.4), on a body whose src/fw/models.mjs
 // entry gives power_native (E143, E146, E147), at the addresses src/fw/facts.mjs powerOff reads from its firmware (fact
 // 'power.off'; E143's POWER_OFF_E143 there, with the evidence for every address). At the play bring-up the power
 // manager's task, PWR_MAIN, starts as the boot starter would start it, with the IO expanders it talks to (where the
@@ -29,13 +29,20 @@
 //               2's bring-up does not create it: X, it never ran). In its place the lab calls the HFW's CameraCommon
 //               object's shutDown(mode, reason) through the object's own vtable slot, as the shell's "sdk api
 //               shutdown" does, with API_SHUTDOWN_NORMAL and API_SHUTDOWN_REASON_BUTTON (the values its usage text
-//               gives; I: the lever's reason), on the lab task and in lab time: while the call waits, lab time runs to
+//               gives; 1 and 1 are what the application passes itself where it makes the call, E143 0x5107f149..5e,
+//               D), on the lab task and in lab time: while the call waits, lab time runs to
 //               the next event, as an idle slice does. From there the firmware runs: OlyHfwPower's startShutDown, the
 //               settings' save, the RAM log's save, the file module's power-off, api_system's power-off sequence with
 //               the IO expanders' power-off commands (and the GIO extension's pins, where the body has them), the
 //               window's ports and wake word, the sub-CPU's 0x85 power-off over the link
 //               (PER_SCPU natively, to S-SCPUDEV or the sub-CPU's own firmware) and, last, 127 into the window's
-//               request word. The session ends at the instruction after that write's call (power.off end)
+//               request word. The session ends at the instruction after that write's call (power.off end). Only
+//               while the USB cable is in (the sub-CPU's PC13 low, play.mjs USB_IDLE 'in', the default): with it out
+//               the application calls shutDown(1, 1) itself in the lever's step (E143 from 0x5107f160, X), whose
+//               0x50abe7e0 calls startShutDown (power.off start_shutdown), and H-POWER follows that call: the
+//               stand-ins below and the end are armed before the lever's step, two observers count the
+//               application's shutDown and startShutDown (once each, or an error), and the lab task waits in lab
+//               time, as an idle slice, until the last write (docs/hle-gaps/4.10.md 4.10.3)
 //   S-PWRLOG    the RAM log's save to the NAND (2 MiB to its own area): the NAND access is answered done, nothing kept
 //               (the controller is not modelled; S-FSNAND keeps the file system's area only)
 //   S-FLASHSAVE the settings' save of startShutDown is listed with the DB init's (without S-NVRAM: skipped, as the
@@ -44,7 +51,8 @@
 //               at each poll the sub-CPU acts as at an idle point (A-SCPUDEV-1, A-SCPUM4-1), until the pin is low.
 //               On the camera it runs beside the MN; the lab gives it the MN's poll as its point to act (I)
 import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
-import { POWER_OFF_E143, POWER_OFF_LIB } from '../fw/facts.mjs';
+import { POWER_OFF_E143, POWER_OFF_LIB, POWER_LATER_E143 } from '../fw/facts.mjs';
+import * as IRQ from './irq.mjs';
 import { FirmwareError, ISR_CALLER, ISR_SP, disasm, runtime, where } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { STEP_HOOKS, STORM, WAIT_HOOKS_PER_MS, WAIT_STORM_PER_MS } from './nav.mjs';
@@ -71,7 +79,7 @@ const IOEXP_WRITE = POWER_OFF_LIB.ioexp_write;
 // 0.1 s (X); the firmware's own waits on the way end in 1 to 5 s (the IO expanders', PER_SCPU's), so a stuck path
 // shows as one of them or as this deadline. Under control camapp 3 startShutDown's TRA 586 waits for the HLS's answer
 // up to 10 s itself (0x50af6829: the exec's timeout 10000, then 0xf0000043; D), so this deadline, counted from the
-// call, ends first when the components do not answer (docs/hle-gaps.md 4.3.6)
+// call, ends first when the components do not answer (docs/hle-gaps/4.3.md 4.3.6)
 export const POWER_OFF_MS = 10000;
 // the sub-CPU's steps per poll of pin 102 (H-SCPUPOLL), and the polls before the lab gives up on the pin
 const POLL_STEPS = 64, POLL_LIMIT = 1000;
@@ -139,52 +147,131 @@ export function startPowerManager(session, f) {
   if (lab.nk.state(tid) !== 0x4 || unanswered.length || errlog.length) {
     throw new PowerError(`H-PWRSTART: after the power manager's start: task ${tid} state 0x${lab.nk.state(tid).toString(16)}, frames ${JSON.stringify(frames)}, errlog ${JSON.stringify(errlog)}: not waiting with its requests answered`);
   }
-  return { tid, frames };
+  lab.pwr_main_tid = tid;                                                         // H-PWRSEND (menu.mjs): its queue's sends go to it
+  return { tid, frames, later: null };
 }
 
-// H-POWER after the lever's off: S-SHUTDOWN to the power-off's last write
+// H-PWRLATER (opt-in, power_later 'on' or OM_POWER_LATER=on; docs/hle-gaps/4.7.md 4.7.6, 4.7.10 and 4.7.16): the
+// boot's two later inits of the power manager (fact 'power.later', src/fw/facts.mjs powerLater; E143's 0x50044ed7,
+// called from 0x50024d43: the source check {0x10, 2} through the task's handler, then UI_IN's and the timer API's
+// calls; and 0x50044f7d, from 0x501e9943: {0x10, 2} again, event 9 posted to queue 10, 0x5002cdb7(0x61125841), then
+// the setters of C and A) on the lab task. The play bring-up runs them after H-DPCINIT (with the native lens, after
+// the lens's bring-up), as the boot runs them after its head's deferred-call init and the lens init (4.6.5's table,
+// 1_J): the source check reads the body's temperature through the A/D driver, whose request completes through a
+// deferred call (0x500503d4, IRQ 53) both through the converter (H-ADINIT, src/lab/play.mjs; 4.7.20) and, without the
+// driver's init (the mutant no-adinit), on its 'no channel' path, so without the deferred calls' handlers the lab task
+// waits for good (4.7.16, X). The second init's battery
+// check sends the sub-CPU 0x11, which S-SCPUDEV refuses and the sub-CPU's own firmware (OM_EMU_SCPU=native) answers.
+// Checked: each init returns, PWR_MAIN waits again, no errlog in the inits' window, and after the second A and C are 1.
+// tid: PWR_MAIN's task
+export function laterInits(session, tid) {
+  const lab = session.lab, dev = lab.scpu_dev, dpc = lab.sim.m.devices.dpc, f = fact('power.later', POWER_LATER_E143), out = [];
+  if (!dpc || !dpc.cfg.irqs.every((n) => lab.sim.u32(IRQ.HANDLER_TABLE + 4 * n))) {
+    throw new PowerError('H-PWRLATER: the deferred calls\' handlers are not attached (H-DPCINIT): the source check\'s A/D request would complete through a deferred call nothing runs');
+  }
+  for (const init of [f.early, f.late]) {
+    const f0 = dev.frames.length, e0 = lab.kernel.errors.length;
+    try {
+      lab.step(`H-PWRLATER the power manager's later init ${h8(init)}`, () => lab.call(init, null, null, null, 2000000));
+      session.settle('H-PWRLATER');
+    } catch (e) { throw new PowerError(`H-PWRLATER: ${h8(init)}: ${e.message.split('\n')[0].replace(/^H-PWRLATER: /, '')}`); }
+    const errlog = lab.kernel.errors.slice(e0).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c, , , w]) => `${h8(c)} from ${w}`);
+    out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog, state: lab.nk.state(tid) });
+    if (lab.nk.state(tid) !== 0x4 || errlog.length) throw new PowerError(`H-PWRLATER: after ${h8(init)}: PWR_MAIN (task ${tid}) state 0x${lab.nk.state(tid).toString(16)}, errlog ${JSON.stringify(errlog)}: not waiting with no errlog`);
+  }
+  const a = lab.sim.read(f.a, 1)[0], c = lab.sim.read(f.c, 1)[0];
+  if (a !== 1 || c !== 1) throw new PowerError(`H-PWRLATER: after ${h8(f.late)}: A (${h8(f.a)}) ${a}, C (${h8(f.c)}) ${c}, not both 1`);
+  if (lab.env?.power_later_log) console.error('H-PWRLATER', JSON.stringify(out));
+  return out;
+}
+
+// H-POWER after the lever's off: S-SHUTDOWN to the power-off's last write, or (follow) the application's own
+// shutdown followed to it
 export class PowerOff {
   // session: the PlaySession, whose lab runs PER_SCPU over the link, the power manager (H-PWRSTART) and, on a body with
-  // IO expanders, S-IOEXP; f: the body's power.off facts
-  constructor(session, f) {
-    this.s = session; this.lab = session.lab; this.f = f;
+  // IO expanders, S-IOEXP; f: the body's power.off facts; follow: the application calls shutDown itself at the lever's
+  // off (a session started with no USB cable, play.mjs USB_IDLE 'out'; docs/hle-gaps/4.10.md 4.10.3), so the lab arms
+  // the power-off's stand-ins before the lever's step (arm) and runs lab time to the last write instead of calling
+  // shutDown
+  constructor(session, f, { follow = false } = {}) {
+    this.s = session; this.lab = session.lab; this.f = f; this.follow = follow;
     this.link = this.lab.scpu_link;
     this.ioexp = session.ioexp;
     if (!this.link || !session.power_manager || !this.ioexp !== !f.ioexp) throw new PowerError('S-SHUTDOWN: the power-off needs PER_SCPU over the link (H-SCPUSTART), the power manager (H-PWRSTART) and, with IO expanders, their stand-in (S-IOEXP)');
+    if (follow && f.start_shutdown === undefined) throw new PowerError(`H-POWER: ${MODEL}'s power.off gives no start_shutdown (src/fw/facts.mjs powerOff; a port made before 2026-11-24): the application's own shutdown cannot be followed`);
     this.polls = 0;                // H-SCPUPOLL: pin 102 polls
     this.log = [];                 // [kind, detail] of every stand-in action, in order
+    this.calls = [];               // (follow) the application's calls of shutDown and startShutDown, in order
+    this.running = false;          // run() waits for the last write
+    this.armed = false;
+    this.at = { object: f.shutdown.object, entry: f.shutdown.entry, save: f.flash_save, log: f.log.ret, end: f.end, poll: f.poll.at, start: f.start_shutdown };
+  }
+  // The power-off's stand-ins installed; with follow also observers of the application's shutDown and startShutDown,
+  // before the lever's step in which the application calls them (X, E143: from 0x5107f160 shutDown 0x50afd2d7, whose
+  // 0x50abe7e0 calls startShutDown 0x50af654b)
+  arm() {
+    if (this.armed) return;
+    this.armed = true;
+    const lab = this.lab, ioexp = this.ioexp;
+    ioexp?.take_log();
+    // what the power-off's record counts from: the link's frames and pins, lab time, the error log, the expanders'
+    // requests (with follow from before the lever's step, where the application's shutdown starts)
+    this.marks = { f0: this.link.dev.frames.length, t0: lab.lab_time(), e0: lab.kernel.errors.length, x0: ioexp?.taken.length ?? 0, p0: lab.sim.m.devices.linkpins.log.length };
+    this.install(this.at);
+    if (!this.follow) return;
+    const at = this.at;
+    lab.observe(at.entry, (l, r) => this.calls.push({ fn: 'shutDown', from: where(r.mdr), lab_ns: lab.lab_time(), mode: r.d0 >>> 0, reason: r.d1 >>> 0 }), 'obs-shutdown');
+    lab.observe(at.start, (l, r) => this.calls.push({ fn: 'startShutDown', from: where(r.mdr), lab_ns: lab.lab_time() }), 'obs-start-shutdown');
   }
   run() {
-    const lab = this.lab, f = this.f, sd = f.shutdown, ioexp = this.ioexp;
-    const at = { object: sd.object, entry: sd.entry, save: f.flash_save, log: f.log.ret, end: f.end, poll: f.poll.at };
-    const dev = this.link.dev, f0 = dev.frames.length, t0 = lab.lab_time(), e0 = lab.kernel.errors.length, x0 = ioexp?.taken.length ?? 0;
-    const pins = lab.sim.m.devices.linkpins, p0 = pins.log.length;
-    ioexp?.take_log();
-    this.install(at);
-    const obj = lab.call(at.object, null, null, null, 200000).a0 >>> 0;
-    const fn = disasm(lab.sim.u32(lab.sim.u32(obj) + 4 * sd.slot));
-    if (fn !== at.entry) throw new PowerError(`S-SHUTDOWN: the CameraCommon object ${h8(obj)}'s slot ${sd.slot} is ${h8(fn)}, not shutDown ${h8(at.entry)}`);
-    const deadline = t0 + POWER_OFF_MS * 1e6, lt = lab.lt, previous = lt.on_idle, settling = lt.settling;
+    const lab = this.lab, sd = this.f.shutdown, ioexp = this.ioexp, at = this.at, follow = this.follow;
+    const count = (name) => this.calls.filter((c) => c.fn === name).length;
+    if (follow && !this.armed) throw new PowerError('H-POWER: the follow of the application\'s shutdown was not armed before the lever\'s step');
+    this.arm();
+    const dev = this.link.dev, pins = lab.sim.m.devices.linkpins, { f0, t0, e0, x0, p0 } = this.marks;
+    let fn = null, obj = null;
+    if (follow) {
+      // the application's own calls, in the lever's step: shutDown once, and startShutDown once from it
+      if (count('shutDown') !== 1 || count('startShutDown') !== 1) throw new PowerError(`H-POWER: at the lever's off with no USB cable the application called shutDown ${count('shutDown')} and startShutDown ${count('startShutDown')} times in the lever's step (${JSON.stringify(this.calls)}), not once each`);
+    } else {
+      obj = lab.call(at.object, null, null, null, 200000).a0 >>> 0;
+      fn = disasm(lab.sim.u32(lab.sim.u32(obj) + 4 * sd.slot));
+      if (fn !== at.entry) throw new PowerError(`S-SHUTDOWN: the CameraCommon object ${h8(obj)}'s slot ${sd.slot} is ${h8(fn)}, not shutDown ${h8(at.entry)}`);
+    }
+    // the deadline counts from the shutDown call: the lab's, or the application's in the lever's step
+    const deadline = (follow ? this.calls[0].lab_ns : t0) + POWER_OFF_MS * 1e6, lt = lab.lt, previous = lt.on_idle, settling = lt.settling;
+    const limit = STEP_HOOKS * 4 + POWER_OFF_MS * WAIT_HOOKS_PER_MS;
     lab.step_storm = STORM + Math.ceil(POWER_OFF_MS * WAIT_STORM_PER_MS);
     // not a lab step: a step is a display run, where a sleep is the lab clock's (menu.mjs in_display_run), and here the
-    // firmware's tasks sleep natively while the lab task waits, as in an idle slice (kernel.mjs elapse_until); the
-    // firmware's error log is checked as a step's is
+    // firmware's tasks sleep natively while the lab task waits, as in an idle slice (kernel.mjs elapse_until, which the
+    // follow uses itself: the lab task only waits there); the firmware's error log is checked as a step's is
     let ended = false;
-    lt.on_idle = () => this.idle(deadline); lt.settling = true;
+    this.running = true;
+    if (!follow) { lt.on_idle = () => this.idle(deadline); lt.settling = true; }
     try {
-      lab.calls(fn, { a0: obj, d0: sd.mode, d1: sd.reason }, undefined, undefined, STEP_HOOKS * 4 + POWER_OFF_MS * WAIT_HOOKS_PER_MS);
+      if (follow) lt.elapse_until(deadline, () => lab.lab_time(), (t) => lab.run_to_event(t), limit);
+      else lab.calls(fn, { a0: obj, d0: sd.mode, d1: sd.reason }, undefined, undefined, limit);
     } catch (e) {
       if (!(e instanceof SequenceEnd)) throw e;
       ended = true;
-    } finally { lt.on_idle = previous; lt.settling = settling; }
+    } finally {
+      this.running = false;
+      if (!follow) { lt.on_idle = previous; lt.settling = settling; }
+    }
+    const who = follow ? 'H-POWER (the application\'s shutdown)' : 'S-SHUTDOWN';
     const errlog = lab.kernel.errors.slice(e0), unexpected = errlog.filter(([c]) => !EXPECTED_ERRLOG.has(c));
-    if (unexpected.length) throw new PowerError(`S-SHUTDOWN: firmware error log: ${unexpected.map(([c, , , caller]) => `${h8(c)} from ${caller}`).join('; ')}`);
+    const logged = unexpected.map(([c, , , caller]) => `${h8(c)} from ${caller}`).join('; ');
+    // (the follow's wait ends at the deadline itself: that comes first, with what the firmware logged on the way)
+    if (follow && !ended) throw new PowerError(`${who}: the power-off had not reached its last write (${h8(at.end)}) ${POWER_OFF_MS} ms after the application's shutDown; errlog ${logged || 'none'}; tasks ${JSON.stringify([...lab.task_states()])}`);
+    if (unexpected.length) throw new PowerError(`${who}: firmware error log: ${logged}`);
     if (!ended) throw new PowerError(`S-SHUTDOWN: shutDown returned without the power-off's last write (${h8(at.end)})`);
+    if (follow && count('startShutDown') !== 1) throw new PowerError(`${who}: startShutDown called ${count('startShutDown')} times by the power-off's end, not once`);
     if (ioexp?.pending.length) throw new PowerError(`S-IOEXP: ${ioexp.pending.length} completion(s) still due at the power-off's end`);
     return {
       lab_ns: [t0, lab.lab_time()], frames: dev.frames.slice(f0), pins: pins.log.slice(p0).map(([n, v]) => `${n} ${v}`), ready: pins.level.ready,
       scpu: { state: dev.state, power: dev.power ?? null }, request_word: lab.sim.m.devices.scpu.reg[REQUEST_WORD >> 2],
       ioexp: ioexp?.taken.slice(x0) ?? [], polls: this.polls, errlog: errlog.map(([c]) => h8(c)), log: [...this.log, ...(ioexp?.take_log() ?? [])],
+      ...(follow && { follow: this.calls.map((c) => ({ ...c })) }),
     };
   }
   // the lab task's idle point while shutDown waits (after the idle steps, the sub-CPU's and S-IOEXP's): lab time to the

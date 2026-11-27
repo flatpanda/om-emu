@@ -30,6 +30,7 @@ import { DEBUG as VSC_DEBUG, DOORBELL, DOORBELL_STUB, DBG_ARG0, DBG_LAST_RESULT,
   CMD_ADVANCE, CMD_RUN_TO_FRAME, CMD_RUN_TO_EVENT } from '../lab/display.mjs';
 
 const KINDS = { r: 1, w: 2, rw: 3, a: 3 };
+const KIND_STR = { 1: 'r', 2: 'w', 3: 'rw' };
 const u32le = (b) => (b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24) >>> 0;
 const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]);
 const PROBE = Symbol('probe');           // a probe range's watch id: {[PROBE]: index}, no id a request can give
@@ -131,6 +132,9 @@ export class Debugger {
     }
     return [...this.bps];
   }
+  getBreakpoints() {
+    return [...this.bps].sort((a, b) => a - b);
+  }
   _outcome(k0, extra = {}) {
     const st = this.m.lastStop() ?? { kind: 'break', code: 0 };
     // the lines this run wrote, at most the last 1,000 (stderrDropped: how many before them it wrote)
@@ -194,6 +198,9 @@ export class Debugger {
     if (ws.some((w) => w.stop)) this._noStops('a stopping watchpoint');
     this.watched = ws;
     this._setWatch();
+  }
+  getWatchpoints() {
+    return this.watched.map((w) => ({ id: w.id, lo: w.lo, hi: w.hi, len: w.hi - w.lo, kind: KIND_STR[w.kind], action: w.stop ? 'stop' : 'log' }));
   }
   // the machine's one watch list: watch()'s and the probes' ranges (probes)
   _setWatch() {

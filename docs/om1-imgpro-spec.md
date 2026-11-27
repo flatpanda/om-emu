@@ -3,7 +3,7 @@
 The image library's unit 7 on E143 (v1.9): what its driver writes, what its interrupt handler reads, which request
 kinds drive it, and what the lab's model (`emu/src/dev/imgpro.mjs`, S-IMGPRO) computes. Addresses are E143's, in the
 disassembly notation (body offset + `0x50000000`). Evidence tags: D (disassembly read), X (executed or measured in the
-lab), I (inference), ? (unknown). The round that read it: `docs/hle-gaps.md` 4.3.1 (2026-11-09).
+lab), I (inference), ? (unknown). The round that read it: `docs/hle-gaps/4.3.md` 4.3.1 (2026-11-09).
 
 ## 1. Where it sits
 

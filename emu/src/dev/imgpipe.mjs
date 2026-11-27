@@ -1,5 +1,5 @@
 // S-IMGPIPE: the image library's pipeline block at 0x9c200000 and the JPEG codec at 0x99900000 (board imgpipe;
-// docs/hle-gaps.md 4.8.13), as far as the play module's view decode drives them: the library's request kind 10, which
+// docs/hle-gaps/4.8.md 4.8.13), as far as the play module's view decode drives them: the library's request kind 10, which
 // its generic handler 0x5046d994 runs (the parameters' packing 0x504809ec into a register image, the units' set-up
 // 0x5048134d, the go 0x504814d2, the end 0x504814ef). A register file with the behaviour the driver relies on, and one
 // program computed: the codec decodes a baseline JPEG from memory and the resizer scales the picture into a display

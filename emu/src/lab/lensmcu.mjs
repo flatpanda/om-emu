@@ -1,5 +1,5 @@
 // S-LENSMCU: the lens's own microcontroller at the far end of the lens serial controller (src/dev/lensssc.mjs;
-// docs/hle-gaps.md 4.4.2, the evidence), a model of the frames the body's lens driver sends and of the replies its
+// docs/hle-gaps/4.4.md 4.4.2, the evidence), a model of the frames the body's lens driver sends and of the replies its
 // parsers read. The lens is the one S-LENS stood for, the M.Zuiko 12-40mm F2.8 PRO (LENS_1240): its identity, name,
 // focal lengths and apertures are the values S-LENS wrote into the driver's record (I: the lens's published
 // specification), now carried by the protocol's replies; a field the lab has no value for is 0 (A-LENSMCU-1). This
@@ -17,7 +17,7 @@
 // 0x502b861d). The reply of a frame of class 0x8x or 0xcx carries one byte more than its parser reads (the driver
 // takes the controller's count less one, 0x502c1ea7; I: a check byte, its value ? and unread: 0 here). The parsers by
 // command id are dispatched at 0x502bacaf; multi-byte fields are little-endian (0x5012b3e3, 0x5012b3fb). The frames
-// the lens's start sends, in order (X, docs/hle-gaps.md 4.4.2):
+// the lens's start sends, in order (X, docs/hle-gaps/4.4.md 4.4.2):
 //   (initial)  header 0, mode 7: the wake-up (0x502c545b), no reply
 //   b0 f2      type 5 (0x502ba64e, code 0xf2 for its first form): no reply is parsed (0x502ba7d9)
 //   c0 f6      id 1: u16 the protocol version (0x6296c924..: 0x0b0a is an old lens, read as 0x1000; bits 1 or 3 set
@@ -38,7 +38,7 @@
 //   c1 2f      id 89: 2 bytes (record +117808; 0x502b10a9)
 //   60 f0      type 3, command 101 with 5 data bytes: no reply
 //   c1 80      id 69 (and 75): the lens's state (0x502b263d, below), polled from then on
-// and, sent later (docs/hle-gaps.md 4.1.8):
+// and, sent later (docs/hle-gaps/4.1.md 4.1.8):
 //   a0 b0      type 1 (0x502b7e8a; a0 b1 [00 00] for command id 0): the AF library's mode set (0x50974553 -> the lens
 //              job 0x502c2635 -> 0x502c29ca: id 1, sub-code 0xfe, a value byte) at TAKE_FOCUS's MODE_UPDATE; data
 //              count 0 and its completion 0x502b7efe reads only the status: no reply

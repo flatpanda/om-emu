@@ -2,9 +2,11 @@
 // without the PERF2 machinery (no host reads, register cache, write elision or HLE builtins), over
 // the machine API. Stats: g_count and g_digest (sha256 of every 'g' reply
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
-import { A, IMAGE_BASE, IMAGE_END, fact } from '../fw/model.mjs';
-import { SECTIONS_E143 } from '../fw/facts.mjs';
-import { bootLoads, rangeMessage, POISON } from '../fw/sections.mjs';
+import { A, IMAGE_BASE, IMAGE_END, MODEL } from '../fw/model.mjs';
+import { BOARD } from '../fw/board.mjs';
+import { StrictLog, strictOn } from './strict.mjs';
+import { rangeMessage, POISON } from '../fw/sections.mjs';
+import { sectionsFact, loadedRanges, secReadyWatch } from './patchaudit.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
 import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
@@ -37,20 +39,7 @@ export function packRegs(regs) {
 const u32le = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]);
 
-// The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
-export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
-// The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
-// env.patch, the overlay summary --patch and --main both give, on a body whose section loader the rule reads, else
-// off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
-// in use, a patched end word's value included). 'on' on a body without the rule throws.
-export function loadedRanges(env) {
-  const mode = env.loaded ?? 'auto';
-  if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);
-  const f = sectionsFact();
-  if (mode === 'off' || (mode === 'auto' && (!env.patch || f === null))) return null;
-  if (f === null) throw new ValueError('--loaded on: this build holds no section loader the rule reads (src/fw/facts.mjs sectionLoader), so what its boot loads is not known');
-  return bootLoads(env.rom, IMAGE_BASE, f);
-}
+export { sectionsFact, loadedRanges, secReadyWatch };
 
 export class Simulator {
   // env: { rom, createHash, clock?, stats? (a Stats or null), slice? (instructions per continue slice), onSlice?,
@@ -66,8 +55,21 @@ export class Simulator {
     const f = this.loads ? sectionsFact() : null;
     this.unloaded = this.loads ? { gaps: [...this.loads.gaps, ...this.loads.unshown], fill: POISON, message: (g, pc) => rangeMessage(g, pc, IMAGE_BASE, f) } : null;
     const unloaded = this.unloaded;
-    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded });
+    // --sec-ready (env.secReady, src/lab/secready.mjs): the patched instructions run in a section whose stage bit is
+    // clear, recorded by a fetch audit; null without the option (no guard, nothing changes)
+    this.secReady = env.secReady ? secReadyWatch(env) : null;
+    // the strict mode (src/lab/strict.mjs): env.strict, the host's StrictLog for the run (or 'on' / 'off'), else
+    // OM_STRICT; this.strict the log (null: off). env.stockRom, the stock run-time image beside an overlay, gives the
+    // ranges the patch made the boot load (cave-store)
+    this.strict = env.strict instanceof StrictLog ? env.strict : strictOn(env.strict) ? new StrictLog({ model: MODEL }) : null;
+    const strict = this.strict?.arm({ rom: env.rom, base: IMAGE_BASE, end: IMAGE_END, preload: BOARD.preload ?? [], loads: this.loads, patchRanges: env.patchRanges ?? null, stock: env.stockRom ?? null }) ?? null;
+    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded,
+      fetchAudit: this.secReady?.guard ?? null, strict });
     this.breakpoints = new Set();
+    this._bpRef = null;
+    this._bpDebug = null;
+    this._builtinsRef = null;
+    this._regBuf = new Uint32Array(16);
     this.known_insns = 0; this.ran = false;
     this.fast = false;
     this.hle_window = null;
@@ -94,7 +96,9 @@ export class Simulator {
   }
   _probe() {
     this.stats.probes += 1;
-    this._account(this._packet('g'));
+    const value = this.m.getReg(15);
+    if (this.ran) this.stats.insns += (value - this.known_insns) >>> 0;
+    this.known_insns = value; this.ran = false;
   }
   _account(reply) {
     const value = parseInt(reply.slice(126, 128) + reply.slice(124, 126) + reply.slice(122, 124) + reply.slice(120, 122), 16);
@@ -169,7 +173,9 @@ export class Simulator {
   // The debugger's breakpoints with the harness's (break_at) on the machine.
   rearm() {
     const d = this.debug;
-    this.m.setBreakpoints(d === null || !d.pcs.size ? [...this.breakpoints] : [...new Set([...this.breakpoints, ...d.pcs])]);
+    this._bpRef = null;
+    this._bpDebug = d;
+    this.m.setBreakpoints(d === null || !d.pcs.size ? this.breakpoints : new Set([...this.breakpoints, ...d.pcs]));
   }
   // The debug stub: the GDB remote packets the harness sends.
   _packet(text) {
@@ -223,20 +229,51 @@ export class Simulator {
     }
   }
   registers() {
-    const raw = this.packet('g');
-    const r = hexRegs(raw), out = {};
-    for (let k = 0; k < 16; k++) out[REGS[k]] = r[k];
-    return out;
+    this._alive();
+    const r = this.m.getRegs();
+    if (this.stats !== null) {
+      const st = this.stats;
+      st.packets.set('g', (st.packets.get('g') || 0) + 1);
+      st.g_count += 1;
+      st.digest.update(regsHex(r));
+      const value = r[15];
+      if (this.ran) st.insns += (value - this.known_insns) >>> 0;
+      this.known_insns = value;
+      this.ran = false;
+    }
+    return {
+      d0: r[0], d1: r[1], d2: r[2], d3: r[3],
+      a0: r[4], a1: r[5], a2: r[6], a3: r[7],
+      sp: r[8], pc: r[9], psw: r[10], mdr: r[11],
+      lir: r[12], lar: r[13], fault: r[14], insns: r[15],
+    };
+  }
+  set_registers(regs) {
+    this._alive();
+    const r = this._regBuf;
+    r[0] = regs.d0 >>> 0; r[1] = regs.d1 >>> 0; r[2] = regs.d2 >>> 0; r[3] = regs.d3 >>> 0;
+    r[4] = regs.a0 >>> 0; r[5] = regs.a1 >>> 0; r[6] = regs.a2 >>> 0; r[7] = regs.a3 >>> 0;
+    r[8] = regs.sp >>> 0; r[9] = regs.pc >>> 0; r[10] = regs.psw >>> 0; r[11] = regs.mdr >>> 0;
+    r[12] = regs.lir >>> 0; r[13] = regs.lar >>> 0; r[14] = regs.fault >>> 0; r[15] = regs.insns >>> 0;
+    if (this.observer !== null && !this.observer.quiet) this.observer.onG('G' + regsHex(r));
+    if (this.stats === null) {
+      this.m.setRegs(r);
+      return;
+    }
+    if (this.ran) this._probe();
+    this.m.setRegs(r);
+    const st = this.stats;
+    st.packets.set('G', (st.packets.get('G') || 0) + 1);
+    this.known_insns = r[15];
+    this.ran = false;
   }
   reset(values = {}) {
-    const regs = {};
-    for (const n of REGS) regs[n] = 0;
-    regs.sp = SP; regs.pc = BASE;
+    const regs = { d0: 0, d1: 0, d2: 0, d3: 0, a0: 0, a1: 0, a2: 0, a3: 0, sp: SP, pc: BASE, psw: 0, mdr: 0, lir: 0, lar: 0, fault: 0, insns: 0 };
     for (const [name, value] of Object.entries(values)) {
       if (!Object.hasOwn(regs, name)) throw new ValueError(`Unknown register: ${name}`);
       regs[name] = value >>> 0;
     }
-    if (this.packet('G' + packRegs(regs)) !== 'OK') throw new AssertionError('');
+    this.set_registers(regs);
   }
   write(address, data) {
     this._alive();
@@ -263,12 +300,24 @@ export class Simulator {
   word(address, value) { this.write(address, le4(value >>> 0)); }
   break_at(addresses) {
     this.breakpoints = new Set(addresses);
-    if (this.debug === null) this.m.setBreakpoints([...this.breakpoints]);
+    this._bpRef = null;
+    this._bpDebug = this.debug;
+    if (this.debug === null) this.m.setBreakpoints(this.breakpoints);
     else this.rearm();
   }
   // builtins: the stops that are PERF2 builtin pcs (HLE._loop), for the kick refusal (d)
-  run(stops = [], step = false, on_stop = null, builtins = []) {
-    if (!step) { this.break_at(stops); this.m.setBuiltins(builtins); }
+  // immutable: caller guarantees stops and builtins arrays are fresh immutable snapshots (safe to skip by ref)
+  run(stops = [], step = false, on_stop = null, builtins = [], immutable = false) {
+    if (!step) {
+      if (!(immutable && stops === this._bpRef && this.debug === this._bpDebug)) {
+        this.break_at(stops);
+        if (immutable) { this._bpRef = stops; this._bpDebug = this.debug; }
+      }
+      if (!(immutable && builtins === this._builtinsRef)) {
+        this.m.setBuiltins(builtins);
+        this._builtinsRef = immutable ? builtins : null;
+      }
+    }
     const stop = this.packet(step ? 's' : 'c');
     if (!(stop.startsWith('S') || stop.startsWith('T'))) throw new RuntimeError(`Unexpected stop: ${stop}`);
     if (on_stop !== null) on_stop();
@@ -277,11 +326,10 @@ export class Simulator {
   cpu_store(address, value, stub) {
     const saved = this.registers();
     this.write(stub, new Uint8Array([0x60]));
-    const regs = { ...saved, pc: stub, d0: value >>> 0, a0: address, fault: 0 };
-    if (this.packet('G' + packRegs(regs)) !== 'OK') throw new AssertionError('');
+    this.set_registers({ ...saved, pc: stub, d0: value >>> 0, a0: address, fault: 0 });
     this.packet('s');
     const after = this.registers();
-    if (this.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
+    this.set_registers(saved);
     return after;
   }
   // Up to count words upward from SP; stops at the first unreadable word (a debugger read error).

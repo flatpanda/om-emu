@@ -17,7 +17,8 @@
 //            fill (clockBytes)
 // The rest of the board is S-SCPUBOARD: the step 5 machine's (src/core/m4/periph/board.mjs: nothing attached, no I2C
 // device acknowledging, no battery pack answering, every ADC channel 0, the hardware-phase straps on their pull-ups)
-// with the port scan's inputs PC13 and PC5 held low, S-SCPUDEV's levels (scpudev.mjs SCAN_IDLE): PC13 low gives the
+// with the port scan's inputs PC13 and PC5 held low, S-SCPUDEV's levels (scpudev.mjs SCAN_IDLE; PC13 high for a
+// session started with no USB cable, src/lab/play.mjs USB_IDLE 'out', passed as board.drive): PC13 low gives the
 // port scan's result bit 0 that keeps UI_IN's switch 0x0400 at the lab's idle image (H-UIINSCAN checks it), and it
 // selects bkground at a power-off (scpu spec 3.4) where the machine's default, PC13 on its pull-up, leads the sub-CPU
 // into standby 3 s after reset (X, step 5); PC5's level is ? (I for both: the camera's levels are not known).
@@ -78,7 +79,7 @@ export class LeadClock {
 // The frame log from the wire, in S-SCPUDEV's form ({cmd, data, reply} in hex, a long write's with long: true). A
 // transaction is the MN's request line low, from its fall to its rise, with the transfers the MN clocks in it. The
 // first transfer is the command frame [length, command, data], of which the MN clocks 10 bytes (D: its descriptor's
-// counts, hle-gaps 4.7.1): the data are the frame's bytes 2 .. length, those past the tenth written as zeros (as
+// counts, hle-gaps/4.7.md 4.7.1): the data are the frame's bytes 2 .. length, those past the tenth written as zeros (as
 // S-SCPUDEV's log has them: the sub-CPU's 20-byte context reads 0 there, I). A long write's header [7, 0x0f, u32 size,
 // command] is followed by its chunks, whose bytes are the data. A read's reply is what the sub-CPU shifted out in the
 // transfers after the command frame, up to the length its first byte gives (the whole frame, or a long read's 255-byte

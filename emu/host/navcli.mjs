@@ -7,13 +7,17 @@
 // line first, a 'patch audit: ...' line after the bring-up (src/lab/patchaudit.mjs), and session.json's patch the
 // overlay's summary, its patch_audit the audit. --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
 // src/lab/sim.mjs loadedRanges; auto, the default, on with --patch or --main on a body whose section loader the lab
-// reads, a run in the unloaded ranges or those not shown loaded then an 'error: ...' line and rc 1). Node-only (host/).
+// reads, a run in the unloaded ranges or those not shown loaded then an 'error: ...' line and rc 1). --sec-ready (with
+// --patch or --main, on E143, E146 and E147; src/lab/secready.mjs): the static section-order pass in a 'patch audit:
+// sec-ready: ...' line before the lab and in the audit, the run-time watch's records in a 'sec-ready: ...' line at the
+// end and in session.json's patch_audit.sec_ready. Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
 import { REPO, loadImage, loadBlock, createHash, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
-import { patchAudit, auditLine, startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
+import { patchAudit, auditLine, startUnloaded, unloadedLine, startSecReady } from '../src/lab/patchaudit.mjs';
+import { secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -23,6 +27,7 @@ import { show } from '../src/util/show.mjs';
 import { decimalInt } from '../src/util/parse.mjs';
 import { installChildTrace } from '../checks/lib/childtrace.mjs';
 import { provision } from './firmware.mjs';
+import { STAND_INS } from '../src/lab/playui.mjs';
 
 export const PROG = 'nav.mjs';
 const OUT = path.join(REPO, 'emu/out/nav', MODEL);
@@ -37,6 +42,8 @@ const M8_TEXTS = {
   "H-CONNECT": "M8, evf_layout only: sendEvent(0x83, 7) in POWER_ON, then settle: GUI message 0x9601, lOutput 7, the INTERNAL_EVF row of the sender 0x5105053c (its EVF row is lOutput 3); which row the camera takes is not traced",
   "H-RESEND": "M8 (the SWITCH token): 0x503e52c7(kind 1 TFT / 32 EVF, {1, 1, 1}) natively, the request openDevice 0x50d83338 makes after its open (0x50d8350d..0x50d83535); openDevice's caller is not traced",
   "H-UPDATE": "M8 (the SWITCH token): the GUI's re-display wrapper 0x510bd84b (gpiUpdateDisplay(1)) from the lab task after the switch; which code updates the display after a switch on the camera is not traced",
+  "S-DISPSYNC": "(nav, the lab's own creation of the GUI: a body whose GUI asks for the application's display sync at its start: E137, E142, E140, E125, E130, E133, E145, E129, E132 and the E118 family) the GUI's synced display requests (type 3; E120's record form type 5) leave the device's buffers pending until an image sync only the application's stopRecView sends, so nav's frames stayed the start's (X; docs/model-survey.md findings 160, 162). The session observes the request from before the GUI's creation and, at the bring-up's end and each step's end, releases each device with such a request as play's S-DISPSYNC does (src/lab/dispsync.mjs, src/lab/camapp.mjs): both panels' sync words cleared through the application's setter, then the image sync of the fact's kind (src/fw/facts.mjs displaySync). The camera releases it with the image's next update, which nav does not run (I)",
+  "S-MODACK": "(a body whose src/fw/models.mjs modack_queues names module queues: E132) a synchronous send to one of those queues, whose tasks do not run in the lab, returns E_OK with nothing written back, as a play session's S-MODACK answers it (src/lab/menu.mjs _sync_send; E132's menu open asks CATEGORY_MAIN)",
 };
 export const ACTIONS = [
   { name: 'script', positional: true },
@@ -58,6 +65,7 @@ export const ACTIONS = [
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
   { opt: '--main', type: 'path', metavar: 'FILE' },
   { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
+  { opt: '--sec-ready', type: 'flag', default: false },
 ];
 const say = (line) => process.stdout.write(line + '\n');
 // --seed FILE: a JSON object of setting id: value, both integers (an id as its decimal key), seeded in ascending id
@@ -106,6 +114,15 @@ function run(a) {
     const unloaded = startUnloaded(fw, a.loaded);
     if (unloaded !== undefined) say(`patch audit: ${unloadedLine(unloaded)}`);
   }
+  let secReady = null;
+  if (a.sec_ready) {
+    try { secReady = startSecReady(fw, loadImage()); } catch (e) {
+      if (!(e instanceof ValueError)) throw e;
+      process.stderr.write(`error: ${e.message}\n`);
+      return 1;
+    }
+    say(`patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
+  }
   const out = a.out ?? path.join(OUT, a.tag);
   fs.mkdirSync(out, { recursive: true });
   const doc = { script: a.script, lang: a.lang, device: a.device, u1: a.u1, start, seed, clock: a.clock,
@@ -119,7 +136,7 @@ function run(a) {
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
   const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: a.loaded,
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: loadImage() } : {}), loaded: a.loaded, ...(secReady ? { secReady } : {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });
@@ -159,10 +176,18 @@ function run(a) {
       const hits = lab.stub_hits.entries().filter(([[ph]]) => ['store', 'persist', 'menu', 'bring-up'].includes(ph)).sort((x, y) => cmpTuple(x[0], y[0]));
       doc.stand_ins = {};
       for (const [[, n, w], v] of hits) doc.stand_ins[`${n} (${w})`] = v;
+      // the bring-up's body steps (src/lab/menu.mjs power_start and gui_sleep, src/lab/nav.mjs gui_connect; their
+      // texts the play session's, src/lab/playui.mjs STAND_INS), nav's S-DISPSYNC releases (dispsync_release) and
+      // S-MODACK's synchronous sends where they ran
+      const ps = lab.power_started;
+      const body = [...(ps?.dpc ? ['H-DPCINIT', 'A-DPC-1'] : []), ...(ps?.sio ? ['H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...ps.sio.labels] : []),
+        ...(ps ? ['H-PWRTASK'] : []), ...(lab.gui_sleep_ms ? ['H-GUISLEEP'] : []), ...(nav.gui_connected ? ['H-GUICONNECT'] : []),
+        ...(nav.dispsync_released.length ? ['S-DISPSYNC'] : []),
+        ...(lab.modack_sends.length ? ['S-MODACK'] : [])];
       const used = [...(a.time ? ['H-BOOTTIME', 'H-DEFER', 'ELAPSE'] : ['H-TIMER']), ...(a.store_first ? ['store-first'] : []),
-        ...(a.evf_layout ? ['S-TAKEOVER', 'H-CONNECT'] : []), ...(tokens.some((t) => t.startsWith('SWITCH')) ? ['H-RESEND', 'H-UPDATE'] : [])];
+        ...(a.evf_layout ? ['S-TAKEOVER', 'H-CONNECT'] : []), ...(tokens.some((t) => t.startsWith('SWITCH')) ? ['H-RESEND', 'H-UPDATE'] : []), ...body];
       doc.m8_inputs = {};
-      for (const k of used) doc.m8_inputs[k] = M8_TEXTS[k];
+      for (const k of used) doc.m8_inputs[k] = M8_TEXTS[k] ?? STAND_INS[k];
       doc.h_timer = lab.timer_log;
       if (a.time) {
         const timer = {};
@@ -172,6 +197,7 @@ function run(a) {
       doc.b2 = lab.takeover_log;
       // the tasks the patch made that started (H-PATCHTASK, src/lab/kernel.mjs)
       if (doc.patch_audit) doc.patch_audit.tasks = lab.lt.patch_tasks.map((t) => '0x' + t.toString(16).padStart(8, '0'));
+      if (doc.patch_audit?.sec_ready) say(secReadyLine(doc.patch_audit.sec_ready));
     } finally { nav.close(); }
   } catch (e) {
     if (!(e instanceof FirmwareError || isValueError(e))) throw e;

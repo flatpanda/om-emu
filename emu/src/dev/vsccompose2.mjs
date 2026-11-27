@@ -81,7 +81,7 @@
 // below 0x100 is ?, as E143's PLANC, docs/om1-vsc-spec.md section 3, which E143's compositor refuses).
 // IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
 import { BOARD } from '../fw/board.mjs';
-import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vsc.mjs';
+import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vscdefs.mjs';
 import { blendLut, osdCol } from './vsccompose.mjs';
 
 const R = { DMA7: 0x030, DMA9: 0x038, DMA12: 0x044, DMA15: 0x050, DMA18: 0x05C, AREA1: 0x0A4, AREA10: 0x0C8,

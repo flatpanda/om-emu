@@ -221,8 +221,9 @@ export async function afBeepSession() {
   const idle = (ms) => { for (let t = 0; t < ms; t += 50) { s.idle_slice(lab.lab_time() + 50e6); pl.publish_audio(); } };
   idle(1500);
   const used = pl.stand_ins_in_use();
-  ok(['H-UIOUTSTART', 'H-RESINIT', 'S-RESNAND', 'S-SOUNDRES', 'H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x)),
-    `the status lists the chain's stand-ins: ${used.filter((x) => /UIOUT|RES|AUD|WM8946|SOUND/.test(x))}`);
+  ok(['H-UIOUTSTART', 'H-RESINIT', 'S-RESNAND', 'S-SOUNDRES', 'H-AUDSTART', 'S-WM8946', 'A-WM8946-1', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x))
+    && !used.includes('S-AUDCPU2') && !used.includes('S-CPU2'),
+    `the status lists the chain's stand-ins (CPU 2 native): ${used.filter((x) => /UIOUT|RES|AUD|WM8946|SOUND|CPU2/.test(x))}`);
   const rn = s.resnand.status();
   ok(rn.sound.startsWith("the host's image") && rn.sound0[0] === '0xa4000000', `S-RESNAND serves the lab-made area, USTART_L's sound 0 loaded: ${JSON.stringify([rn.sound, rn.sound0])}`);
   const seen = { sound: [], post_end: 0, play_end: 0, close: 0, gain: 0 };

@@ -105,6 +105,29 @@ export function placer({ a, b, baseA, baseB, map, entries, scratch = null, loade
     for (const k of [below, above]) if (k !== null && Math.abs(v - k) < 0x1000) return { delta: d(k), how: 'near1' };
     return null;
   }
+  // A vote in a's image copy with no majority (two of b's addresses tied for the most votes, or none with more than
+  // half): the code loads the address, so it is data, which moves with its neighbours: the delta both sides agree on
+  // (nearDelta's 'near'), or one neighbour's within 4 KB ('near1') where that lands on an address with the most votes;
+  // otherwise it is unplaced. The walks' pairing is never its answer: they pair a copy's data bytes as instructions,
+  // and took E143's SD mount state word 0x60360bfc, voted 4 and 4 for E122's 0x616022e4 and 0x616022d8, to
+  // 0x601f1e06, bytes of E122's image copy (X: the re-port at 4e08ef9, docs/model-survey.md finding 155); the
+  // neighbours 0x60360bf8 and 0x60360c00, voted 4 of 4 for 0x616022d4 and 0x616022dc, give 0x616022d8, where the mount
+  // state's setter stores for medium 4 (src/fw/facts.mjs mountState, D). Nor need a tied vote be the answer where both
+  // sides agree: E143's REC_IMAGE queue word 0x60043250 is voted 4 and 4 on E146 for 0x6004328c (REC_FILE's queue
+  // word) and 0x600432a0, and its queue word is 0x6004328e (src/fw/facts.mjs rec_image task.queue, D), which the
+  // neighbours 0x6004324e and 0x60043252 give (X). One neighbour alone is weaker: on E145 E143's WB_MOV task id word
+  // 0x60043604 (src/lab/cpu2.mjs CPU2_STARTS), voted 4 and 4 for 0x60041996 and 0x60041994, has one neighbour's delta,
+  // to 0x60041990, and its own is 0x60041994 (D: its two loads, the boot stage's start 0x50184798 in E143's form at
+  // 0x501e9159, and 0x502f117d 0x48 bytes after MVR_MAIN's id word's 0x502f1135, as E143's 0x5042fa13 after
+  // 0x5042f9cb). Returns undefined where v has no vote, null where the neighbours give no answer, else {to, how}.
+  function splitVote(v) {
+    const m = map.data.get(v >>> 0); if (!m) return undefined;
+    const n = nearDelta(cached(v)); if (n === null) return null;
+    const to = (v + n.delta) >>> 0;
+    if (n.how === 'near') return { to, how: 'near' };
+    let top = 0; for (const k of m.values()) top = Math.max(top, k);
+    return m.get(to) === top ? { to, how: n.how } : null;
+  }
   // Data in a's image copy with no vote and no agreeing neighbours: its bytes looked for in b, every word that looks
   // like an address masked (the pointers a table holds move), near where the nearest vote puts it.
   const isAddr = (w) => (w >= 0x50000000 && w < 0x52000000) || inDram(w);
@@ -284,8 +307,13 @@ export function placer({ a, b, baseA, baseB, map, entries, scratch = null, loade
       const d = voted(v); if (d !== null) return { to: d, how: 'vote' };
       return alignPlace(v, CODE_BASE) ?? { to: null };
     }
-    // in the copy, data first: an address the code loads is the votes' (the walks also pair data bytes as instructions)
-    if (inCopy(v)) { const d = voted(v); if (d !== null) return { to: d, how: 'vote' }; const o = map.code[v - baseA]; if (o >= 0) return { to: (baseB + o) >>> 0, how: 'code' }; }
+    // in the copy, data first: an address the code loads is the votes', or its neighbours' where its vote has no
+    // majority (splitVote; the walks also pair data bytes as instructions)
+    if (inCopy(v)) {
+      const d = voted(v); if (d !== null) return { to: d, how: 'vote' };
+      const t = splitVote(v); if (t !== undefined) return t ?? { to: null };
+      const o = map.code[v - baseA]; if (o >= 0) return { to: (baseB + o) >>> 0, how: 'code' };
+    }
     if (inCopy(v) || inDram(v)) {
       let d = voted(v);
       if (d !== null) return { to: d, how: 'vote' };

@@ -6,7 +6,8 @@
 // after a stop, the players' Card panel and session options (the card's reader, the card routes on a headless
 // Player, the browser's S-NVRAM host and its OPFS directories per build, the page's creative_dial), the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
-// src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
+// src/fw/facts.mjs (test_facts.mjs: firmware-optional, opt-in via --facts or npm run test:facts because scanning
+// unpacked/ takes ~2 min locally) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the kind-3 VSC's COMPOSE on E122's and E118's boards (a
@@ -65,10 +66,12 @@
 // Also here and there, the small units: the memory map's rules at addRegion (test_mem.mjs memUnits).
 // What a firmware file is, --main's patches from a .BIN container and the gate's reasons, on made-up bodies
 // (test_identify.mjs identifyUnits).
+// E-M1-Miii mods.json packs, --main's resource block and a container whose only change is its version field, on
+// made-up blocks (test_mods.mjs modsUnits).
 // The Stand-ins tab's rows: one for every label a session can report in use (test_standins.mjs standinsUnits).
 // What a picture is, said at the picture: the sentences and the two pages' copies (test_sources.mjs sourcesUnits).
 // The lab's call on a synthetic block of hand-written functions (test_slice.mjs sliceUnits).
-//   node emu/bin/test-pure.mjs
+//   node emu/bin/test-pure.mjs [--facts | --no-facts]
 import { vectors } from '../test/test_vectors.mjs';
 import { coreTests } from '../test/test_core.mjs';
 import { purity } from '../test/test_pure.mjs';
@@ -79,6 +82,7 @@ import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
 import { memUnits } from '../test/test_mem.mjs';
 import { identifyUnits } from '../test/test_identify.mjs';
+import { modsUnits } from '../test/test_mods.mjs';
 import { standinsUnits } from '../test/test_standins.mjs';
 import { sourcesUnits } from '../test/test_sources.mjs';
 import { sliceUnits } from '../test/test_slice.mjs';
@@ -130,6 +134,33 @@ import { lookcodeUnits } from '../test/test_lookcode.mjs';
 import { caduceusUnits } from '../test/test_caduceus.mjs';
 import { nocardUnits } from '../test/test_nocard.mjs';
 import { stagesUnits } from '../test/test_stages.mjs';
+import { replayPhaseTests } from '../test/test_replay_phase.mjs';
+import { memprobeTests } from '../test/test_memprobe.mjs';
+import { vscRebaseUnits } from '../test/test_vsc_rebase.mjs';
+import { sessionLangUnits } from '../test/test_session_lang.mjs';
+import { pacingUnits } from '../test/test_pacing.mjs';
+import { checksTimeUnits } from '../test/test_checks_time.mjs';
+import { memSnapshotUnits } from '../test/test_mem_snapshot.mjs';
+import { webSelftestUnits } from '../test/test_web_selftest.mjs';
+import { slot2StatusUnits } from '../test/test_slot2_status.mjs';
+import { panelDoneUnits } from '../test/test_paneldone.mjs';
+import { debugInspectUnits } from '../test/test_debug_inspect.mjs';
+import { cycleUnits } from '../test/test_cycles.mjs';
+import { magnifyUnits } from '../test/test_magnify.mjs';
+
+let runFacts = false;
+for (const arg of process.argv.slice(2)) {
+  if (arg === '--facts') runFacts = true;
+  else if (arg === '--no-facts') runFacts = false;
+  else if (arg === '-h' || arg === '--help') {
+    console.log('usage: node emu/bin/test-pure.mjs [--facts | --no-facts]');
+    process.exit(0);
+  } else {
+    console.error(`test-pure.mjs: unknown option: ${arg}`);
+    console.error('usage: node emu/bin/test-pure.mjs [--facts | --no-facts]');
+    process.exit(2);
+  }
+}
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -166,6 +197,7 @@ report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay
 report('command-line parser', argsTests());
 report('the memory map\'s rules at addRegion: offset alignment, the physical space, overlaps (src/core/mem.mjs)', await memUnits());
 report('what a firmware file is: stock, another version, modified, unknown; --main on a .BIN container; the gate\'s reasons (src/fw/identify.mjs)', await identifyUnits());
+report('E-M1-Miii mods.json packs on the run-time image, --main\'s resource block, a container whose only change is its version field (test_mods.mjs)', modsUnits());
 report('the Stand-ins tab: a row for every label a session can report in use (src/lab/playapi.mjs standInRows)', await standinsUnits());
 report('what a picture is, said at the picture: the frame\'s and a taken picture\'s sentences, the pages\' copies (src/lab/sources.mjs)', await sourcesUnits());
 report('the lab\'s call on a synthetic block: derived frames, arguments, nested calls, the saved registers, typed faults (src/lab/hle.mjs HLE.call)', await sliceUnits());
@@ -201,7 +233,7 @@ report('S-MODPOST: the posts it takes, the guard\'s report, the object-name tabl
 report('S-TAKERDY: the take requests it follows with TAKE\'s event or leaves unanswered (src/lab/camapp.mjs take_ready_rule)', await takeReadyUnits());
 report('S-DISPQ\'s queue: posts in an open DISPLAY run kept for the outermost run\'s end, in order (src/lab/dispq.mjs)', await dispqUnits());
 report('S-RELSEQ\'s S1 by the focus mode (HALF_AF) and S-SEQSTANDBY\'s rest test (src/lab/camapp.mjs)', await fnLeverUnits());
-report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, refusals (S-CAMFE)', camFeUnits());
+report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, SSG1\'s command unit (A-CAMFE-3 / 4), refusals (S-CAMFE)', camFeUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
@@ -214,8 +246,23 @@ report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units()
 { const v = m4Vectors(); report(`Cortex-M4 core against QEMU's recorded vectors (${v.cases} cases)`, v); }
 report('SCPU STM32L4 peripheral models (RCC, FLASH, GPIO / EXTI, U(S)ART, DMA, I2C, SPI, timers, RTC, ADC)', stm32Units());
 report('the SCPU\'s own firmware behind the link: clock, frame log from the wire, byte mover', scpuM4Units());
-const fa = factsTests();
-report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
+report('replay across power cycle: Player phase transitions and Play.init wait predicate', replayPhaseTests());
+report('host memory probe: main and worker isolate sampling (OM_HOST_MEM)', await memprobeTests());
+report('VSC channel LINE_NS rebase on running channel (F05)', vscRebaseUnits());
+report('scripted session --lang option units (bin/session.mjs, host/session.mjs)', sessionLangUnits());
+report('Player pacing and timing paths (BEHIND_NS re-anchor, 20 ms queue wait, --idle wall)', pacingUnits());
+report('checks.mjs portable /usr/bin/time RSS parsing and command selection (F40)', checksTimeUnits());
+report('memSnapshot skipping unmutated read-only ROM pages (F25)', memSnapshotUnits());
+report('web pages ?selftest=1 Card panel coverage (web/play.html, web/index.html)', await webSelftestUnits());
+report('second card slot HLS media status word under camapp 1 (units)', slot2StatusUnits());
+report('S-PANELDONE gate flag-satisfaction checks (src/lab/menu.mjs)', panelDoneUnits());
+report('debug API non-mutating breakpoints and watchpoints inspection ops', debugInspectUnits());
+report('static ES dependency cycle gate across emu/src (0 cycles)', cycleUnits());
+report('E147 AEL/AFL (0x120b) control wiring, H-ADINIT E146/E147, and envVar helper', magnifyUnits());
+if (runFacts) {
+  const fa = factsTests();
+  report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
+}
 const pu = purity();
 report('purity', { checks: pu.files, bad: pu.bad });
 console.log(bad ? `FAILED (${bad})` : 'all passed');

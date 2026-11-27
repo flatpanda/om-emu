@@ -1,5 +1,5 @@
 // S-MODPOST, the posts to S-MODACK's module queues that do not come through the application's API sender
-// (src/lab/camapp.mjs MODPOST_E143; docs/hle-gaps.md 4.1.11), and S-MODACK's PC_PD_CMD_EXEC by its object name
+// (src/lab/camapp.mjs MODPOST_E143; docs/hle-gaps/4.1.md 4.1.11), and S-MODACK's PC_PD_CMD_EXEC by its object name
 // (src/fw/facts.mjs objectNameId; docs/model-survey.md finding 130):
 //   modpostUnits   (no firmware) the rule modpost_entry: each post it lists (eighteen, from the API layer's direct
 //                  senders and 0x503a05fb) matches by its queue, OlyQeWr's return in the sender's wrapper and the whole
@@ -29,7 +29,7 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16);
 // OlyQeWr returns: the API's direct post 0x503ebe46 and TAKE's send 0x502ce57b (D)
 const QUEUE_COUNT = 0x502CE6AE, TAKE_EXEC = 0x5A, TAKE_FUNC = 0x5E, VIA_API_POST = 0x503EBE71, VIA_TAKE_SEND = 0x502CE58C;
 // the API layer's direct senders S-MODPOST lists, run from the lab ([entry, d0 (API 0x20014's kind), how: 'call' for an
-// entry the call's register list frames, 'calls' for one with its own movm (0x50411caa)], D: docs/hle-gaps.md 4.1.11),
+// entry the call's register list frames, 'calls' for one with its own movm (0x50411caa)], D: docs/hle-gaps/4.1.md 4.1.11),
 // and the posts each makes, API 0x20030 (api_rec 0x504100f2) by its kinds 1, 2, 3, 4, 7, 8 among them (ZOOM_EXEC
 // {0, 0, 2 / 1 / 9 / 8 / 7 / 6, 0} through 0x503ebe46, D); the post S-MODPOST does not list: ZOOM_EXEC {0, 0, 3, 0}
 // through 0x503ebe46 from the lab (its struct {queue, timeout, size, 0, message}, D: 0x503ebe46's reads; command 3 is
@@ -124,7 +124,7 @@ export async function modpostSession() {
     const close = () => { pl.close_session(); MODPOST_E143.push(...saved); };       // (until the session closes)
     try { pl.open_session(); } catch (e) { close(); throw e; }
     const s = pl.session, lab = s.lab, ca = s.camapp;
-    // S-TAKERDY off (docs/hle-gaps.md 4.1.12): with it S1's take-ready finishes at once and S2 asks for the picture
+    // S-TAKERDY off (docs/hle-gaps/4.1.md 4.1.12): with it S1's take-ready finishes at once and S2 asks for the picture
     // through the API sender (command 11); the take API's control 0x40, the direct post of command 5, is the S2 of a
     // take-ready not yet finished, which the lab reaches only so
     ca.takerdy_on = false;

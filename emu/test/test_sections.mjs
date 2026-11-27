@@ -2,7 +2,9 @@
 // bootLoads; src/machine.mjs's unloaded option; src/lab/menu.mjs S-SECLOADED; S-STALERAM, --loaded):
 //   sectionsUnits    (firmware-free) on a synthetic block with E143's forms (a reset head with three copies, one end
 //                    word it stores and never loads, load_section, its end switch with three cases, the table): the
-//                    rule's fact, none without a loader and two refused, a case of another form refused; the head's
+//                    rule's fact, none without a loader and two refused, a case of another form refused; the flash-copy
+//                    family's form (E142's) read with head null, which bootLoads refuses, its switch also without
+//                    clr d1 (E130, E133), and a block with both forms refused; the head's
 //                    copies (add, sub a0 and imm16 lengths), an unknown length and a copy not in place refused; the
 //                    reader's sections, head copies and gaps (a head copy splits a gap, the stored end closes one up
 //                    to it) and the ranges not shown loaded (the head's past its copies below section 1, the piece up
@@ -89,6 +91,17 @@ export function sectionsUnits() {
   ok(throws(() => sectionLoader(two), /2 section loads/), 'sectionLoader: two loaders refused');
   const badCase = b.slice(); badCase[CASES + 8 + 1] = 0xcd;
   ok(throws(() => sectionLoader(badCase), /case \d at .* is not 'mov imm32,d0'/), "sectionLoader: a case that is not 'mov imm32,d0' refused");
+  // the flash-copy family's form (E142's register allocation: the argument kept at (4,sp), the row in a3): the same
+  // fact with head null, whose loaded ranges bootLoads refuses to read; its switch also without the leading clr d1
+  // (E130, E133); a block holding both forms refused
+  const fc = b.slice(); fc.set([0x42, 0x04, 0x83, 0x2b, 0xff], LOAD); fc.set([0xf1, 0xe3, 0xfc, 0xd3], LOAD + 16);
+  const ffc = sectionLoader(fc);
+  ok(same(ffc, { ...want, head: null }), `sectionLoader, the flash-copy form: ${JSON.stringify(ffc)}`);
+  ok(throws(() => bootLoads(fc, BASE, ffc), /reset head copies are not read/), 'bootLoads: the flash-copy form (head null) refused');
+  const bare = fc.slice(); bare.copyWithin(SWITCH, SWITCH + 1, SWITCH + 22);     // the call still lands on SWITCH
+  ok(same(sectionLoader(bare)?.ends, ends), `sectionLoader: the switch without clr d1 read (${JSON.stringify(sectionLoader(bare)?.ends)})`);
+  const both = b.slice(); both.set(fc.subarray(LOAD, LOAD + 0x80), 0x900);
+  ok(throws(() => sectionLoader(both), /both forms/), 'sectionLoader: loaders of both forms refused');
   // the head's copies: the three length forms, the end stored and not loaded
   const hc = headCopies(b);
   ok(same(hc.copies.map((c) => [c.dst - BASE, c.len]), HEAD) && same(hc.ends.map((e) => [e.word, e.end]), [[W3, BASE + CLOSED]]),

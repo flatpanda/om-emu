@@ -5,7 +5,7 @@
  * windows so the real A53 Linux (iscdrv.ko) can bring ISC up on qemu virt, and
  * bridges the doorbells to an external MN-side peer (tools/a53-oracle/iscpeer.mjs)
  * over a chardev. Register facts are decoded in tools/a53-oracle/README.md and
- * docs/a53-spec.md 3; the transport is docs/hle-gaps.md 4.11.1.
+ * docs/a53-spec.md 3; the transport is docs/hle-gaps/4.11.md 4.11.1.
  *
  * Instantiate on virt with:  -device om-isc,memdev=<id>,chardev=<id>
  * The 5 RAM windows alias one shared memory-backend-file (also mmap'd by the

@@ -1,4 +1,4 @@
-// The TAKE probe (src/lab/take.mjs, --take probe; docs/hle-gaps.md 4.1.4), E143:
+// The TAKE probe (src/lab/take.mjs, --take probe; docs/hle-gaps/4.1.md 4.1.4), E143:
 //   takeSession  a default session has no probe (camapp.take null, no take option in the recorded options, S-MODACK
 //                answers TAKE_FUNC's queue); with --take probe, under camapp 1 and camapp 2 (control camapp 2), the
 //                application's start reaches the shooting screen with TAKE_FUNC and TAKE_FUNC_CP native, and the
@@ -6,13 +6,13 @@
 //                sequence in TAKE_FUNC_CP (the camera driver's requests 148 and 6, BC_EXEC, the native LENS_EXEC,
 //                STB_EXTERNAL twice and the dust filter, each answered where TAKE waits, then TAKE's reply to the
 //                application), commands 13, 18 and 22 (with the components 29 before 22); then a live view, S1, S2,
-//                MENU in and out reach TAKE with nothing, a mode change P -> A is MODE_CHANGE, and the through start
+//                MENU in and out reach TAKE with nothing but S1's key callback token 75 (H-UIININIT), a mode change P -> A is MODE_CHANGE, and the through start
 //                (command 25) is never taken: the shooting component that would start the through image does not
-//                get TRA 991 while S-TRAACK answers it (docs/hle-gaps.md 4.1.2). Round 2 (H-TAKENBINIT,
-//                docs/hle-gaps.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
+//                get TRA 991 while S-TRAACK answers it (docs/hle-gaps/4.1.md 4.1.2). Round 2 (H-TAKENBINIT,
+//                docs/hle-gaps/4.1.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
 //                to TAKE_EXPOSE is answered by TAKE_EXPOSE itself (its command 0 sets its on byte and is the last
 //                command it takes), TAKE_POWER_MANAGER is asked nothing (TAKE's start-up flag stays 0) and
-//                TAKE_EXPOSE's AE result writer never runs. The strobe (H-STBINIT, S-HOTSHOE, docs/hle-gaps.md 4.12.1):
+//                TAKE_EXPOSE's AE result writer never runs. The strobe (H-STBINIT, S-HOTSHOE, docs/hle-gaps/4.12.md 4.12.1):
 //                STB_EXTERNAL answers the start's commands 1 and 4 itself over the empty hot shoe, 85 to 100 ms after
 //                command 1 (its own timers make it 1 + 64 + 20 ms), status 0 for tokens 4 and 8; on PER_SIO channel 11
 //                its wake byte 00 and then ID exchanges 55 82 with a receive of 9 that nothing answers, each closed;
@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 // the record in a canonical form: '<task> <= <command>' for a message TAKE takes, '<task> -> <target> <command>
 // [sync] (<answer kind>)' for a request
 export function canon(r) {
-  if (r.dir === 'in') return `${r.task} <= ${r.command}`;
+  if (r.dir === 'in') return r.command === null && r.queue === 'mailbox' ? `${r.task} <= mailbox token ${r.token}` : `${r.task} <= ${r.command}`;
   const kind = /^native: \S+ reply to the requester/.test(r.answer) ? 'reply' : r.answer.startsWith('native') ? 'native' : r.answer.startsWith('none') ? 'unanswered' : 'answered';
   if (kind === 'reply') return `${r.task} -> reply`;
   const what = r.queue === null ? r.name.replace(/ \(.*$/, '') : `${r.name} ${r.command}`;
@@ -35,20 +35,22 @@ const CP0 = ['TAKE_FUNC <= 0', 'TAKE_FUNC -> TAKE_FUNC_CP 0 (native)', 'TAKE_FUN
   'TAKE_FUNC_CP -> STB_EXTERNAL 1 (native)', 'TAKE_FUNC_CP -> dust filter gate on (answered)', 'STB_EXTERNAL -> reply',
   'TAKE_FUNC_CP -> STB_EXTERNAL 4 (native)', 'STB_EXTERNAL -> reply', 'TAKE_FUNC_CP -> reply'];
 // (round 3, H-TAKEFOCUS: TAKE_FOCUS native, its commands 0 and 2 taken and replied by TAKE_FOCUS itself; with its ready
-// byte set, command 18's request is synchronous, docs/hle-gaps.md 4.1.8)
+// byte set, command 18's request is synchronous, docs/hle-gaps/4.1.md 4.1.8)
 export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 sync (native)', 'TAKE_EXPOSE -> reply', 'TAKE_FUNC -> reply',
   'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 sync (native)', 'TAKE_FOCUS <= 0', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
 const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
 export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', ...C22];
-// camapp 1 since 2026-11-11 (docs/hle-gaps.md 4.3.8): the probe starts with the Fn lever at API_LEVER_SW_2
+// camapp 1 since 2026-11-11 (docs/hle-gaps/4.3.md 4.3.8): the probe starts with the Fn lever at API_LEVER_SW_2
 // (play.mjs LEVER_PROBE_STATE) and S-SEQSTANDBY takes the start's setFocusModeChange(1), so the application asks
 // TAKE for the focus mode's change (command 22) as camapp 2's start does
 export const START_LAB = [...START, ...C22];
 const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
   'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS', 'H-CAMINIT'];
+// H-SIOMAP runs at every play bring-up since 2026-11-22 (src/lab/play.mjs sio_map_bring_up), the probe or not
+const PROBE_SHARED = new Set(['H-SIOMAP']);
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
-// round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte
+// round 2 (docs/hle-gaps/4.1.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte
 // 0x62abd78a (its task's start clears it, 0x5059149e; command 0 sets it, 0x50592215) and its command word 0x62abd788
 // (255 from its task's start, 0x50591497; each message's command, 0x505914f5: 0 when command 0 is the last it took),
 // TAKE's start-up flag 0x62a3f2bc (every send from TAKE_FUNC and TAKE_FUNC_CP to TAKE_POWER_MANAGER_EXEC is behind it,
@@ -65,7 +67,7 @@ export function neighbourChecks(lab, take, mode, ok) {
   ok(take.ae_writes === 0, `camapp ${mode}: TAKE_EXPOSE's AE result writer ran ${take.ae_writes} times, want 0 (S-EXPOSE)`);
 }
 
-// the strobe (docs/hle-gaps.md 4.12.1): STB_EXTERNAL's state word 0x62a29ad4 (command 1 sets 1, 0x501b7872; the
+// the strobe (docs/hle-gaps/4.12.md 4.12.1): STB_EXTERNAL's state word 0x62a29ad4 (command 1 sets 1, 0x501b7872; the
 // detection's no-flash path keeps it, 0x501b80d4..0x501b8128), its wait's timeout logs 0x23000112 / 0x23000222
 // (0x501ba1db; the 13 s wake wait's), the strobe's own timers between command 1 and its reply (the wake's end 1 ms,
 // 0x501b6941; the wake 64 ms, 0x501b83b9; the detection's window 20 ms, 0x501b8014)
@@ -105,7 +107,7 @@ export async function takeSession() {
     try {
       pl.open_session();
       const s = pl.session, acks = s.steps.flatMap((st) => st.camapp ?? []).filter(([k, d]) => k === 'ack' && /^queue 94 /.test(d));
-      ok(s.camapp.take === null && !('take' in pl.opts()) && !pl.stand_ins_in_use().some((x) => PROBE_STAND_INS.includes(x)) && acks.length === 1,
+      ok(s.camapp.take === null && !('take' in pl.opts()) && !pl.stand_ins_in_use().some((x) => PROBE_STAND_INS.includes(x) && !PROBE_SHARED.has(x)) && acks.length === 1,
         `default: no probe (camapp.take ${s.camapp.take}, options ${JSON.stringify(pl.opts())}), S-MODACK answers TAKE_FUNC's command 0 (${acks.length} acks)`);
     } catch (e) { bad.push(`default: ${e.message.slice(0, 600)}`); }
     pl.close_session();
@@ -129,7 +131,8 @@ export async function takeSession() {
       s.key('s2', 'down'); s.camapp.pump(); idle(700);
       s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(800);
       for (let k = 0; k < 2; k++) { s.key('menu', 'down'); s.camapp.pump(); idle(100); s.key('menu', 'up'); s.camapp.pump(); idle(800); }
-      same(since(), [], 'a live view, S1, S2, MENU in and out');
+      // S1's key callback posts token 75 to TAKE_MAIN's mailbox (test_take_release.mjs S1_KEY; H-UIININIT)
+      same(since(), ['TAKE_MAIN <= mailbox token 75'], 'a live view, S1, S2, MENU in and out');
       const names = s.status().mode_dial_positions.map((p) => p.name);
       s.switch_input('mode_dial', names.indexOf('A')); s.camapp.pump(); idle(2000);
       same(since(), MODE_CHANGE, 'the mode change P -> A');

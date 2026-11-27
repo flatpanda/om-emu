@@ -1,5 +1,5 @@
 // The HLS media side of the card, on a body whose file system runs natively (src/lab/storage.mjs; MODEL_INFO.card_fs.hls
-// in src/fw/models.mjs has the evidence for every address, docs/hle-gaps.md 4.8.3 the record). The camera application's
+// in src/fw/models.mjs has the evidence for every address, docs/hle-gaps/4.8.md 4.8.3 the record). The camera application's
 // media control (OlyHfwOpeMdaCtrl: its requests, its receptor and its reactive) runs natively; the two HLS components
 // it talks to, the function component CmpCst_Function and the media manager CapMed_MediaManager, do not run in the lab
 // (camapp 1 runs no HLS component, camapp 2's bring-up does not create them: X, neither reacted to a format or a card
@@ -17,16 +17,26 @@
 //              result (its class is not read; a remount, I). The component sends 1513 / 1514 through the reception's
 //              asynchronous slot, to the reactive's OXF main thread, which does not run in camapp 1: the synchronous
 //              slot stands in for that thread's dispatch (I). Since 2026-11-16 the erase all (command 3, the
-//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps.md 4.8.15) as well, where the build's
+//              playback menu's Erase All, f.ctrl.erase_all, docs/hle-gaps/4.8.md 4.8.15) as well, where the build's
 //              erase-all call is read (src/fw/facts.mjs pictureErase, fact erase.erase_all) and the DCF database
 //              holds the pictures: executeEraseAllStart's call of the picture file API's erase all natively (it
 //              posts FILECLBK the DCF edit's ALL_DELETE, which erases every picture but the locked ones natively,
 //              its own delete mount among its steps), the progress as the format's (the same getMediaProgress and
 //              progress event), and at the reply the same end, without the DCF numbering mount (the component
 //              starts its remount request for the format alone, D) and with S-CARD's records of the erased
-//              pictures dropped. Any other command (the copy all 2, the unlock all 5, the rating-exclusive erase
-//              all 6), and an error status, stops the session: the component's other starts and its error kinds
-//              (70 / 71 / 118) are not modelled. The ids are E143's: a later build renumbers them
+//              pictures dropped. Since 2026-11-22 (docs/hle-gaps/4.8.md 4.8.16) the unlock all (command 5, Reset All
+//              Images' Reset Protect, f.ctrl.unlock_all): executeUnlockAllStart's notification of the Wi-Fi remote
+//              take component natively (f.ctrl.wifi), then the picture file API's unlock all (fact
+//              erase.unlock_all), which posts FILECLBK the DCF edit's OBJ_UNLOCK of every object, natively; and the
+//              rating-exclusive erase all (command 6, Erase All's Save, f.ctrl.rating_erase, on E143 and E148):
+//              the API's ALL_DELETE with the option 0x10 (fact erase.rating_erase), whose walk keeps every picture
+//              with an Exif Rating of 1 or more, natively; both with the erase all's progress and end (the unlock all
+//              erases nothing, S-CARD's records stay). Since 2026-11-22 too (docs/hle-gaps/4.8.md 4.8.21) the copy
+//              all (command 2, f.ctrl.copy_all, E143 and E146, 4.8.27): the picture file API's copy all between the two slots
+//              natively, with its own progress function and the component's end check of the record's media's
+//              count. Any other command (the copy all 2 where f.ctrl has no copy_all, and command 6 where f.ctrl
+//              has no rating_erase), and an error status, stops the session: the component's other starts
+//              and its error kinds (70 / 71 / 118) are not modelled. The ids are E143's: a later build renumbers them
 //              (src/fw/models.mjs card_fs.hls of E146, E147 and E148), and the log names each event by the id its
 //              constructor gave it
 //   S-MEDIA    the media manager's part of a card's removal and insertion, from the card switch's change: UI_IN decodes
@@ -38,7 +48,7 @@
 //              mount state mounted and 711 {kind, 1, 2} (notifyRecMountEnd: EV_MEDIA_MOUNT_REC) and {kind, 1, 8}
 //              (mountProcEnd). Each notification's layout and sender is D; which ones the media manager sends at a
 //              change, and in which order, is I. The level's meaning is D on E143 and E146 (the SD driver's detect
-//              takes level 0 for a card in the slot, docs/hle-gaps.md 4.8.12), I elsewhere (models.mjs slots).
+//              takes level 0 for a card in the slot, docs/hle-gaps/4.8.md 4.8.12), I elsewhere (models.mjs slots).
 //              The same for the second slot's card and switch on a body whose second slot the lab models
 //              (storage.mjs S-SDCARD), where no media manager runs. With control camapp 3 the firmware's own media
 //              manager runs and takes the second slot's change itself (X): S-MEDIA then only reads the slot's state
@@ -78,26 +88,33 @@ const SLOT = 0, SECOND = 1;         // the first slot, drive 0, and the second, 
 // the media status bits the manager's slot update tests (flags(), D): mounted, the two error bits, and the bit that
 // keeps the flag
 const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
-// S-MEDIA's media status of the first slot (S-CARD's word, camapp.mjs card_status; the setter's names: 0 NO_MOUNT,
-// 0x1001 NOT_PRESENT, 0xf000 OK): NOT_PRESENT after a removal and with the slot empty at the start; NO_MOUNT from an
-// insertion's change to its mount's end, then OK. These are the values the firmware's own media manager leaves in the
-// second slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a
-// removal; NO_MOUNT at an insertion, then its device's status after the mount), written at a change first by the
-// sequence parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and
-// then by the manager's status update of every slot from its device, after its notification of the change (D on E143
-// and E147, both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes
-// NOT_PRESENT so, X; the addresses are in docs/hle-gaps.md 4.8.3). The second slot's word is not placed in the lab (no
-// rule reads the setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
+// S-MEDIA's media status of a slot (S-CARD's words, camapp.mjs card_status: slot 0 at CARD_STATUS, slot 1 at
+// CARD_STATUS - 8; the setter's names: 0 NO_MOUNT, 0x1001 NOT_PRESENT, 0xf000 OK): NOT_PRESENT after a removal and
+// with the slot empty at the start; NO_MOUNT from an insertion's change to its mount's end, then OK (or NO_MOUNT if
+// slot 2's card is unformatted/unmounted). These are the values the firmware's own media manager leaves in the second
+// slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a removal;
+// NO_MOUNT at an insertion, then its device's status after the mount), written at a change first by the sequence
+// parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and then by
+// the manager's status update of every slot from its device, after its notification of the change (D on E143 and E147,
+// both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes NOT_PRESENT
+// so, X; the addresses are in docs/hle-gaps/4.8.md 4.8.3). Under control camapp 3 the second slot's word is left to
+// the firmware's own media manager (X)
 export const MEDIA_NO_MOUNT = 0, MEDIA_NOT_PRESENT = 0x1001, MEDIA_OK = 0xF000;
+// S-MDACTRL's commands, by their key in f.ctrl (src/fw/models.mjs card_fs.hls.ctrl: the command each sends), and the
+// picture file API's call of each in the fact 'erase' (src/fw/facts.mjs pictureErase)
+const WHAT = { format: 'format', erase_all: 'erase all', unlock_all: 'unlock all', rating_erase: 'rating-exclusive erase all', copy_all: 'copy all' };
+const FACT = { [WHAT.erase_all]: 'erase_all', [WHAT.unlock_all]: 'unlock_all', [WHAT.rating_erase]: 'rating_erase' };
 
 export class HlsMedia {
   // session: the PlaySession; storage: its Storage (storage.mjs), whose facts carry hls
   constructor(session, storage) {
     this.s = session; this.lab = session.lab; this.storage = storage; this.f = storage.f.hls;
     this.log = [];                  // [kind, detail] of every stand-in action
-    this.ctrl = null;               // S-MDACTRL: the format or erase all in progress {cmd, api, media, cbc, token, t0, progress, sent, reply}
+    this.ctrl = null;               // S-MDACTRL: the command in progress {cmd, what, api, media, cbc, token, t0, progress, sent, reply}
     this.formats = 0;               // formats finished
-    this.erases = 0;                // S-MDACTRL: erase alls finished
+    this.erases = 0;                // S-MDACTRL: erase alls finished (the rating-exclusive one too)
+    this.unlocks = 0;               // S-MDACTRL: unlock alls finished
+    this.copies = 0;                // S-MDACTRL: copy alls finished
     this.switched = false;          // S-MEDIA: the slot's card switch changed, not yet handled
     this.switched2 = false;         // S-MEDIA: the second slot's (a body whose second slot the lab models)
     this.notified = [];             // the notifications delivered, [id or 711 state, the reception's answer]
@@ -209,10 +226,10 @@ export class HlsMedia {
     this.log.push(['mount state', `kind ${kind}: ${value}`]);
   }
   mount_state(kind) { return this.lab.call(this.f.mount.get, { d0: kind }, null, null, LIMIT).d0 >>> 0; }
-  // the first slot's media status (MEDIA_NOT_PRESENT's evidence), through S-CARD's word
-  _status(value) {
-    const at = this.s.camapp.card_status(value);
-    this.log.push(['media status', `${h8(at)}: 0x${value.toString(16)}`]);
+  // a slot's media status (MEDIA_NOT_PRESENT's evidence), through S-CARD's word (slot 0: CARD_STATUS, slot 1: CARD_STATUS - 8)
+  _status(value, i = SLOT) {
+    const at = this.s.camapp.card_status(value, i);
+    this.log.push(['media status', `${i === SLOT ? '' : 'slot 2: '}${h8(at)}: 0x${value.toString(16)}`]);
   }
   // ---- S-MDACTRL
   // S-TRAACK's exec of TRA 1511: the request's command, media and option, while the request lives
@@ -221,35 +238,69 @@ export class HlsMedia {
     const cmd = b[c.cmd], media = b[c.media] | b[c.media + 1] << 8, option = b[c.option] | b[c.option + 1] << 8;
     this.log.push(['control', `command ${cmd}, media ${media}, option ${option}`]);
     this.started = { cmd, media };
-    const api = cmd === c.format ? c.api : cmd === c.erase_all ? this._erase_all_api(cmd, media) : null;
-    if (api === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (media ${media}): only the format (${c.format}) and the erase all (${c.erase_all}) are stood in`);
+    const what = WHAT[Object.keys(WHAT).find((k) => c[k] !== undefined && c[k] === cmd)];
+    const api = what === WHAT.format ? c.api : what === WHAT.copy_all ? this._copy_all_api(cmd, media, option) : what ? this._file_api(cmd, media, what) : null;
+    if (api === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (media ${media}): only ${Object.keys(WHAT).filter((k) => c[k] !== undefined).map((k) => `the ${WHAT[k]} (${c[k]})`).join(', ')} are stood in`);
     if (this.ctrl !== null) throw new MediaError(`S-MDACTRL: a second media control start while command ${this.ctrl.cmd} runs`);
-    this.ctrl = { cmd, api, media, cbc: null, token: null, queue: null, t0: null, progress: 0, sent: 0, reply: null };
+    this.ctrl = { cmd, what, api, media, option, count0: null, cbc: null, token: null, queue: null, t0: null, progress: 0, sent: 0, reply: null };
   }
-  // the erase all's call (executeEraseAllStart's, E143 0x50cebba1: the picture file API's erase all, API 0x70010, d0
-  // the media; for media 0 or 1 it posts FILECLBK the DCF edit's ALL_DELETE, code 0x25, and returns the token), on a
-  // body whose build's call the rule reads and whose DCF database holds the pictures (the edit erases what the
-  // database lists), else refused
-  _erase_all_api(cmd, media) {
-    const cam = this.s.camapp, at = cam?.erase_facts?.()?.erase_all ?? null;
-    if (at === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (erase all, media ${media}): the rule reads no picture file API's erase all in ${MODEL}'s build`);
-    if (!cam.dcf_db()) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (erase all, media ${media}): ${MODEL}'s DCF database learns of the lab's pictures only at a mount`);
+  // the copy all's call (executeCopyAllStart's, E143 0x50ceba68: the picture file API's copy all, API 0x7000e, d0 the
+  // start record's +2, d1 its +4, taken here as the request's media and option, I; it posts FILECLBK code 38 with
+  // both drives and returns the token), where the model names it (f.ctrl.copy, E143 and E146) and its bytes and the
+  // count's read as the build's (each opens with its own API id's load), and both cards are in the lab's slots
+  _copy_all_api(cmd, media, option) {
+    const f = this.f.ctrl.copy, img = this.lab.image, two = this.storage.f.slots;
+    const opens = (at, id, skip) => [0xfc, 0xcc, id & 0xff, id >>> 8 & 0xff, id >>> 16 & 0xff, id >>> 24].every((b, i) => img[at - 0x50000000 + skip + i] === b);
+    if (!opens(f.api, 0x7000E, 2) || !opens(f.count, 0x70011, 1)) throw new MediaError(`S-MDACTRL: the copy all's API ${h8(f.api)} or its count ${h8(f.count)} does not open with its API id in ${MODEL}'s build`);
+    if (!two || media > SECOND || option > SECOND || media === option) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (copy all, media ${media}, option ${option}): a copy between the lab's two slots only`);
+    return f.api;
+  }
+  // the picture file API's call a start other than the format's makes (src/fw/facts.mjs pictureErase, fact 'erase'):
+  // executeEraseAllStart's erase all (E143 0x50cebba1: API 0x70010, d0 the media; for media 0 or 1 it posts FILECLBK
+  // the DCF edit's ALL_DELETE, code 0x25, and returns the token), executeUnlockAllStart's unlock all (0x50cebc59: API
+  // 0x70025, d0 the media, d1 0: OBJ_UNLOCK, code 0x24, with the option of every object) and
+  // executeRatingExclusiveEraseAllStart's (0x50cebd29: API 0x7004e, d0 the media: ALL_DELETE with the option 0x10, the
+  // rated pictures kept); on a body whose build's call the rule reads and whose DCF database holds the pictures (each
+  // edit walks what the database lists), else refused
+  _file_api(cmd, media, what) {
+    const cam = this.s.camapp, at = cam?.erase_facts?.()?.[FACT[what]] ?? null;
+    if (at === null) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (${what}, media ${media}): the rule reads no picture file API's ${what} in ${MODEL}'s build`);
+    if (!cam.dcf_db()) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (${what}, media ${media}): ${MODEL}'s DCF database learns of the lab's pictures only at a mount`);
     return at;
   }
   _start() {
-    const lab = this.lab, f = this.f.ctrl, c = this.ctrl, what = this._what();
+    const lab = this.lab, f = this.f.ctrl, c = this.ctrl, what = c.what;
     c.cbc = lab.call(f.cbc, { d0: c.cmd }, null, null, LIMIT).d0 >>> 0;
     c.queue = lab.sim.read(f.reply_queue, 2)[0] | lab.sim.read(f.reply_queue + 1, 1)[0] << 8;
+    // the unlock all's start first notifies the Wi-Fi remote take component (CapWif_WifiRemoteTake), natively: its
+    // instance (the getter makes it at the first call) and Wifi_Notify_Callback(event, 0, instance, 0), as
+    // executeUnlockAllStart calls them (E143 0x50cebc9d..0x50cebcad, D); with no wireless connection the notify
+    // API (0x503f654e, API 0xb000e) sends nothing (X: none of its three senders runs)
+    if (what === WHAT.unlock_all) {
+      const w = f.wifi, inst = lab.call(w.instance, null, null, null, LIMIT).a0 >>> 0;
+      const r = lab.call(w.notify, { d0: w.event, d1: 0, a0: inst, a1: 0 }, null, null, LIMIT).d0 >>> 0;
+      this.log.push([what, `the Wi-Fi remote take ${h8(inst)} notified of ${h8(w.event)}: ${r}`]);
+    }
     c.t0 = lab.lab_time();
-    c.token = lab.call(c.api, { d0: c.media }, null, null, LIMIT).d0 >>> 0;
+    // (the copy all: the start keeps the count of the record's media first, executeCopyAllStart 0x50cebab5, D)
+    if (what === WHAT.copy_all) c.count0 = lab.call(f.copy.count, { d0: c.media }, null, null, LIMIT).d0 >>> 0;
+    // (d1: the copy all's the record's +4, the destination; the unlock all's 0 unlocks, 1 locks, and
+    // executeUnlockAllStart passes 0, D)
+    c.token = lab.call(c.api, { d0: c.media, d1: what === WHAT.copy_all ? c.option : 0 }, null, null, LIMIT).d0 >>> 0;
     if (!c.token) throw new MediaError(`S-MDACTRL: the ${what} of media ${c.media} returned no token`);
-    this.log.push([what, `media ${c.media}: token ${h8(c.token)}, the callback id ${c.cbc}, the reply on queue ${c.queue}`]);
+    this.log.push([what, `media ${c.media}${what === 'copy all' ? `, option ${c.option}, the count ${c.count0}` : ''}: token ${h8(c.token)}, the callback id ${c.cbc}, the reply on queue ${c.queue}`]);
     this.s.settle(`S-MDACTRL ${what}`);
   }
-  _what() { return this.ctrl.cmd === this.f.ctrl.format ? 'format' : 'erase all'; }
+  _what() { return this.ctrl.what; }
+  // getMediaProgress natively (api_media 0x503f093a: the file module's done words 0x62ae4cd8 x 100 / its total
+  // 0x62ae4cd4, 0 for no total), the progress of the format, the erase all and the unlock all. The rating-exclusive
+  // erase all's own getRatingExclusiveEraseAllProgress (E143 0x50cebdbb) wants the component (it divides the
+  // 0x04020011 event's parameter x 100 by the total the component kept from 0x04020010, 0x50ce4ad0, D); both events
+  // carry those same two words (0x50890247, 0x5089029a, D), so getMediaProgress gives its quotient
   _progress() {
     const lab = this.lab, f = this.f, c = this.ctrl;
-    const pct = lab.calls(f.ctrl.progress, { d0: c.cmd }, undefined, undefined, LIMIT).d0 >>> 0;
+    // (the copy all's own progress function, getCopyAllProgress: the copied of the total, 0x5041899b, D)
+    const pct = lab.calls(c.cmd === f.ctrl.copy_all ? f.ctrl.copy.progress : f.ctrl.progress, { d0: c.cmd }, undefined, undefined, LIMIT).d0 >>> 0;
     c.sent = c.progress;
     this._result(f.ids.progress, c.cbc, f.ctrl.kinds.progress, pct, 0);
   }
@@ -258,6 +309,13 @@ export class HlsMedia {
     if (c.reply !== 0) throw new MediaError(`S-MDACTRL: the ${what}'s reply status 0x${c.reply.toString(16)}: the component's error path is not modelled`);
     const ms = Math.round((lab.lab_time() - c.t0) / 1e5) / 10;
     this.log.push([what, `the file module's reply 0 after ${ms} ms, ${c.progress} progress event(s)`]);
+    // the copy all's end check (0x50cec5d1, D): the record's media's count still the start's answers 0xf0000024,
+    // the component's error path, which is not modelled
+    if (what === 'copy all') {
+      c.count1 = lab.call(f.ctrl.copy.count, { d0: c.media }, null, null, LIMIT).d0 >>> 0;
+      this.log.push([what, `the end check: media ${c.media}'s count ${c.count0} -> ${c.count1}`]);
+      if (c.count1 === c.count0) throw new MediaError(`S-MDACTRL: the copy all's end check: media ${c.media}'s count ${c.count1} is the start's, the component's error ${h8(f.ctrl.copy.no_copy)}: not modelled`);
+    }
     f.slots.forEach((slot, i) => {                       // the format flags of the slots that are mounted
       const st = lab.call(f.ctrl.status, { d0: i }, null, null, LIMIT).d0 & 0xFFFF;
       if (!(st & 1) && this.mount_state(slot.kind) === f.mount.mounted) {
@@ -267,19 +325,24 @@ export class HlsMedia {
     });
     this._result(f.ids.progress, c.cbc, f.ctrl.kinds.progress, PROGRESS_DONE, 0);
     this._media(1, c.media);
-    // the erase all: no remount (the component starts that request after a format alone, E143 0x50cec36e, D); the
-    // DCF edit's delete mount ran in FILECLBK
-    if (what === 'erase all') {
+    // the erase alls, the unlock all and the copy all: no remount (the component starts that request after a format
+    // alone, E143 0x50cec36e, D); the DCF edit's delete mount ran in FILECLBK. The unlock all erases nothing: S-CARD's records stay
+    if (what !== WHAT.format) {
       this.ctrl = null;
-      this.erases += 1;
-      this.s.camapp?.card_erased?.();
+      if (what === WHAT.unlock_all) this.unlocks += 1;
+      else if (what === WHAT.copy_all) this.copies += 1;
+      else { this.erases += 1; this.s.camapp?.card_erased?.(); }
       this._result(f.ids.result, c.cbc, f.ctrl.kinds.done, 0, 0);
       return;
     }
     // (the second slot's card, where the lab models it: its own drive's mount, and its state and flag after it)
     const second = this.storage.f.slots && c.media === SECOND;
     this.storage.renumber('S-MDACTRL', second ? SECOND : SLOT);
-    if (second) { this.storage.refresh(SECOND); this.flags(); }
+    if (second) {
+      const st2 = this.storage.refresh(SECOND);
+      if (!this.manager()) this._status(st2.mounted ? MEDIA_OK : MEDIA_NO_MOUNT, SECOND);
+      this.flags();
+    }
     this.ctrl = null;
     this.formats += 1;
     this.s.camapp?.card_formatted?.();
@@ -306,7 +369,7 @@ export class HlsMedia {
       // control camapp 3 the manager unmounts it, sends 711 {8, 0, 0} and clears its flag the same way, X)
       if (!st.held(i)) { this.log.push(['switch', `${of}no card was mounted: nothing to unmount`]); return; }
       this._mount_state(kind, m.unmounted);
-      if (i === SLOT) this._status(MEDIA_NOT_PRESENT);
+      this._status(MEDIA_NOT_PRESENT, i);
       st.remove('S-MEDIA', i);
       this._mount(kind, 0, 0);
       this.flags();
@@ -314,12 +377,12 @@ export class HlsMedia {
     }
     if (one.mounted) { this.log.push(['switch', `${of}the card is mounted already`]); return; }
     if (!card?.present) { this.log.push(['switch', `${of}no card in the slot: no mount (I: what the media manager does then is not read)`]); return; }
-    if (i === SLOT) this._status(MEDIA_NO_MOUNT);
+    this._status(MEDIA_NO_MOUNT, i);
     this._mount(kind, 1, 0);
     st.insert('S-MEDIA', i);
     one.insertions += 1;
     this._mount_state(kind, m.mounted);
-    if (i === SLOT) this._status(MEDIA_OK);           // (insert() refuses a card it leaves unmounted)
+    this._status(one.mounted ? MEDIA_OK : MEDIA_NO_MOUNT, i);
     this._mount(kind, 1, m.rec_end);
     this._mount(kind, 1, m.end);
     this.flags();
@@ -353,7 +416,7 @@ export class HlsMedia {
       if (c.token === null) this._start();
       if (c.progress > c.sent) this._progress();
       if (c.reply !== null) this._finish();
-      else if (this.lab.lab_time() - c.t0 > REPLY_LIMIT_MS * 1e6) throw new MediaError(`S-MDACTRL: no reply to the format (token ${h8(c.token)}) after ${REPLY_LIMIT_MS} ms of lab time`);
+      else if (this.lab.lab_time() - c.t0 > REPLY_LIMIT_MS * 1e6) throw new MediaError(`S-MDACTRL: no reply to the ${c.what} (token ${h8(c.token)}) after ${REPLY_LIMIT_MS} ms of lab time`);
     }
     while (this.ends.length) this._end(this.ends.shift());                   // S-MDAEND
     if (this.switched && this.ctrl === null) this._changed();
@@ -361,10 +424,10 @@ export class HlsMedia {
   }
   take_log() { return this.log.splice(0); }
   status() {
-    return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.erases && { erases: this.erases }), ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
+    return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.erases && { erases: this.erases }), ...(this.unlocks && { unlocks: this.unlocks }), ...(this.copies && { copies: this.copies }), ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
       mount_state: this.mount_state(this.f.slots[SLOT].kind),
       // the second slot, once it holds a card (a session with the default empty slot keeps the document it had)
-      ...(this.storage.second?.card ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };
+      ...(this.storage.second?.card && this.f.slots[SECOND] ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };
   }
 }
 

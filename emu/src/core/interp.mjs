@@ -42,7 +42,7 @@ let FORCE_FB = false;
 export function setForceHelper(on) { if (FORCE_FB !== !!on) { FORCE_FB = !!on; flushDecode(); } }
 // Drop every decoded slot (snapshot restore, setForceHelper): the next lookup of any pc decodes it again from memory.
 export function flushDecode() {
-  cslots.clear(); ctag.fill(-1); ckind.fill(K.FB); cch0.fill(-1); cch1.fill(-1); CODECH.fill(0);
+  ctag.fill(-1); ckind.fill(K.FB); cch0.fill(0); cver0.fill(0); cch1.fill(-1);
 }
 // The run loop's TB-start record (refusal c), for a snapshot.
 export function interpState() { return { TB_PC, TB_AT, TB_START, SEGS: [...SEGS] }; }
@@ -217,23 +217,28 @@ function storeHit(at, start) {
 // analog 4 (no near-limit fallback): past the limit, inline forms run on; the next helper form stops
 function inlineAt(pc) {
   const i = (pc ^ (pc >>> 13)) & CMASK;
-  if (ctag[i] !== pc) { decode(pc, i); if (MMIO) { MMIO = false; return false; } }
+  if (ctag[i] !== pc || cver0[i] !== chunkVer[cch0[i]] || (cch1[i] >= 0 && cver1[i] !== chunkVer[cch1[i]])) {
+    decode(pc, i); if (MMIO) { MMIO = false; return false; }
+  }
   return ckind[i] !== K.FB && ckind[i] !== K.FBM;
 }
 const hex = (v) => (v >>> 0).toString(16).padStart(8, '0');
 const CHUNK = 8;                                   // 256-byte physical chunks
-let CODECH = new Uint8Array(1);
-// chunk -> list of the decode-cache slots that hold an instruction byte there. Each valid slot is in the lists of the
-// (at most two) chunks its instruction spans, side 0 and side 1 (cch0/cch1, at index cpos0/cpos1), and in no other:
-// re-tagging a slot for another pc (a direct-mapped conflict) removes it from its old lists first (swap-remove), so
-// the lists stay bounded by the live slots. A list entry is slot * 2 + side.
-const cslots = new Map();
+// Per-256-byte physical chunk version numbers for O(1) precise SMC invalidation: 0 means no code has been decoded in
+// that chunk (except chunk 0, which is kept >= 1 so empty slots with cch0=0, cver0=0 never match even for pc -1).
+// Each slot records the chunk(s) its instruction bytes span (at most two: cch0/cch1) and their versions at decode
+// time (cver0/cver1). A write to a chunk bumps chunkVer[ch], instantly invalidating every slot referencing it with no
+// per-chunk reverse lists or allocations.
+let chunkVer = new Uint32Array(1);
+chunkVer[0] = 1;
 export function resetInterp() {
-  CODECH = new Uint8Array((TOTAL >>> CHUNK) + 1);
-  cslots.clear(); ctag.fill(-1); ckind.fill(K.FB); cch0.fill(-1); cch1.fill(-1); BP.clear(); BPH.fill(0);
+  chunkVer = new Uint32Array((TOTAL >>> CHUNK) + 1);
+  chunkVer[0] = 1;
+  ctag.fill(-1); ckind.fill(K.FB); cch0.fill(0); cver0.fill(0); cch1.fill(-1); BP.clear(); BPH.fill(0);
   PROBE.clear(); PROBE_FN = null; P_PC = -1; P_N = -1;
   WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; SEGS = new Set([0x17]); FORCE_FB = false;
   LOCAL_PAGE = -1; localSlots.length = 0;
+  cacheMisses = 0;
   setSmcHook(invalidateChunk);
 }
 // The bus window remap (bus.mjs onRemap, a valid CPU store to 0x98100058): the decode-cache slots of window pcs hold
@@ -250,46 +255,38 @@ export function windowRemapped(seg) {
   }
   S.kick = true; S.exitReq = true;
 }
-function joinChunk(ch, i, side) {
-  let l = cslots.get(ch);
-  if (l === undefined) cslots.set(ch, l = []);
-  if (side === 0) { cch0[i] = ch; cpos0[i] = l.length; } else { cch1[i] = ch; cpos1[i] = l.length; }
-  l.push(i * 2 + side);
-}
-function leaveChunk(ch, pos) {
-  const l = cslots.get(ch), last = l.pop();
-  if (pos < l.length) { l[pos] = last; if (last & 1) cpos1[last >> 1] = pos; else cpos0[last >> 1] = pos; }
-  else if (l.length === 0) cslots.delete(ch);
-}
-// Empty a slot. ctag -1 is also the int32 form of pc 0xFFFFFFFF (slot 0), so an empty slot must also be K.FB: a
-// lookup of that pc then runs step(), which takes the code-fetch fault, instead of a stale inline form.
+// Empty a slot. ctag -1 is also the int32 form of pc 0xFFFFFFFF (slot 0), so an empty slot also sets ckind to K.FB
+// and cch0/cver0 to 0/0 (which never matches chunkVer[0] >= 1).
 function dropSlot(i) {
-  if (cch0[i] >= 0) leaveChunk(cch0[i], cpos0[i]);
-  if (cch1[i] >= 0) leaveChunk(cch1[i], cpos1[i]);
-  ctag[i] = -1; ckind[i] = K.FB; cch0[i] = -1; cch1[i] = -1;
+  ctag[i] = -1; ckind[i] = K.FB; cch0[i] = 0; cver0[i] = 0; cch1[i] = -1;
 }
 function invalidateChunk(o) {
   const ch = o >>> CHUNK;
-  if (!CODECH[ch]) return;
-  CODECH[ch] = 0;
-  const l = cslots.get(ch);
-  if (l === undefined) return;
-  cslots.delete(ch);
-  for (const e of l) { const i = e >> 1; if (e & 1) cch1[i] = -1; else cch0[i] = -1; dropSlot(i); }
+  const v = chunkVer[ch];
+  if (v === 0) return;
+  const nv = (v + 1) >>> 0;
+  if (nv === 0) {
+    flushDecode();
+    chunkVer[ch] = 1;
+    return;
+  }
+  chunkVer[ch] = nv;
 }
-export function cacheStats() {     // test aid: live slots and the sizes of the per-chunk lists
-  let live = 0, refs = 0, maxSet = 0;
-  for (let i = 0; i < ctag.length; i++) if (cch0[i] >= 0) live++;
-  for (const l of cslots.values()) { refs += l.length; if (l.length > maxSet) maxSet = l.length; }
-  return { live, chunks: cslots.size, refs, maxList: maxSet };
+export function cacheStats() {     // test aid: live slots and decode misses (version-based SMC keeps no per-chunk lists)
+  let live = 0;
+  for (let i = 0; i < ctag.length; i++) {
+    if (cver0[i] !== 0 && cver0[i] === chunkVer[cch0[i]] && (cch1[i] < 0 || cver1[i] === chunkVer[cch1[i]])) live++;
+  }
+  return { live, chunks: 0, refs: 0, maxList: 0, misses: cacheMisses };
 }
 
+let cacheMisses = 0;
 const CBITS = 16, CMASK = (1 << CBITS) - 1;
 const ctag = new Int32Array(1 << CBITS).fill(-1);
 const ckind = new Uint8Array(1 << CBITS), cx = new Uint8Array(1 << CBITS), cy = new Uint8Array(1 << CBITS);
 const cimm = new Int32Array(1 << CBITS), clen = new Uint8Array(1 << CBITS);
-const cch0 = new Int32Array(1 << CBITS).fill(-1), cch1 = new Int32Array(1 << CBITS).fill(-1);
-const cpos0 = new Int32Array(1 << CBITS), cpos1 = new Int32Array(1 << CBITS);
+const cch0 = new Int32Array(1 << CBITS), cch1 = new Int32Array(1 << CBITS).fill(-1);
+const cver0 = new Uint32Array(1 << CBITS), cver1 = new Uint32Array(1 << CBITS);
 const K = { FB: 0, CLR: 1, EXTB: 2, EXTBU: 3, EXTH: 4, EXTHU: 5, ADDI_A: 6, ADDI_D: 7, MOVI_A: 8, MOVI_D: 9,
   LDSP_D: 10, LDSP_A: 11, STSP_D: 12, STSP_A: 13, INC_D: 14, INC_A: 15, INC4: 16, ASL2: 17, ST_DA: 18, LD_DA: 19,
   MOV_DD: 20, MOV_AA: 21, CMP_DD: 22, CMP_AA: 23, CMPI_D: 24, CMPI_A: 25, BCC: 26, BRA: 27, NOP: 28, LCC: 29,
@@ -305,10 +302,8 @@ function setFlags(x, c, v) { R[PSW] = (R[PSW] & ~15) | (x === 0 ? Z : 0) | (x < 
 function addf(l, r) { const x = (l + r) | 0; setFlags(x, (l >>> 0) + (r >>> 0) > 0xffffffff, (~(l ^ r) & (l ^ x)) < 0); return x; }
 function subf(l, r) { const x = (l - r) | 0; setFlags(x, MUT === 1 ? (l >>> 0) <= (r >>> 0) : (l >>> 0) < (r >>> 0), ((l ^ r) & (l ^ x)) < 0); return x; }
 function cond(cc, pc) { if ((R[UNDEF] & CC_USES[cc]) && MUT !== 2) throw new Fault(6, pc); return ccEval(cc, R[PSW]); }
-function markCode(pc, len) {
-  for (let i = 0; i < len; i++) { const o = codePhys(pc + i); if (o >= 0) { CODECH[o >>> CHUNK] = 1; CODEPG[o >>> 12] = 1; } }
-}
 function decode(pc, i) {
+  cacheMisses++;
   let op, p = 0, len;
   try {
     op = cb(pc);
@@ -407,16 +402,27 @@ function decode(pc, i) {
   }
   if ((op === 0xf0 && p === 0xfd) || (op === 0xf2 && (p & 0xf3) === 0xf3) || (op === 0xfa && (p === 0xfc || p === 0xfd))) k = K.FBM;
   if (FORCE_FB && k !== K.FBM) k = K.FB;
-  if (cch0[i] >= 0) dropSlot(i);                   // re-tag: leave the old instruction's chunk lists
   ctag[i] = pc; ckind[i] = k; cx[i] = x; cy[i] = y; cimm[i] = imm; clen[i] = len;
   if (LOCAL_PAGE >= 0 && (pc >>> 16) === LOCAL_PAGE) localSlots.push(i);   // a core's own page (setLocalPage)
-  markCode(pc, len);
-  for (let j = 0; j < len; j++) {
-    const o = codePhys(pc + j);
-    if (o < 0) continue;
-    const ch = o >>> CHUNK;
-    if (ch === cch0[i] || ch === cch1[i]) continue;
-    joinChunk(ch, i, cch0[i] < 0 ? 0 : 1);
+  const o0 = codePhys(pc);
+  const ch0 = o0 >>> CHUNK;
+  CODEPG[ch0 >>> 4] = 1;
+  let v0 = chunkVer[ch0];
+  if (v0 === 0) chunkVer[ch0] = v0 = 1;
+  cch0[i] = ch0; cver0[i] = v0;
+  if (len > 1) {
+    const o1 = codePhys((pc + len - 1) | 0);
+    const ch1 = o1 >>> CHUNK;
+    if (ch1 !== ch0) {
+      CODEPG[ch1 >>> 4] = 1;
+      let v1 = chunkVer[ch1];
+      if (v1 === 0) chunkVer[ch1] = v1 = 1;
+      cch1[i] = ch1; cver1[i] = v1;
+    } else {
+      cch1[i] = -1;
+    }
+  } else {
+    cch1[i] = -1;
   }
 }
 
@@ -462,6 +468,7 @@ export function run(budget = Infinity, resumed = false) {
   const limit = S.limit ? S.limit : Infinity, i0 = S.insns, bud = S.insns + budget, lim = Math.min(limit, bud);
   // forced one-instruction mode: every instruction is its own TB; analog 4: no near-limit zone
   const nearLimit = MUT === 4 ? Infinity : limit - NEAR_LIMIT, near = ONE ? -1 : nearLimit;
+  const ver = chunkVer;
   S.kick = false; S.exitReq = false;
   let tbPc = R[PC], tbAt = S.insns;                   // the last known TB start (refusal c)
   if (resumed) { tbPc = TB_PC; tbAt = TB_AT; } else { IO.n = -1; CST.k = 0; LOOKED_PC = R[PC]; LOOKED_N = S.insns; }
@@ -486,7 +493,7 @@ export function run(budget = Infinity, resumed = false) {
         continue;
       }
       const i = (pc ^ (pc >>> 13)) & CMASK;
-      if (ctag[i] !== pc) {
+      if (ctag[i] !== pc || cver0[i] !== ver[cch0[i]] || (cch1[i] >= 0 && cver1[i] !== ver[cch1[i]])) {
         if (MUT === 8 && crossFault(pc)) { const f = new Fault(2, pc); f.done = true; R[FAULT] = 2; S.fault = f; return RUN_FAULT; }
         const fault0 = R[FAULT];
         try { decode(pc, i); } catch (e) {

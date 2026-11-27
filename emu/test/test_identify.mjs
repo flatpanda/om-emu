@@ -1,7 +1,8 @@
 // What a firmware file is (src/fw/identify.mjs), the gates that say it, and --main FILE on a .BIN container
 // (src/fw/patch.mjs mainFilePatches, checks/lib/env.mjs readMainFile):
 //   identifyUnits    (firmware-free) made-up bodies and containers the test builds: a release's container and its
-//                    bare block ('stock'), a head with another version field ('other-version'), a changed main block
+//                    bare block ('stock'), a head with another version field ('other-version'; the release's stock
+//                    block under one is 'modified', test_mods.mjs), a changed main block
 //                    with the checksum recomputed and not ('modified', checksum_ok), and what is 'unknown': a head
 //                    naming a body MODELS does not hold, a head around another body's stock block, a release's head
 //                    with the blocks elsewhere, no main block, two, a cut one, bytes of no known length, a reader that
@@ -24,7 +25,7 @@
 //                    body's .BIN is its 'stock' container with the checksum 0 and its unpacked block its 'stock' block:
 //                    the head rule (model field: the body's digits and 0; version field: the .BIN name's digits)
 //   identifySession  (the process's model through bin/session.mjs; E147 in bin/test.mjs's child) --main with the
-//                    stock .BIN refused (nothing to patch, the other blocks not read); a .BIN the test makes from it
+//                    stock .BIN refused (nothing to patch in the main or the resource block); a .BIN the test makes from it
 //                    (16 bytes of the main block's 0xFF tail padding changed, the checksum not recomputed, written
 //                    outside the tree and removed) runs: its steps' lab times and frames are those of --main with the
 //                    bare block and the frames those of the stock session, the summary's patch and audit the bare
@@ -101,7 +102,9 @@ export async function identifyUnits() {
     ['a bare changed block of the shared length', Amod, (r) => is(r, 'modified', 'block', null, /^a block of the length of E901's and E902's main code block \(4096 bytes\) whose sha256 \([0-9a-f]{16}\.\.\.\) is none of theirs: a modified main code block of one of them, as far as a bare block shows \(it names no body\)$/) && r.candidates.join() === 'E901,E902'],
     ['a bare changed block of one body\'s length', random(2 * N, 9), (r) => is(r, 'modified', 'block', 'E903', /^a block of the length of E903's main code block \(8192 bytes\) whose sha256 \([0-9a-f]{16}\.\.\.\) is not its: a modified main code block, as far as/) && r.candidates.join() === 'E903'],
     ['a head naming A around B\'s stock block', container(B), (r) => is(r, 'unknown', 'container', 'E901', /^a container whose head \(model field 9010, version field 0x1200\) is not the release's around E902 \(Made-up B\)'s v1\.1 stock main code block$/)],
-    ['A\'s stock block under another version field', container(A, { ver: 0x1300 }), (r) => is(r, 'unknown', 'container', 'E901', /is not the release's around E901 \(Made-up A\)'s v1\.2 stock main code block$/)],
+    // the release rebuilt with its version field rewritten (E-M1-Miii's test builds): 'modified', test_mods.mjs has
+    // --main on it; the head around another body's stock block stays 'unknown' (above)
+    ['A\'s stock block under another version field', container(A, { ver: 0x1300 }), (r) => is(r, 'modified', 'container', 'E901', /^a container of E901 \(Made-up A\) v1\.2 whose only change to the main code block is its version field 0x1300 \(the release's 0x1200; the stock main code block, in the release's place\): modified firmware$/) && r.version === '1.2' && same(r.main, A)],
     ['a head naming no body', container(Amod, { model: '1234' }), (r) => is(r, 'unknown', 'container', null, /^a container of a body MODELS does not hold \(model field 1234, version field 0x1200\)$/)],
     ['a release\'s head, a main block of another length', container(random(N / 2, 5)), (r) => is(r, 'unknown', 'container', 'E901', /^a container whose head names E901 \(Made-up A\) v1\.2 but whose blocks are not the release's \(the main code block at 0x00000000, 2048 bytes; the release's at 0, 4096 bytes, the resource block at 0x00001040\)$/)],
     ['a release\'s head, no resource block where the release has it', block(0x0100, Amod), (r) => is(r, 'unknown', 'container', 'E901', /but whose blocks are not the release's/)],
@@ -244,7 +247,7 @@ export async function identifySession() {
     // --main with the stock .BIN: the stock block itself, as --main with the unpacked block
     const s0 = cli(['--main', stockBin, 'wait:100']), s1 = cli(['--main', stockBlk, 'wait:100']);
     ok(s0.rc === 1 && s0.last.startsWith(`session.mjs: --main refused: ${stockBin}: a container with ${MODEL} (${MODEL_INFO.name})'s v${MODEL_INFO.version} release head and stock main code block (${MODEL_INFO.bin}); the bodies of its `) &&
-      s0.last.endsWith(' other block(s) are not read: nothing to patch in the main code block; a change in another block is not seen here (give it as --patch on that block)') && s1.rc === 1 && s1.last === `session.mjs: --main refused: ${stockBlk}: the stock main code block itself (nothing to patch)`,
+      s0.last.endsWith(' other block(s) are not read: nothing to patch in the main code block or the resource block\'s part the lab reads; a change in another block is not seen here') && s1.rc === 1 && s1.last === `session.mjs: --main refused: ${stockBlk}: the stock main code block itself (nothing to patch)`,
       `--main with the stock .BIN and with the stock block: rc ${s0.rc} ${s0.last} | rc ${s1.rc} ${s1.last}`);
     // a .BIN with 16 bytes of the main block's 0xFF tail padding changed: the file as it is, and its checksum recomputed
     const TAIL = MODEL_INFO.rom_len - 0x100, NEW = Buffer.from('om-emu container');
@@ -262,9 +265,9 @@ export async function identifySession() {
       `the three runs pass and the flow's frames change: rc ${plain.rc} ${bare.rc} ${cont.rc}; ${plain.steps.map((x) => x.frame)} | ${cont.last}`);
     ok(shape(cont) === shape(bare), `--main with the .BIN: every step's lab time, GUI and frame are the bare block's:\n${shape(cont)}\n${shape(bare)}`);
     ok(shape(cont, false) === shape(plain, false), `--main with the .BIN: every step's GUI and frame are the stock session's:\n${shape(cont, false)}\n${shape(plain, false)}`);
-    const tailNote = '; not applied: container (only its main code block is taken: its ';
+    const tailNote = '; not applied: container (only its main code block and its resource block\'s part the lab reads are taken: its ';
     const head = `1 patch (16 bytes changed) from ${modBin}; main block sha256 ${sha(want).slice(0, 16)} (stock ${MODEL_INFO.rom_sha256.slice(0, 16)})`;
-    ok(cont.sum?.patch?.startsWith(head + tailNote) && /other block\(s\) are not read, the lab loads the stock resource block\), checksum \(the main code block's checksum total is not 0 \(not recomputed after the change\); the lab does not check it\)$/.test(cont.sum.patch) &&
+    ok(cont.sum?.patch?.startsWith(head + tailNote) && /other block\(s\) are not read\), checksum \(the main code block's checksum total is not 0 \(not recomputed after the change\); the lab does not check it\)$/.test(cont.sum.patch) &&
       bare.sum?.patch === head.replace(modBin, bareBlk) && cont.err.includes(`session.mjs: patched firmware: ${cont.sum.patch}`),
     `the summary's patch: the bare block's but for the file and what is not applied: ${cont.sum?.patch} | ${bare.sum?.patch}`);
     ok(cont.sum?.patch_audit && JSON.stringify(cont.sum.patch_audit) === JSON.stringify(bare.sum?.patch_audit) && JSON.stringify(cont.sum.stand_ins) === JSON.stringify(bare.sum.stand_ins) && plain.sum.patch === null,
@@ -281,7 +284,7 @@ export async function identifySession() {
     ok(idMod.status === 'modified' && idMod.model === MODEL && idMod.checksum_ok === false && idFix.status === 'modified' && idFix.checksum_ok === true && idFix.rom_sha256 === sha(want),
       `the two .BINs: ${JSON.stringify({ ...idMod, main: null })} ${JSON.stringify({ ...idFix, main: null })}`);
     const fx = cli(['--main', fixBin, 'wait:100']);
-    ok(fx.rc === 0 && fx.sum?.patch?.startsWith(head.replace(modBin, fixBin) + tailNote) && /stock resource block\)$/.test(fx.sum.patch), `--main with the checksum recomputed: no checksum note: rc ${fx.rc} ${fx.sum?.patch} | ${fx.last}`);
+    ok(fx.rc === 0 && fx.sum?.patch?.startsWith(head.replace(modBin, fixBin) + tailNote) && /other block\(s\) are not read\)$/.test(fx.sum.patch), `--main with the checksum recomputed: no checksum note: rc ${fx.rc} ${fx.sum?.patch} | ${fx.last}`);
     // the lab's gate (the browser player's and fetch-fw's) still refuses both, naming them
     for (const [file, re] of [[modBin, /^OE block 0x0100 at 0x00000000: checksum total 0x[0-9a-f]{8}, not 0 \(a damaged or altered \.BIN\); this file is a container of /], [fixBin, /^the main code block is not .*: this file is a container of /]]) {
       const f = fileReader(file);

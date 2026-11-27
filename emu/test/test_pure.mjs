@@ -11,8 +11,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(new URL('..', import.meta.url).pathname);
-const RULES = [[/from\s+['"]node:/, 'node: import'], [/\brequire\s*\(/, 'require()'], [/\bprocess\./, 'process'],
-  [/\bBuffer\b/, 'Buffer'], [/from\s+['"](fs|crypto|path|os|child_process)['"]/, 'node built-in import'], [/import\(\s*['"]node:/, 'dynamic node: import']];
+const RULES = [
+  [/from\s+['"]node:/, 'node: import'],
+  [/\brequire\s*\(/, 'require()'],
+  [/\bprocess\??\./, 'process'],
+  [/\bglobalThis\s*(?:\.\s*process\b|\[\s*['"]process['"]\s*\])/, 'globalThis.process'],
+  [/\bReflect\.get\s*\(\s*globalThis\s*,\s*['"]process['"]\s*\)/, "Reflect.get(globalThis, 'process')"],
+  [/\bBuffer\b/, 'Buffer'],
+  [/from\s+['"](fs|crypto|path|os|child_process)['"]/, 'node built-in import'],
+  [/import\(\s*['"]node:/, 'dynamic node: import'],
+];
+// Documented process-env bootstraps allowed in pure dirs: fw/model.mjs selects the model at module load; temporary
+// menu.mjs and play.mjs entries remain only until their OM_* reads move into host env injection.
+const PROCESS_ALLOW = new Map([
+  ['src/fw/model.mjs', new Set(["Reflect.get(globalThis, 'process')"])],
+  ['src/lab/menu.mjs', new Set(['process', 'globalThis.process'])],
+  ['src/lab/play.mjs', new Set(['process', 'globalThis.process'])],
+]);
 // The independent references (refs/) import only refs/; src/ and scenarios/ import neither refs/ nor checks/
 // (checks/ and bin/ are node code that may import all of them).
 const IMPORT = /(?:\bfrom\s+|\bimport\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/g;
@@ -51,7 +66,8 @@ export function purity() {
           fs.readFileSync(p, 'utf8').split('\n').forEach((line, i) => {
             const code = line.replace(/\/\/.*$/, '');
             if (PURE.includes(dir)) {
-              for (const [re, what] of RULES) if (re.test(code)) bad.push(`${rel}:${i + 1}: ${what}`);
+              const allow = PROCESS_ALLOW.get(rel.replaceAll(path.sep, '/'));
+              for (const [re, what] of RULES) if (re.test(code) && !allow?.has(what)) bad.push(`${rel}:${i + 1}: ${what}`);
               for (const what of importRule(p, code)) bad.push(`${rel}:${i + 1}: ${what}`);
             }
             for (const what of retiredNames(rel, code)) bad.push(`${rel}:${i + 1}: ${what}`);

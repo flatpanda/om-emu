@@ -1,0 +1,493 @@
+{
+ "about": "The strict mode's findings (src/lab/strict.mjs, --strict) for each caduceus-om3 release folder on E147, for emu/test/test_caduceus.mjs --session --strict: the release's flow (its pin's, or the default flow for a folder with no pin) under the strict mode with a menu open after it, the findings in strictPin's form. Observations only: no byte of a release.",
+ "releases": {
+  "v0.29": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fa3000",
+     "sites": 105,
+     "on_patched": 105,
+     "not_patched": [],
+     "span": [
+      "0x60f4b4e8",
+      "0x60f903f4"
+     ],
+     "digest": "c964d44a"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.30.3": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fb5000",
+     "sites": 233,
+     "on_patched": 232,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f937f4",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b5c0",
+      "0x60fae561"
+     ],
+     "digest": "b2407434"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.30.4-alpha": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fb7000",
+     "sites": 234,
+     "on_patched": 233,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f937f4",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b5c0",
+      "0x60fae561"
+     ],
+     "digest": "e8a5a662"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-alpha": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbc000",
+     "sites": 237,
+     "on_patched": 236,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f90024",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b914",
+      "0x60fb2cc1"
+     ],
+     "digest": "43447480"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbe000",
+     "sites": 244,
+     "on_patched": 243,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f9829c",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b95c",
+      "0x60fb2d65"
+     ],
+     "digest": "ea33c4e6"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta2": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbe000",
+     "sites": 244,
+     "on_patched": 243,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f9829c",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b95c",
+      "0x60fb2d65"
+     ],
+     "digest": "ea33c4e6"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40-beta3": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbe000",
+     "sites": 247,
+     "on_patched": 246,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f98284",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b95c",
+      "0x60fb3349"
+     ],
+     "digest": "c507493a"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbe000",
+     "sites": 247,
+     "on_patched": 246,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f98284",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b95c",
+      "0x60fb3349"
+     ],
+     "digest": "c507493a"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.1": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbf000",
+     "sites": 249,
+     "on_patched": 248,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f98214",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b964",
+      "0x60fb3ac9"
+     ],
+     "digest": "1539d07f"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.2": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x60fbf000",
+     "sites": 249,
+     "on_patched": 248,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f98264",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b964",
+      "0x60fb3c09"
+     ],
+     "digest": "9ea6d5b6"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x6101d000",
+     "sites": 251,
+     "on_patched": 250,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f982ac",
+       "size": 2
+      }
+     ],
+     "span": [
+      "0x60f4b4e8",
+      "0x60fbfed2"
+     ],
+     "digest": "a5d1c5b6"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta2": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x6101d000",
+     "sites": 260,
+     "on_patched": 255,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f982c4",
+       "size": 2
+      },
+      {
+       "at": "0xa26df916",
+       "addr": "0x60f568f8",
+       "size": 1
+      },
+      {
+       "at": "0xa26df923",
+       "addr": "0x60f568f9",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3b96",
+       "addr": "0x60f568f8",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3ba3",
+       "addr": "0x60f568f9",
+       "size": 1
+      }
+     ],
+     "span": [
+      "0x60f4b4f4",
+      "0x60fbff1a"
+     ],
+     "digest": "6739e22f"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta3": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x6103f000",
+     "sites": 266,
+     "on_patched": 261,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f982c4",
+       "size": 2
+      },
+      {
+       "at": "0xa26df916",
+       "addr": "0x60f568f8",
+       "size": 1
+      },
+      {
+       "at": "0xa26df923",
+       "addr": "0x60f568f9",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3b96",
+       "addr": "0x60f568f8",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3ba3",
+       "addr": "0x60f568f9",
+       "size": 1
+      }
+     ],
+     "span": [
+      "0x60f4b4f4",
+      "0x6101d01e"
+     ],
+     "digest": "55384c9d"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  },
+  "v0.40.3-beta4": {
+   "sites": 0,
+   "classes": {
+    "cave-store": 1
+   },
+   "on_patched": 0,
+   "span": null,
+   "not_patched": [],
+   "digest": "e3b0c44298fc1c14",
+   "caves": [
+    {
+     "range": "0x60f49800..0x6103f000",
+     "sites": 253,
+     "on_patched": 248,
+     "not_patched": [
+      {
+       "at": "0x5001095c",
+       "addr": "0x60f98294",
+       "size": 2
+      },
+      {
+       "at": "0xa26df916",
+       "addr": "0x60f56878",
+       "size": 1
+      },
+      {
+       "at": "0xa26df923",
+       "addr": "0x60f56879",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3b96",
+       "addr": "0x60f56878",
+       "size": 1
+      },
+      {
+       "at": "0xa26f3ba3",
+       "addr": "0x60f56879",
+       "size": 1
+      }
+     ],
+     "span": [
+      "0x60f4b500",
+      "0x60fbfca2"
+     ],
+     "digest": "b866be4d"
+    }
+   ],
+   "allowed": true,
+   "dropped": 0
+  }
+ }
+}

@@ -12,9 +12,10 @@ import { spawn } from 'node:child_process';
 import { Worker, MessageChannel } from 'node:worker_threads';
 import { REPO, loadImage, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
-import { startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
+import { startUnloaded, unloadedLine, startSecReady } from '../src/lab/patchaudit.mjs';
+import { secReadyLine, secReadyReport } from '../src/lab/secready.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
-import { RuntimeError } from '../src/lab/errors.mjs';
+import { RuntimeError, ValueError } from '../src/lab/errors.mjs';
 import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
 import { MODELS } from '../src/fw/models.mjs';
 import { Tables } from '../src/lab/play.mjs';
@@ -37,6 +38,10 @@ import { blocksPresent } from './blobs.mjs';
 
 export const PROG = 'play.mjs';
 export const PAGE = path.join(REPO, 'emu/web/play.html');
+const ASSETS = {
+  '/ui.css': [path.join(REPO, 'emu/web/ui.css'), 'text/css; charset=utf-8'],
+  '/ui.mjs': [path.join(REPO, 'emu/web/ui.mjs'), 'application/javascript; charset=utf-8'],
+};
 export const OUT = path.join(REPO, 'emu/out/play', MODEL);
 // The options, in the order session.json's args keep
 export const ACTIONS = [
@@ -51,9 +56,11 @@ export const ACTIONS = [
   { opt: '--us-clock', type: 'str', choices: ['lab', 'reads'], default: 'lab' },
   { opt: '--hdmi', type: 'str', choices: ['off', 'on'], default: 'off' },
   { opt: '--audio', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
-  { opt: '--rotate', type: 'str', choices: ['off', 'on'], default: 'off' },
+  { opt: '--rotate', type: 'str', choices: ['auto', 'off', 'on'], default: 'auto' },
   { opt: '--take', type: 'str', choices: ['stand-in', 'probe'], default: 'stand-in' },
-  { opt: '--cpu2', type: 'str', choices: ['stand-in', 'native'], default: 'stand-in' },
+  { opt: '--cpu2', type: 'str', choices: ['auto', 'stand-in', 'native'], default: 'auto' },
+  { opt: '--camapp', type: 'str', choices: ['1', '2', '3'], default: '1' },
+  { opt: '--play-native', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
   { opt: '--creative-dial', type: 'int', default: null, metavar: 'K' },
   { opt: '--held', type: 'str', repeat: true, metavar: 'KEY' },
   { opt: '--no-bgdraw', type: 'flag', default: false },
@@ -87,12 +94,17 @@ const CARD_PUT = { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/P
 // --patch or --main on a body whose section loader the lab reads (E143, E146, E147), off otherwise. The lab's env too,
 // not among session.json's args
 const LOADED = { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' };
+// --sec-ready (with --patch or --main, on E143, E146 and E147; src/lab/secready.mjs): the static section-order pass in
+// a 'play: patch audit: sec-ready: ...' line at the start, and the run-time watch of each session's lab, whose records
+// the status's and session.json's patch_audit.sec_ready carry. The lab's env too, not among session.json's args
+const SEC_READY = { opt: '--sec-ready', type: 'flag', default: false };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
 // non-enumerable patch, --main's file (null when not given) as the non-enumerable main, --nvram's value (null when
 // not given) as the non-enumerable nvram, the --card-put items as the non-enumerable card_put ([] when none) and
-// --loaded's as loaded.
+// --loaded's as loaded, --sec-ready's as sec_ready.
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT, LOADED]);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT, LOADED, SEC_READY]);
+  if (r.sec_ready && r.main === undefined && !r.patch.length) r.error('--sec-ready needs --patch or --main (the overlay it watches)');
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   if (r.main !== undefined && r.patch.length) r.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   const a = {};
@@ -102,6 +114,7 @@ export function parsePlayArgs(argv) {
   for (const item of r.card_put) if (!/^[^=]+=.+$/.test(item)) r.error(`--card-put ${item}: DOS/PATH=LOCAL`);
   Object.defineProperty(a, 'card_put', { value: r.card_put });
   Object.defineProperty(a, 'loaded', { value: r.loaded });
+  Object.defineProperty(a, 'sec_ready', { value: r.sec_ready });
   for (const x of ACTIONS) {
     const k = x.opt.slice(2).replaceAll('-', '_');
     a[k] = r[k];
@@ -144,6 +157,16 @@ export async function main(argv) {
       return 1;
     }
   }
+  // --sec-ready: the static pass here, against the stock image (src/lab/secready.mjs); the worker's labs watch
+  // (env.secReady)
+  let secReady = null;
+  if (a.sec_ready) {
+    try { secReady = startSecReady(overlay, loadImage()); } catch (e) {
+      if (!(e instanceof ValueError)) throw e;
+      report(`${PROG}: ${e.message}`);
+      return 1;
+    }
+  }
   // --replay of a session that ran on patched firmware (its session.json's patch) without --patch: refused here too,
   // before the server starts (src/lab/player.mjs replayPatchRefusal, which the Player applies again); a file that
   // cannot be read is the Player's to report
@@ -164,7 +187,7 @@ export async function main(argv) {
   // (patched firmware: the default file is the patched build's own, keyed by its main block's sha256)
   const nv = nvramChoice({ arg: a.nvram, env: process.env.OM_EMU_NVRAM || null, model: MODEL, unsupported: nvramUnsupported(),
     scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle, replay: a.replay !== null,
-    build: overlay ? overlay.summary.blocks.find((b) => b.block === 'main')?.sha256 ?? MODEL_INFO.rom_sha256 : null });
+    build: overlay ? overlay.summary.blocks.find((b) => b.block === 'main' || b.block === 'image')?.sha256 ?? MODEL_INFO.rom_sha256 : null });
   if (nv.refuse) {
     report(`${PROG}: ${nv.refuse}`);
     return 1;
@@ -217,6 +240,7 @@ export async function main(argv) {
   // starts (src/lab/patchaudit.mjs)
   const unloaded = overlay ? startUnloaded(overlay, a.loaded) : undefined;
   if (unloaded !== undefined) say(`play: patch audit: ${unloadedLine(unloaded)}`);
+  if (secReady) say(`play: patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
   if (cardFiles) say(`play: --card-put: ${cardFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')} onto ${process.env.OM_EMU_CARD} before the first session`);
   const rom = overlay?.rom ?? loadImage();
   let switchTo = null, trying = null;
@@ -244,6 +268,7 @@ export async function main(argv) {
     ...(overlay ? { patch: overlay.summary } : {}) };
   overlay = null;                      // the worker makes its own blocks (patches)
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
+    assets: Object.fromEntries(Object.entries(ASSETS).map(([k, [f, t]]) => [k, [new Uint8Array(fs.readFileSync(f)), t]])),
     session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread
     onPagetest: (body) => {            // <out>/pagetest.json: a write that fails is the request's error (host/server.mjs)
       try { fs.writeFileSync(path.join(out, 'pagetest.json'), JSON.stringify(body)); } catch (e) { throw new RuntimeError(e.message); }
@@ -263,7 +288,7 @@ export async function main(argv) {
     : `play: --replay: the log kept no state, a blank camera at each start (S-SETSAVE)${nv.envIgnored ? '; OM_EMU_NVRAM ignored' : ''}`);
   say('Ctrl+C to quit');
   let worker = null, second = false;
-  const probe = installMemProbe();            // OM_HOST_MEM: the main isolate's memory (host/memprobe.mjs)
+  const probe = installMemProbe(process.env.OM_HOST_MEM, wallClock, { isolate: 'main' });   // OM_HOST_MEM: main isolate (worker sampled in host/labworker.mjs)
   const finish = (rc, { log = true } = {}) => {
     clearInterval(probe);                     // null (no OM_HOST_MEM): a no-op
     proxy.stopped();
@@ -291,7 +316,7 @@ export async function main(argv) {
   }
   // a 16 MB stack (node's default is 4 MB): headroom for a request body that nests deeply, should a message of the lab
   // show part of it
-  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file, cardFiles, loaded: a.loaded }, transferList: [port2],
+  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file, cardFiles, loaded: a.loaded, secReady }, transferList: [port2],
     resourceLimits: { stackSizeMb: 16 } });
   worker.on('message', (m) => proxy.onMessage(m));
   const ended = await new Promise((resolve) => {

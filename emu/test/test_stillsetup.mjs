@@ -1,4 +1,4 @@
-// E147's still set-up (docs/hle-gaps.md 4.3.12): the image library's create takes the constructor the shot record's
+// E147's still set-up (docs/hle-gaps/4.3.md 4.3.12): the image library's create takes the constructor the shot record's
 // picture mode selects, which the creative dial sets, as on the camera, and at COLOR, MONO and ART runs the create's
 // second-step stub that Caduceus for OM-3 hooks (.hook_su), past rec_ImgPro_CreateParam's extension, whose two
 // buffers MM allocates natively once S-RECREQ gives the still's Command 16.

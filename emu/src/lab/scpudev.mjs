@@ -63,8 +63,9 @@
 // nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan, 0x82 a GIO port's level
 // (0x800cfef -> 0x800cdc4: one byte, the pin's; the model's levels are the port scan's inputs, ports 45 PC13 and 37
 // PC5, and another port is refused) and the power manager's 0x12 {5}, which the sub-CPU answers with its own message
-// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps.md 4.7.4) and its 0x14, the notice of
-// its power sources (below, PWR_SOURCES). The words a body uses are its
+// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps/4.7.md 4.7.4) and its 0x14, the notice of
+// its power sources (below, PWR_SOURCES), and the battery check's 0x11, which it answers with its message 0x11 (below,
+// BAT_INFO). The words a body uses are its
 // fact scpu.words, [index, byte], and a request for another is refused (no caller sends one); a body's fact
 // scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?). Every other command stops the
 // session naming it and its handler: the MN's sessions send none, and an answer the sub-CPU makes from its hardware
@@ -89,7 +90,7 @@
 // switch 0x0400. In the model the result follows the levels at once (I: the 3-sample debounce on the scan's cyclic
 // timer is not timed), the scan is never busy (I: busy is set by 0x8012664, whose caller is not read), the report is
 // disabled by a reset, and PC5's other effects in the power manager (0x801a49a -> 0x801acb0) are not modelled.
-// The power sources (docs/hle-gaps.md 4.7.6, D both ends unless tagged): the MN's power manager sends 0x14 {0,
+// The power sources (docs/hle-gaps/4.7.md 4.7.6, D both ends unless tagged): the MN's power manager sends 0x14 {0,
 // inserted 0, inserted 1, recommend 0, recommend 1} when a slot's recommend byte changes, slot 0 the body's battery
 // and slot 1 the PBH's (I: the grip's), and waits for the write's end only (its sender waits for a message of the
 // sub-CPU's after 0x11 and 0x12 alone). The handler 0x8015345 gives the 5 bytes to the sub-CPU's power manager as
@@ -103,6 +104,24 @@
 // stops the session; with any other value it drives GIO port 36 low at most, which no model here reads. The handler
 // is read from E143's image (SOURCES_IMAGE, its sha256), which E146 carries too; a body with another image or none
 // known (the constructor's `sources`) has its 0x14 refused.
+// The battery information (docs/hle-gaps/4.7.md 4.7.19, D both ends unless tagged): the MN's battery check sends 0x11
+// {0, slot, kind, 0} (kinds 0..2; 3 and 4 add two bytes) and waits for the sub-CPU's message 0x11. The handler
+// 0x80150a5 takes byte 0 = 0 only (any other: no effect), sets bit 0x10 of the system-control task's halfword at
+// (0x8016c48) + 2 (0x8016116(0x10, 1); the battery task clears it when its count of requests, the byte 0x20007348,
+// falls to 0, 0x8019a3e..0x8019a50) and sends the battery task (queue 60) its message 5 with data bytes 1..5. The task
+// (0x8019a2d; message 5 -> 0x8019aca) answers kinds 0..2 alike: it asks the slot's pack (slot not 0 -> 1, 0x801a070)
+// for its record with the pack command 0 into a cleared 63-byte buffer (0x8019aea..0x8019b26 -> 0x8014108, the UART
+// exchange of that slot, A-SCPU-BAT), waits for the exchange's end and posts the MN (0x8019ce2 -> 0x80133dc) 0x11 of
+// 57 bytes {0, slot, kind, 1, 0x33, result, the buffer's 51 bytes from +11}. The result is the exchange's frame check
+// (0x8014340 -> 0x80143a8 -> 0x80143d8): 1 unless a frame with the header 0x3a (0xca for a command whose table byte
+// says so), the command, the length and the checksum came back. With no pack on the UART, nothing comes back: result
+// 1 and the buffer as cleared (X, slot 0, kind 0: the image on the lab board answers {0, 0, 0, 1, 0x33, 1, 51 zero
+// bytes} 0.48 s of lab time after the request). The model posts that answer at once (A-SCPUDEV-1) for slot 0 and
+// kinds 0..2: the body's battery pack is not modelled, so its slot reads as no pack answering, as the lab board's
+// (I: what a pack answers, the record's fields and what the MN makes of a result 0, are ?). Kinds 3 and 4 (a
+// request of another form to the pack, 0x8019c44, whose answer is {0, slot, kind, 1, 2, result, u16}), slot 1 (the
+// PBH's pack on its own UART, not run) and a body whose sub-CPU image is not E143's are refused; any other kind is
+// logged by the task and answered with nothing (0x8019ad6..0x8019ae6).
 import { FirmwareError } from './hle.mjs';
 import { bytesHex } from '../util/bytes.mjs';
 
@@ -111,7 +130,10 @@ export const SCPUDEV_LABELS = ['S-SCPUDEV', 'A-SCPUDEV-1'];     // the labels a 
 
 export const DATE_BYTES = 9, RX_BYTES = 10, CONTEXT_BYTES = 20;
 export const SET_DATE = 0x01, GET_DATE = 0x81, WRITE_WORD = 0x06, READ_WORD = 0x86, SYSCTRL = 0x85, POLL = 0x8f, CHUNK = 0x0f, GIO_WRITE = 0x02;
-export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08, GIO_READ = 0x82, PWR_WRITE = 0x12, PWR_SOURCES = 0x14;
+export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08, GIO_READ = 0x82, PWR_WRITE = 0x12, PWR_SOURCES = 0x14, BAT_INFO = 0x11;
+// the battery information's answer for kinds 0..2 (0x8019d38..0x8019d4a): its form byte 0x33 (the record's 51 bytes
+// follow the result), the result of an exchange no pack answered (0x80143d8), and the message's size (0x8019cf0)
+export const BAT_RECORD = 0x33, BAT_NO_ANSWER = 1, BAT_INFO_BYTES = 57;
 // the power manager's handshake: the MN's 0x12 {5} becomes its message 12 (0x801570b -> 0x801534c), whose handler
 // answers with the message 0x12 {5} (0x801a53c -> 0x801526e), D (docs/om1-scpu-spec.md 3.3, 3.4)
 const PWR_SYNC = 5;
@@ -125,7 +147,13 @@ const blankSources = () => SOURCE_SLOTS.map(() => ({ inserted: SOURCE_UNKNOWN, s
 export const SCAN_PORTS = { PC13: { gio: 45, bit: 0 }, PC5: { gio: 37, bit: 1 } };
 // The levels the model starts with (a model choice): PC13 low gives the result bit 0, which the MN turns into UI_IN's
 // switch 0x0400 at state 0, the state the lab's idle image of the E143 family keeps it in (src/lab/play.mjs
-// IDLE_SWITCH_STATES); PC5's level is ? (the MN masks its bit off)
+// IDLE_SWITCH_STATES); PC5's level is ? (the MN masks its bit off). PC13 is active low, so this is a USB cable in
+// (docs/hle-gaps/4.10.md 4.10.2, D): its message 10 carries the inverted level (0x80126a2), the handler 0x801a436
+// sends 0x08 {0} for PC13 low with 0x8015d44(1), PC13 low wakes the sub-CPU from standby (WKUP2) and selects
+// bkground at a power-off, and the application's USB test 0x50abb032 answers "connected" for state 0. A session
+// started with no cable (src/lab/play.mjs USB_IDLE 'out') gives the model PC13 high (the constructor's scan): the
+// lever's off then makes the application call shutDown itself, which H-POWER follows, and the 0x85's message 6 takes
+// the model to standby (docs/hle-gaps/4.10.md 4.10.3, X)
 export const SCAN_IDLE = { PC13: 0, PC5: 0 };
 // the power states (the system-control task's, by number) and the message each 0x85 mode posts it (0x80130c0..)
 export const POWER_STATES = ['steady', 'steady_wait', 'bkground', 'pwr_save', 'hibernation', 'standby'];
@@ -216,11 +244,11 @@ export class ScpuDev {
   // memory: an ScpuMemory; body: {words: the backup words the body uses, [index, byte]; quiet: its writes without
   // an effect (facts scpu.words, scpu.quiet); sources: whether its sub-CPU's image is the one the power manager's
   // 0x14 is read from (E143's), without which that command is refused}
-  constructor(memory, { words, quiet, sources = false }) {
+  constructor(memory, { words, quiet, sources = false, scan = SCAN_IDLE }) {
     this.memory = memory;
     this.words = words;
     this.takesSources = sources;
-    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE, PWR_SOURCES].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
+    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE, PWR_SOURCES, BAT_INFO].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
     this.quiet = new Set(quiet);
     this.labels = SCPUDEV_LABELS;   // what the session's stand-ins name (player.mjs)
     this.lines = null;
@@ -244,7 +272,7 @@ export class ScpuDev {
     this.dropping = false;
     this.power = POWER_STATES[0];            // the system-control task's state
     this.offArg = 0;                         // mode 1's second byte, kept by the 0x85 handler (the task's +21)
-    this.scan = { ...SCAN_IDLE };            // the port scan's input levels
+    this.scan = { ...SCAN_IDLE, ...scan };   // the port scan's input levels (USB_IDLE's choice of PC13)
     this.scanReport = false;                 // the scan's report enabled (by a 0x88 read)
     this.sources = blankSources();           // the power manager's two slots: the two bytes it keeps of each
     this.log = [];                           // the sub-CPU's own events: messages, power states (text)
@@ -487,7 +515,7 @@ export class ScpuDev {
     // leaving steady, the task's transition stops the command manager's link first: PB12's edge interrupt off
     // (0x80134e0) and PC3 low (0x8013498: GIO port 35 = 0), from bkground's 0x801678c (through 0x80134a0, while the
     // state it reads is steady), pwr_save's 0x80167e2 (0x80134e6), standby's 0x8016872 (0x8013488) and
-    // hibernation's 0x8016810 (0x8013510), D; the MN polls pin 102 low after its power-off (docs/hle-gaps.md 4.7.4)
+    // hibernation's 0x8016810 (0x8013510), D; the MN polls pin 102 low after its power-off (docs/hle-gaps/4.7.md 4.7.4)
     if (from === 'steady' && to !== 'steady') { this.later('ready', 0); this.log.push('the link stopped: PC3 low'); }
     this.power = to;
   }
@@ -520,7 +548,7 @@ export class ScpuDev {
   size(cmd, data, n, name) { if (data.length !== n) this.fail(`${name} (${hx(cmd)}) with ${data.length} data bytes: its senders send ${n}`); }
   unknown(cmd, data) {
     const h = HANDLERS.get(cmd);
-    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86, 0x88, 0x82 of the scan's ports${this.takesSources ? ', 0x12 {5} and 0x14' : ' and 0x12 {5}'}${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
+    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86, 0x88, 0x82 of the scan's ports${this.takesSources ? ', 0x12 {5}, 0x14 and 0x11 of slot 0' : ' and 0x12 {5}'}${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
   }
   // the register a word request {index, ..., byte} names, refused unless the body uses it
   word(data) {
@@ -533,11 +561,12 @@ export class ScpuDev {
     if (cmd === WRITE_WORD) { this.size(cmd, data, 6, 'write backup word'); this.memory.setReg(this.word(data), new DataView(data.buffer, data.byteOffset + 1, 4).getUint32(0, true)); return; }
     if (cmd === PWR_WRITE && data[0] === PWR_SYNC) { this.size(cmd, data, 1, 'power manager sync'); this.post(PWR_WRITE, [PWR_SYNC]); return; }
     if (cmd === PWR_SOURCES) {
-      if (!this.takesSources) this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): the power manager's source notice is read from E143's sub-CPU image only (its handler 0x8015345, docs/hle-gaps.md 4.7.6), and this body's image is another`);
+      if (!this.takesSources) this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): the power manager's source notice is read from E143's sub-CPU image only (its handler 0x8015345, docs/hle-gaps/4.7.md 4.7.6), and this body's image is another`);
       this.size(cmd, data, 1 + 2 * SOURCE_SLOTS.length, 'power sources');
       this.setSources(data);
       return;
     }
+    if (cmd === BAT_INFO) return this.batteryInfo(data);
     if (this.quiet.has(cmd)) return;
     this.unknown(cmd, data);
   }
@@ -558,6 +587,23 @@ export class ScpuDev {
     });
     const text = (s, i) => `${SOURCE_SLOTS[i]} inserted ${hx(s.inserted)} second byte ${hx(s.second)}`;
     this.log.push(`power sources: ${this.sources.map(text).join(', ')}`);
+  }
+  // the battery information request 0x11 (0x80150a5 -> the battery task's message 5, 0x8019aca): the answer of a slot
+  // whose pack does not answer, posted as the task's message 0x11 (0x8019ce2)
+  batteryInfo(data) {
+    const bad = (why) => this.fail(`command ${hx(BAT_INFO)} (data ${bytesHex(data)}): ${why}`);
+    if (!this.takesSources) bad('the battery task\'s answer is read from E143\'s sub-CPU image only (its handler 0x80150a5, docs/hle-gaps/4.7.md 4.7.19), and this body\'s image is another');
+    if (data.length < 3) bad('shorter than its builders\' {0, slot, kind, 0}');
+    if (data[0] !== 0) { this.log.push(`battery information ${bytesHex(data)}: byte 0 not 0, not taken (0x80150a5)`); return; }
+    const slot = data[1], kind = data[2];
+    if (kind > 4) { this.log.push(`battery information: kind ${kind} logged by the battery task, no answer (0x8019ae2)`); return; }
+    if (kind >= 3) bad(`kind ${kind}: the battery task's request of that form to the pack (0x8019c44) and its 8-byte answer are not modelled (the MN's battery check sends kind 0)`);
+    this.size(BAT_INFO, data, 4, 'battery information');
+    if (slot !== 0) bad(`slot ${slot}: the PBH's pack is asked on its own UART (0x8014108's table by slot), which was not run; only slot 0 (the body's, no pack answering, X) is modelled`);
+    const msg = new Uint8Array(BAT_INFO_BYTES);
+    msg.set([0, slot, kind, 1, BAT_RECORD, BAT_NO_ANSWER]);
+    this.log.push(`battery information: slot ${slot} kind ${kind}, no pack answering (result ${BAT_NO_ANSWER})`);
+    this.post(BAT_INFO, msg);
   }
   read(cmd, data) {
     if (cmd === GET_DATE) { this.size(cmd, data, 0, 'get date'); return this.memory.date(); }

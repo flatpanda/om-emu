@@ -4,6 +4,27 @@
 // rules against values found without them. readPlacedFacts runs the rules that also need an E143 function's place in
 // the build (the port's), which bin/port.mjs adds to FACTS[code].
 import { insnLength } from '../core/cpu.mjs';
+import {
+  RESET_HEAD, BASE_PAGE_OFFSET, cached, alias, HEAD_COPY_MODE, FLASH_VIEW, RES_TABLES_SPAN, RES_SUB_SPAN,
+  INDEX_READ, LOADER_SPAN, GUI_TAKE_E143, GUICALLER_E143, GUI_TASK_E143, STATE_LOG_E143, STATE_TABLE_E143,
+  MENU_STATE_NAMES, ICON_RETURN_E143, ICON_TABLE_E143, ICON_AUX_E143, API_OBJECT_E143, GUI_DEVICES_E143,
+  GPI_TEXT_CALLBACK_E143, DISPLAY_TASK_INIT_E143, OLYQEWR_E143, VSC_LEVEL_WORDS, CBS_E143, ERRLOG_E143,
+  HANDLER_TABLE_E143, KCB0_E143, INIT_TASK_E143, OLYQERD_E143, DISPLAY_LOOP_E143, DISPLAY_REPLIES_E143,
+  UI_IN_E143, UI_IN_FLAG_E143, UI_IN_POST_E143, UI_IN_SINK_E143, POWER_OFF_E143, POWER_LATER_E143,
+  TOUCH_INIT_E143, TOUCH_TASK_E143, TOUCH_TASK_ID_E143, OLYTAST_E143, OLYEVWT_E143, TP_FLAG_E143,
+  WUP_TSK_E143, OLYTAWU_E143, TSND_DTQ_E143, DB_INIT_E143, FLASH_SAVE_E143, DB_SAVE_RETURN_E143,
+  DIAL_INIT_E143, DIAL_TABLE_PTR_E143, TOUCH_E143, TOUCH_WALK, TP_OPEN_E143, TP_MASK_E143, TP_MASK_WORD_E143,
+  LENS_COMMAND_QUEUE_E143, LENS_FOCAL_NOW_E143, LENS_RECORD_E143, FACE_COLOUR_SET_E143, SHOOTING_E143,
+  SHOTS_QUERY_E143, AD_E143, SECTION_SWITCH, STORAGE_LIB, MEDIA_STATUS_E143, MOUNT_STATE_E143, REC_FILE_E143,
+  REC_IMAGE_E143, IMGPRO_UNIT_E143, DUAL_SLOT_E143, TAKE_API_POST_E143, TAKE_SEND_E143, TAKE_CONTROL_40_E143,
+  TAKE_FUNC29_E143, TAKE_API_E143, TAKE_PACKET_KEEP_E143, TAKE_EVENT_POST_E143, TAKE_REPLY_E143,
+  TAKE_MAIN_E143, TAKE_COMMANDS, TAKE_COPY_E143, TAKE_FILL_E143, AF_MKNT_E143, BROKER_E143, FUNC_DIRECT_E143,
+  dramSize, COMPONENT_GETTER_E143, STILL_CONVERT_E143, STILL_WRAPPER_E143, AE_INTERP, AE_INIT_E143,
+  FRAME_PERIOD_E143, HW_TIMER_INIT_E143, HW_TIMER_PTR_E143, K_CRT_CALL_E143, K_CRT_134D_E143,
+  TAKE_FRAME_E143, FRAME_MODE_SET_E143, AF_UPLOAD_E143, PROP_DEVICE_SITES_E143, EVF_PROP_VALUE,
+  API_SEND_RETURN_E143, API_TARGETS_E143, PC_PD_NAME, PLAY_TASK_NAMES, PLAY_DECODE_E143, PLAY_ISSUE_E143,
+} from './facts-const.mjs';
+export * from './facts-const.mjs';
 
 const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const s32 = (b, o) => u32(b, o) | 0;
@@ -22,7 +43,6 @@ export function callAt(img, o) {
 }
 // The value at a dotted path ('kernel.cpus') of an object (readFacts' result, a MODELS entry): undefined where a step
 // is missing (src/fw/model.mjs fact(), src/fw/place.mjs carryOverrides).
-export const valueAt = (o, path) => path.split('.').reduce((v, k) => (v != null && Object.hasOwn(v, k) ? v[k] : undefined), o);
 
 // The run-time base of a main code block (MODELS image_base): {base, at, target}. The reset head runs in place from
 // flash and leaves it with one absolute jump into its run-time copy, `mov imm32,a0; jmp (a0)` (fc dc imm32 f0 f4),
@@ -31,7 +51,6 @@ export const valueAt = (o, path) => path.split('.').reduce((v, k) => (v != null 
 // copy starts at page offset 0x020: base = (target & ~0xfff) | 0x020, which gives bin/fw-survey.mjs's statistical
 // base on all 32 (X). Why 0x020: the 32-byte container head before the body at a 64 KiB-aligned flash load (I).
 // Throws when the head has no such jump, more than one, or a target below the page offset.
-export const RESET_HEAD = 0x400, BASE_PAGE_OFFSET = 0x020;
 export function imageBase(rom) {
   const hits = [];
   for (let o = 0; o + 8 <= Math.min(RESET_HEAD, rom.length); o++) {
@@ -46,8 +65,6 @@ export function imageBase(rom) {
 // DRAM's uncached view: 0xA0000000.. is the same RAM as 0x60000000.. (src/machine.mjs regions); a copy names its
 // destination in either view, the image's rows use the cached one. cached(a): a DRAM address's cached view; alias(a):
 // its other view (bin/port.mjs places an address by its alias's vote)
-export const cached = (a) => (a >= 0xA0000000 && a < 0xC0000000 ? a - 0x40000000 : a) >>> 0;
-export const alias = (a) => (a >= 0xA0000000 ? a - 0x40000000 : a + 0x40000000) >>> 0;
 const bytesAt = (b, o, pat) => pat.every((x, k) => x === null || b[o + k] === x);
 // a ret or a retf (df / de, three bytes: a rule's "after a return" looks three bytes back); rets (f0 fc), which no
 // rule has met at a function's end, is not counted
@@ -220,7 +237,6 @@ function headWalk(img, rule) {
 // to, dst, len}], ends: [{at, word, end}]}: ends are the end words the walk stores and never loads whose value lies in
 // the run-time image (E147 0x629607a0 = 0x603a3804, stored at 0x50000103: a range ends there that no copy of the head
 // names; ? who loads it). Throws for no such copy, copies to two routines, an unknown length, or one not in place.
-export const HEAD_COPY_MODE = 0x10200, FLASH_VIEW = 0x50000000;
 export function headCopies(img) {
   const { base, calls, stores, loads } = headWalk(img, 'headCopies');
   const flash = (a) => a !== null && a >= FLASH_VIEW + BASE_PAGE_OFFSET && a < FLASH_VIEW + BASE_PAGE_OFFSET + img.length;
@@ -282,6 +298,50 @@ export function vectorPage(img) {
   throw new Error('vectorPage: no run of the seven IVAR stores and the store to (0x801c)');
 }
 
+// The resource API's tables as USTART_L's loader reads them from the NAND (src/lab/resnand.mjs H-RESINIT, S-RESNAND;
+// docs/hle-gaps/4.5.md 4.5), read from the loader's own bytes at `loader` (disassembly notation; MODELS res_nand.loader).
+// The loader (E143 0x501a8ca0, E146 0x501ada65, E147 0x501b5a59, D) clears three words, the second res_read's type-2
+// last entry (`clr d0; mov d0,(abs32) x3`), then reads four indexes in this order, each `mov <size>,d0; call alloc;
+// mov <nand>,a0; mov d0,a1; mov <len>,d0; mov 1,d1; call read; mov a0,(<buffer>); mov a0,d0; add 32,d0;
+// mov d0,(<table>)` (fc dc .. f1 e1 2c .. 85 01 cd .. fc 80 .. f1 d0 28 20 fc 81 ..): the sound index (type 2), the
+// images block's (type 3), the large-data block's (type 0x8000) and the resource block's (types 0 and 1); between the
+// third and the fourth, the loop over the large-data index's sub-indexes: `mov (<0x8000 table>),a0` .. `mov
+// <sizes>,a0; mov (d0,a0),d3` (the read lengths, words) .. `mov <buffers>,a1; mov a0,(d0,a1)` .. `mov <tables>,a0;
+// mov d0,(d1,a0)` .. `cmp <count>,d0; blt` (E143: 12 sub-indexes, sizes at 0x602a49f4; E146 and E147: 11, at
+// 0x602b9f58 and 0x602cb264; D). Returns {last, read, sound, images, large, resource: {nand, len, buffer, table, at},
+// sub: {count, sizes, buffers, tables, at}} (at: disassembly addresses). Throws unless the span holds exactly that.
+export function resTables(img, loader) {
+  const at = (loader - 0x50000000) >>> 0, end = Math.min(at + RES_TABLES_SPAN, img.length - 40);
+  if (!bytesAt(img, at, [0x00, 0xfc, 0x81]) || !bytesAt(img, at + 7, [0xfc, 0x81]) || !bytesAt(img, at + 13, [0xfc, 0x81])) {
+    throw new Error(`resTables: ${h8(loader)} does not begin with 'clr d0; mov d0,(abs32)' three times`);
+  }
+  const reads = [], subs = [];
+  let read = null;
+  for (let o = at; o < end; o++) {
+    if (bytesAt(img, o, [0xfc, 0xdc]) && bytesAt(img, o + 6, [0xf1, 0xe1, 0x2c]) && bytesAt(img, o + 11, [0x85, 0x01, 0xcd]) &&
+        bytesAt(img, o + 18, [0xfc, 0x80]) && bytesAt(img, o + 24, [0xf1, 0xd0, 0x28, 0x20, 0xfc, 0x81])) {
+      const fn = (0x50000000 + o + 13 + ((img[o + 14] | img[o + 15] << 8) << 16 >> 16)) >>> 0;
+      if (read !== null && fn !== read) throw new Error(`resTables: the index reads at ${h8(loader)} call ${h8(read)} and ${h8(fn)}, want one function`);
+      read = fn;
+      reads.push({ nand: u32(img, o + 2), len: img[o + 9] | img[o + 10] << 8, buffer: u32(img, o + 20), table: u32(img, o + 30), at: 0x50000000 + o });
+    }
+    if (bytesAt(img, o, [0xfc, 0xdc]) && bytesAt(img, o + 6, [0xf3, 0x30])) {
+      const s = { sizes: u32(img, o + 2), at: 0x50000000 + o };
+      for (let q = o; q < Math.min(o + RES_SUB_SPAN, end); q++) {
+        if (bytesAt(img, q, [0xfc, 0xdd]) && bytesAt(img, q + 6, [0xf3, 0xc1])) s.buffers = u32(img, q + 2);
+        if (bytesAt(img, q, [0xfc, 0xdc]) && bytesAt(img, q + 6, [0xf3, 0x44])) s.tables = u32(img, q + 2);
+        if (img[q] === 0xa0 && img[q + 2] === 0xc0 && s.count === undefined && s.tables !== undefined) s.count = img[q + 1];
+      }
+      subs.push(s);
+    }
+  }
+  const [sound, images, large, resource] = reads, sub = subs[0];
+  if (reads.length !== 4 || subs.length !== 1 || sub.buffers === undefined || sub.tables === undefined || sub.count === undefined || !(large.at < sub.at && sub.at < resource.at)) {
+    throw new Error(`resTables: at ${h8(loader)}: ${reads.length} index reads (want 4) and ${subs.length} sub-index loops (want 1, with its buffers, tables and count, between the third read and the fourth)`);
+  }
+  return { last: u32(img, at + 9), read, sound, images, large, resource, sub };
+}
+
 // The resource loader's slots: where it copies a language's font and string records and the two image records
 // (src/lab/resources.mjs FONT_SLOT, STRING_SLOT, BLOB_LOADS) and the slots' size limits. The loader reads the
 // block's 32-byte head and index as INDEX_READ bytes from the block's load address, `mov <load>,a0; ..; mov
@@ -295,7 +355,6 @@ export function vectorPage(img) {
 // resLoad: the block's load address (src/lab/resources.mjs loadAddress). Returns {at, font: {slot, limit, at},
 // images: {first, last, at}, string: {slot, limit, at}} (at: block offsets). Throws unless the index read is found
 // once and the span after it holds exactly these three shapes in this order.
-export const INDEX_READ = 0x800, LOADER_SPAN = 0x800;   // the span: E143's string limit is 0x3d0 bytes after the index read
 export function resLoader(img, resLoad) {
   const anchors = [];
   const mov = [0xfc, 0xdc, resLoad & 0xff, resLoad >>> 8 & 0xff, resLoad >>> 16 & 0xff, resLoad >>> 24];
@@ -375,7 +434,6 @@ export function menuMemory(img) {
 // (E118 0x50b93379, E120 0x509140e2). Returns the take (disassembly notation), or undefined for none; throws for two.
 const TAKE_LOOP = [0xfc, null, 0x00, 0x80, 0x00, 0x00, 0x9c, 0x80, 0xff], TAKE_A3 = [0x3f, 0xfa, 0xd3, 0x8c, 0x01];
 const TAKE_TEST = [0x18, 0xa0, 0x00, 0xc8], TAKE_LOAD = [0xfa, 0xb4, 0x8c, 0x01], TAKE_A3_SPAN = 0x100;
-export const GUI_TAKE_E143 = 0x510C2A2E;
 // whether a3 holds sp + 396 at the loop head h: `mov sp,a3; add 396,a3` right before it, or the last `add 396,a3`
 // within TAKE_A3_SPAN bytes before it with a `mov sp,a3` in the 4 bytes before that
 const takeA3 = (img, h) => {
@@ -407,7 +465,6 @@ export function guiTake(img) {
 // their GUI task loads 0x615e9970; E120 0x615e8358, where it loads 0x615e81d4; X, a byte scan). Returns the word, or
 // undefined without a take; throws for a take with no hand-over after it.
 const GUI_CALLER = [0xfa, 0xb4, 0x8c, 0x01, 0xfa, 0xb1, 0x98, 0x01, 0xfa, 0xb5, 0x9c, 0x01, 0xfc, 0xa0], GUI_CALLER_SPAN = 0x100;
-export const GUICALLER_E143 = 0x60368B88;
 export function guiCaller(img, take) {
   if (take === undefined) return undefined;
   const t = take - 0x50000000;
@@ -423,7 +480,6 @@ export function guiCaller(img, take) {
 // E137, E142 and E140 hold no such string (X). Returns the entry (disassembly notation), or undefined where the string is not held; throws for
 // a string loaded more than once or not at such an opening.
 const GUI_TASK_TRACE = '[GUI App]:Start Gui Task', GUI_TASK_OPEN = [0xf8, 0xfe, 0xf8, 0xfc, 0xcc];
-export const GUI_TASK_E143 = 0x5115BA0C;
 export function guiTask(img) {
   const { base } = imageBase(img);
   const loads = findString(img, GUI_TASK_TRACE, { nul: true }).flatMap((o) => loadsOf(img, base + o));
@@ -440,7 +496,6 @@ export function guiTask(img) {
 // hand before the rule; D). Returns [old, new], or undefined where the log has not one call; throws where its one
 // call has no such store within STATE_LOG_SPAN bytes before it, or no load of the two words between them.
 const STATE_LOG_SPAN = 0x30;
-export const STATE_LOG_E143 = 0x5124BA59;
 export function stateLog(img, log) {
   const sites = callsTo(img, log - 0x50000000);
   if (sites.length !== 1) return undefined;
@@ -466,7 +521,6 @@ export function stateLog(img, log) {
 // `cmp N,d3; lcs; cmp N,d3; bcc` (af N d4 af N; E143 12 at 0x5124b478, E145 18 at 0x50de87bf, D). The rule reads N
 // after each load of the table's address, walking STATES_SPAN bytes of instructions. Returns N, or undefined where no
 // load is followed by the bound; throws where two loads give two bounds.
-export const STATE_TABLE_E143 = 0x61596FB8, STATE_PARENTS_E143 = 12;
 const STATES_SPAN = 0x30;
 export function stateTableBound(img, table) {
   const found = new Set();
@@ -484,7 +538,6 @@ export function stateTableBound(img, table) {
 // src/lab/menu.mjs state_names reads them: u16 parent, its name, its children's table of {u16 child, name} rows ending
 // at 0xffff). E143's and E148's ListMenu `0x0b02`, E144's Menu_Viewer `0x1102` (X: the state each menu open reaches,
 // docs/model-survey.md findings 66 to 68 and 160). Returns undefined where no row holds the two names.
-export const MENU_STATE_NAMES = ['SS_MENU', 'ID_ST_MENU'];
 export function menuState(img, table, parents) {
   const { base } = imageBase(img), at = (a) => (a >= base && a + 4 <= base + img.length ? a - base : null);
   const cstr = (a) => { const o = at(a); if (o === null) return null; const e = img.indexOf(0, o); return e < 0 ? null : String.fromCharCode(...img.subarray(o, e)); };
@@ -515,7 +568,6 @@ export function menuState(img, table, parents) {
 // the E144 and E118 families call vt+52, their API vtable lacking E143's slot 0, src/fw/overrides-E144.mjs). Returns
 // {table, table_at, aux, aux_at}, or undefined where the return does not follow `calls (a1)` or the walk meets another
 // instruction.
-export const ICON_RETURN_E143 = 0x51257D3D, ICON_TABLE_E143 = 0x62B3E364, ICON_AUX_E143 = 0x60370AF8;
 const ICON_SPAN = 0x20;
 export function iconStores(img, ret) {
   const c = ret - 2 - 0x50000000;
@@ -541,7 +593,6 @@ export function iconStores(img, ret) {
 // E143's word 8 bytes off on E144 (an override since, src/fw/overrides-E144.mjs) and 4 to 16 bytes off on 14 others
 // (X: the word held 0 after the GUI's creation; D: E148's getter 0x508cddb3 loads 0x61e44380, the port gave
 // 0x61e44378). Returns {getter, word}, or undefined where the form is not met within API_SPAN bytes before the call.
-export const API_OBJECT_E143 = 0x603613B0;
 const API_SPAN = 0x18;
 export function apiObject(img, ret) {
   const c = ret - 2 - 0x50000000;
@@ -566,7 +617,6 @@ export function apiObject(img, ret) {
 // of 164 with a struct of 72 bytes, E122's of 160 with a struct of 68 at sp + 40 (D: 0x50c730a6, 0x50baacfc), where
 // E143's stride left the check reading other words (X). Returns {devices, stride, count, callback_at}, or undefined
 // where the form is not met.
-export const GUI_DEVICES_E143 = 0x62B3DC94, GPI_TEXT_CALLBACK_E143 = 0x510BC7D8;
 const DEVICES_BACK = 0x80, DEVICES_SPAN = 0x100;
 export function guiDevices(img, cb) {
   const { base } = imageBase(img), rt = (base + cb - 0x50000000) >>> 0, found = [];
@@ -673,7 +723,6 @@ export function displayQueue(img) {
 // instruction 13 bytes past the entry, after a trace call these builds make first (`mov 1,d0; mov <name>,a0; call`,
 // E130 0x501fef3d, D), as E134 does; E145's init 0x501eb17f is called once, from 0x50022054 (X). On the E118 family the
 // entry found is not checked. Undefined where none.
-export const DISPLAY_TASK_INIT_E143 = 0x501C2F13;
 const TASK_INIT_SPAN = 0x400;
 export function displayTaskInit(img) {
   const e = entryOf(img, displayQueueSite(img).at, TASK_INIT_SPAN);
@@ -728,7 +777,6 @@ export function displayInit2nd(img) {
 // E134's 0x5016b14e. 10 on E143 (its lab's own request, 0x503eba07, reads the queue id from the target table instead
 // and is not among them, D), E146 and E147, 12 on E137, E139, E140, E142, E144 and E118, 13 to 15 on the other bodies
 // (X, a byte scan of each expanded image at the port's place of OlyQeWr).
-export const OLYQEWR_E143 = 0x5002C151;
 const DQ_WALK = 8;
 // The DISPLAY queue's calls of fn: each `movhu (word),d0` whose first call within DQ_WALK instructions is fn, as
 // {at: the load's offset, ret: the call's return address}.
@@ -820,7 +868,6 @@ const displaySends = (img, qewr) => queueCalls(img, qewr).map((c) => c.ret);
 // a record form's image sync without the three code compares, an image sync of another form without exactly one caller,
 // or a caller without exactly one clear of both panels or, through a wrapper (the record form: directly), one clear of
 // each panel.
-export const DISPLAY_SYNC_E143 = { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] };
 const DISPLAY_API = { request: 0x10035, image_sync: 0x10037 }, API_HEAD = 16, RELEASE_SPAN = 0x80, WRAPPER_SPAN = 0x80;
 // the names a trace loads where no entry loads the id, in order: the E118 family's register form, then E120's record
 // form (MULTI_EXT names the record's fields)
@@ -910,7 +957,6 @@ export function displaySync(img) {
 // 0x502c6d90 (D). E118's open (0x502e1b48) has no such stores, and no word of E118's image holds any of the three
 // addresses (X, a byte scan): its code names no level word. Whether the build names them, all three or none: true on
 // E122 and E120, false on E118 (X). Throws for a build that names some of them only.
-export const VSC_LEVEL_WORDS = [0x2E0, 0x2E4, 0x2E8];
 export function vscLevels(img, base) {
   const named = VSC_LEVEL_WORDS.map((o) => wordsOf(img, base + o).length > 0);
   if (named.some((n) => n !== named[0])) throw new Error(`vscLevels: the build names the level words ${VSC_LEVEL_WORDS.filter((o, k) => named[k]).map((o) => h8(base + o)).join(', ')} only, want all three or none`);
@@ -936,7 +982,6 @@ export function vscLevels(img, base) {
 // E144 holds a second gate, of 2). Returns {word, standby}, or undefined where neither the name nor the form is
 // held; throws for a name held or loaded twice, a chain other than the above, or a form that is not one word with
 // one gate.
-export const RECVIEW_E143 = { word: 0x6035E9C8, standby: 1 };
 const RECVIEW_TRACE = '[RecView] entryStandby ', RECVIEW_WALK = 8, RECVIEW_STATE = [0x92, 0x82];
 function recViewByForm(img) {
   const words = new Map();                                    // W -> the helpers' offsets
@@ -983,10 +1028,6 @@ export function recViewStandby(img) {
 // 211: S2's END_SHOOTING_PICTURE reached no state, the still state stayed in 0x5101 and PLAY found no key to take (X).
 // Every other name S-RELSEQ posts has E143's code on all 18 expanded images (X, a scan of each). Returns {NAME: code} for the names of CBS_E143, or undefined where the build holds no such table; throws for
 // two tables or a name the table lacks.
-export const CBS_E143 = { START_FOCUS: 213, END_FOCUS: 214, START_SHOOTING_PICTURE: 210, START_EXPOSE: 136, END_EXPOSE: 21,
-  END_SHOOTING_PICTURE: 211, START_RECVIEW: 89, END_RECVIEW: 27, START_READY_MOVIE: 205, END_READY_MOVIE: 206,
-  START_RECORDING_MOVIE: 216, END_RECORDING_MOVIE: 217, START_SHOOTING_MOVIE: 92, STOP_SHOOTING_MOVIE: 97,
-  UPDATE_SHOOTING_TIME: 108, START_THROUGH_IMAGE_PROCESS: 258 };
 const CBS_TABLE_MIN = 200, CBS_PREFIX = [0x43, 0x42, 0x53, 0x5f];                          // "CBS_"
 export function cbsIds(img) {
   const { base } = imageBase(img);
@@ -1029,8 +1070,6 @@ export function cbsIds(img) {
 // MOVIE 5; X, docs/om1-input-spec.md section 9). Returns {table, names: [[code, name]]}: the table's run-time address
 // and the name of each code of its run (up to its first 0, at most MODE_DIAL_RUN words) that the build names, by
 // code; table null and no names where the build holds no reader; throws for two readers or two names of one code.
-export const MODE_DIAL_E143 = { table: 0x602243A0, names: [[1, 'P'], [2, 'A'], [3, 'S'], [4, 'M'], [10, 'MOVIE'], [53, 'MY_MODE1'],
-  [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B']] };
 const MODE_DIAL_QUERY = [0xfa, 0xca, 0x01, 0x19], MODE_DIAL_LOAD = 24, MODE_DIAL_RUN = 16, MODEDIAL = 'MODEDIAL_';
 export function modeDial(img) {
   const { base } = imageBase(img), at = [];
@@ -1093,7 +1132,27 @@ export function modeDial(img) {
 // 0x503eeba1, docs/om1-settings-spec.md section 2.2; D). One such run on each of the 18 unpacked bodies, preceded by a
 // called entry (X, a byte scan of each). Returns {init, objects}: the init's entry (disassembly notation) and P (run
 // time), or undefined where the build holds no such run; throws for two runs or a run with no entry.
-export const PROP_STORE_E143 = { init: 0x503EE2D6, objects: 0x62A65E0C };
+// The read of the factory calibration word 2164 in the HDMI connect check's predicate (fact 'hdmi.calib';
+// docs/hle-gaps/4.9.md 4.9.1, 4.9.2): E146's and E147's predicate (E146 0x50409695, E147 0x5041779c; E143's
+// 0x5040dad7 has no such read, D) reads data object kind 0x874 through a wrapper of the settings read and answers 0
+// when the value is above 0xfe000000: `mov 2164,d0; mov 0,a0; clr d1` (2c 74 08 90 00 04), the call of the wrapper
+// (dd rel32 00 04), `mov d0,d2` (82), `cmp -33554432,d2` (fc ca 00 00 00 fe), `bls +3` (c7 03), `clr d3` (0c) (E146
+// 0x504096c5..0x504096db, E147 0x504177cc..0x504177e2, D). The wrapper is `exthu d0; exthu d1; call read,[d2,d3],12;
+// ret [],4` (1c 1d dd rel32 c0 0c df 00 04; E146 0x503eb4a0, E147 0x503f91d9). {call, read}: the wrapper call's
+// address and the settings read's (disassembly notation), or null where the build has no such run (E143); throws for
+// two runs or a wrapper of another shape.
+const CALIB_READ = [0x2c, 0x74, 0x08, 0x90, 0x00, 0x04, 0xdd, null, null, null, null, 0x00, 0x04, 0x82, 0xfc, 0xca, 0x00, 0x00, 0x00, 0xfe, 0xc7, 0x03, 0x0c];
+const CALIB_WRAPPER = [0x1c, 0x1d, 0xdd, null, null, null, null, 0xc0, 0x0c, 0xdf, 0x00, 0x04];
+export function hdmiCalib(img) {
+  const at = [];
+  for (let o = img.indexOf(0x2c); o >= 0 && o + CALIB_READ.length <= img.length; o = img.indexOf(0x2c, o + 1)) if (bytesAt(img, o, CALIB_READ)) at.push(o);
+  if (!at.length) return null;
+  if (at.length > 1) throw new Error(`hdmiCalib: ${at.length} reads of the calibration word 2164 compared with 0xfe000000 (${at.map((o) => h8(0x50000000 + o)).join(', ')}), want one`);
+  const call = at[0] + 6, wrapper = callAt(img, call).to;
+  if (!bytesAt(img, wrapper, CALIB_WRAPPER)) throw new Error(`hdmiCalib: the callee ${h8(0x50000000 + wrapper)} of ${h8(0x50000000 + call)} is not the settings read's wrapper`);
+  return { call: 0x50000000 + call, read: 0x50000000 + callAt(img, wrapper + 2).to };
+}
+
 const PROP_STORE_UNIT = 19, PROP_STORE_SPAN = 0x100;
 export function propStore(img) {
   const unit = (k, want) => img[k] === 0xfc && img[k + 1] === 0xcc && img[k + 6] === 0xdd && img[k + 13] === 0xfc && img[k + 14] === 0x80 &&
@@ -1112,6 +1171,67 @@ export function propStore(img) {
   return { init: 0x50000000 + e, objects };
 }
 
+// The settings init chain (src/lab/menu.mjs settingsChainOf; docs/hle-gaps/4.6.md 4.6.8, 4.6.9), read from the
+// property store's init (propStore's `init`, disassembly notation), the chain's sixth call. The chain is a flat run of
+// calls: the first `call S1; mov d0,d2; exthu d0; cmp 0,d0; bne` (call, 82 1c a0 00 c9 nn), each next one behind the
+// guard `mov d2,d0; exthu d0; cmp 0,d0; bne` (88 1c a0 00 c9 nn) and followed by `mov d0,d2`, every bne skipping its
+// call and that mov; then `call T1; clr d0; call T2; call T3; mov d2,d0; exthu d0; ret` (00 between the first two,
+// 88 1c df after the third). It has no prologue of its own (the boot's `call` saves d2) and follows a return. E143
+// 0x503dae30: 14 steps (the init the sixth, at 0x503dae75), T 0x503e8e8f, 0x50421080, 0x503ed455; E146 0x503d6f01
+// and E147 0x503e4c08 in the same form, 14 steps, the init the sixth (D, their disassembly); the rule reads one on
+// E144, E148 and E139 too (0x502bdb43, 0x502c0f11, 0x502bb7d1, 14 steps each) and none on the other 12 unpacked bodies
+// (X). Returns {entry, steps, tail} (disassembly notation), or undefined where no call to the init sits in that form;
+// throws for two such calls.
+const CHAIN_FIRST = [0x82, 0x1c, 0xa0, 0x00, 0xc9], CHAIN_GUARD = [0x88, 0x1c, 0xa0, 0x00, 0xc9], CHAIN_MAX = 64;
+export function settingsChain(img, init) {
+  const callOf = (p) => { const c = callAt(img, p); return c && (c.len === 7 || c.len === 5) ? c : null; };
+  // the chain from entry e, or null where its bytes leave the form
+  const parse = (e) => {
+    if (!isRet(img, e - 3)) return null;
+    const steps = [];
+    let p = e, c = callOf(p);
+    if (!c || !bytesAt(img, p + c.len, CHAIN_FIRST)) return null;
+    steps.push(c.to);
+    p += c.len + 4;                                      // at the first bne (c9)
+    for (;;) {
+      const bne = p, q = bne + 2;                        // q: the call the bne skips
+      const k = callOf(q);
+      if (!k || img[q + k.len] !== 0x82 || bne + ((img[bne + 1] << 24) >> 24) !== q + k.len + 1) return null;
+      steps.push(k.to);
+      p = q + k.len + 1;
+      if (!bytesAt(img, p, CHAIN_GUARD)) break;
+      p += 4;
+      if (steps.length > CHAIN_MAX) return null;
+    }
+    const t1 = callOf(p);
+    if (!t1 || img[p + t1.len] !== 0x00) return null;
+    const t2 = callOf(p + t1.len + 1), t3 = t2 && callOf(p + t1.len + 1 + t2.len);
+    if (!t3 || !bytesAt(img, p + t1.len + 1 + t2.len + t3.len, [0x88, 0x1c, 0xdf])) return null;
+    return { entry: 0x50000000 + e, steps: steps.map((s) => 0x50000000 + s), tail: [t1.to, t2.to, t3.to].map((s) => 0x50000000 + s) };
+  };
+  const target = init - 0x50000000, found = new Map();
+  for (const at of callsTo(img, target)) {
+    // back from the init's call over the guarded steps to the first, then the whole chain read forward from there
+    let u = at, e = null;
+    for (let n = 0; n <= CHAIN_MAX && e === null; n++) {
+      const back = (end) => [7, 5].filter((l) => callOf(end - l)?.len === l).map((l) => end - l);
+      if (bytesAt(img, u - 6, CHAIN_GUARD) && img[u - 7] === 0x82) {
+        const prev = back(u - 7);
+        if (prev.length !== 1) break;
+        u = prev[0];
+      } else if (bytesAt(img, u - 6, CHAIN_FIRST)) {
+        const first = back(u - 6);
+        if (first.length === 1) e = first[0];
+        break;
+      } else break;
+    }
+    const chain = e === null ? null : parse(e);
+    if (chain && chain.steps.includes(init)) found.set(chain.entry, chain);
+  }
+  if (found.size > 1) throw new Error(`settingsChain: ${found.size} chains call the property store's init ${h8(init)}, at ${[...found.keys()].map(h8).join(', ')}; want one`);
+  return found.size ? [...found.values()][0] : undefined;
+}
+
 // The modules' static constructor tables (fact 'ctors', src/lab/osd.mjs MM_CTOR_TABLE and src/lab/menu.mjs
 // CTOR_TABLES), as the module loader's constructor runner reads them: for a module, `mov N,d2; cmp 0,d2; beq; mov
 // T,a2` and on to the loop `mov (a2),a0; add -32,sp; calls (a0); add 32,sp; inc4 a2; add -4,d2; bgt` (directly or by a
@@ -1124,7 +1244,6 @@ export function propStore(img) {
 // by 0xffffffff after its N pointers (D). The lab runs the first three by their rank, as on E143 (the fourth is
 // E143's module 8, which the lab's start does not load; that E122's is its counterpart is I). Returns [[T, N / 4]]
 // (run time), or throws where no block reaches a loop.
-export const CTORS_E143 = [[0x60714E78, 15], [0x60EF9AD0, 48], [0x615C71D4, 64], [0x617D0310, 6]];
 const CTOR_LOOP = [0xf0, 0x02, 0xf8, 0xfe, 0xe0, 0xf0, 0xf0, 0xf8, 0xfe, 0x20, 0x52, 0x2a, 0xfc, 0xc1, 0xf3];
 const CTOR_BLOCK = [0xfc, 0xce, null, null, null, null, 0xaa, 0x00, 0xc8, null, 0xfc, 0xde];
 export function ctorTables(img) {
@@ -1227,7 +1346,6 @@ export function timerReloadLessOne(img) {
 // callee most often called right after `mov imm32,d0` (E143 5067 such calls, the next callee 2230; E118 2929, the next
 // 1834), and on the 15 bodies that have the hardware-timer start's errlog (0x19000401, above) it is that call's callee
 // (X, a byte scan of each expanded image). Returns the entry (disassembly notation); throws unless exactly one.
-export const ERRLOG_E143 = 0x50047313;
 const ERRLOG_SPAN = 0x60;
 const moduleTest = (img, e) => {
   for (let p = e; p < e + ERRLOG_SPAN; p++) {
@@ -1270,7 +1388,6 @@ export function kernelCpus(img) {
 // of the cached view or of a stride below 0x100). Returns the first table, or undefined where none is found; throws
 // for two.
 const handlerStore = (img, o) => img[o] === 0xfc && (img[o + 1] & 0xfc) === 0xdc && img[o + 6] === 0xf3 && img[o + 7] === (0x4c | (img[o + 1] & 3));
-export const HANDLER_TABLE_E143 = 0xA32600C0;
 export function handlerTables(img, cpus) {
   const found = new Set();
   for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
@@ -1294,7 +1411,6 @@ export function handlerTables(img, cpus) {
 // the others, each with E143's atr, priority and stack size and its entry after a retf (X, a read of each at the
 // port's place of the kcb). Returns the entry (disassembly notation); throws for a table without its row of id 0
 // before kcb+128, or without exactly one row of id 1.
-export const KCB0_E143 = 0x6004381C, INIT_TASK_E143 = 0x5002CCA5;
 const TASK_ROW = 28;
 // CPU 0's static task table at the kcb, as {id, entry (disassembly notation)} rows up to the row of id 0; throws where
 // that row does not come before kcb+128.
@@ -1322,7 +1438,6 @@ function initTask(img, kcb) {
 // all but the E118 family (55), the receive 0x31..0x5d bytes past its entry (E145's task 58 at 0x501eb256, the
 // receive at 0x501eb289, X, a read of each at the port's places). Returns the entry (disassembly notation); throws
 // unless exactly one.
-export const OLYQERD_E143 = 0x5002C067, DISPLAY_LOOP_E143 = 0x501C3035;
 const LOOP_SPAN = 0x100;
 function displayLoop(img, kcb, qerd) {
   return taskRunningTo(img, kcb, queueCalls(img, qerd).map((c) => c.at), LOOP_SPAN, 'displayLoop', 'a receive on the DISPLAY queue');
@@ -1337,7 +1452,6 @@ function displayLoop(img, kcb, qerd) {
 // One call on 15 of the 18 expanded images, two on E137 and E125 (each a trace call first), none on E118 (X, a walk
 // from each entry at the port's places). Returns the call sites (disassembly notation), in order; throws where the
 // entry does not run to a receive within LOOP_SPAN bytes.
-export const DISPLAY_START_E143 = [0x501C3075];
 function displayStart(img, entry, qerd) {
   const e = entry - 0x50000000, receives = queueCalls(img, qerd).map((c) => c.at).filter((at) => at > e && at - e <= LOOP_SPAN && runsTo(img, e, at));
   if (!receives.length) throw new Error(`displayStart: the DISPLAY task's entry ${h8(entry)} runs to no receive on the DISPLAY queue within ${LOOP_SPAN} bytes`);
@@ -1361,7 +1475,6 @@ function displayStart(img, entry, qerd) {
 // REPLY_FN bytes after the callee of a call made there. It is the pair the maps placed on all 15 bodies they placed it
 // on, and one on E118, E120 and E122, which no map placed (X). Returns the two sends' returns (disassembly notation);
 // throws unless exactly one such pair.
-export const DISPLAY_REPLIES_E143 = [0x501C4913, 0x501C4974];
 const REPLY_WINDOW = 0x30, REPLY_PAIR = 0x70, LOOP_BODY = 0x1800, REPLY_FN = 0x80;
 function displayReplies(img, loop, qewr) {
   const e = loop - 0x50000000, sends = [];
@@ -1409,7 +1522,6 @@ function taskRunningTo(img, kcb, sites, span, rule, what) {
 // 16,d0; call 0x50030a16`) and loads the flag word (0x60040eb4) at 0x500fec10, 0x32 bytes in, then runs the same loop
 // (its steps 0x5010007e and 0x500ff03d, D): no map placed its entry. Returns the entry (disassembly notation); throws
 // unless exactly one.
-export const UI_IN_E143 = 0x5014B736, UI_IN_FLAG_E143 = 0x60043010;
 const UI_IN_SPAN = 0x80;
 function uiInTask(img, kcb, flag) {
   return taskRunningTo(img, kcb, halfLoads(img, flag, true), UI_IN_SPAN, 'uiInTask', `a load of the flag word ${h8(flag)}`);
@@ -1425,7 +1537,6 @@ function uiInTask(img, kcb, flag) {
 // the test inline at three places, the code in d2 at 0x5017919f (the S1 press after S2) and in a2 at 0x50179230
 // and 0x501792ba (D). The post's body runs to the next function a call enters (POST_SPAN at most). Returns [{at,
 // reg}] in the order of the body (disassembly notation); throws for none.
-export const UI_IN_POST_E143 = 0x5014C956, UI_IN_SINK_E143 = 0xA32DABA4;
 const POST_SPAN = 0x800, FWD_SPAN = 0x40;
 // the register a sink test at offset p passes on: the source of the last `mov Dm,d0` ('d1'..'d3') or `mov Am,d0`
 // ('a0'..'a3') between the beq and the first call within SINK_ARGS bytes after it, or null
@@ -1483,7 +1594,7 @@ function powerTask(img, kcb) {
   return taskRunningTo(img, kcb, [...modules].flatMap((m) => callsTo(img, m)), PWR_TASK_SPAN, 'powerTask', `a call of the power init calling ${h8(0x50000000 + init)}`);
 }
 
-// The power manager and the power-off natively (fact 'power.off', src/lab/power.mjs; docs/hle-gaps.md 4.7.4), read
+// The power manager and the power-off natively (fact 'power.off', src/lab/power.mjs; docs/hle-gaps/4.7.md 4.7.4), read
 // at the port's place of E143's flash save (FLASH_SAVE_E143) and the file system's NAND access (fileSystem). E143's
 // values (POWER_OFF_E143) with their evidence, D unless tagged; each part below is read by its shape, the same on E146
 // and E147 (X: read on each, test/test_facts.mjs POWER_OFF_FOUND):
@@ -1519,6 +1630,8 @@ function powerTask(img, kcb) {
 // - flash_save: the return address of the one call of the flash save in OlyHfwPower's startShutDown 0x50af654b
 //   (reached from shutDown through 0x50abe7e0), the function that loads its trace "OlyHfwPower::startShutDown
 //   nextShootTime = %d" (0x50af6c52): the call at 0x50af6a0e, return 0x50af6a15
+// - start_shutdown: that function's entry, OlyHfwPower's startShutDown 0x50af654b, which the application reaches
+//   itself at the lever's off with no USB cable (src/lab/power.mjs, the follow; docs/hle-gaps/4.10.md 4.10.3, X)
 // - log: the RAM log's save (api 0xc0036 0x50420fd4 -> 0x518f7381: the callbacks of the table 0x60379ef0, 50 ms,
 //   0x50039def writing 0x100 to +0x800 of the four interrupt-controller banks, a checksum of 2 MiB from 0x63ae0000)
 //   to the NAND: the one call of the NAND access after `mov area,a1; mov size,d0; mov op,d1` with the access's write
@@ -1527,19 +1640,11 @@ function powerTask(img, kcb) {
 //   writes, two in 0x5180a8.. and the shell's 1 MiB at 0x518f7b2d, sum nothing, X): the call 0x518f7428, 0x4e820000,
 //   0x200000: {nand: [area, size], ret}
 // Returns null where no load of "PWR_MAIN" starts a task; throws where a part is missing or found twice.
-export const POWER_OFF_E143 = {
-  pwr: { init: 0x50044EB6, id_word: 0x60042D3A },
-  shutdown: { object: 0x50AFCCD5, slot: 2, entry: 0x50AFD2D7, mode: 1, reason: 1 },
-  flash_save: 0x50AF6A15, log: { nand: [0x4E820000, 0x200000], ret: 0x518F742F }, end: 0x50044DEE,
-  ioexp: { body: { post: 0x50056A85, flag: 0x60043170 }, pbh: { post: 0x50054EDE, flag: 0x60043180 } },
-  poll: { at: 0x5005CEAF, pin: 102 },
-};
 // The power-off's library numbers, the same on every body that runs it (src/lab/power.mjs): ioexp_write, the PBH
 // expander's request the GIO extension's write sends (E143 0x500541f3: request 1 with {+0 the pins' mask, +4 a byte,
 // +8 its request's first word, +16 the request's callback, +20 its argument}, 0x50054237..0x5005425a, D; E146's, X:
 // its power manager's start sends it), whose callback the API calls itself while the PBH's state 0xa32c4915 is 5
 // (0x5005421d..33, D)
-export const POWER_OFF_LIB = { ioexp_write: 1 };
 const PWR_MAIN_NAME = 'PWR_MAIN', SCPU_LAST_WRITE = [0x80, 0x7f, 0xfc, 0x81, 0x9c, 0x00, 0xe0, 0x98];   // 0x98e0009c: src/dev/scpu.mjs
 const LAST_WRITE_HEAD = 0x40, LOG_SPAN = 0x100, SEQUENCE_SPAN = 0x200, SENDER_SPAN = 0x200, SHELL_SPAN = 0x200, SHUTDOWN_HEAD = 0x20, START_SPAN = 0x800;
 const SHUTDOWN_USAGE = 'API_SHUTDOWN_NORMAL', SHUTDOWN_BUTTON = 'API_SHUTDOWN_REASON_BUTTON', START_SHUTDOWN = 'OlyHfwPower::startShutDown nextShootTime';
@@ -1631,9 +1736,68 @@ function powerOff(img, save) {
   if (logs.length !== 1) throw new Error(`${rule}: ${logs.length} NAND writes of an area its function sums, want one`);
   return {
     pwr: starts[0], shutdown: { object: 0x50000000 + getter, slot: img[slotAt + 8] / 4, entry: 0x50000000 + entry, mode: usage.value, reason: button.value },
-    flash_save: saves[0], log: logs[0], end: 0x50000000 + lastCall + len,
+    flash_save: saves[0], start_shutdown: 0x50000000 + start, log: logs[0], end: 0x50000000 + lastCall + len,
     ioexp: ex.length ? { body: ex[0], pbh: ex[1] } : null, poll: polls[0],
   };
+}
+
+// The power manager's two later inits at the bring-up (fact 'power.later', src/lab/power.mjs H-PWRLATER;
+// docs/hle-gaps/4.7.md 4.7.6, 4.7.10 and 4.7.16), read from power.off's init (pwr.init). E143's values
+// (POWER_LATER_E143), D unless tagged:
+// - handler: the task's message handler, the call that ends the init after it builds the start-up message {0x100,
+//   0x20} on its stack, `mov 256,d0; movhu d0,(4,sp); mov 32,d0; movbu d0,(6,sp); mov a2,a0; call handler; ret`
+//   (0x50044ec3..0x50044ed4: 0x5004408f)
+// - early, late: the two functions that build the source check {0x10, 2} the same way, `mov 16,d0; movhu d0,(4,sp);
+//   mov 2,d0; movbu d0,(6,sp)` with `mov a2,a0` before or after it, and call the handler (E143 0x50044ef5 in
+//   0x50044ed7, called by the boot at 0x50024d43; 0x50044f8b in 0x50044f7d, called at 0x501e9943). late is the one
+//   that ends `mov 1,d0; call c_set; mov 1,d0; call a_set; ret` (0x50044fcf..0x50044fdd), after it posts event 9 to
+//   the power manager's queue (`mov 9,d0; mov d0,(24,sp)`, 0x50044fa2); early is the other (E143's also asks UI_IN
+//   and the timer API, E147's sends the check only, D)
+// - a, c: the bytes the setters write, each `movbu d0,(abs); retf` (A 0x50043c63 -> 0xa32bfb58, C 0x50043c6c ->
+//   0xa32bfb59), which the task's tick reads (4.7.6)
+// Read the same on E146 and E147 (test/test_facts.mjs POWER_LATER_FOUND). Throws where a part is missing or found
+// twice.
+const START_MSG = [0x2c, 0x00, 0x01, 0xf8, 0x93, 0x04, 0x80, 0x20, 0xf8, 0x92, 0x06, 0x98];
+const SOURCE_CHECK_MSG = [0x80, 0x10, 0xf8, 0x93, 0x04, 0x80, 0x02, 0xf8, 0x92, 0x06];
+const LATER_SPAN = 0x100, EVENT9 = [0x80, 0x09, 0x42, 0x18];
+function powerLater(img, init) {
+  const rule = 'powerLater', D = (o) => h8(0x50000000 + o), i = init - 0x50000000;
+  // handler, at the end of the init
+  let handler;
+  for (let p = i; p < i + LATER_SPAN && !isRet(img, p);) {
+    const c = callAt(img, p);
+    if (bytesAt(img, p, START_MSG) && (c === null)) {
+      const h = callAt(img, p + START_MSG.length);
+      if (h && isRet(img, p + START_MSG.length + h.len)) handler = h.to;
+    }
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  if (handler === undefined) throw new Error(`${rule}: the power init ${h8(init)} does not end calling a handler with {0x100, 0x20}`);
+  // the {0x10, 2} senders
+  const fns = new Set();
+  for (let o = img.indexOf(SOURCE_CHECK_MSG[0]); o >= 0; o = img.indexOf(SOURCE_CHECK_MSG[0], o + 1)) {
+    if (!bytesAt(img, o, SOURCE_CHECK_MSG)) continue;
+    const q = o + SOURCE_CHECK_MSG.length, after = img[q] === 0x98, c = callAt(img, after ? q + 1 : q);
+    if (c?.to !== handler || (!after && img[o - 1] !== 0x98)) continue;
+    const e = entryOf(img, o, LATER_SPAN);
+    if (e === undefined) throw new Error(`${rule}: the source check {0x10, 2} at ${D(o)} is in no called function`);
+    fns.add(e);
+  }
+  if (fns.size !== 2) throw new Error(`${rule}: ${fns.size} functions send the handler ${D(handler)} the source check {0x10, 2}, want two`);
+  // late: the one that posts event 9 and ends with the two setters
+  const setter = (t) => (img[t] === 0xfc && img[t + 1] === 0x82 && isRet(img, t + 6) ? u32(img, t + 2) : null);
+  const ends = [...fns].map((e) => {
+    let p = e, ev9 = false;
+    while (p < e + LATER_SPAN && !isRet(img, p)) { ev9 ||= bytesAt(img, p, EVENT9); p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]); }
+    const c1 = callAt(img, p - 5), c0 = callAt(img, p - 12), one = (q) => img[q] === 0x80 && img[q + 1] === 0x01;
+    const ok = ev9 && c1?.len === 5 && c0?.len === 5 && one(p - 7) && one(p - 14);
+    return { e, set: ok ? { c: setter(c0.to), a: setter(c1.to) } : null };
+  });
+  const late = ends.filter((x) => x.set && x.set.a !== null && x.set.c !== null);
+  if (late.length !== 1) throw new Error(`${rule}: ${late.length} of the senders ${[...fns].map(D).join(', ')} post event 9 and end setting C and A, want one`);
+  const early = ends.find((x) => x !== late[0]).e;
+  if (!callsTo(img, early).length || !callsTo(img, late[0].e).length) throw new Error(`${rule}: ${D(early)} or ${D(late[0].e)} is called by nothing`);
+  return { handler: 0x50000000 + handler, early: 0x50000000 + early, late: 0x50000000 + late[0].e, a: late[0].set.a, c: late[0].set.c };
 }
 
 // The touch task's start in the boot (fact 'touch_start', and through bin/port.mjs the places of E143's touch init
@@ -1649,7 +1813,6 @@ function powerOff(img, save) {
 // 0x75; E134 0x5021881b, at 0x500223eb, task 0x73), where the touch task's are 0x5022d065 with 0x60040caa (task 0x5d,
 // at 0x5002198a) and 0x50217d43 with 0x6004145e (task 0x5b, at 0x5002246a, D). Returns {init, id_word} (disassembly
 // notation and the word), undefined where no such start is; throws for two.
-export const TOUCH_INIT_E143 = 0x501E3DCA, TOUCH_TASK_E143 = 0x501E3EAC, TOUCH_TASK_ID_E143 = 0x60042DCC, OLYTAST_E143 = 0x5002C546;
 function touchStart(img, kcb, task, taSt) {
   const { base } = imageBase(img), row = taskRows(img, kcb, 'touchStart').filter((r) => r.entry === task), found = [];
   if (row.length !== 1) throw new Error(`touchStart: ${row.length} static tasks at the touch task's place ${h8(task)}, want one`);
@@ -1679,8 +1842,6 @@ function touchStart(img, kcb, task, taSt) {
 // TP_FLAG (E130: 0x60420d54, the map's 0x60420d46, X), so the rule places it. Returns {flag, queue, bit} (the words
 // and the bit's mask); throws where the walk meets a return or TOUCH_TASK_SPAN bytes before the receive, or finds no
 // wait, load or test before it, or the wait's mask (its `mov imm8,d1`) lacks the bit.
-export const OLYEVWT_E143 = 0x5002BDD8, TP_FLAG_E143 = 0x6004306C;
-export const TOUCH_TASK_QUEUE_E143 = { flag: 0x6004306C, queue: 0x600432E8, bit: 8 };
 const TOUCH_TASK_SPAN = 0x300;
 function touchQueue(img, task, evWt, qerd) {
   let flag, mask, load, d1, bit;
@@ -1710,7 +1871,6 @@ function touchQueue(img, task, evWt, qerd) {
 // family; one has this opening on each of the 18 expanded images (X, a byte scan at the port's place of wup_tsk); the
 // other opening right after a return and calling it at once is `mov (a0),d0; clr d2; exth d0` (E143 0x51788936, D).
 // Returns the entry (disassembly notation); throws unless exactly one.
-export const WUP_TSK_E143 = 0x50016BF0, OLYTAWU_E143 = 0x5002C6A7;
 function taWu(img, wup) {
   const found = [];
   for (const o of callsTo(img, wup - 0x50000000)) {
@@ -1730,7 +1890,6 @@ function taWu(img, wup) {
 // loop that copies a quoted string of up to 128 bytes, D), and its port had placed them on code that calls none; E133,
 // E130, E129, E132 and the E118 family have 8 (X, a byte scan of each expanded image at the port's place). Every call
 // there is a 7-byte `call`, the form the guard checks.
-export const TSND_DTQ_E143 = 0x50016578;
 function tsndSites(img, tsnd) {
   return callsTo(img, tsnd - 0x50000000).map((p) => 0x50000000 + p);
 }
@@ -1745,7 +1904,6 @@ function tsndSites(img, tsnd) {
 // E134, E125 and E137, and E142's 0x502903a3, the save S-FLASHSAVE met there (X, a walk of each at the port's places;
 // the other bodies' ports place no DB init or flash save). Returns the return address (disassembly notation); throws
 // for no return within DB_INIT_SPAN bytes or not exactly one call of the flash save before it.
-export const DB_INIT_E143 = 0x503C5473, FLASH_SAVE_E143 = 0x503EEE94, DB_SAVE_RETURN_E143 = 0x503C5537;
 const DB_INIT_SPAN = 0x200;
 function dbSave(img, init, save) {
   const saves = [];
@@ -1823,7 +1981,8 @@ export function dialSelect(img) {
   return { select: 0x50000000 + o, select_end: end - o, table_ptr: ptr, table0 };
 }
 
-// The dial-table select of the forms dialSelect does not read (fact 'dial' where it reads none), found by its store to
+// The dial-table select of the forms dialSelect does not read (fact 'dial' where it reads none, and through
+// bin/port.mjs the place of E143's DIAL_INIT_E143, src/lab/menu.mjs DIAL_INIT), found by its store to
 // the port's place of E143's dial table pointer DIAL_TABLE_PTR_E143 (src/lab/menu.mjs DIAL_TABLE_PTR): a function that
 // opens as dialSelect's, `call getter,[],0`, after a ret or retf, and runs to a `mov Dn,(ptr)` within DIAL_STORE_SPAN
 // bytes. Its board index is either the core byte itself, `extbu d0; asl2 d0`, a board table of one word per board
@@ -1834,12 +1993,13 @@ export function dialSelect(img) {
 // at 0x601c521a, every one with index 0; `mov 0x61f8c914,a0; asl2 d0; mov (d0,a0),d1` into 0xa2764308, the table in
 // its preloaded data, D). After the index, the walk takes the `mov imm32,a0` before the indexed load `mov (d0,a0),Dn`
 // and the store of that Dn, within DIAL_WALK instructions and before any call or return. On both bodies the select is
-// the dial init itself (E134's override of E143's 0x5014b7c7; E125's carried from it, D) and board 0's id table holds
+// the dial init itself (E143's 0x5014b7c7: E134 0x501092da, E125 0x500fec8d, D) and board 0's id table holds
 // slot id and index pairs as E143's 0x60223dbc does (E134 0x601bcb8c, E125 0x601c523c: 0x2032105, 0; 0x2032104, 1, D).
-// Returns {select, select_end, table_ptr, table0} as dialSelect does (table0 the word board 0 selects; img must hold
-// the preloaded data, as bin/port.mjs's run-time image does), or undefined where no store has such an opening or its
-// select has dialSelect's form (`asl 3,d0`, read there). Throws for two selects, or a table0 outside the image.
-export const DIAL_TABLE_PTR_E143 = 0xA32DAAB0;
+// Returns {select, select_end, table_ptr, table0, init} as dialSelect does plus init (the dial init entry, equal to
+// select here; dialSelect omits init because E139 folds its select into its encoder init, not its dial init; table0 the
+// word board 0 selects; img must hold the preloaded data, as bin/port.mjs's run-time image does), or undefined where no
+// store has such an opening or its select has dialSelect's form (`asl 3,d0`, read there). Throws for two selects, or a
+// table0 outside the image.
 const DIAL_STORE_SPAN = 0x60;
 const DIAL_SEARCH = [0x04, 0xfc, 0x85, null, null, null, null, 0x08, 0x14, 0xdb, 0x1d, 0xe5, 0xf1, 0xe4, 0xfc, 0xd0, null, null, null, null,
   0xf0, 0x44, 0xa1, 0xc9, 0x0d, 0xf8, 0x40, 0x01, 0xfc, 0x81, null, null, null, null, 0xca, 0x08, 0x48, 0x89, 0x1e, 0xaa, null, 0xd0,
@@ -1875,7 +2035,7 @@ export function dialStore(img, ptr) {
       if (table0 === null || table0 < base || table0 >= base + img.length) {
         throw new Error(`dialStore: the select at ${h8(0x50000000 + e)} indexes ${h8(load.table)}, whose board-0 word is not an image address`);
       }
-      found.set(e, { select: 0x50000000 + e, select_end: s + 4 - e, table_ptr: ptr, table0 });
+      found.set(e, { select: 0x50000000 + e, select_end: s + 4 - e, table_ptr: ptr, table0, init: 0x50000000 + e });
       break;
     }
   }
@@ -1894,7 +2054,6 @@ export function dialStore(img, ptr) {
 // not read. Returns {i2c_write, i2c_read} with the functions found (disassembly notation), or undefined for none;
 // throws for a name found twice or traced twice.
 const TOUCH_TRACE = { i2c_write: '[TP_I2C] write start', i2c_read: '[TP_I2C] read start' };
-export const TOUCH_E143 = { i2c_write: 0x501E4DFD, i2c_read: 0x501E4F2A }, TOUCH_WALK = 0x20;
 export function touchI2c(img) {
   const { base } = imageBase(img), out = {};
   for (const [k, name] of Object.entries(TOUCH_TRACE)) {
@@ -1927,7 +2086,6 @@ export function touchI2c(img) {
 // name is held but not loaded or neither name nor the form is held; throws for a name held twice or loaded at other
 // than one such opening.
 const TP_OPEN_TRACES = ['[TP]open', '[TP]OPEN \n'];
-export const TP_OPEN_E143 = 0x501E40DA;
 export function touchOpen(img) {
   const { base } = imageBase(img), at = TP_OPEN_TRACES.flatMap((name) => findString(img, name, { nul: true }));
   if (!at.length) return touchOpenForm(img);
@@ -2021,7 +2179,6 @@ function touchRegList(img, write, read) {
 // 16 bodies with a touch panel W is the word after the open's byte (E143 0x62a3ebbc, E122 0x6189f36c, X); the maps
 // placed E143's word elsewhere on E130 (0x6264b0d6, W 0x6264b22c), E133, E118, E120 and E122 (X). Returns W; throws
 // where no such store comes before a return within TP_MASK_SPAN bytes.
-export const TP_MASK_E143 = 0x501E41D1, TP_MASK_WORD_E143 = 0x62A3EBC0;
 const TP_MASK_SPAN = 0x40;
 function touchMask(img, fn) {
   for (let p = fn - 0x50000000, end = p + TP_MASK_SPAN; p < end && !isRet(img, p);) {
@@ -2173,7 +2330,7 @@ export function builtinFocal(img) {
 }
 
 // The lens driver's entry points and flags that the native lens runs (fact 'lens_driver', src/lab/lens.mjs; docs/
-// hle-gaps.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
+// hle-gaps/4.4.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
 // (OLYQERD_E143) and LENS_COMMAND's queue-id word (LENS_COMMAND_QUEUE_E143 0x60043226, the module queue 0x31 of the
 // target table, src/lab/camapp.mjs MODULE_QUEUE_WORDS). D on E143, from its code:
 // - tasks [LENS_MAIN, LENS_COMMAND, LENS_ASKDATA]: the boot starts LENS_MAIN and LENS_ASKDATA right after the lens
@@ -2199,15 +2356,9 @@ export function builtinFocal(img) {
 //   driver's lens-cache table that follow one another from its first, `asl 4,d2; mov d2,a1; add T,a1; mov a1,(abs32)`
 //   (0x501a9597, T 0x602a4a24: 7 areas of 0x40000 from 0x416e0000; a string follows the table)
 // On E146 and E147 every one of them reads (X: their code at the places, the boot starts and USTART_L's calls in
-// E143's shapes; the same 15 frames of the lens's start, docs/hle-gaps.md 4.4.2). Returns {module_init, cache_init,
+// E143's shapes; the same 15 frames of the lens's start, docs/hle-gaps/4.4.md 4.4.2). Returns {module_init, cache_init,
 // task_vars, tasks, exec_queue, flags, cache_area} (disassembly notation, run-time words), or undefined where a part
 // is not found in E143's shape; throws for a part found twice.
-export const LENS_COMMAND_QUEUE_E143 = 0x60043226;
-export const LENS_DRIVER_E143 = {
-  module_init: 0x502A5D10, cache_init: 0x502A6371, task_vars: 0x502A5DFF,
-  tasks: [0x502A5E37, 0x50115A08, 0x502A8193], exec_queue: 0x60043220,
-  flags: { valid: 0xA32D4B98, attach: 0xA32D4B9A, ready: 0xA32D4B94 }, cache_area: [0x416E0000, 0x1C0000],
-};
 const LENS_FLAG_GET = [0x14, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x00, 0xde, 0x00, 0x00];
 const LENS_FLAG_SET = [0x14, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x50, 0xde, 0x00, 0x00];
 const LENS_READY_PAIR = [0xfc, 0xa8, null, null, null, null, 0xde, 0x00, 0x00, 0x00, 0xfc, 0x82, null, null, null, null, 0xde, 0x00, 0x00];
@@ -2302,7 +2453,6 @@ export function lensDriver(img, { kcb, taSt, qerd, commandQueue }) {
 // E144-family bodies with a lens mount, X); none on the three bodies with a built-in lens. S-LENS wrote the steps at
 // E143's 1164, so E140's interpolation at S1's END_FOCUS divided by zero (0x500d96d1, X). Returns T, or undefined where
 // the place does not hold that sequence.
-export const LENS_FOCAL_NOW_E143 = 0x50129980, LENS_ZOOM_TABLE_E143 = 1164;
 const LENS_READ_SPAN = 0x20, LENS_INDEX = [0xfa, 0xd0, null, null, 0xf8, 0xc0, 0x04, 0xf4, 0x80];
 export function lensZoomTable(img, fn) {
   const e = fn - 0x50000000;
@@ -2320,7 +2470,6 @@ export function lensZoomTable(img, fn) {
 // the bytes there held a nonzero flag (the record's +35366) that sent S1's focal-length interpolation down the path
 // that divides by zero (X). Returns the buffer's address, or null where no such init stores the pointer (the E143
 // family, whose S-LENS keeps E143's buffer); throws for two.
-export const LENS_RECORD_E143 = 0xA32CAA8C;
 const LENS_ALIGN = [0x85, 0xc0, 0xfc, 0xcc, null, null, null, null, 0x28, 0x3f, 0xf2, 0x04], LENS_ALIGN_SPAN = 24;
 export function lensStatic(img, record) {
   const found = [];
@@ -2342,7 +2491,6 @@ export function lensStatic(img, record) {
 // D). One W on each of the 18 bodies but E134, which has another driver (its transfers send a message and wait inline,
 // 0x50042df1, D): reached from 4 transfers on E145, 3 on E129 and E132, 2 on the others (X, a byte scan of each
 // expanded image). Returns the waits found (disassembly notation), [] for none.
-export const IIC_WAITS_E143 = [0x5004CBF6];
 const IIC_WAIT = [0x80, 0xff, 0x42, 0x04, 0xfc, 0xac, null, null, null, null, 0x3c, 0x18, 0x20, 0x08, 0x85, 0x01, 0x95, 0x01];
 const IIC_SET = [0x85, 0x01, 0x18], IIC_CALLBACK_SPAN = 0x30;
 export function iicWaits(img) {
@@ -2375,7 +2523,6 @@ export function iicWaits(img) {
 // argument and (a read) keeps no a1 at its entry (E140's write place 0x5016c56e, not checked as its driver's);
 // throws where loads disagree or no ret follows within TOUCH_ARGS_SPAN bytes. The read's register address too
 // (read_addr, touchAddr below).
-export const TOUCH_ARGS_E143 = { write_len: { sp: 20 }, read_len: { reg: 'a1' }, read_addr: ['d1'] };
 const TOUCH_ARGS_SPAN = 0x400, TOUCH_KEEP = 8;
 function touchLength(img, fn, read) {
   const e = fn - 0x50000000;
@@ -2426,7 +2573,6 @@ function touchArgs(img, write, read) {
 // E129 and E132, and the maps placed none on E145, E133 and E130 (X). Returns the entry (disassembly notation), or
 // undefined where the name is not held; throws for a name held or loaded twice, held and not loaded, or no entry.
 const FACE_COLOUR_TRACE = '[DISP] <DRV> :display_vscdrv_extosd_cpdata_set CH=', FACE_COLOUR_SPAN = 0x20;
-export const FACE_COLOUR_SET_E143 = 0x501E061A;
 function faceColourSet(img) {
   const { base } = imageBase(img), at = findString(img, FACE_COLOUR_TRACE, { nul: true });
   if (!at.length) return undefined;
@@ -2455,7 +2601,6 @@ function faceColourSet(img) {
 const SHOOTING_TRACE = { start: 'OlyHfwOpeShoot::startShootingService start', end: 'OlyHfwOpeShoot::endShootingService start',
   auto_through: 'OlyHfwOpeShoot::ctrlAutoThrough() s ctrl[%d]' };
 const SHOOTING_ENTRY = new Set(['auto_through']), SHOOTING_SPAN = 0x40;
-export const SHOOTING_E143 = { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 };
 export function shootingService(img) {
   const { base } = imageBase(img), out = {};
   for (const [k, name] of Object.entries(SHOOTING_TRACE)) {
@@ -2492,7 +2637,6 @@ export function shootingService(img) {
 // E145 ask it 27, 27 and 10 times and E142 and E140 show 999 shots). Each trace is held and loaded once on each of the
 // 18 expanded images, and exactly one callee is left on each (X, a byte scan). Returns the entry (disassembly
 // notation); throws for a trace not held or loaded once, or for none or two callees.
-export const SHOTS_QUERY_E143 = 0x50419164;
 const SHOTS_TRACE = ['OlyHfwOpeShoot::getAvailableShootCount start', 'OlyHfwOpeShoot::getAvailableShootCount end = available %d waitSave %d'];
 // mov imm8,d0 (80 xx), mov imm16,d0 (2c xx xx), mov imm32,d0 (fc cc imm32)
 const movImmD0 = (img, p) => img[p] === 0x80 || img[p] === 0x2c || (img[p] === 0xfc && img[p + 1] === 0xcc);
@@ -2527,7 +2671,6 @@ export function shotsQuery(img) {
 // is the status bit 0x80, D), so with every drive at 1 the E143 and E144 families showed no count or an orange 0 (X).
 // Exactly one such test on each of the 18 expanded images, T of the same form on all (X, a byte scan). Returns {table
 // (the run-time address of drive 0's halfword), drives (N)}; throws unless one.
-export const CARD_DETECT_E143 = { table: 0xA33AF3D4, drives: 2 };
 const DETECT_TEST = [0x1c, 0xa0, 0x00, 0xc8, 0x05, 0xf8, 0xe6, 0x80];
 const DETECT_FORM = [0x81, 0x1d, 0xa5, null, 0xc2, null, 0x1c, 0xe0, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x80, 0xa0,
   0x02, 0xc8, null, 0xa0, 0x03];
@@ -2546,7 +2689,7 @@ export function cardDetect(img) {
 }
 
 // The second card slot (fact 'card.slots', src/lab/storage.mjs S-SDDETECT and S-SDCARD's ports, src/lab/camapp.mjs
-// S-CARD's save slot; docs/hle-gaps.md 4.8.12). D, E143's addresses:
+// S-CARD's save slot; docs/hle-gaps/4.8.md 4.8.12). D, E143's addresses:
 // - detect: the SD driver's card detect of a port (0x508b0221: `mov d0,d2; mov 0x1301,d0; movhu d0,(4,sp); exthu d2;
 //   mov d2,d0; mov sp,a0; inc4 a0; call H`), which the drive status (0x508a8327: 1, no card, where it is not 0), the
 //   sdmem request's card check (0x508b3acf) and logsec's init (0x508ac195) call. Its helper H (0x508b0859) reads a GIO
@@ -2566,10 +2709,23 @@ export function cardDetect(img) {
 // - record: the settings the HLS record controller picks a still's card by (CmpSts_RecordController 0x50c73f16:
 //   `mov a0,(8,sp); mov MODE,d0; call G; mov d0,d3; mov SLOT,d0; call G; movhu d0,(12,sp)`): mode 1129 (0 and 1:
 //   the card of slot, 1 + its value; 2 to 5: both cards where both are usable) and slot 1130
-// Returns undefined where the image has no helper of H's form (a body whose detect is not read here); throws where
-// it has one and a later form differs.
-export const CARD_SLOTS_E143 = { port: 12, detect: { fn: 0x508B0221, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] },
-  record: { mode: 1129, slot: 1130 } };
+// The other bodies with two slots (card.detect drives 2: E139, E134, E125; docs/hle-gaps/4.8.md 4.8.17) detect by UI_IN's
+// level alone, in one of two forms (D):
+// - E139: the detect of E143's form (0x5066466d) whose helper is `clr d0; retf` (0x50664a3d), so the UI_IN path is
+//   always taken: port 0 answers 0 where the level of 0x1506 (+0x1f) is 0, port 1 where that of 0x1518 (+0x2f) is,
+//   else the word's 0x1301 (the level getter 0x5011091b, the media fact's switch_level)
+// - E134 and E125: a detect of its own (E134 0x50678449, E125 0x50622561; the drive status's call), `exthu d0; cmp
+//   2,d0; beq; cmp 0,d0; beq; cmp 1,d0; beq; bra; mov 0x1506,d0; call L; cmp 0,d0; bne; bra; mov 0x1518,d0; call L;
+//   cmp 0,d0; bne; clr d0; bra; mov 0x1301,d0; ret`: 0 for port 2 and for a slot whose level is 0, else 0x1301
+// pins is then null (no expander pin: the level is UI_IN's image's, S-KEYBITS). Their record controller has no
+// counterpart of E143's form (X: the scan finds none on the three); record is then the settings the remaining-shots
+// query (fact card.shots_query) reads, in E143's query's order: the save mode, the auto switch, the save slot (E143
+// 0x50419164: 1129, 1134, 1130, the controller's own; E139 1129, 1134, 1130; E134 1130, 1135, 1131; E125 1137, 1142,
+// 1138; the firmware's own name table, src/fw/setnames.mjs, names E139's and E134's MODE_PICTURE_RECORD_MEDIA and
+// _SLOT so, X; E125's table is not read). Single-slot bodies hold the same detect forms (E144, E148, E142, E140 E139's;
+// E137, E129, E132 E134's, X): drives below 2 give none.
+// Returns undefined where the card driver's detect table has fewer than two drives, or the image has no helper of
+// H's form and no UI_IN form; throws where it has one and a later form differs.
 const N4 = [null, null, null, null];
 const SLOT_HELPER = [0x92, 0x1c, 0xa0, 0x00, 0xc8, 0x08, 0xa0, 0x01, 0xc8, 0x0c, 0xca, 0x19, 0xfc, 0xcc, ...N4, 0xca, 0x08, 0xfc, 0xcc, ...N4,
   0xdd, ...N4, 0x00, 0x04, 0xca, 0x04, 0x80, 0x01, 0xa0, 0x00, 0xc8, 0x06, 0x80, 0x01, 0xca, 0x03, 0x00, 0xf0, 0x72, 0x80, 0x01, 0xdf, 0x20, 0x08];
@@ -2581,12 +2737,19 @@ const SLOT_PIN_READ = [0xf8, 0xfe, 0xfc, 0x1c, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x
 const SLOT_SHADOW = [0x14, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x00, 0xf8, 0xc1, 0x03, 0xf2, 0xa6, 0xf2, 0x02], SLOT_SHADOW_SPAN = 0x50;
 const SLOT_PORT = [0x93, 0xbf, 0x00, 0xc9, 0x05, 0xdf, 0xf0, 0x14, 0x8a, null, 0xf1, 0x5e, 0xf1, 0xe8, 0xf0, 0x60];
 const SLOT_RECORD = [0x43, 0x08, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0x83, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0xf8, 0x93, 0x0c];
-export function cardSlots(img, command) {
+// E139's helper (`clr d0; retf`), E134's and E125's detect (the switch codes at +0x10 and +0x20, L's calls after them)
+const SLOT_HELPER_NONE = [0x00, 0xde, 0x00, 0x00];
+const SLOT_LEVEL = [0x1c, 0xa0, 0x02, 0xc8, null, 0xa0, 0x00, 0xc8, 0x08, 0xa0, 0x01, 0xc8, 0x14, 0xca, null, 0x2c, null, null, 0xdd, ...N4,
+  0xf0, 0x18, 0xa0, 0x00, 0xc9, null, 0xca, null, 0x2c, null, null, 0xdd, ...N4, 0xf0, 0x18, 0xa0, 0x00, 0xc9, null, 0x00, 0xca,
+  null, 0x2c, 0x01, 0x13];
+const SLOT_SHOTS_SPAN = 0x100, SLOT_SHOTS_IDS = 3;
+export function cardSlots(img, command, { drives = 2, shots = null } = {}) {
   const rule = 'cardSlots', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), word = (a) => u32(img, a - base);
   const scan = (form) => { const at = []; for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form)) at.push(o); return at; };
+  if (drives < 2) return undefined;
   // the helpers of H's form (E143 has two: the write-protect read 0x508b01f7's, 0x508b0824, reads pins 21 and 22 so)
   const helpers = new Set(scan(SLOT_HELPER));
-  if (!helpers.size) return undefined;
+  if (!helpers.size) return levelSlots(img, command, shots);
   const fns = scan(SLOT_DETECT).filter((o) => helpers.has(callAt(img, o + SLOT_DETECT.length)?.to));
   if (fns.length !== 1) throw new Error(`${rule}: ${fns.length} functions of the detect's form call a helper (${[...helpers].map(D).join(', ')}), want one`);
   const F = fns[0], H = callAt(img, F + SLOT_DETECT.length).to, gio = [u32(img, H + 14), u32(img, H + 22)], R = callAt(img, H + 26).to;
@@ -2617,6 +2780,34 @@ export function cardSlots(img, command) {
   if (rec.length !== 1) throw new Error(`${rule}: ${rec.length} functions of the record controller's card choice's form, want one`);
   const id = (o) => img[o] | img[o + 1] << 8;
   return { port: img[C + 9], detect: { fn: 0x50000000 + F, switches, pins }, record: { mode: id(rec[0] + 3), slot: id(rec[0] + 14) } };
+}
+// cardSlots' UI_IN forms (E139, E134, E125): the detect, the port index, and record by the remaining-shots query's
+// settings (shots: fact card.shots_query, disassembly notation). Returns undefined where neither form is held
+function levelSlots(img, command, shots) {
+  const rule = 'cardSlots', D = (o) => h8(0x50000000 + o), id = (o) => img[o] | img[o + 1] << 8;
+  const scan = (form) => { const at = []; for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form)) at.push(o); return at; };
+  // E139's: the detect of E143's form with the helper that answers 0; E134's and E125's own
+  const a = scan(SLOT_DETECT).filter((o) => { const c = callAt(img, o + SLOT_DETECT.length); return c && bytesAt(img, c.to, SLOT_HELPER_NONE); });
+  const b = scan(SLOT_LEVEL);
+  if (!a.length && !b.length) return undefined;
+  if (a.length + b.length !== 1) throw new Error(`${rule}: ${a.length} detects of E143's form with a helper that answers 0 and ${b.length} UI_IN-level detects, want one`);
+  const F = a.length ? a[0] : b[0], at = a.length ? [0x1f, 0x2f] : [0x0f, 0x1f];
+  const switches = at.map((k) => (img[F + k] === 0x2c ? id(F + k + 1) : null));
+  const levels = at.map((k) => callAt(img, F + k + 3)?.to);
+  if (switches.includes(null) || levels[0] === undefined || levels[0] !== levels[1]) throw new Error(`${rule}: the detect ${D(F)} does not ask one level getter for two switch codes at +0x${at[0].toString(16)} and +0x${at[1].toString(16)}`);
+  const C = command - 0x50000000;
+  if (!bytesAt(img, C, SLOT_PORT)) throw new Error(`${rule}: the SD command layer ${h8(command)} does not index its ports by a field of the command`);
+  // the settings the remaining-shots query loads, `mov ID,d0; call G` with one G, in first-load order
+  if (shots === null) throw new Error(`${rule}: the UI_IN-level detect ${D(F)} needs the remaining-shots query for the save settings`);
+  const ids = [], getters = new Set();
+  for (let p = shots - 0x50000000, end = p + SLOT_SHOTS_SPAN; p < end && ids.length < SLOT_SHOTS_IDS; p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1])) {
+    const c = img[p] === 0x2c ? callAt(img, p + 3) : null;
+    if (!c) continue;
+    getters.add(c.to);
+    if (!ids.includes(id(p + 1))) ids.push(id(p + 1));
+  }
+  if (ids.length !== SLOT_SHOTS_IDS || getters.size !== 1) throw new Error(`${rule}: the remaining-shots query ${h8(shots)} loads ${ids.length} settings through ${getters.size} getters within 0x${SLOT_SHOTS_SPAN.toString(16)} bytes, want ${SLOT_SHOTS_IDS} through one`);
+  return { port: img[C + 9], detect: { fn: 0x50000000 + F, switches, pins: null }, record: { mode: ids[0], slot: ids[2] } };
 }
 
 // The movie record time's division by the movie info's frame rate (fact 'card.movie_rate', src/lab/camapp.mjs
@@ -2655,7 +2846,6 @@ export function movieRate(img) {
 // 0x9b800030 and 29..34 on the others). Returns {init (disassembly notation), triggers: W, irqs: the IRQs in their
 // words' order}, or undefined where no init stores four or six words so and loads as many consecutive IRQs; throws
 // for two, or one that no call enters.
-export const DPC_E143 = { init: 0x50050279 };
 const DPC_WORDS = 6, DPC_FORMS = [4, 6], DPC_SPAN = 0x180, MMIO = [0x90000000, 0xA0000000];
 export function deferredCalls(img) {
   const store = (o, w) => img[o] === 0xfc && img[o + 1] === 0x81 && u32(img, o + 2) === w;
@@ -2685,6 +2875,46 @@ export function deferredCalls(img) {
   if (init === undefined) throw new Error(`deferredCalls: the trigger init's stores at ${h8(0x50000000 + p)} have no entry a call reaches`);
   return { init: 0x50000000 + init, triggers: w, irqs };
 }
+// The A/D driver's init (fact 'adc', src/lab/play.mjs H-ADINIT; docs/hle-gaps/4.7.md 4.7.20), which the boot calls at
+// stage 0_3..0_l (E143 0x5004d3c3 from 0x50023f55, D) and which alone fills the channel table the driver's requests
+// look their channel up in (0x5004d62d). Its form (E143 0x5004d3c3..0x5004d42b, D): `clr d0` and three stores of the
+// driver's state, the core byte's getter, `extbu d0; asl 4,d0; mov d0,a1; add CONFIGS,a1` (16-byte records by the
+// core byte), `mov (4,a1),d0; mov RING,a0; mov d0,(TABLE); movbu (8,a1),d0; movbu d0,(COUNT)` (the table of 3-byte
+// entries {channel, converter channel, completion kind} and its count), the request ring cleared, `mov (12,a1),d0;
+// call CONV; ret [],4`, where the converter's init CONV opens `mov d0,d1; clr d0; movbu d0,(abs); mov IRQ,d0` and
+// attaches the converter's IRQ (E143 0x5004ccc7, 319). E143's (AD_E143): CONFIGS 0x60118724, TABLE 0xa32bff10, COUNT
+// 0xa32bff14, IRQ 319. One such init on every expanded image of the E143 and E144 families (X, a byte scan of the
+// table's load and stores: E143 0x5004d3e9, E146 0x5004ee6b, E147 0x5004ec07, E144 0x500474c8, E145 0x50045536,
+// E148 0x50048228, E142 0x50046262, E140 0x5004583b, E132 0x50045243; none on E122). Returns {init, configs, table,
+// count, irq} (disassembly notation and the words), undefined where no init has the form; throws for two.
+const AD_TABLE_LOAD = [0xf8, 0x01, 0x04, 0xfc, 0xdc, null, null, null, null, 0xfc, 0x81, null, null, null, null, 0xf8, 0x41, 0x08, 0xfc, 0x82];
+const AD_HEAD = [0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0x81, null, null, null, null, 0xfc, 0x82, null, null, null, null];
+const AD_SPAN = 0x80;
+export function adDriver(img) {
+  const rule = 'adDriver', D = (o) => h8(0x50000000 + o), found = [];
+  for (let o = img.indexOf(0xf8); o >= 0 && o + AD_TABLE_LOAD.length + 4 <= img.length; o = img.indexOf(0xf8, o + 1)) {
+    if (!bytesAt(img, o, AD_TABLE_LOAD)) continue;
+    // before it: `extbu d0; asl 4,d0; mov d0,a1; add imm32,a1` (14 f8 c0 04 f1 e1 fc d1 imm32), after the head and the
+    // core byte's call (d32 call, 7 bytes)
+    const add = o - 6, getter = add - 6 - 7;
+    if (!bytesAt(img, add - 6, [0x14, 0xf8, 0xc0, 0x04, 0xf1, 0xe1]) || !bytesAt(img, add, [0xfc, 0xd1]) || img[getter] !== 0xdd) continue;
+    const init = getter - AD_HEAD.length;
+    if (!bytesAt(img, init, AD_HEAD)) continue;
+    found.push({ init, configs: u32(img, add + 2), table: u32(img, o + 11), count: u32(img, o + 20) });
+  }
+  if (!found.length) return undefined;
+  if (found.length > 1) throw new Error(`${rule}: ${found.length} A/D inits (${found.map((f) => D(f.init)).join(', ')}), want one`);
+  const f = found[0];
+  if (!callsTo(img, f.init).length) throw new Error(`${rule}: the A/D init ${D(f.init)} is called by nothing`);
+  // the converter's init: the init's last call, `mov (12,a1),d0; call CONV; ret [],4`
+  let conv;
+  for (let p = f.init; p < f.init + AD_SPAN; p++) {
+    if (bytesAt(img, p, [0xf8, 0x01, 0x0c])) { const c = callAt(img, p + 3); if (c && bytesAt(img, p + 3 + c.len, [0xdf, 0x00, 0x04])) conv = c.to; break; }
+  }
+  if (conv === undefined) throw new Error(`${rule}: the A/D init ${D(f.init)} does not end calling the converter's init with the record's word +12`);
+  if (!bytesAt(img, conv, [0x81, 0x00, 0xfc, 0x82, null, null, null, null, 0x2c])) throw new Error(`${rule}: the converter's init ${D(conv)} does not open mov d0,d1; clr d0; movbu d0,(abs); mov imm16,d0`);
+  return { init: 0x50000000 + f.init, configs: f.configs, table: f.table, count: f.count, irq: img[conv + 9] | img[conv + 10] << 8 };
+}
 // The serial controller's driver under PER_SIO's channels (fact 'sio', src/lab/sio.mjs S-SIOBUS), the layer that
 // PER_SIO's IIC calls start their transfers through (E132: the IIC write 0x5004ba70 and write-read 0x5004bac8 call
 // the transfer start 0x500506cb, the write-read the receive start 0x500509be before it, D):
@@ -2712,7 +2942,6 @@ export function deferredCalls(img) {
 // registration but no such dispatch, restart store or map (X, a byte scan of the 18). Returns {tx_start, rx_start,
 // done, dispatch, restart, channels, map_init} (code in disassembly notation, the tables and the word run-time
 // addresses), or undefined where a part is missing; throws for two of one.
-export const SIO_E143 = { tx_start: 0x5005DC03, rx_start: 0x5005DEF6, done: [0xA32C96B0, 0xA32C96DC], dispatch: 0x5005ED65, restart: 0xA32C9760, channels: 0xA32C9E48, map_init: 0x5005F0B2 };
 const SIO_W = [null, null, null, null];
 const SIO_REG = [0x15, 0xa5, 0x01, 0xc9, 0x0d, 0x82, 0x16, 0x56, 0xfc, 0xdd, ...SIO_W, 0xf3, 0xc9, 0xa5, 0x02, 0xc9, 0x0c, 0x14, 0x54, 0xfc, 0xdd, ...SIO_W, 0xf3, 0xc1, 0xde, 0x80, 0x04];
 const SIO_TX = [0xf1, 0xd7, 0xf1, 0xe9, 0xfc, 0xd1, ...SIO_W, 0x08, 0xf8, 0x59, 0x02, 0xf8, 0x49, 0x01, 0xfc, 0xdd, ...SIO_W, 0x56, 0xf3, 0xa9, 0x14, 0x1d, 0x17, 0xf1, 0xed, 0xf0, 0xf2];
@@ -2763,7 +2992,6 @@ export function sioDriver(img) {
 // byte scan of the 18). Returns {key, stage}, the two run-time words, both null where neither is held (the lab then
 // sets neither: no code of the build tests a stage bit or reads a boot key of this form); throws for two of either,
 // or one without the other.
-export const BOOT_E143 = { key: 0xA32DAB30, stage: 0xA32DF1F4 };
 const STAGE_TEST = [0xfc, 0xa5, null, null, null, null, 0x28, 0xff, 0x8a, 0x01, 0xf2, 0x92, 0x88, 0xf2, 0x04, 0xc8, 0x06,
   0x80, 0x01, 0xca, 0x03, 0x00, 0xde, 0x80, 0x04];
 const BOOT_KEY_STORE = [0x54, 0xf3, 0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xc8, 0x03, 0x00, 0x00, 0x01];
@@ -2774,7 +3002,7 @@ export function bootState(img) {
   return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
 }
 // The boot's section loader, which the lab does not run (fact 'sections', src/fw/sections.mjs bootLoads, src/lab/menu.mjs
-// S-SECLOADED, the loaded-ranges mode; docs/om1-cores-spec.md 3.6, docs/hle-gaps.md 4.6.3). CPU 2's USTART_L2 copies
+// S-SECLOADED, the loaded-ranges mode; docs/om1-cores-spec.md 3.6, docs/hle-gaps/4.6.md 4.6.3). CPU 2's USTART_L2 copies
 // the main block's sections from flash to DRAM one by one, load_section(n) for n = 1..count (E143 0x50024e6b, E147
 // 0x50024eb5, D):
 //   mov d0,a3; mov -1,d3; add d0,d3; call END,[],0; mov d0,d2; mov d3,d0; extbu d0; mul 12,d0; mov d0,a2;
@@ -2789,20 +3017,31 @@ export function bootState(img) {
 //   instruction that names the word (E143 0xa32df1f8, E146 0xa32df2d0, E147 0xa32de590; X: a byte scan of each block
 //   for the word and its other view). The per-section init ORs the same bits into the stages' ready word (fact
 //   boot.stage, S-BOOTSTAGE), which has readers.
+// The E-family bodies whose reset head copies with the flash-copy routine (src/fw/board.mjs reset_head 'flash-copy')
+// hold the same loader in another register allocation, `mov d0,(4,sp); mov d0,d3; add -1,d3; call END,[],0; mov d0,d2;
+// mov d3,d0; extbu d0; mul 12,d0; mov d0,a3; add TABLE,a3` and the same mask store (E142 0x500257c7, its END
+// 0x50025766 with 9 cases, TABLE 0x60027068, COPIED 0xa272e420, the stages' ready word 0xa272e41c just before it;
+// the boot task calls it for sections 1, 7, 2, 3, 4, 5, 6, 8, 9 in that order, 0x50024f0d..0x500251b0; the
+// per-section step 0x5002584c(n) waits for bit n - 1 of COPIED (0x50025854), runs the section's work and ORs bit n - 1
+// into the stages' ready word (0x50025921), called for stage 1 from the boot task at 0x50025287 and for the others from
+// module code, 0x50170df8..0x50171bae; COPIED is named by those two functions alone, X: a byte scan; D). Their END lacks
+// the leading `clr d1` on E130 and E133 (0x50022879, 0x500229bf: a case out of range returns d0 as it came, D), the
+// switch's only other form. X, a byte scan of the 18 expanded images: E125, E130, E133, E137, E140 and E142 hold this
+// form, E143, E146 and E147 the first, the 9 others neither. Their reset head's copies are not headCopies' (it reads
+// the E143 family's head, which runs from the flash view), so head is null there: what the boot loads (bootLoads,
+// the loaded-ranges mode, --sec-ready) is not read for them; S-SECLOADED, which needs only the mask and the count, is.
 // Returns {loader, switch (disassembly notation), table, copied, ends: [the run-time address of each case's immediate,
-// section 1 first], head: [the call sites of the reset head's copies, headCopies]}, or null where the build holds no
-// such loader (X: E143, E146 and E147 hold one, the 15 other expanded images none); throws for two, or for a switch or
-// case of another form.
-export const SECTIONS_E143 = { loader: 0x50024E6B, switch: 0x50024E02, table: 0x60029B1C, copied: 0xA32DF1F8,
-  ends: [0x60045E3A, 0x60045E42, 0x60045E7A, 0x60045E4A, 0x60045E6A, 0x60045E52, 0x60045E5A, 0x60045E72, 0x60045E62, 0x60045E83],
-  head: [0x50000155, 0x50000178, 0x5000019B, 0x500001BA, 0x500001DC] };
+// section 1 first], head: [the call sites of the reset head's copies, headCopies] or null}, or null where the build
+// holds no such loader; throws for two, or for a switch or case of another form.
 const SECTION_LOAD = [0xf1, 0xe3, 0x8f, 0xff, 0xe3, 0xcd, null, null, 0x00, 0x00, 0x82, 0x8c, 0x14, 0xf9, 0x14, 0x0c, 0xf1, 0xe2, 0xfc, 0xd2];
+const SECTION_LOAD_FC = [0x42, 0x04, 0x83, 0x2b, 0xff, 0xcd, null, null, 0x00, 0x00, 0x82, 0x8c, 0x14, 0xf9, 0x14, 0x0c, 0xf1, 0xe3, 0xfc, 0xd3];
 const SECTION_MASK = [0x17, 0x80, 0x01, 0xf2, 0x9c, 0xfc, 0xa5, null, null, null, null, 0xf2, 0x14, 0xfc, 0x81];
-export const SECTION_SWITCH = [0x04, 0xa0, 0x01, 0xc0, null, 0xa0, null, 0xc1, null, 0x28, 0xff, 0x54, 0xfc, 0xdc, null, null, null, null, 0xf3, 0x80, 0xf0, 0xf4];
-export const SECTION_ROW = 12;
+const SECTION_SWITCH_BARE = SECTION_SWITCH.slice(1);    // the same without the leading clr d1 (E130, E133)
 const SECTION_SPAN = 0x80;     // load_section's mask store after its head (E143 0x50024e6b -> 0x50024ec9, D)
 export function sectionLoader(img) {
-  const at = oneAt(img, SECTION_LOAD, 'sectionLoader', 'section loads');
+  const a = oneAt(img, SECTION_LOAD, 'sectionLoader', 'section loads'), b = oneAt(img, SECTION_LOAD_FC, 'sectionLoader', 'section loads (the flash-copy family\'s form)');
+  if (a !== null && b !== null) throw new Error(`sectionLoader: section loads of both forms, at ${h8(0x50000000 + a)} and ${h8(0x50000000 + b)}`);
+  const at = a ?? b;
   if (at === null) return null;
   const { base } = imageBase(img);
   let mask = null;
@@ -2810,14 +3049,14 @@ export function sectionLoader(img) {
   if (mask === null) throw new Error(`sectionLoader: no 'mov (W),d1; or d1,d0; mov d0,(W)' within 0x${SECTION_SPAN.toString(16)} bytes of load_section ${h8(0x50000000 + at)}`);
   const sw = callAt(img, at + 5).to;
   const ends = sectionEnds(img, base, 0x50000000 + sw, 'sectionLoader');
-  const head = headCopies(img).copies.map((c) => c.at);
+  const head = a !== null ? headCopies(img).copies.map((c) => c.at) : null;
   return { loader: 0x50000000 + at, switch: 0x50000000 + sw, table: u32(img, at + 20), copied: mask, ends, head };
 }
 // The run-time addresses of the end switch's case immediates (sectionLoader) at sw (disassembly notation), read from img
 // (run-time base `base`); also src/fw/sections.mjs's check of an image in use. Throws for another form.
 export function sectionEnds(img, base, sw, rule) {
-  const o = sw - 0x50000000;
-  if (!bytesAt(img, o, SECTION_SWITCH)) throw new Error(`${rule}: the section end switch at ${h8(sw)} is not 'clr d1; cmp 1,d0; blt; cmp N,d0; bgt; add -1,d0; asl2 d0; mov JT,a0; mov (d0,a0),a0; jmp (a0)'`);
+  const s = sw - 0x50000000, bare = bytesAt(img, s, SECTION_SWITCH_BARE), o = bare ? s - 1 : s;   // o: the offsets below as with clr d1
+  if (!bare && !bytesAt(img, s, SECTION_SWITCH)) throw new Error(`${rule}: the section end switch at ${h8(sw)} is not '[clr d1;] cmp 1,d0; blt; cmp N,d0; bgt; add -1,d0; asl2 d0; mov JT,a0; mov (d0,a0),a0; jmp (a0)'`);
   const count = img[o + 6], jt = u32(img, o + 14) - base, ends = [];
   for (let n = 1; n <= count; n++) {
     const c = u32(img, jt + 4 * (n - 1)) - base;
@@ -2881,7 +3120,7 @@ function oneAt(img, pat, rule, what, from = 0, to = img.length) {
 }
 const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 
-// The card's file system (fact 'storage', src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): the seams the lab runs it at,
+// The card's file system (fact 'storage', src/lab/storage.mjs; docs/hle-gaps/4.8.md 4.8.2): the seams the lab runs it at,
 // in a library the bodies share instruction for instruction but for addresses, registers' allocation and a few
 // immediate forms (X: every pattern below on each expanded image). D unless tagged, from E143's code:
 // - FILECLBK, the file module's task, opens its loop with `clr d0; mov d0,(busy); movhu (Q),d0; mov a2,a0; exth d0;
@@ -2962,14 +3201,6 @@ const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 // Found on all 18 expanded images (X; the E118 family's since its forms above, 2026-10-30).
 // Returns undefined where FILECLBK's loop is not found or a seam is missing; throws for a seam found twice or a
 // bring-up, a task start or a NAND call of another shape.
-export const STORAGE_E143 = {
-  init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0, reply: 0x508900C4 },
-  fat_error: 48, nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
-  command: 0x508AD03C, command_fields: { code: 24, arg: 28, resp: 32, buffer: 48, count: 52, block: 56, status: 74 },
-  album_init: 0x508B67E8, status: 0x508A8327, cflush: 0x508881FA,
-  card_power: { send: 0x50059656, ret: 0x508B033C }, card_switch: null,
-  names: { folder: 'OMSYS', file: 'P101', ext: 'JPG' },
-};
 // The storage library's own numbers, which the seams above share on every body that has them (src/lab/storage.mjs;
 // D on E143, from its code; the same on the others is X: their sessions mount, format, count and write with them).
 // FILECLBK's message is {reply queue (0: none), word, code, parameter} (16 bytes, as the API's senders post it,
@@ -3002,11 +3233,6 @@ export const STORAGE_E143 = {
 // (0x519f9ea7). kind: the DCF kind of a JPEG file, which the database counts it under (rec's table 0x606e03ac by the
 // file's type, 1 for its JPEG; 0x50879bc7 counts the fnode's +88; the media API's image count of type 1 reads it,
 // 0x502d17e3)
-export const STORAGE_LIB = {
-  codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 }, unformatted: 0xE08, card_out: 2, card_info: 0x12,
-  fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C }, drive: 'C',
-  rec: { codes: { open: 0x32, reserve: 0xF1, write: 0x54, entry: 0x66, register: 0x33, cancel: 0x36 }, kind: 1 },
-};
 const FAT_ERROR = 48, FAT_ERROR_SPAN = 10;
 const FCB_HEAD = 0x14, FCB_REPLY = 0x80, FS_INIT = 0x100, ALBM_SPAN = 0x60, STATUS_HEAD = 8, FS_WALK = 64, STATUS_SPAN = 0x100, NAND_SPAN = 0x40;
 const FCB_LOOP = [0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xac, null, null, null, null, 0x98, 0x18, 0x85, 0x10];
@@ -3269,7 +3495,6 @@ export function fileSystem(img) {
 // vt[0] 0x506d1691 calls fn(arg) when fn is not 0; E144's 0x50878f17 and 0x50878f59, the same instruction for
 // instruction), and the media control's command 1, the format (getMediaCtrlCBC's 1 -> 16 in the application,
 // 0x506a844c)
-export const MEDIA_LIB = { mount: { unmounted: 0, mounted: 8, rec_end: 2, end: 8 }, switch_event: 0x02020000, cab: { closure: 28, fn: 16, format: 1 } };
 const MDA_PROC_FILE = 'OlyHfwOpeMdaCtrlProcessEvFw.cpp', MDA_RECEPTION_FILE = 'OlyHfwReception.cpp', MDA_MANAGER_FILE = 'CapMed_MediaManager.cpp';
 const MDA_HEAD = 0x20, MDA_FILE = 0x60, MDA_BODY = 0x1000, MDA_SEND = 0x40, MDA_SLOTS = 4, MDA_SLOT_SPAN = 0x30;
 const MDA_VT = 6, MDA_VT_FILE = 0x80, MDA_SD = 0x8000;
@@ -3430,14 +3655,12 @@ export function mediaHls(img, storage = fileSystem(img)) {
 // images (X, a byte scan), whose recording modules build the same requests in their own functions (not read).
 // Returns {time: the clock read's entry}, the one the lab calls for a picture's time stamp, or null where no recorder
 // is found; throws for two, or for one whose builders do not send STORAGE_LIB's codes.
-export const RECORDER_E143 = { time: 0x5012B7CD };
 // The DCF database's picture counts (fact 'dcf.counts', src/lab/camapp.mjs S-CARD): a table of 52 bytes a slot, +0
 // the total and +4 + 4 * type the count of each type 1..8 (+40 type 255, +44 type 9, +48 type 33), which the
 // database's count update adds to (E143 0x50874b48, from the registration 0x50879bc7) and the media API's image count
 // (0x503feea4) reads through its getter, `mov d1,d2; extbu d2; cmp 255,d2; bne; exthu d0; udfu01 52,d0; add
 // T,d0; mov d0,a0; mov (40,a0),d0` (E143 0x502d1799, T 0xa33aa5b4, D). One such getter on each of the 18 expanded
 // images (X, a byte scan). Returns T; throws for none or two.
-export const DCF_COUNTS_E143 = 0xA33AA5B4;
 const DCF_COUNT_GET = [0x86, 0x16, 0xfa, 0xca, 0xff, 0x00, 0xc9, null, 0x1c, 0xf9, 0x14, 0x34, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe0,
   0xf8, 0x00, 0x28];
 export function dcfCounts(img) {
@@ -3459,14 +3682,24 @@ export function dcfCounts(img) {
 // - erase_all (id 0x70010, 0x503fdaf6: d0 the media; 2 or more returns 0) builds the DCF edit's ALL_DELETE request:
 //   +2 the media, +12 0, FILECLBK's code 37 (0x25: `mov 37,d0; mov d0,(40,sp)`, 0x503fdba2), and posts it through
 //   the API's sender with the API's reply queue (0x503fdbdc), returning the token (src/lab/media.mjs S-MDACTRL's
-//   erase all; docs/hle-gaps.md 4.8.15). An image without it gives erase_all null.
+//   erase all; docs/hle-gaps/4.8.md 4.8.15). An image without it gives erase_all null;
+// - unlock_all (id 0x70025, 0x503ff28b: d0 the media, d1 1 to lock, else unlock; a media 2 or more, or 0x8010,
+//   returns 0) builds the DCF edit's request for every picture: +2 the media, +12 the option 0x40000 (the edit's
+//   walk of all objects, 0x50872dfc: option bits 0x60000), FILECLBK's code 35 (0x23, OBJ_LOCK) for d1 1, else 36
+//   (0x24, OBJ_UNLOCK: `mov 36,d0`, 0x503ff365), posted as the erase all's (src/lab/media.mjs S-MDACTRL's unlock
+//   all, the media control's command 5). An image without it gives unlock_all null;
+// - rating_erase (id 0x7004e, 0x5040263e: d0 the media) builds the erase all's ALL_DELETE request with +12 the option
+//   0x10 (`or 16,d0`, 0x504026ad) and +20 1, FILECLBK's code 37 (`mov 37,d0`, 0x504026e6), posted as the erase
+//   all's: with the option bit 0x10 the edit's walk keeps every picture whose Exif Rating (tag 0x4746) is +20 or
+//   more (0x508734aa, 0x50873fbc; S-MDACTRL's rating-exclusive erase all, command 6). An image without it gives
+//   rating_erase null.
 // The entry of each is the greatest call target within API_ENTRY bytes before its id's load. One load of each id
 // in d0 on 17 images, none on E118 and E120 (X, a byte scan; E144's and E130's functions read as E143's, D: E144
-// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all}, or null where the first two ids are
+// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute, erase_all, unlock_all, rating_erase}, or null where the first two ids are
 // not loaded; throws for an id loaded twice, a load with no call target before it, or a function without its code or
 // its read within API_BODY bytes of whole instructions.
-export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1, erase_all: 0x503FDAF6 };
-const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ERASE_ALL = 0x70010, API_ENTRY = 0x20, API_BODY = 0x200, DCFED_OBJ_DEL = 0x21, DCFED_ALL_DELETE = 0x25, FNODE_ATTR = 89;
+const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ERASE_ALL = 0x70010, API_UNLOCK_ALL = 0x70025, API_RATING_ERASE = 0x7004E, API_ENTRY = 0x20, API_BODY = 0x200;
+const DCFED_OBJ_DEL = 0x21, DCFED_OBJ_UNLOCK = 0x24, DCFED_ALL_DELETE = 0x25, FNODE_ATTR = 89;
 export function pictureErase(img) {
   const rule = 'pictureErase', D = (o) => h8(0x50000000 + o);
   const fn = (id, what, has) => {
@@ -3482,7 +3715,9 @@ export function pictureErase(img) {
   const del = fn(API_OBJECT_DELETE, "`mov 33,d0` (the DCF edit's object delete)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_DEL);
   const attr = fn(API_ATTRIBUTE, "`movbu (89,aN),dM` (the fnode's attribute)", (q) => img[q] === 0xf8 && (img[q + 1] & 0xf0) === 0x40 && img[q + 2] === FNODE_ATTR);
   const all = fn(API_ERASE_ALL, "`mov 37,d0` (the DCF edit's ALL_DELETE)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_ALL_DELETE);
-  return del === null || attr === null ? null : { object_delete: del, attribute: attr, erase_all: all };
+  const unlock = fn(API_UNLOCK_ALL, "`mov 36,d0` (the DCF edit's OBJ_UNLOCK)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_UNLOCK);
+  const rating = fn(API_RATING_ERASE, "`mov 37,d0` (the DCF edit's ALL_DELETE)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_ALL_DELETE);
+  return del === null || attr === null ? null : { object_delete: del, attribute: attr, erase_all: all, unlock_all: unlock, rating_erase: rating };
 }
 // The HLS media layer's status word of the SD card in the first slot (fact 'media_status', and through bin/port.mjs
 // the place of E143's MEDIA_STATUS_E143; src/lab/camapp.mjs S-CARD's CARD_STATUS; docs/model-survey.md finding 138).
@@ -3495,7 +3730,6 @@ export function pictureErase(img) {
 // and E120 (X: src/fw/ports.mjs before this rule). One such opening on each of the 19 expanded images, its medium-4
 // branch to `mov d1,(abs32)` (X, a byte scan). Returns that word; throws unless one opening, or where its branch is not
 // that store.
-export const MEDIA_STATUS_E143 = 0x60360BEC;
 const MEDIA_STATUS_SET = [0x82, 0xaa, 0x04, 0xc8, null, 0xa0, 0x08, 0xc8, null, 0xa0, 0x01, 0xc8];
 export function mediaStatus(img) {
   const at = oneAt(img, MEDIA_STATUS_SET, 'mediaStatus', 'media status setters');
@@ -3515,7 +3749,6 @@ export function mediaStatus(img) {
 // the votes for E122's 0x616022d8 and 0x616022e4 (medium 1's) tied at 4 each (X: bin/port.mjs at master 4e08ef9; the
 // earlier ports had 0x616022d8 and 0x615e04a4, the setter's). Returns W; throws unless one setter, or where medium 4
 // is not its first medium or does not branch to the code after the compares.
-export const MOUNT_STATE_E143 = 0x60360BFC;
 export function mountState(img) {
   const found = [];
   for (let o = img.indexOf(0xa0); o >= 0; o = img.indexOf(0xa0, o + 1)) {
@@ -3564,7 +3797,7 @@ export function recorder(img) {
   return { time: 0x50000000 + time };
 }
 
-// REC_FILE's task natively (fact 'rec_file', src/lab/rec.mjs; docs/hle-gaps.md 4.8.10): the EXIF module's template,
+// REC_FILE's task natively (fact 'rec_file', src/lab/rec.mjs; docs/hle-gaps/4.8.md 4.8.10): the EXIF module's template,
 // REC's module init, REC_FILE's task and the packet REC_IMAGE posts it, REC_IMAGE's rec_jpeg_exec with the image
 // pipeline's seams, and REC_FILE's file contexts, read at the port's place of E143's CPU 0 kcb (KCB0_E143). D on E143
 // (REC_FILE_E143: the values src/lab/rec.mjs gave by hand before the rule) unless tagged:
@@ -3593,7 +3826,7 @@ export function recorder(img) {
 //   rec_ImgPro_CreateParam's extension reads for the size of its first buffer (S-RECREQ gives it 16; this version's
 //   dump only: the other versions' rules do not read it); and RecordMediaMode (1 byte, +297; E146 and E147 +267), the
 //   save mode REC_MAIN copies from the request and REC_FILE's double-slot test reads (0x5053dcf8; S-RECREQ gives it
-//   the setting's value, docs/hle-gaps.md 4.8.14; this version's dump only too)
+//   the setting's value, docs/hle-gaps/4.8.md 4.8.14; this version's dump only too)
 // - jpeg: make_image (S-JPEGENC) by its trace; rec_jpeg_exec by its trace too, read as the form but not given since
 //   2026-11-11 (no stand-in reads it: REC_IMAGE's task runs it); header, the size rec_jpeg_exec clears before the
 //   encode, the
@@ -3622,30 +3855,11 @@ export function recorder(img) {
 // - clock_set: the camera's clock setting, the function that ends right before the clock read (fact 'recorder') with
 //   `mov 10499,d0; movhu d0,(8,a2); ret` (0x5012b7a7; the storage test sets the clock with it, X)
 // E146 and E147 read every part (X: their sessions record S2's file natively with them; E146's values as read by hand
-// before the rule, D). The E144 family's REC is another version (docs/hle-gaps.md 4.8.10: its REC_FILE receives without
+// before the rule, D). The E144 family's REC is another version (docs/hle-gaps/4.8.md 4.8.10: its REC_FILE receives without
 // the file name, its EXIF init has no cache flush), where no part past the trace table reads (recFileQueue below
 // reads that version). Returns the parts in
 // E143's shape, or undefined where the trace table, the receive or a part is not found in its shape; throws for a
 // trace table, a receive, a traced function, a template copy or a date set found twice.
-export const REC_FILE_E143 = {
-  exif: {
-    init: 0x504298BD, cflush: 0x504298F6, template: 0x62A6C358, copy: 0x504298F9, size: 92252, time: 37800,
-    date: { format: 0x5012BD20, code: 0x4200, copy: 0x50003843, original: 4089, created: 4109, modified: 1364 },
-    tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40858, 40866], set: 0x5042992D,
-  },
-  init: 0x50539665,
-  task: { id: 27, entry: 0x5053F1A4, flag: 0x60043182, queue: 0x6004324E, handled: 0x5053F20D },
-  packet: {
-    size: 316, post: 0x5053990F,
-    fields: { pExifParam: 28, HandleTarget: 116, BuffAddr1: 144, BuffSize1: 148, HeaderSize: 184, Status: 208, Mode: 210,
-      Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314, Command: 52, RecordMediaMode: 297 },
-  },
-  jpeg: {
-    make_image: 0x50549B42, header: 41984,
-    image: { record: null, addr: 188, size: 192 },
-  },
-  contexts: [0x62A8C4E4, 0x62A8C540], clock_set: 0x5012B7A7,
-};
 const REC_TRACE_HEAD = 'ERROR TRACE ID', REC_TRACE_NEXT = 'rec_main', REC_FILE_SOURCE = 'rec_file.c', REC_DUMP_FIELD = 'pExifParam ';
 const REC_ENTRY_TRACE = 0x3100, REC_POST_TRACE = 0x1002, REC_TRACE_GAP = 16, REC_FN_SPAN = 0x100, REC_TASK_SPAN = 0x100;
 const REC_BIND = 27, REC_EXEC_SPAN = 0x400, REC_DUMP_SPAN = 0x1000, REC_CALL_WALK = 8, REC_TAG_SPAN = 200;
@@ -3707,6 +3921,40 @@ function recTraced(img, scan, rule, name, kind) {
   if (fns.size > 1 || fns.has(undefined)) throw new Error(`${rule}: the trace of "${name}" in ${fns.size} functions, want one`);
   return fns.size ? [...fns][0] : undefined;
 }
+// The packet's fields by REC's packet dump (the function that loads the field name "pExifParam ", E143 0x50541561;
+// recFile, dualSlot): each field's read and its padded name's load before the call that prints them, a3 the packet,
+// a2 a3 + N (`mov N,a2; add a3,a2`), a1 the record a3 points at once moved past the packet's last field (`add P,a3;
+// mov (a3),a1`, or `mov (a3),a0` for its last field, SlotNo: E146 and E147's image record). Returns name -> {ptr, at, width} (ptr null: the packet's +at; else the
+// record whose pointer is the packet's +ptr, its +at), or undefined where the dump is not found in its shape.
+function recDump(img) {
+  const { base } = imageBase(img), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  const dumps = findString(img, REC_DUMP_FIELD, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0)).filter((p) => img[p + 1] === 0xdc);
+  const dump = dumps.length === 1 ? entryOf(img, dumps[0], REC_FN_SPAN) : undefined;
+  if (dump === undefined || img[dump] !== 0x93) return undefined;
+  const named = new Map(), reg = { 0: null, 1: null, 2: null, 3: { ptr: null, at: 0 } };
+  const read = (q) => {
+    let x, d = 0;
+    if (img[q] >= 0x70 && img[q] <= 0x73) x = img[q] & 3;
+    else if (img[q] === 0xf0 && img[q + 1] >= 0x40) x = img[q + 1];
+    else if (img[q] === 0xf8) { x = img[q + 1]; d = img[q + 2] << 24 >> 24; } else if (img[q] === 0xfa) { x = img[q + 1]; d = s16(q + 2); } else return null;
+    const r = reg[x & 3], w = REC_WIDTH[x >> 4];
+    return (x & 0x0c) || w === undefined || !r ? null : { ptr: r.ptr, at: r.at + d, width: w };
+  };
+  // (a return that a conditional branch right before it skips does not end the dump: E146's before its record's part)
+  const skipped = (p) => img[p - 2] >= 0xc0 && img[p - 2] <= 0xca && p - 2 + (img[p - 1] << 24 >> 24) === p + 3;
+  for (let p = dump + 1, name = null, f = null, pend = null; p < dump + REC_DUMP_SPAN && !(isRet(img, p) && !skipped(p)); p = step(p)) {
+    const op = img[p], o2 = img[p + 1];
+    if (op === 0x9a) pend = o2;
+    else if (op === 0xf1 && o2 === 0x7e) reg[2] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + pend };
+    else if (op === 0xfa && o2 === 0xd3) reg[3] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + s16(p + 2) };
+    else if (op === 0xf0 && (o2 === 0x07 || o2 === 0x03)) reg[o2 >> 2] = reg[3]?.ptr === null ? { ptr: reg[3].at, at: 0 } : null;
+    else if (op === 0xfc && o2 === 0xdc) name = text(u32(img, p + 2) - base).trim();
+    else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
+  }
+  return named;
+}
 export function recFile(img, kcb) {
   const rule = 'recFile', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
   const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
@@ -3742,32 +3990,9 @@ export function recFile(img, kcb) {
     return c?.to === post;
   });
   if (post === undefined || !posts.length) return undefined;
-  // the packet's fields by its dump: each field's read and its padded name's load before the call that prints them,
-  // a3 the packet, a2 a3 + N (`mov N,a2; add a3,a2`), a1 the record a3 points at once moved past the packet's last
-  // field (`add P,a3; mov (a3),a1`, E146 and E147's image record)
-  const dumps = findString(img, REC_DUMP_FIELD, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0)).filter((p) => img[p + 1] === 0xdc);
-  const dump = dumps.length === 1 ? entryOf(img, dumps[0], REC_FN_SPAN) : undefined;
-  if (dump === undefined || img[dump] !== 0x93) return undefined;
-  const named = new Map(), reg = { 1: null, 2: null, 3: { ptr: null, at: 0 } };
-  const read = (q) => {
-    let x, d = 0;
-    if (img[q] >= 0x70 && img[q] <= 0x73) x = img[q] & 3;
-    else if (img[q] === 0xf0 && img[q + 1] >= 0x40) x = img[q + 1];
-    else if (img[q] === 0xf8) { x = img[q + 1]; d = img[q + 2] << 24 >> 24; } else if (img[q] === 0xfa) { x = img[q + 1]; d = s16(q + 2); } else return null;
-    const r = reg[x & 3], w = REC_WIDTH[x >> 4];
-    return (x & 0x0c) || w === undefined || !r ? null : { ptr: r.ptr, at: r.at + d, width: w };
-  };
-  // (a return that a conditional branch right before it skips does not end the dump: E146's before its record's part)
-  const skipped = (p) => img[p - 2] >= 0xc0 && img[p - 2] <= 0xca && p - 2 + (img[p - 1] << 24 >> 24) === p + 3;
-  for (let p = dump + 1, name = null, f = null, pend = null; p < dump + REC_DUMP_SPAN && !(isRet(img, p) && !skipped(p)); p = step(p)) {
-    const op = img[p], o2 = img[p + 1];
-    if (op === 0x9a) pend = o2;
-    else if (op === 0xf1 && o2 === 0x7e) reg[2] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + pend };
-    else if (op === 0xfa && o2 === 0xd3) reg[3] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + s16(p + 2) };
-    else if (op === 0xf0 && o2 === 0x07) reg[1] = reg[3]?.ptr === null ? { ptr: reg[3].at, at: 0 } : null;
-    else if (op === 0xfc && o2 === 0xdc) name = text(u32(img, p + 2) - base).trim();
-    else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
-  }
+  // the packet's fields by its dump (recDump)
+  const named = recDump(img);
+  if (named === undefined) return undefined;
   const fields = {};
   for (const [name, width] of Object.entries({ ...REC_FIELDS, Command: 4, RecordMediaMode: 1 })) {
     const f = named.get(name);
@@ -3851,7 +4076,7 @@ export function recFile(img, kcb) {
 }
 
 // REC_IMAGE's task natively (fact 'rec_image', src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ,
-// S-EXIFPRM; docs/hle-gaps.md 4.3.3, 4.3.5), read where recFile reads REC_FILE's parts (rec, its result), at the port's
+// S-EXIFPRM; docs/hle-gaps/4.3.md 4.3.3, 4.3.5), read where recFile reads REC_FILE's parts (rec, its result), at the port's
 // place of E143's CPU 0 kcb. D on E143 (REC_IMAGE_E143: the values src/lab/rec.mjs gave by hand before the rule) unless
 // tagged; REC's traced functions by recTraced (rec_bracket_entry 0x5053b1dc and rec_make_image_finish 0x50541ec5 with K
 // 0x31010000, rec_bracket_update 0x5053b39c with 0x31000000, "REC post_msg_main" 0x5053984b with 0x11010000):
@@ -3887,7 +4112,7 @@ export function recFile(img, kcb) {
 //   `movbu`, one site each), and the picture mode in its own, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a2; add
 //   OFF,a2; movbu d0,(a2); extbu d0; cmp W,d0; bne; mov ID2,d0; mov 0,a0; clr d1; call S; movbu d0,(a2)`, one site,
 //   which reads ID2 instead where ID gives W: [ID, OFF, 1, W, ID2] (38017 and 40209 where it gives 6, D on the three)
-// - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps.md
+// - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps/4.3.md
 //   4.3.4, 4.3.9; given there by hand for E143 before the rule, REC_ENCODE_E143). rec_jpeg_make_image (rec's
 //   jpeg.make_image) calls, to its return, its trace, a clear, rec_ImgPro_CreateParam (by its trace, K 0x31000000),
 //   the image library's create, rec_ImgPro_ImageParam (by its trace), an error log, the run, rec_ImgPro_Jpeg_Result
@@ -3899,21 +4124,9 @@ export function recFile(img, kcb) {
 //   its one call, `mov (An),d0; call d32; mov d0,d2; mov d2,d1; exthu d1; cmp 0,d1; beq`, of the function right after
 //   the getter's 7 bytes, set, the library's parameter set (0x50542c97, 0x50491c9f)
 // E146 and E147 read every part (X: their sessions make S2's picture in REC_IMAGE's task with them; D: E146's task
-// 0x5051ee03 and the rest at docs/hle-gaps.md 4.3.5; the encode's points D on E146: 0x5051ff50, 0x50484597,
+// 0x5051ee03 and the rest at docs/hle-gaps/4.3.md 4.3.5; the encode's points D on E146: 0x5051ff50, 0x50484597,
 // 0x5051f653, 0x5051ff9a, 0x50520568). Returns the parts in REC_IMAGE_E143's shape; throws where a part is not found
 // in its shape or is found twice.
-export const REC_IMAGE_E143 = {
-  task: { id: 28, entry: 0x50541C45, queue: 0x60043250 },
-  shared: { init: 0x5054DBE8, done: 0xA332CE59 },
-  imgpro: [0x5048C3A0, 0x5048BA3A, 0x5050A6B2],
-  reply: { fn: 0x5053984B, from: 0x5053F3C0 },
-  alive: 0,
-  settings: 0x500417DA,
-  take: [[35217, 38074, 2], [38737, 38076, 2], [38769, 38078, 2], [38785, 38080, 2], [40401, 38086, 1], [12417, 38122, 1],
-    [38017, 38037, 1, 6, 40209], [49169, 38008, 2], [17601, 38772, 1]],
-  encode: { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36, packet: 24 },
-};
-export const IMGPRO_UNIT_E143 = 0x9C600000;
 const REC_IMAGE_SPAN = 0x200, REC_RECV_SPAN = 0x20, REC_SHARED_SPAN = 0x200, IMGPRO_UNITS_SPAN = 0x200, REC_HANDLER_SPAN = 0x200;
 const REC_PARAM_SPAN = 0x900, IMGPRO_GETTER = 7;
 const REC_SET_TEST = [0x82, 0x89, 0x1d, 0xa5, 0x00, 0xc8];
@@ -4055,7 +4268,84 @@ export function recImage(img, kcb, rec) {
   };
 }
 
-// TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps.md
+// Dual Independent's second image (fact 'dual_slot', src/lab/rec.mjs record and image_native; docs/hle-gaps/4.8.md
+// 4.8.24, 4.8.28), read where recFile reads REC_FILE (rec, its result: E143, E146, E147). D on E143 and E146 unless
+// tagged:
+// - one, two, types: REC_IMAGE's settings copy for a double-slot mode with Media 1 alone, `mov T2,a0; add a2,a0; movhu
+//   (a0),d0; mov ET,d3; add d2,d3; mov d3,a1; movhu d0,(a1); movhu (a0),d0; movhu d0,(T1,a2); movhu (a0),d0; movhu
+//   d0,(abs); movhu (B,a2),d0; movhu d0,(A,a2)` three times (E143 0x5053de93, E146 0x5051b739), one site: the shot
+//   record's file types of the first and the second slot [T1, T2] (+37896, +37898; E146 +37548, +37550: TAKE's fill
+//   writes 0 for a JPEG quality there, 0x503bbb19, E146 0x503bc446), the second slot's image settings two [B] and the
+//   first slot's one [A] (+38000, +38016, +38020 and +37998, +38014, +38018; E146 +37652, +37668, +37672 and +37650,
+//   +37666, +37670), ET the packet's ExifFileType
+// - the double-slot test (E143 0x5053dd22, E146 0x5051b5c8): rec_jpeg_exec's (rec's traced) call of it that, where it
+//   answers, reads SlotNo and tests it for 1, `call T; exthu d0; cmp 0,d0; beq; [mov d3,a0; mov (a0),a0;] movbu
+//   (S,An),d0; cmp 1,d0; bne`, one call; T reads the shot record's two in turn, `movhu (B,a0),d2` (0x5053dd4a..), and
+//   the packet's ExifFileType and ExifFileTypeDoubleSlot, `movhu (ET,a2),d1` (0x5053dd78, 0x5053dd80)
+// - slot {record, at}, addr, size: SlotNo, BuffAddrDoubleSlot and BuffSizeDoubleSlot by the packet dump's names
+//   (recDump): SlotNo the packet's +313 on E143 (record null), on E146 the image record's +49 (record: the packet's
+//   word that points at it, +180, rec.jpeg.image.record.at; rec_jpeg_exec's d3 is the packet + 180, E146 0x50527887);
+//   the SlotNo read above at the dump's offset, in the record's form (`mov d3,a0; mov (a0),a0`) where the dump's is
+//   the record's; after it, up to rec_jpeg_exec's `jmp`, its two stores `mov Dm,(d16,An)` at the dump's
+//   BuffAddrDoubleSlot and BuffSizeDoubleSlot (E143 0x505499a9, 0x505499ad: +172, +168; E146 0x50527a72, 0x50527a78:
+//   +160, +156)
+// Returns the parts in DUAL_SLOT_E143's shape; throws where a part is not found in its shape or is found twice.
+const DUAL_COPY = [0x24, null, null, 0xf1, 0x78, 0xf0, 0x60, 0x2f, null, null, 0xeb, 0xf1, 0xed, 0xf0, 0x71, 0xf0, 0x60, 0xfc, 0x72, null, null, null, null,
+  0xf0, 0x60, 0xfc, 0x83, null, null, null, null,
+  0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null, 0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null,
+  0xfc, 0x62, null, null, null, null, 0xfc, 0x72, null, null, null, null];
+const DUAL_EXEC_SPAN = 0x800, DUAL_TEST_SPAN = 0x80, DUAL_STORE_SPAN = 0x20;
+export function dualSlot(img, rec) {
+  const rule = 'dualSlot', D = (o) => h8(0x50000000 + o), u16 = (o) => img[o] | img[o + 1] << 8;
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  // REC_IMAGE's settings copy: the types, two and one
+  const cp = oneAt(img, DUAL_COPY, rule, 'settings copies for Media 1 alone');
+  if (cp === null) throw new Error(`${rule}: no settings copy for Media 1 alone in REC_IMAGE's form`);
+  const et = u16(cp + 8), types = [u32(img, cp + 19), u16(cp + 1)];
+  const two = [0, 1, 2].map((k) => u32(img, cp + 33 + 12 * k)), one = [0, 1, 2].map((k) => u32(img, cp + 39 + 12 * k));
+  // the dump's names
+  const named = recDump(img), field = (name, width) => {
+    const f = named?.get(name);
+    if (f?.width !== width) throw new Error(`${rule}: the packet dump names no ${width}-byte ${name} (${JSON.stringify(f)})`);
+    return f;
+  };
+  const slotNo = field('SlotNo', 1), addr = field('BuffAddrDoubleSlot', 4), size = field('BuffSizeDoubleSlot', 4);
+  const ft = field('ExifFileType', 2), ft2 = field('ExifFileTypeDoubleSlot', 2);
+  if ([addr, size, ft, ft2].some((f) => f.ptr !== null)) throw new Error(`${rule}: the dump's BuffAddrDoubleSlot, BuffSizeDoubleSlot, ExifFileType or ExifFileTypeDoubleSlot is not the packet's`);
+  if (ft.at !== et || ft2.at !== et + 2) throw new Error(`${rule}: the settings copy ${D(cp)} writes ExifFileType at +${et}, the dump names +${ft.at} and +${ft2.at}`);
+  const record = slotNo.ptr;
+  if (record !== null && record !== rec.jpeg.image?.record?.at) throw new Error(`${rule}: the dump's SlotNo is in a record at the packet's +${record}, not REC_IMAGE's image record (+${rec.jpeg.image?.record?.at})`);
+  // rec_jpeg_exec's call of the double-slot test before its SlotNo test, and the two stores after it
+  const scan = recTraceScan(img, rule), exec = scan && recTraced(img, scan, rule, 'rec_jpeg_exec', REC_ENTRY_TRACE);
+  if (exec == null) throw new Error(`${rule}: no rec_jpeg_exec by its trace`);
+  const read = record === null ? [0xfa, null, slotNo.at & 0xff, slotNo.at >> 8] : [0xf1, 0xec, 0xf0, 0x00, 0xf8, 0x40, slotNo.at];
+  const hits = [];
+  for (let p = exec; p < exec + DUAL_EXEC_SPAN; p = step(p)) {
+    const c = callAt(img, p);
+    if (!c) continue;
+    const q = p + c.len, r = q + 5;
+    if (!bytesAt(img, q, [0x1c, 0xa0, 0x00, 0xc8, null]) || !bytesAt(img, r, read) || !bytesAt(img, r + read.length, [0xa0, 0x01, 0xc9])) continue;
+    if (record === null && (img[r + 1] & 0xfc) !== 0x40) continue;          // movbu (d16,An),d0
+    const stores = [];
+    for (let s = r + read.length + 4; s < r + read.length + 4 + DUAL_STORE_SPAN && img[s] !== 0xcc; s = step(s)) if (img[s] === 0xfa && (img[s + 1] & 0xf0) === 0x10) stores.push(u16(s + 2));
+    hits.push({ at: p, test: c.to, stores });
+  }
+  if (hits.length !== 1) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} tests SlotNo (+${slotNo.at}${record === null ? '' : ` of the record at +${record}`}) for 1 after ${hits.length} calls, want one`);
+  const [{ test, stores }] = hits;
+  if (stores.length !== 2 || !stores.includes(addr.at) || !stores.includes(size.at)) throw new Error(`${rule}: rec_jpeg_exec's stores after its SlotNo test are at +${stores.join(', +')}, not BuffAddrDoubleSlot +${addr.at} and BuffSizeDoubleSlot +${size.at}`);
+  // the double-slot test's reads
+  const reads = [], typeReads = [];
+  for (let p = test; p < test + DUAL_TEST_SPAN && !isRet(img, p); p = step(p)) {
+    if (img[p] === 0xfc && img[p + 1] === 0x68) reads.push(u32(img, p + 2));
+    if (img[p] === 0xfa && img[p + 1] === 0x66) typeReads.push(u16(p + 2));
+  }
+  if (JSON.stringify(reads) !== JSON.stringify(two) || JSON.stringify(typeReads) !== JSON.stringify([ft.at, ft2.at])) {
+    throw new Error(`${rule}: the double-slot test ${D(test)} reads the shot record's +${reads.join(', +')} and the packet's +${typeReads.join(', +')}, not the second slot's +${two.join(', +')} and ExifFileType +${ft.at}, +${ft2.at}`);
+  }
+  return { slot: { record, at: slotNo.at }, addr: addr.at, size: size.at, one, two, types };
+}
+
+// TAKE's request protocol as S-MODPOST and S-TAKERDY take it (fact 'take_requests', src/lab/camapp.mjs; docs/hle-gaps/4.1.md
 // 4.1.11, 4.1.12, 4.1.13), read at the E143 functions' places where recFile reads REC_FILE (E143, E146, E147). D on
 // E143 unless tagged; each site is E143's instructions with addresses, displacements and the values read left open
 // (the direct post's first stack store too: no form here is a 32-byte run of the firmware's bytes, bin/pubaudit.mjs;
@@ -4073,14 +4363,8 @@ export function recImage(img, kcb, rec) {
 // - TAKE_MAIN's state table, loaded at its loop's head (TAKE_MAIN_E143: 15 bytes of frame set-up, then `mov
 //   imm32,a3`; 20 bytes a state, +4 its name, +12 its command table of 8-byte {u16 command, u16, handler} rows ended by
 //   0xffff): Idle's table holds the take-ready and its stop (0, 7), RdyTrig2Wait's the stop and takePicture (7, 11)
-//   (TAKE_COMMANDS); X on E143 and E147: the rows the probe's TAKE_MAIN dispatches (docs/hle-gaps.md 4.1.7)
+//   (TAKE_COMMANDS); X on E143 and E147: the rows the probe's TAKE_MAIN dispatches (docs/hle-gaps/4.1.md 4.1.7)
 // Throws where a form or a command row is missing
-export const TAKE_REQUESTS_E143 = { api_post: 0x503EBE71, take_send: 0x502CE58C, control_post: 5, func29: { command: 29, param: 0x62A3F2BE },
-  kind_at: 8, queue_at: 4, event: 0x04080032 };
-export const TAKE_API_POST_E143 = 0x503EBE46, TAKE_SEND_E143 = 0x502CE57B, TAKE_CONTROL_40_E143 = 0x50417EFD;
-export const TAKE_FUNC29_E143 = 0x503A05FB, TAKE_API_E143 = 0x50417CD9, TAKE_PACKET_KEEP_E143 = 0x503C275C;
-export const TAKE_EVENT_POST_E143 = 0x503C3262, TAKE_REPLY_E143 = 0x502CE5E6, TAKE_MAIN_E143 = 0x503996C3;
-export const TAKE_COMMANDS = { Idle: [0, 7], RdyTrig2Wait: [7, 11] };
 const TAKE_API_SPAN = 0x400, TAKE_STATES = 35, TAKE_STATE_BYTES = 20, TAKE_ROWS_MAX = 64;
 const API_POST_FORM = [0x93, 0x90, 0x10, 0xf1, 0x7c, 0x43, 0x10, 0x70, 0x95, 0x08, 0x42, null, 0xf1, 0x7d, 0x47, 0x0c, 0x71, 0x9d,
   0x42, 0x1c, 0x51, 0x71, 0x3c, 0x20, 0x18, 0x04, 0xa4, 0xc8, 0x08, 0x85, 0xff, 0xa4, 0xc8, 0x03, 0x75, 0x73, 0xdd, null, null, null, null, 0xf0, 0x30];
@@ -4133,7 +4417,7 @@ export function takeRequests(img, at, qewr) {
     kind_at: img[kind + 5], queue_at: img[keep + 2], event: u32(img, ev + 8) };
 }
 
-// TAKE's exposure for a still's record as S-EXIFPRM gives it (fact 'take_exposure', src/lab/rec.mjs; docs/hle-gaps.md
+// TAKE's exposure for a still's record as S-EXIFPRM gives it (fact 'take_exposure', src/lab/rec.mjs; docs/hle-gaps/4.3.md
 // 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the single still's TAKE_MAIN
 // states in order are StlRdy1, StlRdy2 and StlTake (the state table as takeRequests reads it, by name):
 // - record {size, fill, flags, reads}: StlRdy1's entry takes an exposure record from TAKE's ring and fills it, `call G;
@@ -4155,9 +4439,6 @@ export function takeRequests(img, at, qewr) {
 //   mov d2,a0; movhu d0,(28,sp); movhu d3,(X,a0); mov a3,d0; movhu d0,(Y,a0); movhu (28,sp),d0; movhu d0,(Z,a0)`
 //   (0x503bce15: N 56, +56 to 38170, +60 to 38180, +58 to 38176)
 // The offsets read are the instructions' displacements (none is assumed). Throws where a form is missing or found twice
-export const TAKE_EXPOSURE_E143 = { record: { size: 96, fill: 0x503BF619, flags: 0x40000000, reads: [[41002, 6], [41034, 8], [41018, 10], [41082, 12]] },
-  range: { fn: 0x50599812, low: 38166, high: 38168 }, copy: [[6, 38164], [8, 38172], [10, 38178], [56, 38170], [60, 38180], [58, 38176]] };
-export const TAKE_COPY_E143 = 0x503BCDAC, TAKE_FILL_E143 = 0x503BBD26;
 const TAKE_EXP_SPAN = 0x600, TAKE_EXP_FILL_SPAN = 0x140, TAKE_RANGE_SPAN = 0x400, TAKE_COPY_SPAN = 0x80, TAKE_RING_SPAN = 0x20;
 const TAKE_EXP_STATE = 'StlRdy1', TAKE_EXP_TV = 41002, TAKE_EXP_AV = 41018;
 const EXP_COPY_FORM = [0xf8, 0x63, null, 0x24, null, null, 0xf1, 0x68, 0x43, 0x10, 0xf0, 0x70, 0xf8, 0x63, null, 0xf1, 0xe8, 0xfc, 0x70,
@@ -4217,9 +4498,9 @@ export function takeExposure(img, at) {
   };
 }
 
-// TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps.md 4.3.13),
+// TAKE's shot for a still as H-SHOTALLOC allocates it (fact 'take_shot', src/lab/rec.mjs; docs/hle-gaps/4.3.md 4.3.13),
 // read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged (E146's and E147's callers, intake
-// and still states read against E143's: docs/hle-gaps.md 4.3.13). A normal still's shot is not
+// and still states read against E143's: docs/hle-gaps/4.3.md 4.3.13). A normal still's shot is not
 // TAKE_MAIN's to allocate: its still states allocate one only under TAKE context bytes of other modes (StlRdy1
 // 0x503b1365 kind 8, 0x503b1341, 0x503b1391), and keep the take-picture request's own id, the packet's +0, which
 // api_rec's takePicture (0x5040ee43) stores from its second argument. The id is the take buffer the application's
@@ -4241,8 +4522,6 @@ export function takeExposure(img, at) {
 //   the three with the lab's settings (the Bayer and thumbnail handles, the record, and the buffers of the flags 8,
 //   0x10, 0x20 and 0x40), and the free 0
 // Throws where a form is missing or found twice
-export const TAKE_SHOT_E143 = { alloc: 0x5040F43A, free: 0x5040F52E, kind: { setting: 49698, value: 2 }, take: { alloc: 0x503AF59E, free: 0x503AF80B },
-  record: { fn: 0x503AFC3E, table: 0x62A494A4, entry: 32, ids: 116, flag: 4, at: 20 } };
 const TAKE_SHOT_SPAN = 0x60, API_SHOT_ALLOC = 0x20019, API_SHOT_FREE = 0x2001A;
 const SHOT_KIND_FORM = [0xfc, 0xcc, null, null, null, null, 0x90, 0x00, 0x04, 0xdd, null, null, null, null, 0x00, 0x04, 0xa0, null, 0xc9, 0x06, 0x80, 0x01,
   0xca, 0x03, 0x00, 0xdd];
@@ -4275,7 +4554,7 @@ export function takeShot(img) {
   };
 }
 
-// TAKE's own fills of a still's shot as H-TAKEFILLS runs them (fact 'take_fills', src/lab/rec.mjs; docs/hle-gaps.md
+// TAKE's own fills of a still's shot as H-TAKEFILLS runs them (fact 'take_fills', src/lab/rec.mjs; docs/hle-gaps/4.3.md
 // 4.3.13), read where recFile reads REC_FILE (E143, E146, E147). D on E143 unless tagged; the still states by name in
 // TAKE_MAIN's state table (as takeExposure reads it), each fill a function of TAKE's context and the take-picture
 // request's packet or its shot id:
@@ -4308,14 +4587,20 @@ export function takeShot(img) {
 //   that order within TAKE_LENS_SPAN; and TAKE's third fill (third, 0x503bd1fa), the one call of a function object's
 //   `mov (4,a3),a2; mov (a2),d0; mov (8,a2),d1; mov d0,a0; mov (4,a2),a1; mov d1,d0; call T` (0x503b7e32), which
 //   calls the EXIF set (exif.set, recFile's) once within TAKE_PIC_SPAN (0x503bd48e)
+// - strobe {request, at, status, decision, props: {fill, table, count}} (2026-11-22, H-TAKEFILLS' strobe request and
+//   H-STBPROP): StlRdy1's request to the strobe sequence, the one call `mov (P),a1; mov a3,a0; call REQ` in StlRdy1's
+//   code (0x503b1396: 0x503b8126, StlRdy1's function's last call), REQ opening `mov a1,d3; mov a0,a2; mov AT,a3; add
+//   a0,a3; mov a3,a0; mov a2,a1; mov d3,d0; clr d1` (AT the exposure request's offset in TAKE's context, +3144; E146
+//   and E147 +3348, X), then its build call, `mov a3,a0`, the strobe sequence's still decision (DECISION,
+//   0x501bc976) and `movhu d0,(STATUS,a2)` (the decision's status, +3140; E146 and E147 +3344); the decision's one
+//   call of the strobe module's property read within TAKE_STB_SPAN (0x501bca10: 0x501c20e0, opening `cmp COUNT,d0;
+//   bge; mov d0,d1; asl 3,d1; mov d1,a0; add TABLE,a0`: TABLE 0x60350410, rows of 8 bytes {id, size, pointer},
+//   COUNT 122); and the module's fill of the table's pointers (fill, 0x501c20b0, the strobe module's boot init's call
+//   at 0x501c225c), the one function `mov d0,d3; clr d2; mov TABLE,a2; movhu (a2),d0; call; mov a0,(4,a2); inc d2;
+//   add 8,a2; cmp COUNT,d2`
 // Throws where a form is missing or found twice
-export const TAKE_FILLS_E143 = { context: 0x62A4A358, packet: 0x62A4A350,
-  mode: { build: 0x503C28C7, bytes: 0x62A4CE68, copy: 0x503C4509, record: 0x62A4CE80, standby: 0x503B09DD },
-  ring: { get: 0x503BAEB6, free: 0x503BAF23 }, record: { fn: 0x503BBA51, modes: [0x62A4B190, 0x62A4B1BC] },
-  take: { capture: 0x503BCAA2, key: 0x503BAA2D, count: 0x62A4AF68, after: 0x503BC4FE },
-  pic: { fn: 0x503BCD51, mode: 3122, af: 0x509B08F0, crop: [40858, 40866], lens: 0x503BD137, third: 0x503BD1FA } };
-export const AF_MKNT_E143 = 0x509B08F0;
-const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20, TAKE_PIC_SPAN = 0x400, TAKE_LENS_SPAN = 0x60;
+const TAKE_FILL_SPAN = 0x800, TAKE_CTX_SPAN = 0x80, TAKE_COUNT_SPAN = 0x20, TAKE_PIC_SPAN = 0x400, TAKE_LENS_SPAN = 0x60, TAKE_STB_SPAN = 0x100;
+const STB_REQUEST_FORM = [0xf1, 0xd7, 0x92, 0x27, null, null, 0xf1, 0x73, 0x9c, 0x99, 0x8c, 0x04];
 const TAKE_THIRD_CALL = [0xf8, 0x2b, 0x04, 0x72, 0xf8, 0x06, 0x08, 0xf1, 0xe0, 0xf8, 0x26, 0x04, 0x84];
 const TAKE_LENS_IDS = [22257, 22289, 22305];
 const STANDBY_FORM = [0xcf, 0xa0, 0xf8, 0xfe, 0xfc, 0xf1, 0xe5, 0xf0, 0x09, 0xf8, 0x25, 0x04];
@@ -4391,6 +4676,20 @@ export function takeFills(img, at, exif) {
   if (thirds.length !== 1) throw new Error(`${rule}: ${thirds.length} function-object calls of TAKE's third fill, want 1`);
   const third = callAt(img, thirds[0] + TAKE_THIRD_CALL.length).to;
   if (exif?.set === undefined || callsTo(third, third + TAKE_PIC_SPAN, exif.set - 0x50000000).length !== 1) throw new Error(`${rule}: TAKE's third fill ${D(third)} does not call the EXIF set ${exif?.set === undefined ? '(not read)' : h8(exif.set)} once`);
+  // StlRdy1's request to the strobe sequence, the decision's property read and the module's fill of its table
+  const rqs = all([0xfc, 0xa1, ...le32(packet), 0x9c], s1, s1 + TAKE_EXP_SPAN).filter((o) => img[o + 7] === 0xdd || img[o + 7] === 0xcd);
+  if (rqs.length !== 1) throw new Error(`${rule}: StlRdy1's code from ${D(s1)} makes ${rqs.length} calls \`mov (P),a1; mov a3,a0; call\`, want 1`);
+  const req = callAt(img, rqs[0] + 7).to;
+  if (!bytesAt(img, req, STB_REQUEST_FORM)) throw new Error(`${rule}: StlRdy1's strobe request ${D(req)} does not open with its exposure request's setup`);
+  const build = callAt(img, req + STB_REQUEST_FORM.length), dc = build && req + STB_REQUEST_FORM.length + build.len;
+  const decide = dc && img[dc] === 0x9c ? callAt(img, dc + 1) : null, kept = decide && dc + 1 + decide.len;
+  if (!decide || !bytesAt(img, kept, [0xfa, 0x72])) throw new Error(`${rule}: StlRdy1's strobe request ${D(req)} does not build, decide and keep the status`);
+  const PROP_READ = [0xa0, null, 0xc2, null, 0x81, 0xf8, 0xc1, 0x03, 0xf1, 0xe4, 0xfc, 0xd0];
+  const reads = []; for (let o = decide.to; o < decide.to + TAKE_STB_SPAN; o++) { const c = (img[o] === 0xdd || img[o] === 0xcd) && callAt(img, o); if (c && bytesAt(img, c.to, PROP_READ)) reads.push(c.to); }
+  if (new Set(reads).size !== 1) throw new Error(`${rule}: the strobe decision ${D(decide.to)} calls ${new Set(reads).size} property reads in its first 0x${TAKE_STB_SPAN.toString(16)} bytes, want 1`);
+  const ptab = u32(img, reads[0] + 12), count = img[reads[0] + 1];
+  const fill = oneAt(img, [0x83, 0x08, 0xfc, 0xde, ...le32(ptab), 0xf0, 0x62, 0xdd, null, null, null, null, null, null, 0xf8, 0x32, 0x04, 0x48, 0x22, 0x08, 0xaa, count], rule, 'fills of the strobe module\'s property table');
+  if (fill === null) throw new Error(`${rule}: no fill of the strobe module's property table ${h8(ptab)} (${count} rows)`);
   return {
     context, packet,
     mode: { build: 0x50000000 + callAt(img, bd[0] + 7).to, bytes, copy: 0x50000000 + cp, record: u32(img, cp + 8), standby: 0x50000000 + sb },
@@ -4398,11 +4697,13 @@ export function takeFills(img, at, exif) {
     record: { fn: 0x50000000 + callAt(img, rf + 21).to, modes: [u32(img, rf + 8), u32(img, rf + 17)] },
     take: { capture: 0x50000000 + capture, key: 0x50000000 + key, count: u32(img, cnt + 2), after: 0x50000000 + after },
     pic: { fn: 0x50000000 + pic, mode, af: 0x50000000 + afAt, crop, lens: 0x50000000 + lens, third: 0x50000000 + third },
+    strobe: { request: 0x50000000 + req, at: img[req + 4] | img[req + 5] << 8, status: img[kept + 2] | img[kept + 3] << 8, decision: 0x50000000 + decide.to,
+      props: { fill: 0x50000000 + fill, table: ptab, count } },
   };
 }
 
 // REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
-// reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
+// reads none; src/lab/rec.mjs; docs/hle-gaps/4.8.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
 // tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
 // - REC's trace table and functions as recFile reads them, but the table's first name may follow other bytes than a
 //   NUL (E134 0x6055d190, E137, E125: the word before it; X)
@@ -5350,7 +5651,6 @@ export function recFileFrame(img, kcb) {
 // the same queue right before it (`movhu (W),d0; exth d0; call`, d16 or d32) is the init's own first: E122's init
 // 0x501a8270 makes two calls with the queue's id before its loop (0x501a8314, 0x501a831e), its wrapper 0x501a825a
 // calls it (D); the init is then the first opening. Returns the entry (disassembly notation); throws for none or two.
-export const BROKER_E143 = 0x502A48B6;
 const BROKER_OPEN = [0xfc, 0xac, null, null, null, null, 0x18], BROKER_START = [0x00, 0x04, 0xdb], BROKER_END = [0xa5, 0x64, 0xd0];
 const BROKER_LOOP = 0x40;
 export function brokerInit(img) {
@@ -5392,7 +5692,6 @@ export function brokerInit(img) {
 // E144, E137 and E142 (D: no write of it in between), not checked by the rule. Returns {run, id} (disassembly
 // notation), or undefined where no function has this shape; throws for two.
 const FD_COPY = [0x3c, 0x50, 0x85, 0xfa, 0xdb], FD_COPY_TAIL = [0x60, 0x50, 0x44, 0xd9], FD_MOVES = 5, FD_WALK = 64;
-export const FUNC_DIRECT_E143 = 0x51068E37;
 const isCopy = (img, p) => bytesAt(img, p, FD_COPY) && (img[p + 5] & 0xfc) === 0x70 && img[p + 6] === (0x50 | (img[p + 5] & 3))
   && bytesAt(img, p + 7, FD_COPY_TAIL);
 export function funcDirect(img) {
@@ -5507,8 +5806,52 @@ export function guiCanvas(img) {
 // 0xb0000000 or, on E133, E130, E129, E132, E118 and E120, 0xc0000000 (X, the facts of the 17 ported bodies), whose
 // GUIs use DRAM above 384 MiB (E130's application start, with 384 MiB mapped, faulted in a word copy at 0x50b0c026
 // whose last destination was 0xbfc59440, and runs on with 512 MiB, X). The banks sit below it, the first one ending
-// there, on all 18 expanded images (X). Returns the size in bytes.
-export const dramSize = ({ banks: [[base, size, count]] }) => cached(base) + size * count - 0x60000000;
+// there, on all 18 expanded images (X). Returns the size in bytes. On the E143 family (board dram_rule 'mm-bank0')
+// the lab's DRAM is read from MM's bank 0 instead (mmBank0, mmDramSize, below).
+
+// MM's bank 0 (the memory manager's first pool: MM kind 0, the still's Bayer and its kind-3 pair, docs/hle-gaps/4.3.md
+// 4.3.14): MM's init constructs each bank's pool with `mov POOL,a0; mov BASE,d0; mov BLOCK,d1; mov HANDLE,a1; call`
+// (fc dc imm32, fc cc imm32, fc cd imm32, then `mov 0,a1` 95 00 for bank 0 and `mov 256,a1` 25 00 01 for bank 1, the
+// handle the bank << 8; E143 0x50533ba4: pool 0xa31f4e9c, base 0xb8000000, block 0x1ffec00, bank 1 at 0x50533bdc, D).
+// X (E143, live view): the bank table 0x606dc498's entry 0 holds that pool (+4), whose +8 is the base and +12 the
+// block, as rawframe.mjs reads them. The rule takes the one such site whose base lies in the DRAM's uncached view
+// (0xa0000000..0xc0000000) with bank 1's `mov 256,a1` within 0x40 bytes after it (E143 0x50533ba4, E146 0x50510d83,
+// E147 0x5051ff0c: each base 0xb8000000, block 0x1ffec00, X). Returns {pool, base, block, at}; throws for none or
+// several.
+const MM_BANK0_CALL = [0xfc, 0xcc, null, null, null, null, 0xfc, 0xcd, null, null, null, null, 0x95, 0x00, 0xcd];
+export function mmBank0(img) {
+  const hits = [];
+  for (let p = img.indexOf(0xfc); p >= 0 && p + 6 + MM_BANK0_CALL.length <= img.length; p = img.indexOf(0xfc, p + 1)) {
+    if (img[p + 1] !== 0xdc || !bytesAt(img, p + 6, MM_BANK0_CALL)) continue;
+    const base = u32(img, p + 8), block = u32(img, p + 14);
+    if (base < 0xA0000000 || base >= 0xC0000000 || !block) continue;
+    const next = img.subarray(p + 6 + MM_BANK0_CALL.length, p + 6 + MM_BANK0_CALL.length + 0x40);
+    if (!next.some((_, k) => bytesAt(next, k, [0x25, 0x00, 0x01]))) continue;
+    hits.push({ pool: u32(img, p + 2), base, block, at: 0x50000000 + p });
+  }
+  if (hits.length !== 1) throw new Error(`mmBank0: ${hits.length} pool constructions of MM's bank 0 in the DRAM's uncached view, want 1${hits.length ? `: ${hits.map((h) => h8(h.at)).join(', ')}` : ''}`);
+  return hits[0];
+}
+
+// The lab's DRAM on the E143 family (board fact 'dram_size' where the family's dram_rule is 'mm-bank0'): the bus DRAM
+// from 0xa0000000 to the end of the 128 MiB bus segment holding MM's bank 0's first block. The CPU reaches bus
+// 0xb8000000.. through its window, which shows one segment of 2^27 bytes (src/dev/bus.mjs, A17), at reset segment 0x17
+// (bus 0xb8000000..0xc0000000); MM's own address classifier splits the bus at the same places (0x50533a98: below
+// 0xb8000000 class 0, below 0xc0000000 class 1, then one class per 0x08000000 up to 0xf0000000, D). E143, E146 and E147:
+// bank 0 at 0xb8000000, so 0xa0000000..0xc0000000, 512 MiB, the end of the DRAM's uncached view (cached(), the lab's
+// largest DRAM, src/core/mem.mjs DRAM_MAX). It holds bank 0's first four blocks (the shot's handles 1..3 end at
+// 0xbdffc400, X) and the play module's buffer 0xbc857f00 on E146 and E147 (X, docs/hle-gaps/4.8.md 4.8.18). MM's banks
+// reach much further (bus 0x08000000.. and 0xc0000000..0xff0d9c00, X: 4.3.14), so the camera's DRAM is larger (I):
+// this is the part the CPU's uncached view and the window's reset segment show, not the camera's size. Throws where
+// bank 0 lies below the GUI's banks' end (dramSize; E143 family: both 0xb8000000) or its first block crosses the
+// segment's end. Returns the size in bytes.
+const BUS_SEGMENT = 2 ** 27;
+export function mmDramSize({ base, block }, gui) {
+  const end = (Math.floor(base / BUS_SEGMENT) + 1) * BUS_SEGMENT;
+  if (0x60000000 + dramSize(gui) > cached(base)) throw new Error(`mmDramSize: MM's bank 0 at ${h8(base)} lies below the GUI's banks' end ${h8(0xa0000000 + dramSize(gui))}`);
+  if (base + block > end || end > 0xC0000000) throw new Error(`mmDramSize: MM's bank 0 block ${h8(base)}+0x${block.toString(16)} past its bus segment's end ${h8(end)} or the uncached view's`);
+  return end - 0xA0000000;
+}
 
 // The application's module-9 state reads (fact 'app.module9_readers', src/lab/camapp.mjs S-TAKEOVER): the return
 // addresses of the calls of MODULE_STATE_GET (E143's 0x50ab5780, at its place in the build) that `mov 9,d0` (80 09)
@@ -5543,7 +5886,6 @@ function moduleReaders(img, getter) {
 // are the same is I). E125's 0x507a4581 calls 0x502ca3dd and tests the component for null before its method (D).
 // Through bin/port.mjs also the places of E143's wrappers (how 'component-method'). Throws where a caller has no such
 // entry or callee.
-export const COMPONENT_GETTER_E143 = 0x50D7570B;
 const COMPONENT_HEAD = 0x40, COMPONENT_TAIL = 12;
 export function componentWrappers(img, getter) {
   const g = getter - 0x50000000, out = [], here = (o) => `componentWrappers: the getter call at ${h8(0x50000000 + o)}`;
@@ -5590,8 +5932,6 @@ export function componentWrappers(img, getter) {
 // {focal: {at, size}, iso: {at, size}} (the fact adds the converter, convert), or null where the walk finds no such
 // copy; throws where a field is copied twice or not at all while the other is, the second form reads the record from
 // two slots, or the walk finds no return within STILL_WALK instructions.
-export const STILL_CONVERT_E143 = 0x50ACC981, STILL_WRAPPER_E143 = 0x50ACF1FA;
-export const STILL_E143 = { convert: STILL_CONVERT_E143, focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } };
 const STILL_GUI = { focal: 56, iso: 88 }, GUI_OFFSETS = new Set(Object.values(STILL_GUI)), STILL_WALK = 2000, STILL_AFTER = 12;
 export function stillFields(img, convert) {
   let p = convert - 0x50000000, last = [];
@@ -5682,7 +6022,6 @@ function langSetting(img, loader) {
 // a walk of each expanded image at the port's place of the interpolation; E145, E129, E132 and the E118 family have
 // none, aeRows reads the first three). Throws where the interpolation has no return within AE_INSNS instructions, not
 // one wrapper, or no init.
-export const AE_INTERP = 0x50563138, AE_INIT_E143 = 0x50560B29;
 const AE_INSNS = 120, AE_WALK = 0x400;
 function aeInit(img, interp) {
   const io = interp - 0x50000000, here = `aeInit: the interpolation at ${h8(interp)}`;
@@ -5795,7 +6134,6 @@ function aeRows(img) {
 // after its getter also writes, and its setter 0x501ec907 stores the second, (0x61ccc97c) (D); the rule had taken the
 // first getter whose word is stored after it, and the display start read 150 there (X). Returns {tft, evf} (a device
 // missing where its vtotal function is not placed); throws where a placed one has no such getter.
-export const FRAME_PERIOD_E143 = { tft: { vtotal: 0x501D8ABA, word: 0xA32DB47C }, evf: { vtotal: 0x50023BAB, word: 0xA32DB428 } };
 const PERIOD_SPAN = 0x200, PERIOD_STORE = 0x40;
 const PERIOD_GETTER = [0xfc, 0xa4, null, null, null, null, 0xde, 0x00, 0x00];
 // a vtotal function that returns a constant, `mov imm16,d0; retf`, with no such getter run after it: the rule answers
@@ -5828,7 +6166,6 @@ function framePeriod(img, vtotal) {
 // table form indexes entries of 8 bytes with the enable word at +4 (E122 0x5006eda3 `asl 3,d2`, then `movhu (4,a0),d0;
 // cmp 1,d0`, 10 entries at 0x6012fa78, D; E143's and E125's 6 bytes, enable at +2, `udfu01 6,d2`): {table, entry,
 // enable} where the entry is not 6 bytes. Throws unless exactly one form.
-export const HW_TIMER_INIT_E143 = 0x500642DD, HW_TIMER_PTR_E143 = 0xA32CA47C;
 const HW_TIMER_SPAN = 0x30, HW_TIMER_ENABLE_SPAN = 0x10;
 function hwTimer(img, init) {
   const found = [];
@@ -5853,7 +6190,6 @@ function hwTimer(img, init) {
 // 0x36fdfd0b, D). The target is the map's place of E143's on E146, E147, E144, E139, E134, E137, E142, E140, E145,
 // E133, E130, E129 and E132 (X, a call read at each port's place of the call); the call is not placed on the E118
 // family. Throws where the place holds no call.
-export const K_CRT_CALL_E143 = 0x5005A6CB, K_CRT_134D_E143 = 0x3FFE134D;
 function crtClockRead(img, site) {
   const c = callAt(img, site - 0x50000000);
   if (!c || c.len !== 7) throw new Error(`crtClockRead: no 7-byte call at ${h8(site)}, the place of E143's ${h8(K_CRT_CALL_E143)}`);
@@ -5873,7 +6209,6 @@ function crtClockRead(img, site) {
 // clamp at each port's place of the request). S-TAKEFRAME's 4, E143's AF-frames bit, is no number this set knows: it
 // stores 0 (E125 0x50021ea7, D), so on these bodies S-AFOSD's upload, which acts in mode 3 only, is dropped (open).
 // Returns the set, or undefined where the request is not a clamp (the E143 family's).
-export const TAKE_FRAME_E143 = 0x5039F583, FRAME_MODE_SET_E143 = 0x500256D9;
 const FRAME_MODE_MAX = 3;
 function frameModeSet(img, request) {
   let p = request - 0x50000000;
@@ -5904,7 +6239,6 @@ function frameModeSet(img, request) {
 // addresses), and its AF is TAKE_FOCUS's, with no FCS layer and no "osd:upload_af_info()" (X, a string scan). The
 // mask form (the E143 family's set, a bit per request) is not read. Returns {mode, uploads: [mode 1, mode 2, mode 3]}
 // (null for a mode with no upload), or undefined where set is not the clamp form; throws where a mode has two uploads.
-export const AF_UPLOAD_E143 = 0x500257CE;
 const PLANE_SPAN = 0x200, CLAMP_SPAN = 0x60, TEST_SPAN = 0x18, PLANE_PREFIX = new Set([0x86, 0x92]);   // mov d1,d2; mov a0,a2
 // `movbu (abs32),Dn` (fc a8..ab) at o: n, else -1; `cmp imm8,Dn` (a0, a5, aa, af) at o: [n, imm8], else null
 const byteLoad = (img, o) => (img[o] === 0xfc && (img[o + 1] & 0xfc) === 0xa8 ? img[o + 1] & 3 : -1);
@@ -5940,7 +6274,6 @@ function framePlane(img, set) {
 // and E140, 4013 on E125, E145, E133, E130, E129 and E132 (X, a byte read before each port's place of the two sites),
 // 4014 on the E118 family (the first site placed by src/fw/overrides-E122.mjs). Throws where a placed site has no such
 // read before it or the sites disagree.
-export const PROP_DEVICE_SITES_E143 = [0x503EFF61, 0x50B76DBE];
 function propDevice(img, sites) {
   const ids = sites.map((site) => {
     const o = site - 0x50000000, len = [5, 7].find((n) => callAt(img, o - n)?.len === n && img[o - n - 3] === 0x2c);
@@ -5961,7 +6294,6 @@ function propDevice(img, sites) {
 // (0x502fe38a) and an AUD_EXEC request (0x502f6ba0), where 6 takes BI_EVF's 825 lines (0x502fa8eb, D). 2 on the 15
 // bodies of the E143 and E144 families, 6 on E118, E120 and E122 (X). Throws where two such writers disagree; undefined
 // where there is none.
-export const EVF_PROP_VALUE = 8;
 const EVF_GUARD_SPAN = 0x40;
 function evfCode(img, propId) {
   const codes = new Set();
@@ -5989,10 +6321,6 @@ function evfCode(img, propId) {
 // entry is the queue its name in the object-name table names (X, the 19 images: the five of the E118 family the
 // port's queue-id words read as another queue's, XTC_APP_EXEC, TFT_EXEC, LENS_COMMAND, FCS_EXEC and PWR_EXEC, and
 // those of E146, E147, E134, E137, E125, E145, E133, E130, E129 and E132). Throws where the walk finds no such pair.
-export const API_SEND_RETURN_E143 = 0x503EBA07;
-export const API_TARGETS_E143 = { XTC_APP_EXEC: 0, PLAY_EXEC: 3, TFT_EXEC: 4, TAKE_EXEC: 6, REC_EXEC_MAIN: 12,
-  FILECLBK_UEXEC: 14, ADJ_SLF_EXEC: 33, BC_EXEC: 34, UI_OUT_EXEC: 39, LENS_EXEC: 18, ADJ_EXEC: 24, TAKE_FUNC: 25,
-  ZOOM_EXEC: 26, FCS_EXEC: 27, PWR_EXEC: 28, AUD_EXEC: 37, LENS_COMMAND: 40, MOVE_MAIN: 41, C3D: 42 };
 const API_SENDER_SPAN = 0x100, API_TABLE_MAX = 64;
 export function apiTargets(img, ret) {
   const { base } = imageBase(img), end = ret - 0x50000000;
@@ -6019,9 +6347,15 @@ export function apiTargets(img, ret) {
 // is read so: no API target names that queue (D: E143's, E137's and E125's tables, docs/model-survey.md finding
 // 130), and the port's placement of E143's id word read REC_EXEC_PROGRESS on E137 and FMEMEXEC on E125, which hold no
 // such name (finding 99)
-const OBJECT_NAME = 24, OBJECT_RECORD = 26, OBJECT_RUN_MIN = 100;
-export const PC_PD_NAME = 'PC_PD_CMD_EXEC';
+const OBJECT_NAME = 24, OBJECT_RECORD = 26, OBJECT_RUN_MIN = 100, OBJECT_NAME_CACHE_MIN = 0x100000;
+const objectNameCache = new WeakMap();
 export function objectNameId(img, name) {
+  let cache = null;
+  if (img.length >= OBJECT_NAME_CACHE_MIN) {
+    cache = objectNameCache.get(img);
+    if (!cache) { cache = new Map(); objectNameCache.set(img, cache); }
+    if (cache.has(name)) return cache.get(name);
+  }
   const looks = (o) => {
     if (o < 0 || o + OBJECT_RECORD > img.length) return false;
     let n = 0;
@@ -6031,18 +6365,107 @@ export function objectNameId(img, name) {
     return true;
   };
   const want = [...name].map((c) => c.charCodeAt(0)), hits = [];
-  for (let o = 0; o + OBJECT_RECORD <= img.length; o++) {
-    if (img[o] !== want[0]) continue;
-    let k = 1;
-    while (k < want.length && img[o + k] === want[k]) k++;
-    if (k < want.length || img[o + k] !== 0 || !looks(o)) continue;
-    let run = 1;
-    for (let p = o - OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p -= OBJECT_RECORD) run++;
-    for (let p = o + OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p += OBJECT_RECORD) run++;
-    if (run >= OBJECT_RUN_MIN) hits.push(o);
+  if (want.length) {
+    for (let o = img.indexOf(want[0]); o >= 0 && o + OBJECT_RECORD <= img.length; o = img.indexOf(want[0], o + 1)) {
+      let k = 1;
+      while (k < want.length && img[o + k] === want[k]) k++;
+      if (k < want.length || img[o + k] !== 0 || !looks(o)) continue;
+      let run = 1;
+      for (let p = o - OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p -= OBJECT_RECORD) run++;
+      for (let p = o + OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p += OBJECT_RECORD) run++;
+      if (run >= OBJECT_RUN_MIN) hits.push(o);
+    }
   }
   if (hits.length > 1) throw new Error(`objectNameId: ${hits.length} records named ${name} (${hits.map(h8).join(', ')})`);
-  return hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
+  const id = hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
+  if (cache) cache.set(name, id);
+  return id;
+}
+
+// The play module's start (fact 'play.tasks', src/lab/playmod.mjs H-PLAYSTART; docs/hle-gaps/4.8.md 4.8.11, 4.8.18):
+// USTART5 starts its six tasks one after the other, each as `movhu (W),d0; exth d0; call OlyTaSt` (fc ac W, 18, a
+// 7-byte call) and then logs it by name, `mov <name>,a0` (fc dc) 14 bytes after the movhu, the names the six
+// NUL-terminated strings of PLAY_TASK_NAMES (E143 0x501e9f10..0x501e9fab, the names from 0x602c55b8; E146
+// 0x501f0514.., E147 0x501f82e4.., each start PLAY_START_STEP bytes after the one before, D). Returns [[W, name]] in
+// that order (W the task's id word, run-time), or undefined where no name's string is loaded so; throws where a name
+// has not one such load, the starts are not consecutive or call two functions.
+const PLAY_START = [0xfc, 0xac, null, null, null, null, 0x18, 0xdd], PLAY_START_NAME = 14, PLAY_START_STEP = 0x1b;
+export function playTasks(img) {
+  const rule = 'playTasks', { base } = imageBase(img);
+  const starts = PLAY_TASK_NAMES.map((name) => {
+    const loads = findString(img, name, { nul: true }).flatMap((o) => loadsOf(img, base + o)).filter((p) => img[p + 1] === 0xdc && bytesAt(img, p - PLAY_START_NAME, PLAY_START));
+    if (loads.length > 1) throw new Error(`${rule}: ${name} logged after ${loads.length} task starts (${loads.map((p) => h8(0x50000000 + p - PLAY_START_NAME)).join(', ')}), want one`);
+    return loads.length ? loads[0] - PLAY_START_NAME : null;
+  });
+  if (starts.every((p) => p === null)) return undefined;
+  const missing = PLAY_TASK_NAMES.filter((n, k) => starts[k] === null);
+  if (missing.length) throw new Error(`${rule}: no task start logged as ${missing.join(', ')}`);
+  const apart = starts.findIndex((p, k) => k > 0 && p !== starts[k - 1] + PLAY_START_STEP);
+  if (apart > 0) throw new Error(`${rule}: ${PLAY_TASK_NAMES[apart]}'s start ${h8(0x50000000 + starts[apart])} is not ${PLAY_START_STEP} bytes after ${PLAY_TASK_NAMES[apart - 1]}'s`);
+  const callees = new Set(starts.map((p) => callAt(img, p + 7).to));
+  if (callees.size !== 1) throw new Error(`${rule}: the starts call ${[...callees].map((o) => h8(0x50000000 + o)).join(', ')}, want one function`);
+  return starts.map((p, k) => [u32(img, p + 2), PLAY_TASK_NAMES[k]]);
+}
+// The play module's view decode at the image library (fact 'play.decode', src/lab/playmod.mjs S-IMGPIPE, S-PLAYDEC;
+// docs/hle-gaps/4.8.md 4.8.11, 4.8.13, 4.8.18), from the library's issue (the place of E143's 0x5048f331). D unless
+// tagged, from E143's code and E146's and E147's:
+// - issue_from: the issue's two calls, both the play module's (E143 0x518b446f, 0x518b478b; E146 0x518c2dce,
+//   0x518c3180; E147 0x518cacb3, 0x518cb065), their return addresses in their order;
+// - wait, wait_from: after each the first call whose a0 is set by the same instruction as the issue's, the one byte
+//   `mov a3,a0` (9c) on E143, `mov <block>,a0` (fc dc) on E146 and E147, where the calls between are the play
+//   module's traces (E146 0x51a240a4 with `mov <line>,a0`); the same function after both (E143 0x5048f6e4, E146
+//   0x50481d2a, E147 0x50490620), its returns in the same order;
+// - request: the request's fields, from the builder before the second call: the source format's store, the u16
+//   `movhu d0,(F,An)` (f8 70..73) right after `mov 7170,d0` (2c 02 1c; E143 0x518b4606, F 8; E146 0x518c2fd8, F 16:
+//   the source address is 64-bit there, the fields after it 8 bytes on), the padded width, the width and height and
+//   the size the library scales from stored at F + 2 .. F + 10 after it; the work buffer, `mov (8,a0),d0; mov d0,(An)`
+//   (f8 00 08 6x), An set by `mov W,a2` (9a W) or `add W,a2` (22 W) before it (E143 28, E146 36), and its bytes the
+//   `mov d0,(K,a2)` (f8 12 K) right before the 7170 load at W + K (E143 36, E146 48); src at +0;
+// - dest: the destination's fields, the u16 store right after `mov 3074,d0` (2c 02 0c): its format at G (E143 8,
+//   E146 16), the pitch and the size at G + 2 .. G + 6, its address at +0.
+// Returns PLAY_DECODE_E143's shape; throws where the issue has not two callers or a part is not found.
+const PLAY_WAIT_SPAN = 0x40, PLAY_FIELDS_SPAN = 0x40;
+export function playDecode(img, issue) {
+  const rule = 'playDecode', D = (o) => h8(0x50000000 + o);
+  const calls = callsTo(img, issue - 0x50000000);
+  if (calls.length !== 2) throw new Error(`${rule}: ${calls.length} calls of the image library's issue ${h8(issue)}, want two`);
+  // the instruction that sets a0 right before a call: `mov imm32,a0` (fc dc) or `mov Am,a0` (9x, one byte)
+  const setA0 = (c) => (img[c - 6] === 0xfc && img[c - 5] === 0xdc ? img.subarray(c - 6, c) : (img[c - 1] & 0xf3) === 0x90 && (img[c - 1] >> 2 & 3) !== 0 ? img.subarray(c - 1, c) : null);
+  const waits = calls.map((c) => {
+    const a0 = setA0(c);
+    if (a0 === null) throw new Error(`${rule}: the issue's call ${D(c)} sets a0 in no form the rule reads`);
+    const next = callsWhere(img, () => true).find((x) => x.at > c && x.at < c + PLAY_WAIT_SPAN && setA0(x.at)?.length === a0.length && bytesAt(img, x.at - a0.length, [...a0]));
+    if (!next) throw new Error(`${rule}: no call within 0x${PLAY_WAIT_SPAN.toString(16)} bytes after the issue's ${D(c)} takes its a0`);
+    return next;
+  });
+  if (waits[0].to !== waits[1].to || waits[0].to === issue - 0x50000000) throw new Error(`${rule}: the calls after the issue's go to ${waits.map((w) => D(w.to)).join(', ')}, want one function besides the issue`);
+  // the request's builder: between the two calls
+  const [c1, c2] = calls, from = c1 + 7;
+  const f7170 = oneAt(img, [0x2c, 0x02, 0x1c], rule, 'loads of 7170', from, c2);
+  const f3074 = oneAt(img, [0x2c, 0x02, 0x0c], rule, 'loads of 3074', from, c2);
+  if (f7170 === null || f3074 === null) throw new Error(`${rule}: no ${f7170 === null ? 'source format 7170' : 'destination format 3074'} between the issue's calls ${D(c1)} and ${D(c2)}`);
+  const stores = (p) => { const out = []; for (let q = p; q < p + PLAY_FIELDS_SPAN; q++) if (img[q] === 0xf8 && (img[q + 1] & 0xfc) === 0x70) out.push([q, img[q + 2]]); return out; };
+  const firstStore = (p, what) => {
+    const s = stores(p)[0];
+    if (!s || s[0] > p + 8) throw new Error(`${rule}: no u16 store of the ${what} right after its load ${D(p)}`);
+    return s[1];
+  };
+  const F = firstStore(f7170 + 3, 'source format'), G = firstStore(f3074 + 3, 'destination format');
+  const has = (p, offs, what) => { const got = stores(p).map(([, o]) => o); const lost = offs.filter((o) => !got.includes(o)); if (lost.length) throw new Error(`${rule}: no u16 store of the ${what} at ${lost.join(', ')} after ${D(p)}`); };
+  has(f7170, [F + 2, F + 4, F + 6, F + 8, F + 10], 'source\'s sizes');
+  has(f3074, [G + 2, G + 4, G + 6], 'destination\'s pitch and size');
+  const K = [5, 3].map((k) => f7170 - k).find((q) => bytesAt(img, q, [0xf8, 0x12]) && (q + 3 === f7170 || bytesAt(img, q + 3, [0x5e, 0x08])));
+  if (K === undefined) throw new Error(`${rule}: no \`mov d0,(K,a2)\` of the work buffer's bytes right before ${D(f7170)}`);
+  const ws = oneAt(img, [0xf8, 0x00, 0x08, 0x62], rule, 'work buffer stores', from, f7170);
+  let W = null;
+  for (let q = ws - 2; ws !== null && q >= ws - 0x10 && W === null; q--) if ((img[q] === 0x9a || img[q] === 0x22) && wholeTo(img, q, ws)) W = img[q + 1];
+  if (W === null) throw new Error(`${rule}: no \`mov W,a2\` or \`add W,a2\` before the work buffer's store ${ws === null ? '(none)' : D(ws)}`);
+  const ret = (c) => 0x50000000 + c.at + c.len;
+  return {
+    issue, issue_from: calls.map((c) => 0x50000000 + c + 7), wait: 0x50000000 + waits[0].to, wait_from: waits.map(ret),
+    request: { src: 0, format: F, width: F + 4, height: F + 6, area_width: F + 8, area_height: F + 10, work: W, bytes: W + img[K + 2] },
+    dest: { addr: 0, format: G, pitch: G + 2, width: G + 4, height: G + 6 },
+  };
 }
 
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
@@ -6050,7 +6473,7 @@ export function objectNameId(img, name) {
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
 // start, replies}}, {play: {wrappers, still}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
-// {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
+// {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0, init}}, {ui_in: {task,
 // forward}}, {touch_start: {init, id_word}}, {touch_mask: {word}},
 // {touch_regs}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} and {rec_file: {exif, init,
@@ -6126,7 +6549,10 @@ export function readPlacedFacts({ img, at }) {
   const uiPost = at(UI_IN_POST_E143), uiSink = at(UI_IN_SINK_E143);
   const uiIn = { ...(kcb !== null && uiFlag !== null && { task: uiInTask(img, kcb, uiFlag) }), ...(uiPost !== null && uiSink !== null && { forward: uiInForward(img, uiPost, uiSink) }) };
   if (Object.keys(uiIn).length) facts.ui_in = uiIn;
-  if (kcb !== null) facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off: powerOff(img, flashSave) }) };
+  if (kcb !== null) {
+    const off = flashSave !== null ? powerOff(img, flashSave) : undefined;
+    facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off }), ...(off && { later: powerLater(img, off.pwr.init) }) };
+  }
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
   const tpMask = touchDriver(img) ? at(TP_MASK_E143) : null;
@@ -6156,6 +6582,8 @@ export function readPlacedFacts({ img, at }) {
   // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
+  // Dual Independent's second image (SlotNo, the double-slot buffer, the slots' settings and file types), on the same
+  if (recF !== undefined) facts.dual_slot = dualSlot(img, recF);
   // TAKE's requests as S-MODPOST and S-TAKERDY take them, on the same bodies (E143, E146, E147)
   if (recF !== undefined) facts.take_requests = takeRequests(img, at, qewr);
   // TAKE's exposure for a still's record as S-EXIFPRM gives it, on the same bodies
@@ -6164,6 +6592,10 @@ export function readPlacedFacts({ img, at }) {
   if (recF !== undefined) facts.take_shot = takeShot(img);
   // TAKE's own fills of a still's shot as H-TAKEFILLS runs them, on the same bodies
   if (recF !== undefined) facts.take_fills = takeFills(img, at, recF.exif);
+  // the play module's start and its view decode at the image library, on the same bodies
+  const playIssue = recF !== undefined ? at(PLAY_ISSUE_E143) : null, playStarts = recF !== undefined ? playTasks(img) : undefined;
+  if (playStarts !== undefined) facts.play.tasks = playStarts;
+  if (playIssue !== null) facts.play.decode = playDecode(img, playIssue);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;
@@ -6234,12 +6666,14 @@ export function readFacts({ img, family, resLoad }) {
   facts.mm_init = mmInit(img);
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
+  const adc = adDriver(img);
+  if (adc !== undefined) facts.adc = adc;
   const sio = sioDriver(img);
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
-  // the second card slot (cardSlots), on a body whose detect helper has E143's form
-  const slots = storage !== undefined ? cardSlots(img, storage.command) : undefined;
+  // the second card slot (cardSlots), on a body whose card driver has two drives (E143's detect form, or UI_IN's)
+  const slots = storage !== undefined ? cardSlots(img, storage.command, { drives: facts.card.detect.drives, shots: facts.card.shots_query }) : undefined;
   if (slots !== undefined) facts.card.slots = slots;
   const media = mediaHls(img, storage);
   if (media !== undefined) facts.media = media;
@@ -6251,7 +6685,8 @@ export function readFacts({ img, family, resLoad }) {
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);
-  facts.board.dram_size = dramSize(facts.gui);
+  if (family.dram_rule !== 'mm-bank0' && family.dram_rule !== 'gui') throw new Error(`readFacts: board dram_rule ${JSON.stringify(family.dram_rule)} has no rule here`);
+  facts.board.dram_size = family.dram_rule === 'mm-bank0' ? mmDramSize(mmBank0(img), facts.gui) : dramSize(facts.gui);
   const recview = recViewStandby(img);
   facts.recview = recview ?? null;
   facts.touch_int = touchIntWait(img) ?? null;
@@ -6261,6 +6696,7 @@ export function readFacts({ img, family, resLoad }) {
   const propStoreInit = propStore(img);
   if (propStoreInit !== undefined) facts.prop_store = propStoreInit;
   facts.ctors = ctorTables(img);
+  facts.hdmi = { calib: hdmiCalib(img) };
   return facts;
 }
 
@@ -6314,7 +6750,7 @@ export function rulePlaces(facts) {
 // 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
 // (crtClockRead, 'call-target'); the frame display mode set at the one the TAKE request's clamp calls (frameModeSet,
 // 'take-clamp'); the AF upload at the frame plane's mode-3 upload, unplaced where the plane has none (framePlane,
-// 'plane-mode').
+// 'plane-mode'); the dial init at the dial-table store's select where dialStore reads it (dialStore, 'dial-store').
 export function placedRulePlaces(facts, e143, place) {
   const out = new Map();
   if (facts.store?.db_save !== undefined) out.set(DB_SAVE_RETURN_E143, { to: facts.store.db_save, how: 'db-save' });
@@ -6335,6 +6771,7 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.crt) out.set(K_CRT_134D_E143, { to: facts.crt.clock_read, how: 'call-target' });
   if (facts.frame_mode) out.set(FRAME_MODE_SET_E143, { to: facts.frame_mode.set, how: 'take-clamp' });
   if (facts.frame_plane) out.set(AF_UPLOAD_E143, { to: facts.frame_plane.uploads[2], how: 'plane-mode' });
+  if (facts.dial?.init !== undefined) out.set(DIAL_INIT_E143, { to: facts.dial.init, how: 'dial-store' });
   if (facts.icons) {
     out.set(ICON_TABLE_E143, { to: facts.icons.table, how: 'icon-store' });
     out.set(ICON_AUX_E143, { to: facts.icons.aux, how: 'icon-store' });

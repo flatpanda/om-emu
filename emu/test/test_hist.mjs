@@ -1,4 +1,4 @@
-// The VSC's histogram unit in play (E143, control camapp 3; docs/hle-gaps.md 4.2.7, docs/om1-vsc-spec.md section 13;
+// The VSC's histogram unit in play (E143, control camapp 3; docs/hle-gaps/4.2.md 4.2.7, docs/om1-vsc-spec.md section 13;
 // the device's own units are test_dev.mjs vscHistUnits):
 //   histLiveSession  the live histogram with S-SCENE's live view, without and with --cpu2 native: the session runs on
 //                  where it stopped at the first end with IMG1 on (HIST_UNMODELLED at 0x501e153d); the run the live
@@ -19,7 +19,7 @@
 //                  (A-VSCHIST-6); they reach CapPlh's four buffers and the GUI draws them as four panels of bars in
 //                  GUI layer 1, white, red, green and blue, each bar ceil(bin * 78 / 32) rows high; the detail view's
 //                  frame is refused for the highlight unit's area alone (HIAREA1-3, FEATURE_UNOBSERVED): the next stop
-//   histEvfSession  the EVF switch under the running histogram (docs/hle-gaps.md 4.2.7, 4.3.6, 4.3.10): the lab's
+//   histEvfSession  the EVF switch under the running histogram (docs/hle-gaps/4.2.md 4.2.7, docs/hle-gaps/4.3.md 4.3.6, docs/hle-gaps/4.3.md 4.3.10): the lab's
 //                  DISPLAY cmd 2 OPEN of the EVF made with a run on (the open of the lab's own switch, camapp 1 and
 //                  2's, and camapp 3's until its switch became the firmware's own): the run that is on ends on the
 //                  TFT's channel, which still runs (the open has changed the opened word and not yet closed the
@@ -46,7 +46,7 @@ const BIN_READ_RETURN = 0x501D7128, REQ_BINS = 0x62A3EACC, START_PATH = 0x501D6B
 // {498, 271}) and the firmware's values for them: 128 bins, clip 64, HIST3[15:0] = 2 s with s = 1024 << 16 / (800 *
 // 600) = 139 and (1024 >> 3) << 16 / (100 * 75) = 1118 (0x501d6d24..4b, 0x501d6d87..b1)
 const LIVE = { full: 0x00940320, spot: 0x01F20064, hist2: 0x00100112, hist3: { full: 0x00400116, spot: 0x004008BC }, bins: 128 };
-// the GUI's copy of its drawHistogram request for OSD_DRAW_CPU2 (docs/hle-gaps.md 4.6.2: 36 bytes, then the plane
+// the GUI's copy of its drawHistogram request for OSD_DRAW_CPU2 (docs/hle-gaps/4.6.md 4.6.2: 36 bytes, then the plane
 // descriptor and the two series): x, y, width, height at +4, the series at +12 (the full area's) and +16 (the
 // spot's), the scale at +20, the bin count at +24, the two bin limits at +26 / +28 and the colours at +31..+34
 const DRAW_REQ = 0xA33EB558, DRAW_SERIES = [0xA33EB58C, 0xA33EB78C], OSD_STRIDE = 1664;
@@ -59,7 +59,7 @@ const PANEL = { x: 555, pitch: 10, bottoms: [129, 215, 301, 387], rows: 78 };
 const GUI_DISP_DETAIL = '0x050b';
 // the opened word and the histogram's run word (vsc spec section 13), the ISR's error log
 const OPENED = 0xA32DB39C, HIST_RUN = 0x62A3EAF8, HIST_ERRLOG = 0x37001418, OPEN_TFT = 1, OPEN_EVF = 2;
-// the histogram's stop, DISPLAY cmd 15 (0x501d709f: waits up to 50 ms for the running run's end; hle-gaps 4.2.7)
+// the histogram's stop, DISPLAY cmd 15 (0x501d709f: waits up to 50 ms for the running run's end; hle-gaps/4.2.md 4.2.7)
 const HIST_STOP = 0x501D709F;
 
 async function setup() {

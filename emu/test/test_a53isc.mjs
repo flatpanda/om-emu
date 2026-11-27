@@ -7,12 +7,14 @@
 // the refusals: unobserved ports, kinds and ops throw, a thirteenth concurrent socket op is dropped as the A53 drops
 // it, a CGI message out of order throws.
 //   node emu/test/test_a53isc.mjs
-import { A53Isc, PORT, PENDING, SLOTS, CGI_INFO, POOL_MN } from '../src/lab/a53isc.mjs';
+import { A53Isc, PORT, SOCK, PENDING, SLOTS, CGI_INFO, CGI_CHUNK, CGI_REPLY, CGI_DATA, POOL_MN } from '../src/lab/a53isc.mjs';
 
 const tester = () => { const bad = []; let checks = 0; return { bad, get checks() { return checks; }, ok: (c, what) => { checks++; if (!c) bad.push(what); } }; };
 const hex = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 const unhex = (h, n = h.length / 2) => { const b = new Uint8Array(n); for (let i = 0; i < h.length / 2; i++) b[i] = parseInt(h.substr(2 * i, 2), 16); return b; };
 const u32 = (b, o) => new DataView(b.buffer, b.byteOffset).getUint32(o, true);
+const i32 = (b, o) => new DataView(b.buffer, b.byteOffset).getInt32(o, true);
+const put32 = (b, o, v) => new DataView(b.buffer, b.byteOffset).setUint32(o, v >>> 0, true);
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
 const latin1 = (b) => String.fromCharCode(...b);
 
@@ -49,7 +51,7 @@ function harness() {
   const write = (a, b) => b.forEach((x, i) => mem.set(a + i, x));
   const pool = { freed: [], alloc: (size) => ({ block: 2, size, addr: POOL_MN + 0x2000 }), free(h) { this.freed.push(h); } };
   const net = { calls: [], queue: [] };
-  for (const op of ['socket', 'bind', 'listen', 'accept', 'send', 'recv', 'close']) {
+  for (const op of ['socket', 'bind', 'connect', 'listen', 'accept', 'send', 'sendto', 'recv', 'shutdown', 'close', 'getsockopt', 'setsockopt']) {
     net[op] = (...a) => { net.calls.push([op, ...a]); return net.queue.length ? net.queue.shift() : PENDING; };
   }
   const svc = new A53Isc({ send: (node, port, b) => out.push({ node, port, b: Uint8Array.from(b) }), mem: { read, write }, net, pool });
@@ -103,9 +105,91 @@ export function a53iscUnits() {
     for (let i = 0; i < SLOTS; i++) svc.receive(3, unhex('0500000010', 64));
     svc.receive(3, unhex('0b00000011', 64));
     ok(out.length === 2 && svc.dropped === 1, 'with 12 ops in flight a thirteenth is dropped, no reply');
-    ok(throws(() => svc.receive(3, unhex('03000000', 64))) && throws(() => svc.receive(3, unhex('0c000000', 64))), 'connect and select (not observed live) throw');
+    ok(throws(() => svc.receive(3, unhex('09000000', 64))) && throws(() => svc.receive(3, unhex('0c000000', 64))), 'recvfrom and select (undocumented layouts) throw');
     ok(throws(() => svc.receive(3, unhex('01000000', 32))), 'a port-3 record that is not 64 bytes throws');
     ok(throws(() => svc.receive(9, unhex('00', 8))), 'a port with no service throws');
+  }
+
+  { // isc_socket: D-evidenced ops (connect, sendto, shutdown, getsockopt, setsockopt)
+    const { svc, out, net, write, read } = harness();
+    const rec64 = (op, id) => { const r = new Uint8Array(64); put32(r, 0, op); put32(r, 4, id); return r; };
+    const sa = unhex('02000050c0a80001', 16); // AF_INET 192.168.0.1:80
+
+    // connect (op 3): +0x10 fd, +0x14 sockaddr[16], +0x24 len -> +0x28 ret
+    const cReq = rec64(SOCK.connect, 0x201);
+    put32(cReq, 0x10, 7); cReq.set(sa, 0x14); put32(cReq, 0x24, 16);
+    net.queue = [0];
+    svc.receive(3, cReq);
+    const cCall = net.calls.at(-1), cRep = out.at(-1);
+    ok(cCall[0] === 'connect' && cCall[1] === 7 && hex(cCall[2]) === hex(sa) && cCall[3] === 16, 'connect forwards fd, sockaddr[16], len');
+    ok(cRep.port === 4 && u32(cRep.b, 4) === 0x201 && cRep.b[0xc] === 1 && i32(cRep.b, 0x28) === 0, 'connect writes ret 0 at +0x28');
+    // connect pending + error return (-1)
+    svc.receive(3, cReq);
+    const cSlot = svc.slots.findIndex((s) => s && s.op === SOCK.connect);
+    svc.finish(cSlot, -1);
+    ok(i32(out.at(-1).b, 0x28) === -1, 'connect error return (-1) written at +0x28');
+
+    // sendto (op 7): +0x10 fd, +0x14 MN buf, +0x18 len, +0x1c flags, +0x20 sockaddr[16], +0x30 addrlen -> +0x34 ret
+    write(0x63fe4000, Uint8Array.from('ping', (c) => c.charCodeAt(0)));
+    const stReq = rec64(SOCK.sendto, 0x202);
+    put32(stReq, 0x10, 8); put32(stReq, 0x14, 0x63fe4000); put32(stReq, 0x18, 4); put32(stReq, 0x1c, 0x40);
+    stReq.set(sa, 0x20); put32(stReq, 0x30, 16);
+    net.queue = [4];
+    svc.receive(3, stReq);
+    const stCall = net.calls.at(-1), stRep = out.at(-1);
+    ok(stCall[0] === 'sendto' && stCall[1] === 8 && latin1(stCall[2]) === 'ping' && stCall[3] === 0x40 && hex(stCall[4]) === hex(sa) && stCall[5] === 16,
+      'sendto reads MN buf and forwards fd, data, flags, sockaddr, addrlen');
+    ok(stRep.port === 4 && u32(stRep.b, 4) === 0x202 && stRep.b[0xc] === 1 && i32(stRep.b, 0x34) === 4, 'sendto writes ret at +0x34');
+    net.queue = [-1];
+    svc.receive(3, stReq);
+    ok(i32(out.at(-1).b, 0x34) === -1, 'sendto error return (-1) written at +0x34');
+
+    // shutdown (op 10): +0x10 fd, +0x14 how -> +0x18 ret
+    const shReq = rec64(SOCK.shutdown, 0x203);
+    put32(shReq, 0x10, 7); put32(shReq, 0x14, 2);
+    net.queue = [0];
+    svc.receive(3, shReq);
+    const shCall = net.calls.at(-1), shRep = out.at(-1);
+    ok(shCall[0] === 'shutdown' && shCall[1] === 7 && shCall[2] === 2 && i32(shRep.b, 0x18) === 0 && shRep.b[0xc] === 1,
+      'shutdown forwards fd, how and writes ret at +0x18');
+    net.queue = [-1];
+    svc.receive(3, shReq);
+    ok(i32(out.at(-1).b, 0x18) === -1, 'shutdown error return (-1) written at +0x18');
+
+    // setsockopt (op 14): +0x10 fd, +0x14 level, +0x18 name, +0x1c MN buf, +0x20 len -> +0x24 ret
+    write(0x63fe4100, unhex('01000000'));
+    const ssReq = rec64(SOCK.setsockopt, 0x204);
+    put32(ssReq, 0x10, 7); put32(ssReq, 0x14, 1); put32(ssReq, 0x18, 2); put32(ssReq, 0x1c, 0x63fe4100); put32(ssReq, 0x20, 4);
+    net.queue = [0];
+    svc.receive(3, ssReq);
+    const ssCall = net.calls.at(-1), ssRep = out.at(-1);
+    ok(ssCall[0] === 'setsockopt' && ssCall[1] === 7 && ssCall[2] === 1 && ssCall[3] === 2 && hex(ssCall[4]) === '01000000',
+      'setsockopt reads MN buf and forwards fd, level, name, optval');
+    ok(u32(ssRep.b, 4) === 0x204 && ssRep.b[0xc] === 1 && i32(ssRep.b, 0x24) === 0, 'setsockopt writes ret at +0x24');
+    net.queue = [-1];
+    svc.receive(3, ssReq);
+    ok(i32(out.at(-1).b, 0x24) === -1, 'setsockopt error return (-1) written at +0x24');
+
+    // getsockopt (op 13): +0x10 fd, +0x14 level, +0x18 name, +0x1c MN buf, +0x20 len -> +0x20 len, +0x24 ret
+    const gsReq = rec64(SOCK.getsockopt, 0x205);
+    put32(gsReq, 0x10, 7); put32(gsReq, 0x14, 1); put32(gsReq, 0x18, 4); put32(gsReq, 0x1c, 0x63fe4200); put32(gsReq, 0x20, 8);
+    net.queue = [unhex('05000000')];
+    svc.receive(3, gsReq);
+    const gsCall = net.calls.at(-1), gsRep = out.at(-1);
+    ok(gsCall[0] === 'getsockopt' && gsCall[1] === 7 && gsCall[2] === 1 && gsCall[3] === 4 && gsCall[4] === 8,
+      'getsockopt forwards fd, level, name, len');
+    ok(hex(read(0x63fe4200, 4)) === '05000000' && u32(gsRep.b, 0x20) === 4 && i32(gsRep.b, 0x24) === 0,
+      'getsockopt writes optval to MN buf, updates +0x20 len, and writes 0 at +0x24');
+    net.queue = [-1];
+    svc.receive(3, gsReq);
+    ok(i32(out.at(-1).b, 0x24) === -1, 'getsockopt error return (-1) written at +0x24');
+    net.queue = [new Uint8Array(9)];
+    ok(throws(() => svc.receive(3, gsReq)), 'getsockopt returning more bytes than requested len throws');
+
+    // memory-required ops throw without mem
+    const noMem = new A53Isc({ send: () => {}, net });
+    ok(throws(() => noMem.receive(3, stReq)) && throws(() => noMem.receive(3, ssReq)) && throws(() => noMem.receive(3, gsReq)),
+      'sendto, setsockopt and getsockopt throw without memory');
   }
 
   { // isc_cgi: the recorded GET
@@ -156,8 +240,94 @@ export function a53iscUnits() {
     ok(res === null, 'a first chunk short of the total does not finish');
     write(POOL_MN + 0x2000, two('def', 6)); svc.receive(12, out[0].b); svc.receive(11, out[0].b.subarray(0, 16));
     ok(res && latin1(res.data) === 'abcdef' && res.slot === 3, 'the chunks are joined up to the total');
-    ok(throws(() => svc.cgiRequest({ method: 'POST', uri: '/x.cgi', body: 'x'.repeat(0x3001) }, null)), 'a body over one chunk (not observed live) throws');
     ok(throws(() => svc.cgiRequest({ method: 'PUT', uri: '/x.cgi' }, null)), 'a method other than GET and POST throws');
+  }
+
+  { // isc_cgi: multi-chunk POST (3 chunks) and multi-chunk reply (3 chunks)
+    const { svc, out, write, read, pool } = harness();
+    const totalReq = CGI_CHUNK * 2 + 17;
+    const reqBody = Uint8Array.from({ length: totalReq }, (_, i) => (i * 37 + 11) & 0xff);
+    let res = null;
+    svc.cgiRequest({ method: 'POST', uri: '/upload.cgi?n=3', body: reqBody, remote: '10.0.0.2', log: 'oi' }, (r) => { res = r; });
+
+    // Chunk 1: kind 1, URI present, first 0x3000 bytes
+    const inq1 = out.at(-1);
+    ok(inq1.port === PORT.CGI_HANDLE && inq1.b.length === 32, 'multi-chunk POST chunk 1 sends p12 inquiry');
+    svc.receive(PORT.CGI_ACK, inq1.b);
+    const info1 = read(POOL_MN + 0x2000, CGI_INFO);
+    ok(u32(info1, 0) === 1 && u32(info1, 4) === totalReq && u32(info1, 8) === CGI_CHUNK && u32(info1, 0xc) === 2,
+      'chunk 1 info: kind 1, total content length, chunk 0x3000, POST');
+    ok(latin1(info1.subarray(0x14, 0x14 + u32(info1, 0x10))) === '/upload.cgi?n=3', 'chunk 1 carries URI');
+    ok(info1[0x414] === reqBody[0] && info1[0x414 + CGI_CHUNK - 1] === reqBody[CGI_CHUNK - 1], 'chunk 1 carries bytes [0..0x3000)');
+    ok(out.at(-1).port === PORT.CGI_DATA && out.at(-1).b.length === 16, 'chunk 1 sends p11 notice');
+    svc.receive(PORT.CGI_RESULT, new Uint8Array(32));
+
+    // Chunk 2: kind 2, no URI, next 0x3000 bytes
+    const inq2 = out.at(-1);
+    ok(inq2.port === PORT.CGI_HANDLE && inq2.b.length === 32, 'after chunk 1 p13, sends p12 inquiry for chunk 2');
+    svc.receive(PORT.CGI_ACK, inq2.b);
+    const info2 = read(POOL_MN + 0x2000, CGI_INFO);
+    ok(u32(info2, 0) === 2 && u32(info2, 4) === totalReq && u32(info2, 8) === CGI_CHUNK && u32(info2, 0xc) === 2 && u32(info2, 0x10) === 0,
+      'chunk 2 info: kind 2, total content length, chunk 0x3000, POST, uriLen 0');
+    ok(info2[0x414] === reqBody[CGI_CHUNK] && info2[0x414 + CGI_CHUNK - 1] === reqBody[CGI_CHUNK * 2 - 1], 'chunk 2 carries bytes [0x3000..0x6000)');
+    svc.receive(PORT.CGI_RESULT, new Uint8Array(32));
+
+    // Chunk 3: kind 2, final 17 bytes
+    const inq3 = out.at(-1);
+    ok(inq3.port === PORT.CGI_HANDLE, 'after chunk 2 p13, sends p12 inquiry for chunk 3');
+    svc.receive(PORT.CGI_ACK, inq3.b);
+    const info3 = read(POOL_MN + 0x2000, CGI_INFO);
+    ok(u32(info3, 0) === 2 && u32(info3, 4) === totalReq && u32(info3, 8) === 17 && u32(info3, 0x10) === 0,
+      'chunk 3 info: kind 2, total content length, chunk 17, uriLen 0');
+    let bodyMatch = true;
+    for (let i = 0; i < 17; i++) if (info3[0x414 + i] !== reqBody[CGI_CHUNK * 2 + i]) bodyMatch = false;
+    ok(bodyMatch, 'chunk 3 carries final 17 bytes verbatim');
+    const beforeFinalTaken = out.length;
+    svc.receive(PORT.CGI_RESULT, new Uint8Array(32));
+    ok(out.length === beforeFinalTaken, 'after final request chunk p13, no further p12 inquiry is sent');
+
+    // Multi-chunk reply: 3 chunks (2 full 0x3070 chunks + 23-byte tail)
+    const maxReply = CGI_REPLY - CGI_DATA;
+    const totalRep = maxReply * 2 + 23;
+    const repData = Uint8Array.from({ length: totalRep }, (_, i) => (i * 19 + 5) & 0xff);
+    const sendReplyChunk = (slice) => {
+      const R = new Uint8Array(CGI_DATA + slice.length);
+      put32(R, 4, totalRep); put32(R, 8, slice.length); put32(R, 0xc, 5);
+      R.set(slice, CGI_DATA);
+      write(POOL_MN + 0x2000, R);
+      svc.receive(PORT.CGI_HANDLE, inq1.b);
+      ok(out.at(-1).port === PORT.CGI_ACK && u32(out.at(-1).b, 0x18) === 0, 'reply chunk acked on p16 with +0x18 0');
+      svc.receive(PORT.CGI_DATA, inq1.b.subarray(0, 16));
+      ok(out.at(-1).port === PORT.CGI_RESULT && u32(out.at(-1).b, 4) === 0, 'reply chunk completed on p13 with +4 0');
+    };
+    sendReplyChunk(repData.subarray(0, maxReply));
+    ok(res === null, 'not done after reply chunk 1 of 3');
+    sendReplyChunk(repData.subarray(maxReply, maxReply * 2));
+    ok(res === null, 'not done after reply chunk 2 of 3');
+    sendReplyChunk(repData.subarray(maxReply * 2));
+    ok(res && res.slot === 5 && res.data.length === totalRep && pool.freed.length === 1, '3-chunk reply completes with full length, slot 5, buffer freed');
+    let repMatch = true;
+    for (let i = 0; i < totalRep; i++) if (res.data[i] !== repData[i]) repMatch = false;
+    ok(repMatch, '3-chunk reply bytes reassembled verbatim');
+  }
+
+  { // isc_cgi: error on chunk ack / chunk result frees buffer and advances queue
+    const { svc, out, pool } = harness();
+    svc.cgiRequest({ method: 'POST', uri: '/a.cgi', body: 'a'.repeat(CGI_CHUNK + 5) }, null);
+    svc.cgiRequest({ method: 'GET', uri: '/b.cgi' }, null);
+    // Accept chunk 1, then refuse chunk 2's p16 inquiry ack
+    svc.receive(PORT.CGI_ACK, out[0].b);
+    svc.receive(PORT.CGI_RESULT, new Uint8Array(32));
+    const inq2 = out.at(-1);
+    const badAck = Uint8Array.from(inq2.b); put32(badAck, 0x18, 1);
+    ok(throws(() => svc.receive(PORT.CGI_ACK, badAck)), 'non-zero p16 ack on chunk 2 throws');
+    ok(pool.freed.length === 1 && out.at(-1).port === PORT.CGI_HANDLE, 'refused p16 frees buffer and starts queued request');
+
+    // Accept queued GET's inquiry, then refuse its p13 result
+    svc.receive(PORT.CGI_ACK, out.at(-1).b);
+    const badRes = new Uint8Array(32); put32(badRes, 4, 1);
+    ok(throws(() => svc.receive(PORT.CGI_RESULT, badRes)), 'non-zero p13 result throws');
+    ok(pool.freed.length === 2 && svc.cgi === null, 'refused p13 frees buffer and clears in-flight CGI');
   }
   return t;
 }

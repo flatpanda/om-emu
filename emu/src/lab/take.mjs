@@ -1,4 +1,4 @@
-// The TAKE probe (docs/hle-gaps.md 4.1.4; E143 only, `--take probe`, off by default): TAKE_FUNC (task 0x69) and
+// The TAKE probe (docs/hle-gaps/4.1.md 4.1.4; E143 only, `--take probe`, off by default): TAKE_FUNC (task 0x69) and
 // TAKE_FUNC_CP (task 0x6a) run natively in place of S-MODACK's answers to TAKE_FUNC's queue, under either camapp
 // mode, and every request they make of a module or driver the lab does not run goes to a recording stand-in, which
 // records it and answers only where TAKE waits. Addresses are E143's (D unless tagged).
@@ -40,7 +40,7 @@
 //               logs 0x0a273000 (X; I: the front end would complete them, after the second init). So the stand-in
 //               records the request, returns 0 (accepted) and after the step calls the request's completion natively
 //               with d0 0 and a0 the request, as the driver does (0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f).
-//               Round 6 (below; docs/hle-gaps.md 4.2.6): request 6 is the sensor's power-on, which natively stops at
+//               Round 6 (below; docs/hle-gaps/4.2.md 4.2.6): request 6 is the sensor's power-on, which natively stops at
 //               the sensor's serial unit even with the second init run, so the stand-in keeps requests 6 and 5
 //   S-TAKEUSF   the dust filter's gate-on API (0x50064a69, "USF GATE CONTROL") from TAKE's tasks: TAKE_FUNC_CP's start
 //               asks it (0x502cdb34) with its record {callback 0x502cdc97, 0} and waits on flag TAKE_FUNC_CP bit 1,
@@ -51,7 +51,7 @@
 // The probe keeps H-LENSON (lens.mjs): the lens's bring-up comes before the application starts TAKE, whose start then
 // sends LENS_EXEC its own camera-on, which LENS_MAIN takes natively.
 //
-// Round 2, the release route to TAKE_EXEC (docs/hle-gaps.md 4.1.7): TAKE_MAIN and TAKE_MAIN_CP run natively too, and
+// Round 2, the release route to TAKE_EXEC (docs/hle-gaps/4.1.md 4.1.7): TAKE_MAIN and TAKE_MAIN_CP run natively too, and
 // under control camapp 3 (the components with their transactions native) the shooting sequence's own take requests
 // reach TAKE_MAIN:
 //   H-TAKEMAIN  after H-TAKEINIT: TAKE_MAIN's module init (0x50399619, the boot stage 0x501e8e84's call at 0x501e8f7b,
@@ -105,13 +105,13 @@ const TAKE_QUEUES = { 0x5E: 'TAKE_FUNC', 0x5F: 'TAKE_FUNC_CP', 0x60: 'TAKE_FUNC_
 const CP_POST = 0x61;
 // send's return in TAKE's reply function 0x502ce619 ({u16 status, token, word 3} to the request's word 0)
 const T_REPLY = 0x502CE63B;
-// S-TAKEREQ's queues: id -> name (the object-name table's, CPU 2's from its own table, docs/hle-gaps.md 4.1.1)
+// S-TAKEREQ's queues: id -> name (the object-name table's, CPU 2's from its own table, docs/hle-gaps/4.1.md 4.1.1)
 export const TAKE_REQ_QUEUES = {
   0x09: 'BC_EXEC', 0x57: 'STB_EXTERNAL', 0x5B: 'TAKE_EXPOSE', 0x5D: 'TAKE_FOCUS', 0xD7: 'TAKE_POWER_MANAGER_EXEC',
   0x2001: 'MOV_COMMAND', 0x2005: 'SDET_EXEC', 0x2006: 'WB_MOV',
 };
 const BC_EXEC = 0x09;
-// Round 2 (docs/hle-gaps.md 4.1.6; H-TAKENBINIT): TAKE_EXPOSE and TAKE_POWER_MANAGER natively behind the same probe.
+// Round 2 (docs/hle-gaps/4.1.md 4.1.6; H-TAKENBINIT): TAKE_EXPOSE and TAKE_POWER_MANAGER natively behind the same probe.
 // USTART2's stage 0x501e8e84 runs TAKE_EXPOSE's module init (0x50591220, its call at 0x501e90bd) and starts it with
 // act_tsk (tid word 0x60042df4, 0x501e90cb..0x501e90d8); it starts TAKE_POWER_MANAGER the same way (0x60042e2c,
 // 0x501e9364..0x501e936b), whose init (0x502ce4d4: the flag pattern 0x62a48760 = 3, its two queues bound to the flag
@@ -130,7 +130,7 @@ const NB = {
   // TAKE_EXPOSE's AE result writer (S-EXPOSE's objects 0xc12a / 0xc0ba / 0xc0ca and eight more through the property
   // setter 0x5004188b), called from five callbacks (0x5059757f, 0x5059781d, 0x5059790f, 0x5059794c, 0x505979a5)
   // that the AE launchers (0x505964e7, 0x505943cb, 0x5059699d) put into the requests they build for EXP's 0x505536be
-  // (the first and the last hand theirs to it; docs/hle-gaps.md 4.1.6); not one of TAKE_EXPOSE's command cases.
+  // (the first and the last hand theirs to it; docs/hle-gaps/4.1.md 4.1.6); not one of TAKE_EXPOSE's command cases.
   // Observed, so that a run that reaches it shows (none does: S-EXPOSE stands in for it)
   ae_writer: 0x50596187,
 };
@@ -170,7 +170,7 @@ Object.assign(TAKE_REQ_QUEUES, { 0x3002: 'FACE_FD' });
 // 80 and returns the reply's status, reading nothing else of it. Another request with TAKE_POST as its reply queue
 // throws: TAKE_EXPOSE's 0x400 with token 11 (sent by 0x503c2c3a), whose handler 0x503c2ce6 frees the reply's word 2,
 // would not be answered right by {0, token, 0}. Since round 3 (H-TAKEFOCUS, with every probe) TAKE_FOCUS's queue is
-// native, so send takes its 0x300 natively and this entry is not reached (docs/hle-gaps.md 4.1.8)
+// native, so send takes its 0x300 natively and this entry is not reached (docs/hle-gaps/4.1.md 4.1.8)
 const MAIN_REPLIES = [{ queue: 0x5D, command: 0x300, token: 1 }];
 
 export class TakeProbe {
@@ -363,7 +363,7 @@ export class TakeProbe {
   }
   take_log() { const l = this.log; this.log = []; return l; }
 
-  // ---- round 2 (docs/hle-gaps.md 4.1.6): TAKE's neighbours natively ----
+  // ---- round 2 (docs/hle-gaps/4.1.md 4.1.6): TAKE's neighbours natively ----
   // install(): the neighbours' queues join the native ones (S-TAKEREQ no longer takes them)
   neighbours_install() {
     this.nb_tids = null;
@@ -493,7 +493,7 @@ export class TakeProbe {
     this.log.push(['init', `TAKE_MAIN task ${tids.main}, TAKE_MAIN_CP task ${tids.cp} waiting`]);
   }
 
-  // ---- the strobe natively (docs/hle-gaps.md 4.12.1; H-STBINIT, S-HOTSHOE; STB_E143 below the class) ----
+  // ---- the strobe natively (docs/hle-gaps/4.12.md 4.12.1; H-STBINIT, S-HOTSHOE; STB_E143 below the class) ----
   // install(): STB_EXTERNAL's queue joins the native ones (S-TAKEREQ no longer takes it); its reply to a requester is
   // recorded ({dir 'out', task 'STB_EXTERNAL', status, token}); the hot shoe's channel (shoe.mjs)
   stb_install() {
@@ -518,7 +518,7 @@ export class TakeProbe {
   }
   // the requester waits for STB_EXTERNAL's reply: lab time runs in STB_STEP_MS slices until it is recorded, at most
   // STB_ANSWER_MS (a reply that takes longer stops the session: with nothing on the shoe the strobe's own timers make
-  // it 1 + 64 + 20 ms after the request, D, docs/hle-gaps.md 4.12.1)
+  // it 1 + 64 + 20 ms after the request, D, docs/hle-gaps/4.12.md 4.12.1)
   stb_wait(command, token, from) {
     const lab = this.lab, t0 = lab.lab_time();
     const replied = () => this.requests.slice(from).some((r) => r.task === 'STB_EXTERNAL' && r.dir === 'out' && r.token === token);
@@ -545,7 +545,7 @@ export class TakeProbe {
     this.log.push(['init', Object.entries(this.stb_tids).map(([k, n]) => `${STB_E143.tasks[k].name} task ${n}`).join(', ') + ' waiting']);
   }
 
-  // ---- round 3 (docs/hle-gaps.md 4.1.8): TAKE_FOCUS natively (H-TAKEFOCUS; the paragraph after the class) ----
+  // ---- round 3 (docs/hle-gaps/4.1.md 4.1.8): TAKE_FOCUS natively (H-TAKEFOCUS; the paragraph after the class) ----
   focus_task(cur) {
     if (!this.focus_tid) return null;
     return cur === this.lab.nk.tcb(this.focus_tid) ? FOCUS_E143.name : null;
@@ -600,7 +600,7 @@ export class TakeProbe {
     return true;
   }
 
-  // ---- round 4 (docs/hle-gaps.md 4.2.3): cam.c's init and EXP natively (H-CAMINIT, H-EXPINIT; CAM_E143 below) ----
+  // ---- round 4 (docs/hle-gaps/4.2.md 4.2.3): cam.c's init and EXP natively (H-CAMINIT, H-EXPINIT; CAM_E143 below) ----
   // (from install) the record of what the camera driver does natively and of EXP's frame events: the switch's requests
   // from tasks other than TAKE's (cam_native), cam.c's error log, EXP's four frame callbacks, EXP_MOVIE's frame wait
   // and its answer on EXP_MOVIE_POST
@@ -629,7 +629,7 @@ export class TakeProbe {
       this.cam.answers.push(disasm(r.mdr));
       this.log.push(['cam', `EXP_MOVIE answers EXP_MOVIE_POST (from ${h8(disasm(r.mdr))})`]);
     }, 'H-EXPINIT (answer)');
-    // round 6 (docs/hle-gaps.md 4.2.6): cam_seq_power.c's sequences, when something runs them natively (S-TAKECAM
+    // round 6 (docs/hle-gaps/4.2.md 4.2.6): cam_seq_power.c's sequences, when something runs them natively (S-TAKECAM
     // answers TAKE's requests 6 and 5, so nothing in the probe's own flows does): each event its handlers take and
     // each power rail step, in order ({what 'on' / 'off', event, t_ns} and {what 'rail', step})
     for (const [at, what] of [[C.power.on, 'on'], [C.power.off, 'off']]) lab.observe(at, (l, r) => {
@@ -664,7 +664,7 @@ export class TakeProbe {
     this.log.push(['init', `cam.c's init ${h8(C.init)}: the request pool's head ${h}`]);
   }
   // H-CAMINIT2 (from bring_up, after H-TAKEINIT; only with the session's cam_fe opt-in, off by default;
-  // docs/hle-gaps.md 4.2.5): cam.c's second init natively against S-CAMFE (src/dev/camfe.mjs, built here), as USTART
+  // docs/hle-gaps/4.2.md 4.2.5): cam.c's second init natively against S-CAMFE (src/dev/camfe.mjs, built here), as USTART
   // calls it (0x50024d80) after TAKE_FUNC's init and its tasks' start (0x50024c2d..0x50024c54) and before USTART2's
   // stage task (0x50024d9b). Its ten steps register the movie sequence's queues (0x5019868e) and run the front end's
   // init (0x5016efcd), which attaches the camera units' interrupts (IRQs 15-22, 24-42, 243-247); S-CAMFE drives none of
@@ -720,7 +720,7 @@ export class TakeProbe {
   }
 }
 
-// The strobe (docs/hle-gaps.md 4.12.1). USTART2's stage 0x501e8e84 starts STB_HANDLER_PROC (task 139, tid word
+// The strobe (docs/hle-gaps/4.12.md 4.12.1). USTART2's stage 0x501e8e84 starts STB_HANDLER_PROC (task 139, tid word
 // 0x60042e3c, 0x501e8fbd), STB_CHARGE (task 35, 0x60042d6c, 0x501e8fd8) and STB_EXTERNAL (task 101, 0x60042df0,
 // 0x501e8ff3) through OlyTaSt 0x5002c546, with no strobe module init before them. STB_EXTERNAL (0x501b7465) is queue
 // 0x57's one reader and replies {u16 status, token, parameter} to the request's word 0 with OlyQeWr at 0x501b76fb
@@ -740,7 +740,7 @@ export const STB_E143 = {
   received: 0x501B759B, message: 44,
 };
 const STB_ANSWER_MS = 1000, STB_STEP_MS = 10;
-// Round 3, TAKE_FOCUS natively (docs/hle-gaps.md 4.1.8; `--take probe`, E143):
+// Round 3, TAKE_FOCUS natively (docs/hle-gaps/4.1.md 4.1.8; `--take probe`, E143):
 //   H-TAKEFOCUS after H-TAKEMAIN: TAKE_FOCUS's two inits natively in the boot's order, its interface's (0x506ea9d7,
 //               USTART2's stage 0x501e8e84 at 0x501e9088: its context pointer 0xa33d9560 -> 0xa33d9564, the ready byte
 //               0xa33d955c cleared, the UI_IN edge callback 0x506eac7a registered for 0x101 through 0x5014c420) and its
@@ -776,7 +776,7 @@ const TAKE_EVENT = { via: 0x502CE613, queue: 0x06 };
 // its handler 0x5015582d as a deferred call (IRQ 55's ring, 0x502a4b08), which queues a sequence item 144 (24 bytes
 // from the driver's pool, its completion 0x50155a00) through 0x501524c0; what the item drives is not read
 CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
-// Round 4, cam.c and EXP natively (docs/hle-gaps.md 4.2.3; `--take probe`, E143):
+// Round 4, cam.c and EXP natively (docs/hle-gaps/4.2.md 4.2.3; `--take probe`, E143):
 //   H-CAMINIT  before H-TAKEINIT: cam.c's first init (0x502a49ec, USTART's call at 0x50024aa2) natively: its error log
 //              state (0x501504c0), its four pools (0x501529dc: the request pool's free list at 0x6299726c, not
 //              built before, so request 148's handler logged 0x0a103000), the instances its sequence engine works on
@@ -793,14 +793,14 @@ CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
 //              from EXP_MOVIE) then go natively and are recorded; EXP's frame callbacks (request 7's completion +72 and
 //              the slots for the events 0x200, 0x300 and 0x400, +80, +84, +88) are observed. What fires them on the
 //              camera is the front end (not read to an interrupt), so EXP_MOVIE waits on its flag 21
-// Round 5, cam.c's second init (docs/hle-gaps.md 4.2.5; `--take probe` with the session's cam_fe opt-in, off by
+// Round 5, cam.c's second init (docs/hle-gaps/4.2.md 4.2.5; `--take probe` with the session's cam_fe opt-in, off by
 // default):
 //   H-CAMINIT2 after H-TAKEINIT: cam.c's second init natively against S-CAMFE (src/dev/camfe.mjs), the register file
 //              that takes exactly the values that init writes (cam_fe_bring_up); without the opt-in it is not run
 //              (above). With it cam.c takes EXP_MOVIE's requests 8 and 7 without an error and keeps request 7's
 //              item for the movie sequence's frame step, which nothing in the lab runs, so EXP_MOVIE still waits on
 //              its flag 21
-// Round 6, cam.c's request 6 (docs/hle-gaps.md 4.2.6; no new stand-in). Requests 6 and 5 go to cam_seq_power.c, the
+// Round 6, cam.c's request 6 (docs/hle-gaps/4.2.md 4.2.6; no new stand-in). Requests 6 and 5 go to cam_seq_power.c, the
 // module the second init's seventh step 0x5019c70f sets up (0x5015552a / 0x5015553b -> 0x50155ad9: a 24-byte record,
 // +0 the kind 1 / 2, +8 the request's argument +3, +12 the completion relay 0x50155d90, +16 the request), which runs
 // each as a chain of events on an event queue of its own (0x50150f8e(4, 1) / (5, 1); power-on 0x5019c843, handler
@@ -809,10 +809,11 @@ CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
 // an argument of 1 or 2, cam_mec_ctrl.c's item 13 for the mechanism driver beside them (TAKE_FUNC_CP's start passes
 // 0, 0x502cda60); then the camera clocks (0x5019d213), four more ports, the configuration of SSG1's command unit (the
 // SSG's requests 7 and 8, applied by 0x5019dc8f), three requests of cam_frame_driver.c (0x50171ade with 131), the
-// units' set-up (0x5019d287) and the kind-7 sender 0x5019d460, which calls the front end's entry (hle-gaps 4.2.5),
-// twice. Natively under cam_fe it runs the rails and the clocks, which S-CAMFE takes (camfe.mjs POWER_ON), and stops
-// at the command unit's first register (0x9b000a04, written at 0x5019dcb6): the sensor's serial channel is not
-// modelled, and the request would not complete. So S-TAKECAM keeps answering requests 6 and 5 (the power-off's first
+// units' set-up (0x5019d287) and the kind-7 sender 0x5019d460, which calls the front end's entry (hle-gaps/4.2.md 4.2.5),
+// twice. Natively under cam_fe it runs the rails and the clocks, which S-CAMFE takes (camfe.mjs POWER_ON), and the
+// command unit, which S-CAMFE models since 2026-11-22 (camfe.mjs SSG: 13 mode-0 batches, each ended on IRQ 18), and
+// stops in the units' set-up at the clock gate 0x9b5008a0 (0x50160cfe), so the request would not complete
+// (hle-gaps/4.2.md 4.2.6). So S-TAKECAM keeps answering requests 6 and 5 (the power-off's first
 // event sends the front end a kind-7 request, 0x5019cf56), and cam_install only records the sequences' events and
 // rail steps for a test that makes the request itself (test_expcb.mjs camFrontEndSession)
 export const CAM_E143 = {

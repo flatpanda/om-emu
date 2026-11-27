@@ -21,7 +21,7 @@ import { Scheduler } from '../src/core/m4/periph/sched.mjs';
 import { Spi } from '../src/core/m4/periph/spi.mjs';
 import { Dma, ccr } from '../src/core/m4/periph/dma.mjs';
 import { ScpuDev, ScpuMemory } from '../src/lab/scpudev.mjs';
-import { LeadClock, WireFrames, clockBytes, LEAD_S, BOOT_S, LINK_HZ } from '../src/lab/scpum4.mjs';
+import { ScpuM4, LeadClock, WireFrames, clockBytes, LEAD_S, BOOT_S, LINK_HZ } from '../src/lab/scpum4.mjs';
 import { bytesHex } from '../src/util/bytes.mjs';
 
 // ---- A-SCPUM4-1's clock
@@ -39,7 +39,7 @@ function clockTests(ok) {
 }
 
 // ---- the frame log from the wire against S-SCPUDEV's own
-// A scripted MN on the link (PER_SCPU's handshake, docs/hle-gaps.md 4.7.1), every request edge and transfer also given
+// A scripted MN on the link (PER_SCPU's handshake, docs/hle-gaps/4.7.md 4.7.1), every request edge and transfer also given
 // to a WireFrames: request low, wait for ready to drop, clock the 10-byte frame, wait for it to rise; for a read, wait
 // for it to drop, clock the length byte and the rest, wait for it to rise; release. Long writes and reads by chunks.
 function tappedMn(dev, wire) {
@@ -180,7 +180,7 @@ export async function scpuM4Session() {
   const ref = linkRecord(p0);
   const offRef = MODEL_INFO.power_native ? powerOff(p0) : null;
   p0.close_session();
-  const p1 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'native', scpuImage });
+  const p1 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'native', scpuImage, ScpuM4 });
   try { p1.open_session(); } catch (e) {
     ok(false, `${MODEL}: the start with the sub-CPU's own firmware: ${e.message.split('\n')[0]}`);
     const dev = p1.session?.lab?.scpu_dev;

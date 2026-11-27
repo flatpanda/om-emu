@@ -18,9 +18,13 @@
 //   until a card:in token; a restart keeps the slot as the last session left it, card:out included, and restart:card=
 //   FILE puts that card in), cardGet ['DOS/PATH=LOCAL'...] (copied off at close), nvram
 //   'off' (the default: a blank camera at each start) | FILE (kept there between sessions and runs, S-NVRAM),
-//   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, held [KEY...] (keys held down at power-on, released once
+//   loaded 'auto'|'on'|'off' (S-STALERAM), secReady true (--sec-ready, src/lab/secready.mjs: the static section-order
+//   pass at the start, said and in the audit, and the run-time watch; needs patch or main), strict 'on'|'off'
+//   (src/lab/strict.mjs; absent: OM_STRICT), creativeDial K, held [KEY...] (keys held down at power-on, released once
 //   the start is done: H-STARTKEY reads MENU's), a15 'auto'|'off'|'on' and device 'tft'|'evf' (play's --a15
-//   and --device), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
+//   and --device), rotate 'auto'|'off'|'on' (play's --rotate: PER_ROTATE natively, H-ROTINIT; auto, the default, on where the body
+//   has it: E143, E146, E147), lang CODE (play's --lang; default 'en', validated against the model's supported
+//   languages and kept across restart), osdErrors 'fail' (a step with an OSD engine refusal fails; the default on OSD_FAIL_BODIES) |
 //   'report' (the default on the other bodies), out DIR (session-N.json logs; relative paths of the tokens resolve
 //   against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
@@ -70,6 +74,14 @@ export const STACK_WORDS = 256, DUMP_MAX = 64 * 1024 * 1024;
 export const OSD_FAIL_BODIES = new Set(['E143', 'E146', 'E147']);
 export class TokenError extends UsageError {}
 export class SessionRefused extends Error {}
+export function validateLang(lang, supported) {
+  const code = lang === undefined ? 'en' : lang;
+  if (typeof code !== 'string' || !code) throw new TokenError(`--lang ${JSON.stringify(code)}: not a language code`);
+  if (supported && !supported.includes(code)) {
+    throw new TokenError(`--lang ${code}: one of ${[...supported].sort().join(', ')}`);
+  }
+  return code;
+}
 class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
 // the steps that run at a debug stop (the firmware held inside a tick): reads, pokes, checks, the card, arming, resume
 const AT_STOP = new Set(['read', 'dump', 'write', 'call', 'setting', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
@@ -103,7 +115,7 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // play's tokens that are harness inputs, not the camera's (the summary lists them): a GUI event posted, a setting
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
-const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'setting', 'exif', 'expect', 'trace', 'break', 'resume'];
+const RESERVED = ['wait', 'hold', 'tilt', 'switch', 'restart', 'shot', 'read', 'dump', 'write', 'call', 'setting', 'exif', 'expect', 'trace', 'break', 'resume'];
 // a setting as a token gives it: an id (decimal or 0x) or a name of the firmware's own (MODE_MOVIE), resolved per body
 // by openSession (src/fw/setnames.mjs; the names read from the user's firmware, host/setnames.mjs)
 const SETTING = '(?:\\d+|0x[0-9a-fA-F]+|[A-Z][A-Z0-9_]*)';
@@ -141,6 +153,13 @@ export function parseToken(t) {
   if ((m = new RegExp(`^hold:(${ID})(?::(\\d+))?$`).exec(t))) return step('hold', { id: m[1], ms: m[2] === undefined ? HOLD_MS : Number(m[2]) });
   if ((m = new RegExp(`^switch:(${ID})(?:=(\\d+)|([+-]\\d+))$`).exec(t))) return step('switch', { id: m[1], ...(m[2] !== undefined ? { value: Number(m[2]) } : { by: Number(m[3]) }) });
   if (t === 'power:off') return step('power');
+  // tilt:roll=R[,pitch=P]: the play input tilt (degrees; a field left out is 0), which waits its own lab time
+  if ((m = /^tilt:((?:roll|pitch)=-?\d+(?:\.\d+)?(?:,(?:roll|pitch)=-?\d+(?:\.\d+)?)?)$/.exec(t))) {
+    const v = Object.fromEntries(m[1].split(',').map((kv) => kv.split('=')).map(([k, x]) => [k, Number(x)]));
+    if (m[1].split(',').length !== Object.keys(v).length) throw new TokenError(`${t}: roll= or pitch= given twice`);
+    return step('tilt', { roll: v.roll ?? 0, pitch: v.pitch ?? 0 });
+  }
+  if (/^tilt(?::|$)/.test(t)) throw new TokenError(`${t}: tilt:roll=R[,pitch=P] (degrees)`);
   if ((m = /^restart(?::card=(.+))?$/.exec(t))) return step('restart', { card: m[1] ?? null });
   if ((m = /^shot:(.+\.png)$/i.exec(t))) return step('shot', { file: m[1] });
   if ((m = /^read:([^:]+):([^:]+)$/.exec(t))) {
@@ -261,6 +280,7 @@ export function stepInputs(st, settle = SETTLE_MS) {
     case 'token': return [{ type: 'token', token: st.token }];
     case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, ...wait(settle)];
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
+    case 'tilt': return [{ type: 'tilt', roll: st.roll, pitch: st.pitch }];
     case 'card': return [{ type: 'card', action: st.action, ...(st.slot !== 1 ? { slot: st.slot } : {}) }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
     case 'setting': return [{ type: 'debug', op: 'setting', setting: st.id ?? st.setting }];
@@ -332,14 +352,16 @@ export async function openSession(o = {}) {
   if (o.model && o.model !== MODEL) throw new SessionRefused(`model ${o.model}: the lab in this process is ${MODEL}'s (fixed at its first import; another model needs another process)`);
   const E = await import('../checks/lib/env.mjs');
   const { PatchRefused, patchLine } = await import('../src/fw/patch.mjs');
-  const { startUnloaded, unloadedLine } = await import('../src/lab/patchaudit.mjs');
+  const { startUnloaded, unloadedLine, startSecReady } = await import('../src/lab/patchaudit.mjs');
+  const { secReadyLine, secReadyReport } = await import('../src/lab/secready.mjs');
+  const { StrictLog, strictOn, strictLine } = await import('../src/lab/strict.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { codePc, notationOf } = await import('../src/debug/live.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { BY_ID } = await import('../src/lab/play.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
   const { nvramUnsupported } = await import('../src/lab/menu.mjs');
-  const { LabError } = await import('../src/lab/errors.mjs');
+  const { LabError, ValueError } = await import('../src/lab/errors.mjs');
   const { memoryCard } = await import('../src/lab/sdcard.mjs');
   const { cardPut, withCardFiles, CardFsError } = await import('../src/lab/cardfs.mjs');
   const { openVolume } = await import('../refs/volume.mjs');
@@ -349,6 +371,7 @@ export async function openSession(o = {}) {
   const { pngRaw } = await import('./server.mjs');
   const { callSpec } = await import('../src/debug/call.mjs');
   const { frameSource } = await import('../src/lab/sources.mjs');
+  const { languages } = await import('../src/lab/resources.mjs');
   const { settingNames } = await import('./setnames.mjs');
   const { SettingNameError } = await import('../src/fw/setnames.mjs');
   const say = o.say ?? (() => {});
@@ -409,9 +432,10 @@ export async function openSession(o = {}) {
   const puts = pairs(o.cardPut, '--card-put'), gets = pairs(o.cardGet, '--card-get');
   // play's --a15 and --device: the A15 guard's mode (auto: under play's bracket guard) and the device shown at the start
   // (the eye sensor's or LV's switch tokens change it later; shot: takes the shown device's frame)
-  const a15Arg = o.a15 ?? 'auto', deviceArg = o.device ?? 'tft', osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
+  const a15Arg = o.a15 ?? 'auto', rotateArg = o.rotate ?? 'auto', deviceArg = o.device ?? 'tft', langArg = validateLang(o.lang), osdPolicy = o.osdErrors ?? (OSD_FAIL_BODIES.has(MODEL) ? 'fail' : 'report');
   if (!['fail', 'report'].includes(osdPolicy)) throw new TokenError(`--osd-errors ${osdPolicy}: fail or report`);
   if (!['auto', 'off', 'on'].includes(a15Arg)) throw new TokenError(`--a15 ${a15Arg}: auto, off or on`);
+  if (!['auto', 'off', 'on'].includes(rotateArg)) throw new TokenError(`--rotate ${rotateArg}: auto, off or on`);
   if (!['tft', 'evf'].includes(deviceArg)) throw new TokenError(`--device ${deviceArg}: tft or evf`);
   if (deviceArg === 'evf' && !BY_ID.has('eye')) throw new TokenError(`--device evf: ${MODEL} has no eye sensor in the lab (no EVF to start on)`);
   if (o.main && o.patch?.length) throw new TokenError('--main and --patch exclude each other (--main is the whole change to the main code block)');
@@ -430,11 +454,22 @@ export async function openSession(o = {}) {
     // the summary's audit until a session's bring-up gives the whole one: hooks and ports not audited (null)
     startAudit = { hooks: null, ported: null, unloaded: u ?? null, tasks: [] };
   }
+  const rom = fw?.rom ?? E.loadImage(), resBlock = fw?.resBlock ?? E.loadBlock();
+  validateLang(langArg, languages(rom, resBlock).map((e) => e.lang));
+  // --sec-ready: the static pass now, against the stock image; the watch in each session's lab (src/lab/secready.mjs)
+  let secReady = null;
+  if (o.secReady) {
+    try { secReady = startSecReady(fw, E.loadImage()); } catch (e) {
+      if (e instanceof ValueError) throw new SessionRefused(e.message);
+      throw e;
+    }
+    say(`patch audit: ${secReadyLine(secReadyReport(secReady.static, null))}`);
+  }
   // the kept state: off (a blank camera at each start) unless a file is named
   const nvArg = o.nvram ?? 'off';
   if (nvArg === 'on') throw new SessionRefused('--nvram on: name the file (--nvram FILE), or off');
   const nv = nvramChoice({ arg: nvArg, env: null, model: MODEL, unsupported: nvramUnsupported(), scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle,
-    build: fw ? fw.summary.blocks.find((b) => b.block === 'main')?.sha256 ?? null : null });
+    build: fw ? fw.summary.blocks.find((b) => b.block === 'main' || b.block === 'image')?.sha256 ?? null : null });
   if (nv.refuse) throw new SessionRefused(nv.refuse);
   if (nv.file) {
     try { fileNvram(nv.file).load(); } catch (e) { throw new SessionRefused(`${/^S-NVRAM /.test(e.message) ? e.message : `S-NVRAM ${nv.file}: ${e.message}`} (--nvram off for a blank camera)`); }
@@ -464,12 +499,16 @@ export async function openSession(o = {}) {
   if (STORAGE) say(`${cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)'}${o.noCard ? '; the slot empty at the start (--no-card; card:in puts it in)' : ''}`);
   if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
+  // the strict mode (src/lab/strict.mjs): o.strict 'on' / 'off', else OM_STRICT; one log for the whole run
+  let strictLog;
+  try { strictLog = o.strict instanceof StrictLog ? o.strict : strictOn(o.strict, process.env) ? new StrictLog({ model: MODEL }) : null; } catch (e) { throw new TokenError(`--${e.message}`); }
+  if (strictLog) say('strict: on (misaligned accesses, stores into the code image, reads of boot-copied or unloaded image words; src/lab/strict.mjs)');
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
-  const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: 'off',
-    take: 'stand-in', cpu2: 'stand-in', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg };
+  const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: rotateArg,
+    take: 'stand-in', cpu2: o.cpu2 ?? 'auto', camapp: String(o.camapp ?? '1'), play_native: o.playNative ?? 'auto', creative_dial: o.creativeDial ?? null, held: o.held ?? [], a15: a15Arg, device: deviceArg, lang: langArg };
   let frame = null, sessionNo = 0;
-  const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
-    ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',
+  const baseEnv = { rom, resBlock, nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
+    ...(fw ? { patch: fw.summary, patchRanges: fw.changed, stockRom: E.loadImage() } : {}), loaded: o.loaded ?? 'auto', ...(secReady ? { secReady } : {}), ...(strictLog ? { strict: strictLog } : { strict: 'off' }),
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
     wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r), settingNames: () => settingNames(MODEL) },
     onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16, device: meta.device }; }, onAudio: () => {} };
@@ -842,7 +881,7 @@ export async function openSession(o = {}) {
     let cardRows = null;
     if (STORAGE) { try { cardRows = listing(); } catch (e) { if (BUG(e)) throw e; cardRows = { error: e.message }; } }
     return { summary: true, ok: failed === null, model: MODEL, osd_errors_policy: osdPolicy, patch: fw ? patchLine(fw.summary) : null, patch_audit: audit ?? startAudit, stand_ins: [...standins], pokes, harness_inputs: harness, calls,
-      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed,
+      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed, ...(strictLog ? { strict: strictLog.doc() } : {}),
       traces: armedLog.length ? { armed: armedLog, now: describe(), counts: Object.fromEntries(hitTotals), hits_dropped: hitsDropped, stops: stopCount } : null, ended_at_stop: ended };
   };
   return {

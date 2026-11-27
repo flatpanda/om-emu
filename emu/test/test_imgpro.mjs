@@ -1,4 +1,4 @@
-// The imgpro unit's model (src/dev/imgpro.mjs S-IMGPRO; docs/om1-imgpro-spec.md, docs/hle-gaps.md 4.3.1) on a bare
+// The imgpro unit's model (src/dev/imgpro.mjs S-IMGPRO; docs/om1-imgpro-spec.md, docs/hle-gaps/4.3.md 4.3.1) on a bare
 // machine, with the register writes in the order the firmware's driver makes them: the unit's init (0x5050a6b2), kind
 // 14's start, set-up and go (0x5050a797, 0x5050b118, 0x5050a8ba), the handler's acknowledge (0x5048bfe3) and the end
 // (0x5050a8e1). Checks: the register file and the bus errors around it, a start refused while powered down, without

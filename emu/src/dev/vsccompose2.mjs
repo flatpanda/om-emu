@@ -79,7 +79,7 @@
 //                  level word holds is ?; I: E118's clock warning then shows as E122's does)
 // On both kinds a level other than 0 is drawn as full (E144's EVF writes 0xcc, X; what the chip does with a level
 // below 0x100 is ?, as E143's PLANC, docs/om1-vsc-spec.md section 3, which E143's compositor refuses).
-// IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
+// Kind-3 IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
 import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vscdefs.mjs';
 import { blendLut, osdCol } from './vsccompose.mjs';

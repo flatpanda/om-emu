@@ -441,9 +441,11 @@ function textFindings(text, markers, add) {
   }
 }
 
-function isText(u8) {
-  if (u8.includes(0)) return false;
-  try { new TextDecoder('utf-8', { fatal: true }).decode(u8); return true; } catch { return false; }
+const UTF8 = new TextDecoder('utf-8');
+const UTF8_FATAL = new TextDecoder('utf-8', { fatal: true });
+function decodeTextUtf8(u8) {
+  if (u8.includes(0)) return null;
+  try { return UTF8_FATAL.decode(u8); } catch { return null; }
 }
 
 const isCommit = (git, r) => { try { git(['rev-parse', '--verify', '--quiet', `${r}^{commit}`]); return true; } catch { return false; } };
@@ -525,12 +527,12 @@ export async function audit({ repo = process.cwd(), refs = null, since = [], fw 
     const b = blobs.get(id), u8 = data.get(id), base = { path: b.path, blob: id, commit: b.commit, size: u8.length };
     bytes += u8.length;
     if (u8.length > maxSize) add({ ...base, rule: 'size', detail: `${u8.length.toLocaleString('en-US')} bytes, over ${maxSize.toLocaleString('en-US')}` });
-    if (!isText(u8)) {
+    const text = decodeTextUtf8(u8);
+    if (text === null) {
       add({ ...base, rule: 'binary', detail: `not text (${u8.includes(0) ? 'NUL bytes' : 'invalid UTF-8'}), ${u8.length.toLocaleString('en-US')} bytes` });
       segments.push({ blob: b, kind: 'raw', at: 0, bytes: u8 });
       continue;
     }
-    const text = new TextDecoder().decode(u8);
     textFindings(text, marks, (rule, detail) => add({ ...base, rule, detail }));
     if (!b.symlink) {
       texts.push({ blob: b, u8, text });
@@ -610,8 +612,8 @@ export async function audit({ repo = process.cwd(), refs = null, since = [], fw 
       // text is a copied text resource
       if (g.kind === 'text' ? longest <= TEXT_RUN_MAX : g.kind === 'listing' ? matched <= LISTING_BUDGET : false) continue;
       const li = g.li, where = `${path.relative(root, files[locFile[li]].file)}+0x${locOff[li].toString(16)}${locScr[li] ? ' (descrambled)' : ''}`;
-      const r0 = runs[0], line = r0.seg.text === undefined ? '' : `line ${lineOf(r0.seg.text, g.kind === 'text' ? charAt(r0.seg.text, r0.start) : r0.seg.at)}: `;
-      const show = (r) => (g.kind === 'text' ? JSON.stringify(new TextDecoder().decode(r.seg.bytes.subarray(r.start, r.end))) : Buffer.from(r.seg.bytes.subarray(r.start, r.end)).toString('hex'));
+      const r0 = runs[0], line = r0.seg.text === undefined ? '' : `line ${lineOf(r0.seg.text, g.kind === 'text' ? UTF8.decode(r0.seg.bytes.subarray(0, r0.start)).length : r0.seg.at)}: `;
+      const show = (r) => (g.kind === 'text' ? JSON.stringify(UTF8.decode(r.seg.bytes.subarray(r.start, r.end))) : Buffer.from(r.seg.bytes.subarray(r.start, r.end)).toString('hex'));
       add({ rule: 'firmware', path: g.blob.path, blob: g.blob.id, commit: g.blob.commit, runs: runs.map(show),
         detail: `${line}${matched} bytes ${KIND[g.kind]} match the firmware, in ${runs.length} run${runs.length > 1 ? 's' : ''}, the longest ${longest} (first at ${where})` });
     }
@@ -620,8 +622,6 @@ export async function audit({ repo = process.cwd(), refs = null, since = [], fw 
   return { refs, since, commits: commits.length, blobs: ids.length, bytes, fwFiles: files.length, fwBytes, fwMs, findings, warnings, ms: performance.now() - t0 };
 }
 const KIND = { raw: 'of the raw content', text: 'of the text', hex: 'decoded from a hex run', list: 'decoded from a number list', listing: 'decoded from a listing', base64: 'decoded from base64' };
-// the character offset of a byte offset in a text (for line numbers of raw text matches)
-const charAt = (text, byteOff) => new TextDecoder().decode(new TextEncoder().encode(text).subarray(0, byteOff)).length;
 
 export class UsageError extends Error {}
 

@@ -1361,7 +1361,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
   console.log(`firmware identity: units ${iu.checks - iu.bad.length}/${iu.checks}; the files at hand ${fi.checks - fi.bad.length}/${fi.checks}${fi.skipped.length ? `, ${fi.skipped.length} SKIPPED` : ''}; --main with a .BIN on E143 ${is.checks - is.bad.length}/${is.checks}${is.skipped.length ? `, ${is.skipped.length} SKIPPED` : ''}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...iu.bad, ...fi.bad, ...is.bad, ...[...fi.skipped, ...is.skipped].map((x) => `SKIPPED ${x}`), ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
-  bad += iu.bad.length + fi.bad.length + is.bad.length + is.skipped.length + (r.status === 0 ? 0 : 1);
+  bad += iu.bad.length + fi.bad.length + fi.skipped.length + is.bad.length + is.skipped.length + (r.status === 0 ? 0 : 1);
 }
 // E-M1-Miii mods.json packs (test_mods.mjs): the units; E139's blocks against the pinned pack (in ~/.om-emu/thirdparty,
 // outside the tree; without it a counted skip); then bin/session.mjs on E139 in a process of its own
@@ -1372,8 +1372,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const r = spawnSync(process.execPath, [new URL('../test/test_mods.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E139' }, encoding: 'utf8' });
   const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
   console.log(`E-M1-Miii mods.json: units ${mu.checks - mu.bad.length}/${mu.checks}; E139's blocks ${mf.checks - mf.bad.length}/${mf.checks}${mf.skipped.length ? `, ${mf.skipped.length} SKIPPED` : ''}; E139 sessions ${r.status === 0 ? 'ok' : 'FAILED'}`);
-  [...mu.bad, ...mf.bad, ...mf.skipped.map((x) => `SKIPPED ${x}`), ...lines.map((l) => `E139: ${l.trim()}`)].forEach((x) => console.log('  ', x));
-  bad += mu.bad.length + mf.bad.length + (r.status === 0 ? 0 : 1);
+  [...mu.bad, ...mf.bad, ...mf.skipped.map((x) => `SKIPPED ${x}`), ...(r.status === 0 ? [] : lines.map((l) => `E139: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += mu.bad.length + mf.bad.length + mf.skipped.length + (r.status === 0 ? 0 : 1);
 }
 // the Stand-ins tab's rows (src/lab/playapi.mjs standInRows; test_standins.mjs): a row for every label a session can
 // report, then the labels a session reports on E143 here and on E147 in a process of its own

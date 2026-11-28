@@ -43,7 +43,7 @@ export class I2c extends Regs {
     this.cr1 = 0; this.cr2 = 0; this.oar1 = 0; this.oar2 = 0; this.timingr = 0; this.timeoutr = 0;
     this.isr = TXE; this.rxdr = 0; this.txdr = 0; this.txFull = false;
     this.ev = this.sched ? this.sched.cancel(this.ev) : null;
-    this.dev = null; this.count = 0; this.cur = null;
+    this.dev = null; this.cur = null;
     this.slEv = this.sched ? this.sched.cancel(this.slEv) : null;
     this.sl = null;                               // the board master's transfer to this slave
     if (this.irq) this.update();
@@ -123,6 +123,7 @@ export class I2c extends Regs {
   start() {
     if (this.cr2 & (1 << 11)) throw new Unmodelled(`${this.name} 10-bit addressing`);
     if (this.sl) throw new Unmodelled(`${this.name} a START while another master holds the bus (arbitration)`);
+    this.ev = this.sched.cancel(this.ev);
     const addr = (this.cr2 >>> 1) & 0x7f, read = (this.cr2 & RD_WRN) !== 0;
     this.isr |= BUSY; this.isr &= ~(TC | TCR);
     this.cur = { addr, read, n: (this.cr2 >>> 16) & 0xff, done: 0, waitTx: false, bytes: [] };
@@ -178,6 +179,7 @@ export class I2c extends Regs {
   }
   nack() { this.isr |= NACKF; this.stopNow(); }
   stopNow() {
+    this.ev = this.sched.cancel(this.ev);
     if (this.dev) this.dev.stop();
     this.dev = null; this.cur = null;
     this.isr = (this.isr | STOPF) & ~(BUSY | TC | TCR);

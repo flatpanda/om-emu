@@ -18,7 +18,6 @@ import * as CD from './check_display.mjs';
 import * as fmt from '../refs/osdfmt.mjs';
 import * as R from '../src/lab/resources.mjs';
 import * as T from '../src/lab/text.mjs';
-import * as D from '../src/lab/display.mjs';
 import { OSD_DEFAULTS, EngineError } from '../src/lab/osd.mjs';
 import { decode_command } from '../src/lab/osdfmt.mjs';
 import { FirmwareError, LabError } from '../src/lab/errors.mjs';

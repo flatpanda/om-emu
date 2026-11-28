@@ -133,7 +133,7 @@ export class HlsMedia {
       const c = this.ctrl;
       if (c !== null && c.reply === null && (r.d0 & 0xFFFF) === c.queue) {
         const p = lab.sim.u32(r.a0 >>> 0);
-        if (lab.sim.u32(p + 4) === c.token) c.reply = lab.sim.read(p, 2)[0] | lab.sim.read(p + 1, 1)[0] << 8;
+        if (lab.sim.u32(p + 4) === c.token) { const b = lab.sim.read(p, 2); c.reply = b[0] | b[1] << 8; }
       }
       return prev(h, r);
     });                                                                  // observed: the hook keeps its name
@@ -157,8 +157,8 @@ export class HlsMedia {
     const seen = (r) => {
       if (other.has(r.mdr >>> 0)) throw new MediaError(`S-MDAEND: the media control's request to the camera base from ${where(r.mdr)}, the path of another command or an error: not modelled`);
       if (!sites.has(r.mdr >>> 0)) return;
-      const sim = lab.sim, ev = r.a0 >>> 0, clo = sim.u32(ev + c.closure) >>> 0;
-      this.ends.push({ ev, id: sim.read(ev + 4, 2)[0] | sim.read(ev + 5, 1)[0] << 8, clo, fn: clo ? sim.u32(clo + c.fn) >>> 0 : 0, from: where(r.mdr) });
+      const sim = lab.sim, ev = r.a0 >>> 0, clo = sim.u32(ev + c.closure) >>> 0, idb = sim.read(ev + 4, 2);
+      this.ends.push({ ev, id: idb[0] | idb[1] << 8, clo, fn: clo ? sim.u32(clo + c.fn) >>> 0 : 0, from: where(r.mdr) });
     };
     if (lab.hooks.has(runtime(c.post))) lab.wrap(c.post, (prev) => (h, r) => { seen(r); return prev(h, r); });
     else lab.hook(c.post, (h, r) => { seen(r); lab.passthrough(r); }, 'S-MDAEND');
@@ -271,7 +271,8 @@ export class HlsMedia {
   _start() {
     const lab = this.lab, f = this.f.ctrl, c = this.ctrl, what = c.what;
     c.cbc = lab.call(f.cbc, { d0: c.cmd }, null, null, LIMIT).d0 >>> 0;
-    c.queue = lab.sim.read(f.reply_queue, 2)[0] | lab.sim.read(f.reply_queue + 1, 1)[0] << 8;
+    const qb = lab.sim.read(f.reply_queue, 2);
+    c.queue = qb[0] | qb[1] << 8;
     // the unlock all's start first notifies the Wi-Fi remote take component (CapWif_WifiRemoteTake), natively: its
     // instance (the getter makes it at the first call) and Wifi_Notify_Callback(event, 0, instance, 0), as
     // executeUnlockAllStart calls them (E143 0x50cebc9d..0x50cebcad, D); with no wireless connection the notify
@@ -288,7 +289,7 @@ export class HlsMedia {
     // executeUnlockAllStart passes 0, D)
     c.token = lab.call(c.api, { d0: c.media, d1: what === WHAT.copy_all ? c.option : 0 }, null, null, LIMIT).d0 >>> 0;
     if (!c.token) throw new MediaError(`S-MDACTRL: the ${what} of media ${c.media} returned no token`);
-    this.log.push([what, `media ${c.media}${what === 'copy all' ? `, option ${c.option}, the count ${c.count0}` : ''}: token ${h8(c.token)}, the callback id ${c.cbc}, the reply on queue ${c.queue}`]);
+    this.log.push([what, `media ${c.media}${what === WHAT.copy_all ? `, option ${c.option}, the count ${c.count0}` : ''}: token ${h8(c.token)}, the callback id ${c.cbc}, the reply on queue ${c.queue}`]);
     this.s.settle(`S-MDACTRL ${what}`);
   }
   _what() { return this.ctrl.what; }
@@ -311,7 +312,7 @@ export class HlsMedia {
     this.log.push([what, `the file module's reply 0 after ${ms} ms, ${c.progress} progress event(s)`]);
     // the copy all's end check (0x50cec5d1, D): the record's media's count still the start's answers 0xf0000024,
     // the component's error path, which is not modelled
-    if (what === 'copy all') {
+    if (what === WHAT.copy_all) {
       c.count1 = lab.call(f.ctrl.copy.count, { d0: c.media }, null, null, LIMIT).d0 >>> 0;
       this.log.push([what, `the end check: media ${c.media}'s count ${c.count0} -> ${c.count1}`]);
       if (c.count1 === c.count0) throw new MediaError(`S-MDACTRL: the copy all's end check: media ${c.media}'s count ${c.count1} is the start's, the component's error ${h8(f.ctrl.copy.no_copy)}: not modelled`);

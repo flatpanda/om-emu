@@ -121,6 +121,7 @@ export class Cores {
   _polled(c) {
     if (c.poll === null) return false;
     const b = dbgRead(c.poll.addr, c.poll.bytes.length);
+    if (b === null) return false;
     for (let i = 0; i < b.length; i++) if (b[i] !== c.poll.bytes[i]) return true;
     return false;
   }

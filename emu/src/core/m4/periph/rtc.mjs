@@ -37,8 +37,6 @@ export class Rtc extends Regs {
     this.sub = 0;                                 // ck_apre periods into the current second
     this.acc = 0;                                 // RTC clock periods not yet an ck_apre period
     this.at = this.sched ? this.sched.now() : 0;
-    this.hz = 0;
-    this.ev = this.sched ? this.sched.cancel(this.ev) : null;
     this.wuEv = this.sched ? this.sched.cancel(this.wuEv) : null;
     this.rsfEv = this.sched ? this.sched.cancel(this.rsfEv) : null;
     this.secEv = this.sched ? this.sched.cancel(this.secEv) : null;

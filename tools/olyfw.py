@@ -27,9 +27,7 @@ def descramble(b):
     n = len(b) - len(b) % 16
     for k, p in enumerate(PERM):
         out[k:n:16] = b[p:n:16].translate(XOR_FF)
-    # tail (not mult of 16) left as-is; real bodies are 16-aligned
-    for i in range(len(b) - len(b) % 16, len(b)):
-        out[i] = b[i]
+    # tail (not mult of 16) left as-is (already copied by bytearray(b)); real bodies are 16-aligned
     return bytes(out)
 
 def scramble(b):

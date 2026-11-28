@@ -690,7 +690,7 @@ export async function openSession(o = {}) {
       if (failed) throw new SessionRefused(`the run failed at step ${failed.step}`);
       if (ended) throw new SessionRefused(`the run ended at the debug stop of step ${ended.step}`);
       if (held && !AT_STOP.has(st.kind)) {
-        throw new SessionRefused(`${st.text}: at a debug stop only read:, dump:, write:, call:, expect:, card-ls, card-get:, exif:, shot:, trace:, break: and resume run (the firmware is held inside a tick); resume first`);
+        throw new SessionRefused(`${st.text}: at a debug stop only read:, dump:, write:, call:, expect:, card-ls, card-get:, exif:, shot:, trace:, break:, setting: and resume run (the firmware is held inside a tick); resume first`);
       }
       if (st.kind === 'restart') {
         const positions = pl?.phase === 'off' ? pl.off_positions : null;    // after power:off; else a battery pull, a fresh start
@@ -947,6 +947,7 @@ export async function openSession(o = {}) {
           failed ??= { step: null, token: '--card-get', message: e.message };
         }
       }
+      note();
       const s = summary();
       try { closePlayer(); } catch (e) { if (BUG(e) && !(e instanceof LabError)) throw e; errors.push(`close: ${e.message}`); failed ??= { step: null, token: 'close', message: e.message }; return summary(); }
       return s;

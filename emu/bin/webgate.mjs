@@ -2,7 +2,7 @@
 // Gates B5-B7 of the browser player in headless Chrome, driven over the DevTools protocol with node's built-in
 // WebSocket (no npm packages), and B2's runner half in node. On the lab model only (src/fw/model.mjs LAB_MODEL, E143):
 // the scenario inputs it replays were recorded on E143, and the pages it opens take the default model.
-//   node emu/bin/webgate.mjs [--bin FILE] [--chrome PATH] [--calls DIR] [--png DIR] [--rounds N] [--skip-page] [--quick | --page-only] [--keep]
+//   node emu/bin/webgate.mjs [--bin FILE] [--other-bin FILE] [--chrome PATH] [--calls DIR] [--png DIR] [--rounds N] [--skip-page] [--quick | --page-only] [--keep]
 // --quick: only node's and the Worker's shoot-tft from the file (the negative controls' short run); --page-only: only
 // B6 and B7 (with node's run of the page's inputs).
 // --bin: the firmware .BIN (default $OM_BIN, else $OM_FW_DIR/<the model's .BIN>); missing: exit 2.
@@ -62,7 +62,6 @@ import { createHash as nodeHash } from 'node:crypto';
 import { asTracer } from '../checks/lib/tracecmp.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
-const REPO = path.dirname(EMU);
 const STAGE0 = ['kernel-1', 'kernel-5b', 'kernel-5c', 'kernel-6', 'kernel-7', 'kernel-7b', 'osd'];
 const argv = process.argv.slice(2);
 const opt = (k, d = null) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };

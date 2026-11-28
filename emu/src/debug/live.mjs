@@ -425,12 +425,14 @@ export class LiveDebug {
   _step(q) {
     if (this.at === null) throw new BadRequest(`step: only at a debug stop (the session is ${this.state_name()}): set a breakpoint or a stopping watchpoint, then cont`);
     const n = absent(q.n) ? 1 : count(q.n, 'n', 1), m = this.sim.m, k0 = m.stderrCount();
-    let harness = false;
+    let harness = false, stepped = 0;
     for (let i = 0; i < n; i++) {
       if (this.sim.breakpoints.has(m.getRegs()[9] >>> 0)) { harness = true; break; }
       m.step();
+      stepped += 1;
       if (m.lastStop().kind !== 'break') break;
     }
+    if (stepped === 0) return { stop: 'break', regs: regsHex(this.dbg.regs()), stderr: [], harness: true };
     const o = outcome(this.dbg._outcome(k0));
     if (m.lastStop().kind === 'watch') m.dropPendingStop();     // reported here: the next step or cont runs
     return harness ? { ...o, harness: true } : o;

@@ -34,15 +34,14 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // src/fw/xmap.mjs transferTarget decodes the same forms and the jumps for the map, a copy of its own because its bytes
 // are the map cache's key (bin/port.mjs cachedMap).
 export function callAt(img, o) {
+  if (o < 0 || o >= img.length) return null;
   const op = img[o], o2 = img[o + 1], s16 = (k) => (img[k] | img[k + 1] << 8) << 16 >> 16;
-  if (op === 0xdd) return { len: 7, to: o + s32(img, o + 1) };
-  if (op === 0xcd) return { len: 5, to: o + s16(o + 1) };
-  if (op === 0xfc && o2 === 0xff) return { len: 6, to: o + s32(img, o + 2) };
-  if (op === 0xfa && o2 === 0xff) return { len: 4, to: o + s16(o + 2) };
+  if (op === 0xdd && o + 7 <= img.length) return { len: 7, to: o + s32(img, o + 1) };
+  if (op === 0xcd && o + 5 <= img.length) return { len: 5, to: o + s16(o + 1) };
+  if (op === 0xfc && o2 === 0xff && o + 6 <= img.length) return { len: 6, to: o + s32(img, o + 2) };
+  if (op === 0xfa && o2 === 0xff && o + 4 <= img.length) return { len: 4, to: o + s16(o + 2) };
   return null;
 }
-// The value at a dotted path ('kernel.cpus') of an object (readFacts' result, a MODELS entry): undefined where a step
-// is missing (src/fw/model.mjs fact(), src/fw/place.mjs carryOverrides).
 
 // The run-time base of a main code block (MODELS image_base): {base, at, target}. The reset head runs in place from
 // flash and leaves it with one absolute jump into its run-time copy, `mov imm32,a0; jmp (a0)` (fc dc imm32 f0 f4),
@@ -62,23 +61,21 @@ export function imageBase(rom) {
   return { base: ((target & ~0xfff) | BASE_PAGE_OFFSET) >>> 0, at, target };
 }
 
-// DRAM's uncached view: 0xA0000000.. is the same RAM as 0x60000000.. (src/machine.mjs regions); a copy names its
-// destination in either view, the image's rows use the cached one. cached(a): a DRAM address's cached view; alias(a):
-// its other view (bin/port.mjs places an address by its alias's vote)
-const bytesAt = (b, o, pat) => pat.every((x, k) => x === null || b[o + k] === x);
+const UTF8_ENC = new TextEncoder();
+const bytesAt = (b, o, pat) => o >= 0 && o + pat.length <= b.length && pat.every((x, k) => x === null || b[o + k] === x);
 // a ret or a retf (df / de, three bytes: a rule's "after a return" looks three bytes back); rets (f0 fc), which no
 // rule has met at a function's end, is not counted
 const isRet = (img, o) => img[o] === 0xdf || img[o] === 0xde;
 // the offsets of a string's bytes in an image: nul, also its terminating NUL; after, also a NUL before it (a string of
 // its own, not the tail of another)
 const findString = (img, str, { nul = false, after = false } = {}) => {
-  const s = new TextEncoder().encode(nul ? str + '\0' : str), at = [];
+  const s = UTF8_ENC.encode(nul ? str + '\0' : str), at = [];
   for (let o = img.indexOf(s[0]); o >= 0; o = img.indexOf(s[0], o + 1)) if (bytesAt(img, o, s) && (!after || img[o - 1] === 0)) at.push(o);
   return at;
 };
 const hasString = (img, str) => findString(img, str).length > 0;
 // the value a `mov imm32,Rn` (fc cc..cf: Dn, fc dc..df: An) at p loads, or null; the offsets of the loads of v
-const loadAt = (img, p) => (img[p] === 0xfc && (img[p + 1] & 0xec) === 0xcc ? u32(img, p + 2) : null);
+const loadAt = (img, p) => (p >= 0 && p + 6 <= img.length && img[p] === 0xfc && (img[p + 1] & 0xec) === 0xcc ? u32(img, p + 2) : null);
 const loadsOf = (img, v) => {
   const at = [];
   for (let p = img.indexOf(0xfc); p >= 0; p = img.indexOf(0xfc, p + 1)) if (loadAt(img, p) === v) at.push(p);
@@ -6555,9 +6552,10 @@ export function readPlacedFacts({ img, at }) {
   }
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
-  const tpMask = touchDriver(img) ? at(TP_MASK_E143) : null;
+  const hasTouch = touchDriver(img);
+  const tpMask = hasTouch ? at(TP_MASK_E143) : null;
   if (tpMask !== null) facts.touch_mask = { word: touchMask(img, tpMask) };
-  facts.touch_regs = (tpWrite !== null && tpRead !== null && touchDriver(img) ? touchRegList(img, tpWrite, tpRead) : undefined) ?? null;
+  facts.touch_regs = (tpWrite !== null && tpRead !== null && hasTouch ? touchRegList(img, tpWrite, tpRead) : undefined) ?? null;
   const evWt = at(OLYEVWT_E143);
   if (tpTask !== null && evWt !== null && qerd !== null) facts.touch_task = touchQueue(img, tpTask, evWt, qerd);
   const modeSet = takeFrame !== null ? frameModeSet(img, takeFrame) : undefined;

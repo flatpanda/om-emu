@@ -148,7 +148,8 @@ function main(argv) {
   overlay = patchOverlay(args);
   if (overlay) process.stderr.write(`${PROG}: patched: ${patchLine(overlay.summary)}\n`);
   if (overlay?.unloaded !== undefined) process.stderr.write(`${PROG}: patch audit: ${unloadedLine(overlay.unloaded)}\n`);
-  if (serve) { startServe(); return 0; }
+  if (serve) { startServe(args.loaded); return 0; }
+  if (args.trace !== undefined && args.exec_trace !== undefined) args.error('--trace and --exec-trace exclude each other');
   const { regs, writes, reads, watches, disasms } = items(args);       // all checked before the machine starts
   const oneInsn = args.trace !== undefined || args.trace_mode === 'one-insn' && args.exec_trace !== undefined;
   const env = { rom: loadImage(overlay?.label ?? args.image ?? PATCHED), createHash, machine: { ...envMachine(), ...(oneInsn ? { oneInsn } : {}) },
@@ -203,8 +204,8 @@ function main(argv) {
   }
 }
 
-function startServe() {
-  const proto = new Protocol({ env: { createHash, machine: envMachine() }, defaultImage: overlay?.label ?? PATCHED, loadImage, openSink, disasm, resolvePath: (p) => path.resolve(p) });
+function startServe(loaded) {
+  const proto = new Protocol({ env: { createHash, machine: envMachine(), ...(overlay ? { patch: overlay.summary } : {}), loaded }, defaultImage: overlay?.label ?? PATCHED, loadImage, openSink, disasm, resolvePath: (p) => path.resolve(p) });
   const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity, terminal: false });
   rl.on('line', (line) => {
     if (proto.done || !line.trim()) return;

@@ -81,10 +81,33 @@ export class FatVolume {
     }
     return out;
   }
+  // walk every cluster's FAT entry sequentially (one sector read per FAT sector on FAT16/FAT32, one read on FAT12)
+  _scanFat(fn) {
+    const fatStart = this.start + this.reserved, end = this.clusters + 2;
+    if (this.type === 'FAT32') {
+      for (let s = 0, c = 0; c < end; s++, c += 128) {
+        const b = this.read(fatStart + s, 1), lim = Math.min(128, end - c);
+        for (let i = c === 0 ? 2 : 0; i < lim; i++) fn(c + i, u32(b, i * 4) & 0x0fffffff);
+      }
+      return;
+    }
+    if (this.type === 'FAT16') {
+      for (let s = 0, c = 0; c < end; s++, c += 256) {
+        const b = this.read(fatStart + s, 1), lim = Math.min(256, end - c);
+        for (let i = c === 0 ? 2 : 0; i < lim; i++) fn(c + i, u16(b, i * 2));
+      }
+      return;
+    }
+    const b = this.read(fatStart, this.fatSize);
+    for (let c = 2; c < end; c++) {
+      const off = c + (c >> 1), v = u16(b, off);
+      fn(c, c & 1 ? v >> 4 : v & 0xfff);
+    }
+  }
   // the free clusters by the FAT
   freeClusters() {
     let n = 0;
-    for (let c = 2; c < this.clusters + 2; c++) if (this.next(c) === 0) n += 1;
+    this._scanFat((_, v) => { if (v === 0) n += 1; });
     return n;
   }
   // FAT32's FSInfo: {free, next} or null
@@ -203,7 +226,8 @@ export class FatVolume {
     if (this.type === 'FAT32') walkChain('the root directory', this.rootCluster);
     walk(this.rootCluster, '');
     const lost = [];
-    for (let c = 2; c < this.clusters + 2; c++) { const v = this.next(c); if (v !== 0 && v !== bad && !owner.has(c)) lost.push(c); }
+    let free = 0;
+    this._scanFat((c, v) => { if (v === 0) free += 1; else if (v !== bad && !owner.has(c)) lost.push(c); });
     if (lost.length) problems.push(`${lost.length} cluster(s) in use in the FAT and taken by nothing (the first ${lost.slice(0, 8).join(', ')})`);
     const fatStart = this.start + this.reserved;
     for (let k = 1; k < this.nfats; k++) {
@@ -213,10 +237,7 @@ export class FatVolume {
       }
     }
     const fsi = this.fsInfo();
-    if (fsi && fsi.free !== 0xffffffff) {
-      const free = this.freeClusters();
-      if (fsi.free !== free) problems.push(`FSInfo's free count ${fsi.free}, the FAT's ${free}`);
-    }
+    if (fsi && fsi.free !== 0xffffffff && fsi.free !== free) problems.push(`FSInfo's free count ${fsi.free}, the FAT's ${free}`);
     return problems;
   }
   // a file's bytes, by its entry

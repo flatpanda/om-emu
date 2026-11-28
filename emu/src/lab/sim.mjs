@@ -8,7 +8,7 @@ import { StrictLog, strictOn, strictCache } from './strict.mjs';
 import { rangeMessage, POISON } from '../fw/sections.mjs';
 import { sectionsFact, loadedRanges, secReadyWatch } from './patchaudit.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
-import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
+import { RuntimeError, FirmwareError, ValueError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
 
 export const REGS = ['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'sp', 'pc', 'psw', 'mdr', 'lir', 'lar', 'fault', 'insns'];
@@ -73,8 +73,6 @@ export class Simulator {
     this._builtinsRef = null;
     this._regBuf = new Uint32Array(16);
     this.known_insns = 0; this.ran = false;
-    this.fast = false;
-    this.hle_window = null;
     this.stats = env.stats ?? null;
     this.observer = null;          // capture-equivalent tracer: onStop(kind), onG(text), onWrite(address, data)
     this.closed = false;
@@ -281,8 +279,11 @@ export class Simulator {
     this._alive();
     if (this.observer && data.length) this.observer.onWrite(address, data);
     for (let offset = 0; offset < data.length; offset += MAX_WRITE) {
-      const chunk = data.subarray(offset, offset + MAX_WRITE);
-      this.m.dbgWrite((address + offset) >>> 0, chunk);
+      const chunk = data.subarray(offset, offset + MAX_WRITE), a = address + offset;
+      try { this.m.dbgWrite(a >>> 0, chunk); } catch (e) {
+        if (e instanceof RspError) throw new RuntimeError(`GDB M${signedHex(a)},${chunk.length.toString(16)}: ${e.code}`);
+        throw e;
+      }
     }
   }
   _read_rsp(address, size) {

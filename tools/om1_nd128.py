@@ -217,7 +217,8 @@ def compare_tables(original, donor):
 
 
 def build(source, donor_path, out_dir):
-    source, out_dir = Path(source).resolve(), Path(out_dir).resolve()
+    source_arg, out_dir_arg = Path(source), Path(out_dir)
+    source, out_dir = source_arg.resolve(), out_dir_arg.resolve()
     require(sha256(source) == SOURCE_SHA256, "Unsupported source firmware SHA-256")
     before_blocks = validate_container(source, roundtrip=True)
     with source.open("rb") as f:
@@ -268,10 +269,10 @@ def build(source, donor_path, out_dir):
     code_path.write_bytes(patched)
     report = {
         "status": "offline_research_candidate_NOT_camera_verified",
-        "source": str(source), "source_sha256": SOURCE_SHA256,
-        "output": str(output), "output_sha256": sha256(output),
+        "source": str(source_arg), "source_sha256": SOURCE_SHA256,
+        "output": str(out_dir_arg / output.name), "output_sha256": sha256(output),
         "output_size": output.stat().st_size,
-        "main_code": str(code_path), "main_code_sha256": hashlib.sha256(patched).hexdigest(),
+        "main_code": str(out_dir_arg / code_path.name), "main_code_sha256": hashlib.sha256(patched).hexdigest(),
         "original_main_code_sha256": MAIN_SHA256,
         "menu_behavior": "ND64 label retained; its exposure-adapter step is remapped 6 -> 7",
         "patches": [{"decoded_body_offset": hex(o), "before": a.hex(), "after": b.hex()}

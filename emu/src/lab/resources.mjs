@@ -185,7 +185,7 @@ export class StringTable {
   raw(sid) {
     const o = this.pointers[sid] - STRING_SLOT[0];
     let end = o;
-    while (!(this.data[end] === 0 && this.data[end + 1] === 0)) end += 2;
+    while (end + 1 < this.data.length && !(this.data[end] === 0 && this.data[end + 1] === 0)) end += 2;
     return this.data.subarray(o, end);
   }
   text(sid) { return utf16Text(this.raw(sid)); }

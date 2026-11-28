@@ -80,6 +80,7 @@ export class MemoryBus {
   }
   // ---- accesses
   rd(a, size) {
+    a >>>= 0;
     const r = this.find(a);
     if (!r || a + size > r.end) return this.unmapped(a, size, false, 0);
     if (r.dev) return r.dev.read(a - r.base, size);
@@ -89,6 +90,7 @@ export class MemoryBus {
     return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) | 0;
   }
   wr(a, size, v) {
+    a >>>= 0;
     const r = this.find(a);
     if (!r || a + size > r.end) { this.unmapped(a, size, true, v); return; }
     if (r.dev) { r.dev.write(a - r.base, size, v); return; }

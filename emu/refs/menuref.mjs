@@ -429,7 +429,7 @@ export class Nav {
       writes = [[1446, 3200], [1447, 3200], [1448, 3200], [1449, 3200]];
       return this.state(writes);
     }
-    if (kind === 'off' || (name === 'INFO' && kind === 'off')) return this.state();
+    if (kind === 'off') return this.state();
     if (kind !== 'click' && kind !== 'on') throw refuse(`${token}: kind ${kind} not observed`);
     if (this.screen === 'closed') throw refuse(`${token} with the menu closed: not observed`);
     if (this.screen === 'help') {

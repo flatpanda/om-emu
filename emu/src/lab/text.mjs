@@ -7,7 +7,7 @@ import { A, IMAGE_BASE, fact } from '../fw/model.mjs';
 import * as R from './resources.mjs';
 import * as D from './display.mjs';
 import { FirmwareError, runtime, where } from './hle.mjs';
-import { EXPECTED_RECORDS, GUI_GUARDS, KIND3_RECORD, KIND3_AREA, STRIDE, HEIGHT, REGISTRY, OsdLab, OSD_DEFAULTS, EngineError, format_error } from './osd.mjs';
+import { EXPECTED_RECORDS, GUI_GUARDS, KIND3_RECORD, KIND3_AREA, NRECORDS, STRIDE, HEIGHT, REGISTRY, OsdLab, OSD_DEFAULTS, EngineError, format_error } from './osd.mjs';
 import { ValueError } from './errors.mjs';
 import { decode_command } from './osdfmt.mjs';
 import { SP } from './sim.mjs';
@@ -128,8 +128,7 @@ export const GuiMixin = (Base) => class extends Base {
   }
   // S-LOG (observer): records (file, line) and returns.
   _s_log(hle, r) {
-    const call = this.sim.read(r.mdr - 7, 7);
-    const size = call[0] === 0xDD ? call[6] : this.sim.read(r.mdr - 5, 5)[4];
+    const size = this.sim.read(r.mdr - 1, 1)[0];
     const args = unpack('<3I', this.sim.read(r.sp + size + 4, 12));
     const raw = this.sim.read(args[1], 32), z = raw.indexOf(0);
     this.font_log.push([latin1(z < 0 ? raw : raw.subarray(0, z)), args[2], where(r.mdr)]);
@@ -160,10 +159,10 @@ export const GuiMixin = (Base) => class extends Base {
       start = end;
     }
     this.records = [];
-    for (let i = 0; i < 6; i++) this.records.push(this.sim.u32(REGISTRY + 8 * i));
+    for (let i = 0; i < NRECORDS; i++) this.records.push(this.sim.u32(REGISTRY + 8 * i));
     this.records.push(KIND3_RECORD);
     this.surfaces = [];
-    for (let i = 0; i < 7; i++) this.surfaces.push(this.record(i));
+    for (let i = 0; i <= NRECORDS; i++) this.surfaces.push(this.record(i));
     this.init_log = this.engine.exec_log().map((row) => ({ seq: row[0], source: row[1], result: row[3], command: decode_command(row.slice(4, 4 + row[2])) }));
     this.init_commands = this.engine.exec_total();
     this.init_errors = this.engine.errors();
@@ -270,11 +269,14 @@ export const GuiMixin = (Base) => class extends Base {
     return i;
   }
   // H-CLEAR: the harness writes zeros (debugger write) into rect (x, y, w, h) of the layer's front record.
-  clear_layer(layer = TEXT_LAYER, rect = [0, 0, 1664, 1200]) {
+  clear_layer(layer = TEXT_LAYER, rect = [0, 0, STRIDE, HEIGHT]) {
     const s = this.surfaces[this.buffer_of(layer)], [x, y, w, h] = rect;
     if (x < 0 || y < 0 || x + w > s.stride || y + h > s.height) throw new ValueError(`clear rect ${show(rect)} outside the record`);
     if (w === s.stride) this.sim.write(s.base + y * s.stride, new Uint8Array(w * h));
-    else for (let row = y; row < y + h; row++) this.sim.write(s.base + row * s.stride + x, new Uint8Array(w));
+    else {
+      const zero = new Uint8Array(w);
+      for (let row = y; row < y + h; row++) this.sim.write(s.base + row * s.stride + x, zero);
+    }
   }
   // One DrawTextById (sid) or DrawText (literal text) call in its own exec bracket; box (x0, y0, x1, y1) inclusive,
   // default (x, y, 1599, 1199). H-STYLE: {+0 colour, +4 0, +8 0, +12 h-align, +13 v-align, +14..+21 margins 0, +22 edge}.

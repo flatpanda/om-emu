@@ -239,9 +239,9 @@ export class Storage {
     if (f.card_switch) {
       const { send, ret, callback } = f.card_switch, sw = (prev) => (h, r) => {
         if (r.mdr >>> 0 !== runtime(ret)) return prev(h, r);
-        const req = r.a0 >>> 0, on = lab.sim.read(req + SWITCH_BYTE, 1)[0];
+        const req = r.a0 >>> 0, on = lab.sim.read(req + SWITCH_BYTE, 1)[0], id = lab.sim.read(req, 2);
         this.switches += 1;
-        this.log.push(['switch', `the card line's request ${lab.sim.read(req, 2)[0] | lab.sim.read(req + 1, 1)[0] << 8} (switch ${on}): answered`]);
+        this.log.push(['switch', `the card line's request ${id[0] | id[1] << 8} (switch ${on}): answered`]);
         return h.finish_after(r, callback, { a0: req, d0: 0 });
       };
       if (lab.hooks.has(runtime(send))) lab.wrap(send, sw);
@@ -255,7 +255,7 @@ export class Storage {
     }, 'K-CFLUSH');
     // the tasks the bring-up starts, by their static ids (the words of the image the starts read)
     const entries = new Map([...lab.nk.tasks()].map(([t, [e]]) => [t, e]));
-    const tids = f.tasks.map((w) => lab.sim.read(w, 1)[0] | lab.sim.read(w + 1, 1)[0] << 8);
+    const tids = f.tasks.map((w) => { const b = lab.sim.read(w, 2); return b[0] | b[1] << 8; });
     for (const t of tids) {
       if (!entries.has(t)) throw new StorageError(`H-FILEINIT: the bring-up starts task ${t}, which is not a static task`);
       lab.lt.allow.add(entries.get(t));

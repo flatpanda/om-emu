@@ -3,7 +3,7 @@
 // check_irq's mutant negative controls (MUT_HIGHEST_LEVEL, MUT_HIGHEST_IRQ, MUT_IPI_NO_CLEAR, from the machine's
 // mutant option). Gate mode 2's extra look at the next TB start after a request rises is the interpreter's
 // (interp.mjs, S.kick).
-import { BUS, Unported, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
+import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
 import { BOARD, timerIrq } from '../fw/board.mjs';
 import {
   DEBUG_BASE, DEBUG_SIZE, DOORBELL_BASE, DEBUG_MAGIC, D,

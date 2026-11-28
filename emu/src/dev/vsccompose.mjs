@@ -405,7 +405,7 @@ export function compose(v, c) {
       // A21: a register block the board's compositor does not apply (BOARD.vsc.unapplied; E147's highlight and NV
       // blocks, src/fw/models.mjs VSC_UNAPPLIED): the composite shows the planes without it
       if (UNAPPLIED.some(([lo, hi]) => off >= lo && off <= hi)) {
-        v.noteRecord(NOTE.ASSUMED, c, off, k.m[w]);
+        if (k.mw(w)) v.noteRecord(NOTE.ASSUMED, c, off, k.m[w]);
         continue;
       }
       if (off === 0x008 && (v.dbg[chanDbg(c, CH.ASSUME)] & A15_BIT) && k.mw(w) && k.m[w] === 0x41) {   // A15 (opt-in)

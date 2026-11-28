@@ -9,7 +9,7 @@ import * as D from './display.mjs';
 import * as K from './kernel.mjs';
 import * as MM from './menu.mjs';
 import * as M from './menudata.mjs';
-import { FirmwareError, disasm, runtime, where } from './hle.mjs';
+import { FirmwareError, disasm, where } from './hle.mjs';
 import { ValueError, IndexError, lookup } from './errors.mjs';
 import { Unported } from '../core/mem.mjs';
 import { show } from '../util/show.mjs';

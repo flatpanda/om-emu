@@ -20,11 +20,14 @@ export async function runWorkload({ repo, raw, scenarios, checks, jobs, model, l
   for (const [part, argv] of parts) {
     log(`${part}: node ${argv.join(' ')}`);
     const t0 = performance.now();
+    const outFd = fs.openSync(path.join(raw, `${part}.stdout`), 'w');
+    let errFd;
     const rc = await new Promise((resolve, reject) => {
-      const p = spawn(process.execPath, argv, { cwd: repo, env, stdio: ['ignore', fs.openSync(path.join(raw, `${part}.stdout`), 'w'), fs.openSync(path.join(raw, `${part}.stderr`), 'w')] });
+      errFd = fs.openSync(path.join(raw, `${part}.stderr`), 'w');
+      const p = spawn(process.execPath, argv, { cwd: repo, env, stdio: ['ignore', outFd, errFd] });
       p.on('error', reject);
       p.on('exit', (code, signal) => resolve(code ?? signal));
-    });
+    }).finally(() => { fs.closeSync(outFd); if (errFd !== undefined) fs.closeSync(errFd); });
     const seconds = +((performance.now() - t0) / 1000).toFixed(1);
     log(`${part}: exit ${rc} after ${seconds} s`);
     out.push({ part, argv, rc, seconds });
@@ -52,9 +55,10 @@ export function union(raw, { size, model }) {
     const args = meta.argv.slice(2).join(' ');
     const run = `${script}${args ? ' ' + args : ''}${mutant ? ' ' + JSON.stringify(meta.env) : ''}`;
     for (const g of [group, `${group}/${script}`]) {
-      groups[g] ??= { threads: 0, set: new Uint8Array(size), runs: new Set() };
+      groups[g] ??= { threads: 0, set: new Uint8Array((size + 7) >>> 3), runs: new Set() };
       groups[g].threads++; groups[g].runs.add(run);
-      for (const v of offs) groups[g].set[v & 0x1ffffff] |= v >>> 25;
+      const gset = groups[g].set;
+      for (const v of offs) { const o = v & 0x1ffffff; if ((v >>> 25) && o < size) gset[o >>> 3] |= 1 << (o & 7); }
     }
     for (const v of offs) { all[v & 0x1ffffff] |= v >>> 25; if (!mutant) clean[v & 0x1ffffff] |= v >>> 25; }
     for (const [pc, name, fires] of meta.stubs) {
@@ -64,9 +68,10 @@ export function union(raw, { size, model }) {
     for (const [pc, n] of meta.other) other.set(pc, (other.get(pc) ?? 0) + n);
   }
   const countOf = (set) => { let n = 0; for (let o = 0; o < size; o++) if (set[o]) n++; return n; };
+  const bitCount = (set) => { let n = 0; for (let i = 0; i < set.length; i++) { let b = set[i]; while (b) { b &= b - 1; n++; } } return n; };
   const doc = {
     model, threads: files.length, executed_all: countOf(all), executed_without_mutants: countOf(clean),
-    groups: Object.fromEntries(Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([g, v]) => [g, { threads: v.threads, executed: countOf(v.set), runs: [...v.runs].sort() }])),
+    groups: Object.fromEntries(Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([g, v]) => [g, { threads: v.threads, executed: bitCount(v.set), runs: [...v.runs].sort() }])),
     stubs: [...stubs.values()].map((s) => ({ ...s, groups: [...s.groups].sort() })).sort((a, b) => b.fires - a.fires || a.pc.localeCompare(b.pc) || a.name.localeCompare(b.name)),
     other_pcs: [...other].sort((a, b) => b[1] - a[1]).slice(0, 200),
   };

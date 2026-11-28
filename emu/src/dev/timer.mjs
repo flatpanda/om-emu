@@ -1,7 +1,7 @@
 // OM-1 timer block (0x98900000) on the lab clock and its debug window 0x89a10000, and the lab clock itself,
 // the us clock on lab time (A-USLAB, USMODE 1, from the reset) and the mutant negative controls 28..30 included. Times
 // are integer ns held in Numbers (exact below 2^53 ns, about 104 lab days).
-import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
+import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, ctx } from '../core/mem.mjs';
 import { IRQ_TIMER } from './intc.mjs';
 import { BOARD } from '../fw/board.mjs';
 

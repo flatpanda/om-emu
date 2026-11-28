@@ -1786,7 +1786,8 @@ export class CamApp {
   play_execute(rsb, from) {
     const sim = this.s.lab.sim, req = sim.u32(rsb + RSB_REQUEST) >>> 0;
     if (!req) return;
-    const p = { rsb, id: sim.u32(req) >>> 0, notify: sim.u32(req + 4) >>> 0, param: sim.read(req + 16, 2)[0] | (sim.read(req + 17, 1)[0] << 8) };
+    const pb = sim.read(req + 16, 2);
+    const p = { rsb, id: sim.u32(req) >>> 0, notify: sim.u32(req + 4) >>> 0, param: pb[0] | (pb[1] << 8) };
     const kind = playRequestKind(p.id, this.erase_unnative());
     if (kind?.refuse) throw new FirmwareError(`S-PLAYSEQ: ${kind.refuse} (from ${where(from)})`);
     if (kind?.erase) p.erase = true;
@@ -2186,7 +2187,7 @@ export class CamApp {
     return { started: this.started, recview_pending: this.timed.some(([, n]) => n === 'END_RECVIEW'), pending: this.timed.map(([, n]) => n),
       recording_s: this.recording === null ? null : +((this.s.lab.lab_time() - this.recording) / 1e9).toFixed(1),
       card_used_s: +(this.card_used_ms / 1000).toFixed(1), card_images: this.card_images(),
-      components: this.native_tra ? this.boot_objects().some(([[name], o]) => name === 'CtgStl_StillImageShooting' && this.s.lab.sim.u32(o + RX_STATE) !== 3) : this.boot_finished,
+      components: this.native_tra ? (this.boot_finished ||= this.boot_objects().some(([[name], o]) => name === 'CtgStl_StillImageShooting' && this.s.lab.sim.u32(o + RX_STATE) !== 3)) : this.boot_finished,
       ...(this.native_tra ? { native_tra: true } : {}),
       reactive: this.reactive === null ? null : h8(this.reactive),
       // the subject frames shown: from MDET's own table where MDET_DL runs (source 'mdet'), else S-SUBJECT's

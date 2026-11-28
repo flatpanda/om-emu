@@ -5,12 +5,12 @@
 import * as K from './kernel.mjs';
 import { HLE, DATA, DATA_END, FirmwareError, disasm, install_core_index, runtime, where, cat } from './hle.mjs';
 import { RTOS, Kernel } from './rtos.mjs';
-import { EngineError, ValueError, LabError } from './errors.mjs';
+import { EngineError, ValueError, RuntimeError, LabError } from './errors.mjs';
 import { show } from '../util/show.mjs';
 import { pack, unpack } from '../util/bytes.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { gui_palette } from './osdfmt.mjs';
-import { A, ON_LAB_MODEL, IMAGE_BASE, MODEL_INFO, fact } from '../fw/model.mjs';
+import { A, ON_LAB_MODEL, IMAGE_BASE, fact } from '../fw/model.mjs';
 import { CTORS_E143 } from '../fw/facts-const.mjs';
 import { BOARD } from '../fw/board.mjs';
 
@@ -54,7 +54,7 @@ export class EngineDebug {
     this.sim = sim;
     let magic;
     try { magic = sim.u32(DEBUG + DBG_MAGIC); } catch (e) {
-      if (e?.name === 'RuntimeError') throw new FirmwareError(`the machine has no OSD engine debug window (${e.message})`);
+      if (e instanceof RuntimeError) throw new FirmwareError(`the machine has no OSD engine debug window (${e.message})`);
       throw e;
     }
     if (magic !== 0x4544534F) throw new FirmwareError(`OSD engine debug window magic 0x${fx(magic, 8)}: not emu's OSD engine model`);

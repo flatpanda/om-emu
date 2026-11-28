@@ -61,8 +61,8 @@ export class Adc extends Regs {
     v &= mask;
     switch (off) {
       case ISR: this.isr &= ~v; this.update(); return;
-      case IER: this.ier = v & 0x7ff; this.update(); return;
-      case CR: return this.writeCr(v);
+      case IER: this.ier = merge(this.ier, v, mask, 0x7ff); this.update(); return;
+      case CR: return this.writeCr(v, mask);
       case CFGR:
         this.cfgr = merge(this.cfgr, v, mask);
         return;
@@ -71,9 +71,8 @@ export class Adc extends Regs {
     if (this.r.has(off)) { this.r.set(off, merge(this.r.get(off), v, mask)); return; }
     throw this.missing(off, true, v);
   }
-  writeCr(v) {
-    let cr = this.cr;
-    cr = (cr & ~(0x30000000 | (1 << 30))) | (v & (0x30000000 | (1 << 30)));   // DEEPPWD, ADVREGEN, ADCALDIF
+  writeCr(v, mask) {
+    let cr = merge(this.cr, v, mask, 0x70000000);   // DEEPPWD, ADVREGEN, ADCALDIF
     if (v & ADCAL) { /* calibration completes at once; CALFACT stays */ }
     if (v & ADEN) { cr |= ADEN; this.isr |= ADRDY; }
     if (v & ADDIS) { cr &= ~(ADEN | ADSTART); this.ev = this.sched.cancel(this.ev); }

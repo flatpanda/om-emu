@@ -20,7 +20,6 @@
 // Reports the detours (how each ended), snapshot sizes and the snapshot and restore times. Exit 1 on a difference.
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { runScenarios, osdDoc, loadImage, loadBlock, firstDivergence, CALLS_DIR, STAGE1, STAGE2 } from './run.mjs';
 import { dump } from '../src/trace/tracer.mjs';

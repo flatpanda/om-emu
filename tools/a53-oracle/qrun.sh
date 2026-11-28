@@ -11,7 +11,12 @@ OUT=${OUT:-/tmp/a53run}
 HERE=$(dirname "$0")
 S=/tmp/a53mon.sock
 mkdir -p "$OUT"
-dtc -q -I dts -O dtb -o "$OUT/virt-nep1.dtb" "$IMG/virt-nep1.dts"
+DTS="$IMG/virt-nep1.dts"
+if [ ! -f "$DTS" ]; then
+  DTS="$OUT/virt-nep1.dts"
+  node "$HERE/qdts.mjs" "$IMG/nep1.dts" "$DTS"
+fi
+dtc -q -I dts -O dtb -o "$OUT/virt-nep1.dtb" "$DTS"
 rm -f "$OUT/ram.bin" "$S"
 timeout $(( $1 + 30 )) qemu-system-aarch64 \
   -M virt,gic-version=3,virtualization=on,secure=off -cpu cortex-a53 -smp 2 -m 2G \

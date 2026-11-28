@@ -81,9 +81,9 @@ export class GpioPort extends Regs {
   }
   wr(off, v, mask) {
     const locked = (this.lckr >>> 16) & 1 ? this.lckr & 0xffff : 0;
-    const keep = (bitsPer) => {                  // the bits of locked pins stay
+    const keep = (bitsPer, from = 0, count = 16) => {                  // the bits of locked pins stay
       let m = 0;
-      for (let p = 0; p < 16; p++) if ((locked >>> p) & 1) m |= ((1 << bitsPer) - 1) << (bitsPer * (p % (32 / bitsPer)));
+      for (let i = 0; i < count; i++) if ((locked >>> (from + i)) & 1) m |= ((1 << bitsPer) - 1) << (bitsPer * i);
       return ~m >>> 0;
     };
     switch (off) {
@@ -104,8 +104,8 @@ export class GpioPort extends Regs {
         else this.lockStep = 0;
         return;
       }
-      case AFRL: this.afr[0] = merge(this.afr[0], v, mask); return;
-      case AFRH: this.afr[1] = merge(this.afr[1], v, mask); return;
+      case AFRL: this.afr[0] = merge(this.afr[0], v, mask, keep(4, 0, 8)); return;
+      case AFRH: this.afr[1] = merge(this.afr[1], v, mask, keep(4, 8, 8)); return;
       default: throw this.missing(off, true, v);
     }
     this.update();

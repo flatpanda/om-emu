@@ -105,8 +105,14 @@ function readFields(codes, b, o) {
 }
 const SIZES = { B: 1, H: 2, h: 2, I: 4, i: 4, Q: 8, x: 1 };
 function parseFmt(fmt) {
-  if (fmt[0] !== '<') throw new Error('pack: little-endian formats only');
+  if (typeof fmt !== 'string' || fmt[0] !== '<') throw new StructError('pack: little-endian formats only');
   const out = [];
-  for (const m of fmt.slice(1).matchAll(/(\d*)([BHhIiQx])/g)) for (let k = 0; k < (m[1] ? +m[1] : 1); k++) out.push(m[2]);
+  let pos = 1;
+  for (const m of fmt.slice(1).matchAll(/(\d*)([BHhIiQx])/g)) {
+    if (m.index + 1 !== pos) throw new StructError(`pack: bad format '${fmt}'`);
+    pos = m.index + 1 + m[0].length;
+    for (let k = 0; k < (m[1] ? +m[1] : 1); k++) out.push(m[2]);
+  }
+  if (pos !== fmt.length) throw new StructError(`pack: bad format '${fmt}'`);
   return out;
 }

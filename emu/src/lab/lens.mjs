@@ -37,7 +37,7 @@ import { FirmwareError, where, runtime } from './hle.mjs';
 import { OLYQEWR } from './display.mjs';
 import * as K from './kernel.mjs';
 import * as N from './nav.mjs';
-import { LensMcu, LENS_1240, LensError, frameName } from './lensmcu.mjs';
+import { LensMcu, LENS_1240, frameName } from './lensmcu.mjs';
 
 export class NativeLensError extends FirmwareError {}
 
@@ -128,12 +128,7 @@ export class NativeLens {
   }
   // the controller's far end: S-LENSMCU (an unknown frame throws a LensError, which the controller reports on its
   // line and turns into a bus error: the session stops there, naming the frame)
-  frame(fr) {
-    try { return this.mcu.frame(fr); } catch (e) {
-      if (e instanceof LensError) this.error = e.message;
-      throw e;
-    }
-  }
+  frame(fr) { return this.mcu.frame(fr); }
   // S-LENSNAND (and S-FSNAND below it): the lens caches' area erased, the firmware's writes kept
   _nand(h, r, prev) {
     const [base, size] = this.f.cache_area, flash = r.a1 >>> 0, n = r.d0 >>> 0, op = r.d1 >>> 0;

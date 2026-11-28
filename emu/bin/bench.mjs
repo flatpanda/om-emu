@@ -21,7 +21,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import { runScenarios, osdDoc, loadImage, loadBlock, CALLS_DIR, STAGE1, STAGE2 } from './run.mjs';
 import { callFrames } from '../src/lab/hle.mjs';
 import { blobs, languages } from '../src/lab/resources.mjs';

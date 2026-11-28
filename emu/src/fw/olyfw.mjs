@@ -34,6 +34,12 @@ export function descramble(src, out = new Uint8Array(src.length)) {
       d[i + 2] = ~((c >>> 24) | (((c >>> 16) & 0xff) << 8) | (((c >>> 8) & 0xff) << 16) | ((c & 0xff) << 24));
       d[i + 3] = ~(((e >>> 8) & 0xff) | (((e >>> 16) & 0xff) << 8) | ((e & 0xff) << 16) | ((e >>> 24) << 24));
     }
+  } else if (out === src) {
+    const t = new Uint8Array(16);
+    for (let g = 0; g < n; g += 16) {
+      for (let k = 0; k < 16; k++) t[k] = src[g + PERM[k]] ^ 0xff;
+      out.set(t, g);
+    }
   } else {
     for (let g = 0; g < n; g += 16) for (let k = 0; k < 16; k++) out[g + k] = src[g + PERM[k]] ^ 0xff;
   }

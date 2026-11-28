@@ -37,6 +37,9 @@ export const expandBlobs = (rom) => expand(rom);
 // and the machine loads them with the image.
 function relocate(img, base, rows) {
   if (!rows.length) return img;
+  for (const [from, len, to] of rows) {
+    if (to < base || from < 0 || len < 0 || from + len > img.length) throw new Error(`expandImage: preload row [0x${from.toString(16)}, 0x${len.toString(16)}, 0x${to.toString(16)}] out of bounds`);
+  }
   const end = Math.max(img.length, ...rows.map(([, len, to]) => to - base + len));
   const out = new Uint8Array(end);
   out.set(img);

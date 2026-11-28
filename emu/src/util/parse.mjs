@@ -20,10 +20,11 @@ export function intLiteral(text) {
 }
 // A finite decimal number: an optional sign, digits with an optional fraction ('3', '2.5', '.5', '5.') and exponent
 // ('1e3', '2.5E-2').
+const DEC_D = '[0-9]+(?:_[0-9]+)*';
+const DEC_NUM_RE = new RegExp(`^[+-]?(?:${DEC_D}(?:\\.(?:${DEC_D})?)?|\\.${DEC_D})(?:[eE][+-]?${DEC_D})?$`);
 export function decimalNumber(text) {
-  const D = '[0-9]+(?:_[0-9]+)*';
   const t = text.trim();
-  if (!new RegExp(`^[+-]?(?:${D}(?:\\.(?:${D})?)?|\\.${D})(?:[eE][+-]?${D})?$`).test(t)) return null;
+  if (!DEC_NUM_RE.test(t)) return null;
   const v = Number(t.replaceAll('_', ''));
   return Number.isFinite(v) ? v : null;
 }

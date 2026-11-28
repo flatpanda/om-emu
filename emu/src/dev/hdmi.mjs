@@ -157,16 +157,23 @@ export class Hdmi {
   write(off, value, size, dbg) {
     if (dbg || size !== 4 || (off & 3) || !(WORDS.has(off) || this.inBuffer(off))) return this.txUnknown('write', off, size, value, dbg);
     const keep = (this.lanes >>> 16) & 15;
-    for (let i = 0; i < 4; i++) if (!(keep & (1 << i)) && READ_ONLY.has(off + i)) return this.txUnknown('write', off, size, value, dbg);
     for (let i = 0; i < 4; i++) {
       if (keep & (1 << i)) continue;
       const r = off + i, b = (value >>> (8 * i)) & 0xff;
-      if (r === DDC_COMMAND && b !== DDC_READ && b !== DDC_WRITE) return this.txUnknown('write', off, size, value, dbg);
-      if (STATUS.includes(r)) this.reg[r] &= ~b;
-      else this.reg[r] = b;
-      if (r === DDC_COMMAND && b === DDC_READ) this.ddcRead();
-      else if (r === DDC_COMMAND) this.ddcWrite();
-      else if (r === UPDCTRL && (b & UPDATE_REQUEST)) this.reg[STATUS[2]] |= UPDATE_DONE;
+      if (READ_ONLY.has(r) || (r === DDC_COMMAND && b !== DDC_READ && b !== DDC_WRITE)) return this.txUnknown('write', off, size, value, dbg);
+    }
+    for (let i = 0; i < 4; i++) {
+      if (keep & (1 << i)) continue;
+      const r = off + i, b = (value >>> (8 * i)) & 0xff;
+      if (r === DDC_COMMAND) {
+        if (b === DDC_READ) this.ddcRead();
+        else this.ddcWrite();
+        this.reg[r] = b;
+      } else if (STATUS.includes(r)) this.reg[r] &= ~b;
+      else {
+        this.reg[r] = b;
+        if (r === UPDCTRL && (b & UPDATE_REQUEST)) this.reg[STATUS[2]] |= UPDATE_DONE;
+      }
     }
     this.update();
   }

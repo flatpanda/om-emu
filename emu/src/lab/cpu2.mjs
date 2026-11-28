@@ -1,4 +1,4 @@
-// CPU 2 natively (--cpu2 native, E143, off by default; docs/hle-gaps/4.6.md 4.6.1): the machine's second core
+// CPU 2 natively (--cpu2 auto|native, E143, on by default on E143 unless --strict cache; docs/hle-gaps/4.6.md 4.6.1): the machine's second core
 // (src/core/cores.mjs) run from CPU 2's entry through its kernel to its idle loop, then beside CPU 0 for the session.
 //   H-CPU2RELEASE  the two words CPU 2 waits for before its kernel and its init task's starts, which CPU 0 writes in
 //                  code the lab does not run: the release flag (0xa3258360) = 1 (CPU 0's reset head, 0x50000282..329)
@@ -316,8 +316,8 @@ export class Cpu2 {
         const sp = api.R[8] >>> 0, req = api.u32(sp + 84);
         const plane = req ? api.u32(req) : 0;
         self.osd.taken.push({ reply_queue: api.u32(sp + 72), command: api.u32(sp + 80), req: h8(req), base: h8(plane ? api.u32(plane) : 0),
-          x: api16(api, req + 4), y: api16(api, req + 6), w: api16(api, req + 8), h: api16(api, req + 10), n: api16(api, req + 24),
-          bins: h8(api.u32(req + 12)), scale: api.u32(req + 20), lab_ns: self.lab.lab_time() });
+          x: req ? api16(api, req + 4) : 0, y: req ? api16(api, req + 6) : 0, w: req ? api16(api, req + 8) : 0, h: req ? api16(api, req + 10) : 0,
+          n: req ? api16(api, req + 24) : 0, bins: h8(req ? api.u32(req + 12) : 0), scale: req ? api.u32(req + 20) : 0, lab_ns: self.lab.lab_time() });
         return 'step';
       }]],
       [D(OSD_REPLY), ['OSD_DRAW_CPU2 replies', (api) => {

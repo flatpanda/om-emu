@@ -122,12 +122,12 @@ export class LensSsc {
     if (dbg || size !== 4 || (off & 3) || READ_ONLY.has(off) || !(WORDS.has(off) || fifo)) return this.sscUnknown('write', off, size, value, dbg);
     value >>>= 0;
     if (off === STATUS) { this.status = (this.status & ~value) >>> 0; this.update(); return; }
+    if (off === DMA_ABORT && value > 1) return this.sscUnknown('write', off, size, value, dbg, ' (abort: 1)');
+    if (off === START && value > 1) return this.sscUnknown('write', off, size, value, dbg, ' (start: 1, stop: 0)');
+    if (off === START && value === 1) this.start();
     this.reg[off >> 2] = value;
     if (off === ENABLE) this.update();
     else if (off === DMA_ABORT && value === 1) { this.status = (this.status | STOPPED) >>> 0; this.update(); }
-    else if (off === DMA_ABORT && value !== 0) return this.sscUnknown('write', off, size, value, dbg, ' (abort: 1)');
-    else if (off === START && value === 1) this.start();
-    else if (off === START && value !== 0) return this.sscUnknown('write', off, size, value, dbg, ' (start: 1, stop: 0)');
   }
   // the frame the registers describe, as the far end sees it
   frame() {

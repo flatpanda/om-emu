@@ -32,11 +32,16 @@ QP=$!
 sleep 1.5
 node "$HERE/iscpeer.mjs" live "$MEM" "$SOCK" $((SECS*1000)) "$@" &
 PEERP=$!
-[ -n "$SHCMDS" ] && node "$HERE/uartsh.mjs" "$UART" "$SHCMDS" &
+UARTP=
+if [ -n "$SHCMDS" ]; then
+  node "$HERE/uartsh.mjs" "$UART" "$SHCMDS" &
+  UARTP=$!
+fi
 sleep 0.8
 python3 -c "import socket,time;s=socket.socket(socket.AF_UNIX);s.connect('$MON');time.sleep(.3);s.recv(65536);s.sendall(b'cont\n');time.sleep(.3)"
 wait $PEERP || true
 # leave the vCPUs' registers for a post-mortem (a stall shows where each CPU is)
 python3 -I "$HERE/mon.py" "$MON" "info registers -a" > "$OUT/regs.txt" 2>&1 || true
 [ -n "$RAMDUMP" ] && python3 -I "$HERE/mon.py" "$MON" "pmemsave 0x40000000 0x80000000 \"$OUT/ram.bin\"" > /dev/null 2>&1
+[ -n "$UARTP" ] && kill $UARTP 2>/dev/null || true
 kill $QP 2>/dev/null || true

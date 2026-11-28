@@ -117,7 +117,6 @@ export function cocMm(lens, z) {
 }
 
 // ---- patterns: reflectance [r, g, b] in 0..1 and opacity, at world coordinates (m) on the layer's plane
-const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
 const hash = (x) => { let h = Math.imul(x | 0, 0x9E3779B1) ^ 0x85EBCA6B; h = Math.imul(h ^ (h >>> 15), 0x2C1B3C6D); return ((h ^ (h >>> 13)) >>> 0) / 4294967296; };
 const PATTERNS = {
   sky(X, Y) {
@@ -208,7 +207,7 @@ export function renderFrame(scene, width, height, t_s, frame, scale = 2) {
   const R = new Float32Array(np), G = new Float32Array(np), B = new Float32Array(np);
   const lr = new Float32Array(np), lg = new Float32Array(np), lb = new Float32Array(np), la = new Float32Array(np);
   const tmp = new Float32Array(Math.max(w, h));
-  const { focal_mm: f } = scene.lens, exp = exposureOf(scene);
+  const { focal_mm: f } = scene.lens, exp = exposureOf(scene), lens = { ...scene.lens, aperture: exp.aperture };
   const mmPerPx = SENSOR_MM[0] / w;
   for (const layer of scene.layers) {
     const pat = PATTERNS[layer.pattern];
@@ -227,7 +226,7 @@ export function renderFrame(scene, width, height, t_s, frame, scale = 2) {
       }
     }
     // defocus (box blur x3 ~ a Gaussian of the circle of confusion's radius) and motion smear over the exposure
-    const blurPx = cocMm(lensInUse(scene), z) / mmPerPx / 2;
+    const blurPx = cocMm(lens, z) / mmPerPx / 2;
     const smearPx = Math.abs(layer.speed * exp.shutter_s) / mPerPx;
     for (const plane of [lr, lg, lb, la]) {
       for (let k = 0; k < 3; k++) { boxBlur(plane, w, h, blurPx / Math.sqrt(3), 0, tmp); boxBlur(plane, w, h, blurPx / Math.sqrt(3), 1, tmp); }
@@ -326,11 +325,11 @@ export function subjectsAt(scene, t_s = 0, aspect = 2 / 3) {
 
 // What the page shows next to the frame: the exposure in use and the circle of confusion of each layer.
 export function sceneReport(scene) {
-  const e = exposureOf(scene);
+  const e = exposureOf(scene), lens = { ...scene.lens, aperture: e.aperture };
   return {
     preset: scene.preset, ev: scene.ev, af: scene.af, af_point: scene.af_point,
     lens: { ...scene.lens },
     exposure: { mode: scene.exposure.mode, shutter_s: e.shutter_s, aperture: e.aperture, iso: e.iso, comp_ev: scene.exposure.comp_ev, ev_offset: +e.ev_offset.toFixed(2), clipped: e.clipped },
-    layers: scene.layers.map((l) => ({ name: l.name, depth_m: l.depth_m, speed: l.speed, coc_mm: +cocMm(lensInUse(scene), l.depth_m).toFixed(4) })),
+    layers: scene.layers.map((l) => ({ name: l.name, depth_m: l.depth_m, speed: l.speed, coc_mm: +cocMm(lens, l.depth_m).toFixed(4) })),
   };
 }

@@ -132,6 +132,7 @@ export function setStrict(cfg) {
   SREAD = (cfg?.reads ?? []).map(([lo, hi]) => [lo >>> 0, hi >>> 0]);
   const mark = (list, pg) => {
     for (const [lo, hi] of list) {
+      if (lo >= hi) continue;
       for (const d of [0, 0x40000000]) for (let p = (lo + d) >>> 16; p <= (hi - 1 + d) >>> 16 && p < 65536; p++) pg[p] = 1;
     }
   };

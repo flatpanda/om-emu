@@ -22,6 +22,7 @@ const N = Number(opt('--cases', '2000')), SEED = Number(opt('--seed', '1')), SHO
 const RECORD = opt('--record', null), PORT = Number(opt('--port', String(12000 + (process.pid % 2000))));
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'm4oracle-'));
+process.on('exit', () => fs.rmSync(dir, { recursive: true, force: true }));
 fs.writeFileSync(path.join(dir, 'boot.bin'), bootImage());
 const qemu = spawn('qemu-system-arm', ['-M', 'mps2-an386', '-cpu', 'cortex-m4', '-nographic', '-monitor', 'none', '-serial', 'none',
   '-S', '-gdb', `tcp:127.0.0.1:${PORT}`, '-kernel', path.join(dir, 'boot.bin')], { stdio: ['ignore', 'ignore', 'inherit'] });

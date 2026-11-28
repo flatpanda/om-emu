@@ -273,6 +273,7 @@ export class CamFe {
     }
     this.regs.set(a, value);
     this.writes++;
+    if (a === SSG.mask) this.ssg_update();
   }
   // why an address outside the two programs is refused
   outside(a) { return SENSOR_SERIAL(a) ? `${REFUSED.serial}: a word its driver does not use` : REFUSED.outside; }

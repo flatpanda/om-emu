@@ -36,7 +36,7 @@ for (let i = 0; i < addrs.length;) {
 }
 const bin = path.join(scratch, 'img.bin');
 fs.writeFileSync(bin, img);
-// objdump keeps its decode in sync within a range, so one call per run (batched into one process per 400 runs)
+// objdump keeps its decode in sync within a range, so one call per run (appending to listing every 400 runs)
 for (let k = 0; k < runs.length; k += 400) {
   let out = '';
   for (const [a, b] of runs.slice(k, k + 400)) {

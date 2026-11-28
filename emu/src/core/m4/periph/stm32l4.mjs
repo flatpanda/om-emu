@@ -180,7 +180,12 @@ export class Stm32l4 {
   }
 
   // ---- the debug console
-  consoleText(from = 0) { return String.fromCharCode(...this.tx.LPUART1.slice(from)); }
+  consoleText(from = 0) {
+    const a = this.tx.LPUART1;
+    let s = '';
+    for (let i = from; i < a.length; i++) s += String.fromCharCode(a[i]);
+    return s;
+  }
   type(text) { this.lpuart1.receive([...text].map((c) => c.charCodeAt(0) & 0xff)); }
   // from reset to the first prompt, within `seconds` of SCPU time
   boot(seconds = 5) { return this.run({ seconds, until: () => this.prompts > 0 }); }

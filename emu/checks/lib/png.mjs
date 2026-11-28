@@ -59,7 +59,7 @@ export function write_outputs(lab, name, device, comp, dump, outDir) {
   let sha = null;
   if (words.length) {
     write_png(png, h.width, h.height, words_to_rgb(words));
-    const raw = Buffer.from(Uint32Array.from(words).buffer);
+    const raw = words instanceof Uint32Array ? Buffer.from(words.buffer, words.byteOffset, words.byteLength) : Buffer.from(Uint32Array.from(words).buffer);
     fs.writeFileSync(path.join(outDir, `${name}.ycc`), raw);
     sha = createHash('sha256').update(raw).digest('hex');
   }

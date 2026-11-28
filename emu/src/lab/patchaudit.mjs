@@ -113,7 +113,7 @@ export function auditTables(ranges, { hooks, ports, facts, len }) {
     hooked.add(pc - base + CODE >>> 0);
     out.hooks.push({ at: hex8(pc - base + CODE), name });
   }
-  out.hooks.sort((a, b) => (a.at < b.at ? -1 : 1));
+  out.hooks.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   // an address on patched bytes: in the disassembly notation the instruction there, at run time the width bytes from it
   const on = (v, width = 1) => {
     v >>>= 0;

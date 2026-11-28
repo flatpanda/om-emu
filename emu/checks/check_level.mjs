@@ -32,7 +32,7 @@
 // applied), with --only R1,R2 those groups under no-rotinit (PER_ROTATE's range with PER_ROTATE not started), and
 // passes when each is caught.
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
-import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
+import { labEnv, loadBlock, loadNand, runMain } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { eq } from './lib/eq.mjs';
 import { Player } from '../src/lab/player.mjs';
@@ -41,7 +41,6 @@ import { MODEL, MODEL_INFO, A } from '../src/fw/model.mjs';
 import { STATE_SHOOTING } from '../src/lab/play.mjs';
 import { words_to_rgb } from '../src/lab/display.mjs';
 import { bodyReading, sensorOf } from '../src/lab/acc.mjs';
-import { deepEqual } from '../src/util/equal.mjs';
 import { show } from '../src/util/show.mjs';
 
 // the readers the check calls natively (D): the raw and the corrected cache's accessors ({x, y, z} to a0, the counter
@@ -74,7 +73,7 @@ class Group {
   eq(label, got, want) { this.cases += 1; if (!eq(got, want, 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`); }
   true(label, ok, detail = '') { this.cases += 1; if (!eq(!!ok, true, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`); }
 }
-const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
+const env = () => labEnv({ resBlock: loadBlock(), nand: loadNand(), wallClock: () => performance.now() / 1000 });
 function withPlayer(mutant, fn, extra = {}) {
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(mutant ? { x_mutant: mutant } : {}), ...extra }, env());
   pl.open_session();

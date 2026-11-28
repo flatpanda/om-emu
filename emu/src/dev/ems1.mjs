@@ -127,12 +127,13 @@ export class Ems1 {
   // A start: the parameters written since the last one kept, the result RAMs of its channels set from the lab's source
   // (its words by index, the rest 0), the completion due after RUN_NS
   start(ch, word) {
-    const params = this.params();
+    const params = this.source ? this.params() : null;
     for (let k = 0; k < CHANNELS; k++) {
       if (!(ch & (1 << k))) continue;
-      const base = (RESULT + RESULT_STRIDE * k) >> 2, words = this.source ? this.source(k, params) : {};
+      const base = (RESULT + RESULT_STRIDE * k) >> 2;
       this.regs.fill(0, base, base + RESULT_WORDS);
-      for (const [i, v] of Object.entries(words)) {
+      if (!this.source) continue;
+      for (const [i, v] of Object.entries(this.source(k, params))) {
         const n = Number(i);
         if (!(Number.isInteger(n) && n >= 0 && n < RESULT_WORDS && Number.isInteger(v))) throw new Error(`S-EMS1: the lab's result word ${JSON.stringify([i, v])} of channel ${k} is not one of its RAM's`);
         this.regs[base + n] = v >>> 0;

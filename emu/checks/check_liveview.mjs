@@ -64,7 +64,6 @@ function scaled_request(device, address, crop = D.LV_SCALED_CROP) {
   const [src, dst, at] = D.LV_SCALED[device];
   return D.ThRequest.scaled(D.DEVICE[device].mask, address, crop, src, dst, at);
 }
-const mapDiff = (a, b) => { const out = new Map(); for (const [k, v] of b) if (a.get(k) !== v) out.set(k, [a.get(k), v]); return out; };
 
 // ----------------------------------------------------------------------------------- G1
 function g1_bus(lab) {

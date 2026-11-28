@@ -43,6 +43,7 @@ export const ENGINES = {
   pdt: { page: 0x2000, params: [[0x201c, 0x21fc]], result: [0x2200, 0x225c] },
   trc: { page: 0x3000, params: [[0x301c, 0x3334], [0x35c0, 0x362c]], result: [0x3338, 0x35a4] },
 };
+const ENGINE_LIST = Object.entries(ENGINES);
 export const E_RESET = 0x000, E_WRITE = 0x004, E_STATUS = 0x008, E_CLEAR = 0x00c, E_CLOSE = 0x010, E_OPEN = 0x014, E_START = 0x018;
 export const S_DONE = 0x1;
 // A-PDT-1: a run of either engine takes 2 ms of lab time (I: neither engine's time per frame is known; the drivers
@@ -77,12 +78,11 @@ export class Pdt {
   }
   // the engine whose page holds off and the register's offset within it, or null for the common page
   engine(off) {
-    for (const [name, E] of Object.entries(ENGINES)) if (off >= E.page && off < E.page + 0x1000) return [name, E, off - E.page];
+    for (const [name, E] of ENGINE_LIST) if (off >= E.page && off < E.page + 0x1000) return [name, E, off - E.page];
     return null;
   }
-  known(off) {
+  known(off, en = this.engine(off)) {
     if (off === RESET || off === HOLD || off === FLUSH || inRanges(off, LLF)) return true;
-    const en = this.engine(off);
     if (!en) return false;
     const [, E, r] = en;
     return r <= E_START || inRanges(off, E.params) || (off >= E.result[0] && off <= E.result[1]);
@@ -91,16 +91,16 @@ export class Pdt {
   busy(name) { return this.e[name].due !== Infinity; }
   update(name) { this.intc.setLine(this.cfg.irqs[name], this.e[name].status !== 0); }
   read(off, size, dbg) {
-    if (size !== 4 || (off & 3) || !this.known(off)) return this.unknown('read', off, size, 0, dbg);
     const en = this.engine(off);
+    if (size !== 4 || (off & 3) || !this.known(off, en)) return this.unknown('read', off, size, 0, dbg);
     if (en && en[2] === E_STATUS) return this.e[en[0]].status;
     if (off === FLUSH) return 0;
     return this.regs[off >> 2];
   }
   write(off, value, size, dbg) {
     value >>>= 0;
-    if (dbg || size !== 4 || (off & 3) || !this.known(off)) return this.unknown('write', off, size, value, dbg);
     const en = this.engine(off);
+    if (dbg || size !== 4 || (off & 3) || !this.known(off, en)) return this.unknown('write', off, size, value, dbg);
     if (en) {
       const [name, E, r] = en, x = this.e[name];
       if (r === E_STATUS) { x.status = (x.status & ~value) >>> 0; this.update(name); return; }

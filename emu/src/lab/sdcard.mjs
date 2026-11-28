@@ -139,12 +139,12 @@ export class SdCard {
   // are the host's (a data command's).
   exec(code, arg, count = 0, blockSize = 0) {
     const index = code & 0x3f, acmd = (code & 0x40) !== 0;
-    const r = this._exec(code, index, acmd, arg >>> 0, count, blockSize);
+    const r = this._exec(code, index, acmd, arg >>> 0, count);
     this.log.push([index, acmd ? 1 : 0, arg >>> 0, r.status]);
     if (this.log.length > 200) this.log.splice(0, this.log.length - 200);
     return r;
   }
-  _exec(code, index, acmd, arg, count, blockSize) {
+  _exec(code, index, acmd, arg, count) {
     const none = { status: NO_RESPONSE };
     if (!this.present || (code & UHS2)) return none;     // an empty slot; UHS-II: this card has no UHS-II interface
     const ok = (w0 = 0, data = null, write = false) => ({ status: 0, resp: [w0 >>> 0, 0, 0, 0], data, write });

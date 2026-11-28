@@ -153,7 +153,6 @@ export class StrictLog {
   // src/core/mem.mjs's report: kind 'misaligned', 'store' or 'read'; a the access's address (either view). The data-
   // cache model's: kind one of STRICT_CACHE_CLASSES, with its where
   report(kind, a, w, dir, v, cacheWhere = null) {
-    const { base, end } = this.r;
     const c = a >= 0xA0000000 && a < 0xC0000000 ? (a - 0x40000000) >>> 0 : a >>> 0;
     let cls = kind === 'misaligned' ? 'misaligned' : kind === 'store' ? 'image-store' : STRICT_CACHE_CLASSES.includes(kind) ? kind : null, where = cacheWhere;
     if (kind === 'read') {
@@ -168,9 +167,7 @@ export class StrictLog {
       if (own) { this.cave(own, a, w, v, c); return; }
     }
     const pc = ctx.pc() >>> 0;
-    const pcc = pc >= 0xA0000000 && pc < 0xC0000000 ? (pc - 0x40000000) >>> 0 : pc;
-    const at = pcc >= base && pcc < end ? (pcc - base + CODE) >>> 0 : pc;
-    const patched = this.r.patch !== null && this.r.patch.code(pcc) !== null;
+    const { at, patched } = this.where(pc);
     if (!patched) {
       const e = allowed(this.allow, cls, at, c);
       if (e) { this.allowedCounts.set(e, (this.allowedCounts.get(e) ?? 0) + 1); return; }
@@ -195,7 +192,7 @@ export class StrictLog {
     const pc = ctx.pc() >>> 0;
     let f = this.caves.get(own.lo);
     if (!f) {
-      const { at, patched } = this.where(pc);
+      const { at } = this.where(pc);
       f = { class: 'cave-store', site: h8(pc), disasm: h8(at), addr: h8(a), size: w, dir: 'w', value: h8(v), ret: h8(ctx.mdr()), insns: ctx.insns(), n: 0,
         range: `${h8(own.lo)}..${h8(own.hi)}`, where: `section ${own.n}'s range from its stock end ${h8(own.stock)} to the end the patch's end word at ${h8(own.word)} holds`,
         bySite: new Map(), lo: c, hi: c, last: null };

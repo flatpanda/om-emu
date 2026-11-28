@@ -201,7 +201,7 @@ export function secOrder(img, stock, layout, changed) {
     return !(s.every((v) => v === 0xff) || s.every((v) => v === 0));
   });
   const out = { hooks: hooks.length, crossings: 0, gated: 0, ungated: [] };
-  const reported = new Set(), counted = new Set();
+  const reported = new Set(), counted = new Set(), gatedSet = new Set();
   for (const h of hooks) {
     const start = runStart(img, stock, h.lo), from = sectionOf(layout, base + start);
     if (from === null) continue;
@@ -228,8 +228,9 @@ export function secOrder(img, stock, layout, changed) {
           const to = sectionOf(layout, t), at = base + o >>> 0;
           const here = sectionOf(layout, at);
           if (to !== null && tier(to) > tier(from) && (here === null || tier(to) > tier(here))) {
-            if (!counted.has(at)) { counted.add(at); out.crossings++; if (gated) out.gated++; }
+            if (!counted.has(at)) { counted.add(at); out.crossings++; if (gated) { gatedSet.add(at); out.gated++; } }
             if (!gated && !reported.has(at)) {
+              if (gatedSet.delete(at)) out.gated--;
               reported.add(at);
               out.ungated.push({ at: h8(at), disasm: h8(DIS + o), from, kind: f.kind, target: h8(t), to, hook: h8(base + start) });
             }
@@ -243,7 +244,7 @@ export function secOrder(img, stock, layout, changed) {
       }
     }
   }
-  out.ungated.sort((a, b) => (a.at < b.at ? -1 : 1));
+  out.ungated.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   return out;
 }
 

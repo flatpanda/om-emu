@@ -58,15 +58,15 @@ export function jpegOfFrame([w, h, rows], { dht: given = null } = {}) {
   if (own && ![0x00, 0x01, 0x10, 0x11].every((tc) => own.has(tc))) {
     throw new RangeError('jpegOfFrame: the DHT lacks a DC or AC table 0 or 1');
   }
-  const at = (x, y) => rows[Math.min(y, h - 1)].subarray(0, 2 * w);
+  const row = (y) => rows[Math.min(y, h - 1)];
   // the samples of a block's 8 x 8 area, edges replicated: Y at a pixel; Cb or Cr at a chroma column (half width)
   const mean = (x0, y0, pick) => {
     let s = 0;
     for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) s += pick(x0 + x, y0 + y);
     return s / 64;
   };
-  const Y = (x, y) => at(Math.min(x, w - 1), y)[2 * Math.min(x, w - 1)];
-  const C = (cx, y, odd) => { const x = Math.min(2 * cx + odd, w - 1 - ((w - 1 - odd) & 1)); return at(x, y)[2 * x + 1]; };
+  const Y = (x, y) => row(y)[2 * Math.min(x, w - 1)];
+  const C = (cx, y, odd) => { const x = Math.min(2 * cx + odd, w - 1 - ((w - 1 - odd) & 1)); return row(y)[2 * x + 1]; };
   const tables = own ? [codes(own.get(0x00)), codes(own.get(0x01))] : [codes(DC_LUMA), codes(DC_CHROMA)];
   const eobs = own ? [codes(own.get(0x10)).get(0), codes(own.get(0x11)).get(0)]
     : [codes(AC_EOB).get(0), codes(AC_EOB).get(0)];
@@ -150,23 +150,28 @@ export function decodeJpeg(bytes) {
     if (at + 4 > bytes.length) no('the data ends before a scan');
     if (bytes[at] !== 0xff) no(`no marker at ${at}`);
     const marker = bytes[at + 1], len = be16(at + 2), body = at + 4, end = at + 2 + len;
+    if (len < 2) no(`segment 0x${marker.toString(16)} at ${at} has length ${len}`);
     if (end > bytes.length) no(`the data ends before the end of segment 0x${marker.toString(16)} at ${at}`);
     if (marker === 0xdb) {
       for (let p = body; p < end; p += 65) {
+        if (p + 65 > end) no('a truncated quantization table');
         if (bytes[p] >> 4) no('a 16-bit quantization table');
         quant[bytes[p] & 15] = bytes.subarray(p + 1, p + 65);
       }
     } else if (marker === 0xc4) {
       for (let p = body; p < end;) {
+        if (p + 17 > end) no('a truncated Huffman table');
         const bits = bytes.subarray(p + 1, p + 17);
         let n = 0;
         for (const b of bits) n += b;
+        if (p + 17 + n > end) no('a truncated Huffman table');
         if ((bytes[p] >> 4) > 1) no(`Huffman table class ${bytes[p] >> 4}`);
         huff[bytes[p] >> 4][bytes[p] & 15] = decodeTable(bits, bytes.subarray(p + 17, p + 17 + n));
         p += 17 + n;
       }
     } else if (marker === 0xc0) {
       if (frame) no('a second frame');
+      if (body + 6 > end || body + 6 + 3 * bytes[body + 5] > end) no('a truncated frame header');
       if (bytes[body] !== 8) no(`${bytes[body]}-bit samples`);
       frame = { height: be16(body + 1), width: be16(body + 3), components: [] };
       for (let i = 0, p = body + 6; i < bytes[body + 5]; i++, p += 3) {
@@ -176,10 +181,13 @@ export function decodeJpeg(bytes) {
     } else if (marker >= 0xc1 && marker <= 0xcf && marker !== 0xc8 && marker !== 0xcc) {
       no(`frame type SOF${marker - 0xc0}: only the baseline SOF0 is decoded`);
     } else if (marker === 0xdd) {
+      if (body + 2 > end) no('a truncated DRI segment');
       if (be16(body)) no('a restart interval');
     } else if (marker === 0xda) {
       if (!frame) no('a scan before the frame');
+      if (body + 1 > end) no('a truncated scan header');
       const n = bytes[body];
+      if (body + 4 + 2 * n > end) no('a truncated scan header');
       if (n !== frame.components.length) no(`a scan of ${n} of the frame's ${frame.components.length} components`);
       for (let i = 0; i < n; i++) {
         const c = frame.components[i], p = body + 1 + 2 * i;

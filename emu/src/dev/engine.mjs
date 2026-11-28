@@ -1,7 +1,7 @@
 // OM-1 OSD draw engine (MMIO 0x9BC00000), strict model, and its lab debug window 0x8E000000.
 // Commands run synchronously inside the CPU store to the start register; their host time is counted as
 // engine time (machine stats.engineMs).
-import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
+import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, ctx } from '../core/mem.mjs';
 import { IRQ_OSD_ENGINE } from './intc.mjs';
 import { BOARD } from '../fw/board.mjs';
 

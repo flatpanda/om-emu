@@ -99,7 +99,7 @@ export class Tracer extends HarnessDigest {
     this.events = []; this.nstops = 0;
     this.hle = null; this.lab = null; this.sim = null;
     this.presented_seen = 0; this.accepted_seen = 0;
-    this.last_exec_raw = null; this.final = null;
+    this.final = null;
     this.fmt = fmtOf(name);
     this.fmt3 = this.fmt === FORMAT4;   // the /3 extras: devices summaries with the vsc and stub blocks, ...
     this.fmt4 = this.fmt === FORMAT4;   // ... and /4's: dstep / dnote events, ipi blocks, final.lab and planes

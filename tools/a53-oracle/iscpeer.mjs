@@ -65,7 +65,7 @@ export function controlMagic(cfg = CFG) {
 // info block and its reply went nowhere (X). state 0x1000 = owner starting,
 // 0x2000 = running, 0x3000 = refused-if-already (D). A message is {u8 port,
 // u8 len}+payload, len <= 128, port < 48; free = (read - 1 - write) mod size.
-const FIFO_HDR = 12, MSG_MAX = 128, STATE_RUN = 0x2000, STATE_START = 0x1000;
+const FIFO_HDR = 12, MSG_MAX = 128, STATE_RUN = 0x2000;
 
 // A node's receive FIFO: a view over the shared memory at memAddr[node]+off.
 export class Fifo {
@@ -412,10 +412,10 @@ async function live(memPath, sockPath, opts = {}) {
   const t0 = Date.now(), log = [];
   const sock = net.connect(sockPath);
   const ring = () => sock.write(Buffer.from([0]));
-  const tx = (port, buf, why = '') => {
-    const r = peer.send(4, port, buf, ring);
-    log.push({ t: Date.now() - t0, dir: 'mn>a53', port, hex: buf.toString('hex') });
-    console.log(`[peer] TX -> node 4 port ${port} [${hx(buf)}] ret ${r}${why ? '  ' + why : ''}`);
+  const tx = (port, buf, why = '', node = 4) => {
+    const r = peer.send(node, port, buf, ring);
+    log.push({ t: Date.now() - t0, dir: 'mn>a53', node, port, hex: buf.toString('hex') });
+    console.log(`[peer] TX -> node ${node} port ${port} [${hx(buf)}] ret ${r}${why ? '  ' + why : ''}`);
     return r;
   };
   const waiters = [];                       // {port, res}
@@ -451,7 +451,7 @@ async function live(memPath, sockPath, opts = {}) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // Scripted MN->A53 sends: opts.send = [{afterMs, node, port, bytes}]
-  for (const s of opts.send || []) setTimeout(() => tx(s.port, Buffer.from(s.bytes)), s.afterMs);
+  for (const s of opts.send || []) setTimeout(() => tx(s.port, Buffer.from(s.bytes), '', s.node), s.afterMs);
 
   // Socket scenario: the MN as a TCP server through the A53 (ports 3/4): socket,
   // bind 0.0.0.0:PORT, listen, accept (a client inside the guest connects, e.g.
@@ -580,7 +580,7 @@ function selftest() {
   eq('FIFO reports full before overrun', n > 0, true);
 
   // 5. The ISC_alloc_mem pool (the format the A53's memblock_alloc reads).
-  const pb = peer.poolBase, pool = peer.pool;             // init'd by initControlBlock
+  const pb = peer.poolBase;                                // init'd by initControlBlock
   eq('pool shift = 12', mem.getU16(pb + 0), 12);
   eq('pool nblocks = 32', mem.getU16(pb + 2), 0x20);
   const h1 = peer.allocMem(16 * 1024);                    // CGIInit's request

@@ -11,7 +11,7 @@
 import { Regs, Unmodelled, merge } from './regs.mjs';
 
 export const CR1 = 0x00, CR2 = 0x04, SR = 0x08, DR = 0x0c, CRCPR = 0x10, RXCRCR = 0x14, TXCRCR = 0x18;
-const RXNE = 1, TXE = 2, OVR = 64, BSY = 128, SPE = 64;
+const RXNE = 1, TXE = 2, OVR = 64, SPE = 64;
 
 export class Spi extends Regs {
   constructor({ name, irq, irqn }) {
@@ -76,8 +76,9 @@ export class Spi extends Regs {
       }
       case SR: return;   // CRCERR is the only writable bit; OVR clears by reading DR then SR
       case DR: {
+        const sh = (mask & 0xff) ? 0 : (mask & 0xff00) ? 8 : (mask & 0xff0000) ? 16 : 24;
         const n = mask === 0xff || mask === 0xff00 || mask === 0xff0000 || mask === 0xff000000 ? 1 : 2;
-        for (let i = 0; i < n; i++) if (this.txf.length < 4) this.txf.push((v >>> (8 * i)) & 0xff);
+        for (let i = 0; i < n; i++) if (this.txf.length < 4) this.txf.push((v >>> (sh + 8 * i)) & 0xff);
         this.lines();
         return;
       }

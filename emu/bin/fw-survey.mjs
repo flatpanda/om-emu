@@ -101,12 +101,13 @@ async function survey(files) {
       if (b.typ === 'OE' && b.flags === 0x100) rom = Buffer.from(r.data);
       if (b.typ === 'OE' && b.flags === 0x101) res = Buffer.from(r.data);
     }
+    const name = path.basename(file);
+    if (!rom) { console.log([`E${name.slice(6, 9)}`, name, blocks.length, ok ? 'ok' : 'BAD', 'no OE 0x100 block'].join('\t')); continue; }
     const img = Buffer.from(rom);
     let sections = 0;
     for (let q = rom.indexOf(MAGIC); q >= 0; q = rom.indexOf(MAGIC, q + 1), sections++) img.set(lz4Block(rom.subarray(q + 32, q + 32 + u32(rom, q + 16)), u32(rom, q + 20)), q);
     const x = movs(img, 0x97000000) + movs(img, 0x9BB80000), ix = movs(img, 0x8FE00000) + movs(img, 0x9C000000);
     const family = x > ix ? 'E143 (ISC 0x97000000, VSC 0x9bb80000)' : `E144 (ISC 0x8fe00000, VSC 0x9c000000${movs(img, 0x9C100000) ? ', engine 0x9c100000' : ''})`;
-    const name = path.basename(file);
     console.log([`E${name.slice(6, 9)}`, name, blocks.length, ok ? 'ok' : 'BAD', `${(rom.length / 1048576).toFixed(1)} MiB`, sections,
       (([b, f]) => `${hex(b)} (${(100 * f).toFixed(1)}%)`)(runBase(img)), family, res && res.indexOf(MAGIC) >= 0 ? 'olycompress' : 'plain'].join('\t'));
   }

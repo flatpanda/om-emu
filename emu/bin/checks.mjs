@@ -144,8 +144,8 @@ export function runJsAsync(check, run, { extraEnv = {}, dirName = run.id } = {})
 export function verdict(run, js) {
   const why = [];
   if (js.rc !== run.rc) why.push(`rc ${js.rc}, want ${run.rc}${js.stderr.trim() ? ` (stderr, last line: ${lines(js.stderr).pop()})` : ''}`);
-  if (typeof run.stdout_re === 'string' && !lines(js.stdout).some((l) => new RegExp(run.stdout_re).test(l))) why.push(`no stdout line matches ${JSON.stringify(run.stdout_re)}`);
-  if (typeof run.stderr_re === 'string' && !lines(js.stderr).some((l) => new RegExp(run.stderr_re).test(l))) why.push(`no stderr line matches ${JSON.stringify(run.stderr_re)}`);
+  if (typeof run.stdout_re === 'string') { const re = new RegExp(run.stdout_re); if (!lines(js.stdout).some((l) => re.test(l))) why.push(`no stdout line matches ${JSON.stringify(run.stdout_re)}`); }
+  if (typeof run.stderr_re === 'string') { const re = new RegExp(run.stderr_re); if (!lines(js.stderr).some((l) => re.test(l))) why.push(`no stderr line matches ${JSON.stringify(run.stderr_re)}`); }
   for (const f of filesOf(run, js.dir)) if (!fs.existsSync(f)) why.push(`declared file ${path.relative(REPO, f)} not written`);
   return why.length ? why.join('; ') : null;
 }

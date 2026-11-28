@@ -73,7 +73,7 @@ export class Rsp {
       if (r.length !== 2 * n) throw new Error(`gdbstub: read 0x${(addr + o).toString(16)}: ${r.slice(0, 8)}`);
       out += r;
     }
-    return Uint8Array.from(out.match(/../g), (x) => parseInt(x, 16));
+    return out ? Uint8Array.from(out.match(/../g), (x) => parseInt(x, 16)) : new Uint8Array(0);
   }
   async writeMem(addr, bytes) {
     for (let o = 0; o < bytes.length; o += 1024) {

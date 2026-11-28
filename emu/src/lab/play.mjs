@@ -765,6 +765,7 @@ export function heapFill(v) {
 }
 
 export class PlayLab extends N.NavLab {
+  #heap_freed = new Set();
   // H-GUIBYAPP: in a play session the camera application creates the GUI at its start, as on the camera; the lab's
   // bring-up does not (two GUIs, the lab's idle one holding a root of output 0 and one of OSD layer 1's two buffers).
   preinit(opts) { super.preinit(opts); this.gui_by_app = true; }
@@ -804,6 +805,7 @@ export class PlayLab extends N.NavLab {
     this.heap_sizes = new Map();
     this.heap_owner = new Map();                       // block -> [malloc's caller (disassembly), task id]
     this.heap_free = new Map();
+    this.#heap_freed.clear();
     this.heap_stats = new Tally();
     this.heap_fill = heapFill(opts.heap_fill ?? envVar(this.env, 'heap_fill', 'OM_HEAP_FILL'));
     this.hook(HLE.MALLOC, (h, r) => this._s_malloc(h, r), 'S-HEAP malloc');
@@ -970,6 +972,7 @@ export class PlayLab extends N.NavLab {
     let a;
     if (free && free.length) {
       a = free.pop();
+      this.#heap_freed.delete(a);
       this.heap_stats.add('reused');
     } else {
       a = this.heap;
@@ -992,8 +995,9 @@ export class PlayLab extends N.NavLab {
       this.heap_owner.delete(a);
       if (!this.heap_free.has(size)) this.heap_free.set(size, []);
       this.heap_free.get(size).push(a);
+      this.#heap_freed.add(a);
       this.heap_stats.add('freed');
-    } else if ([...this.heap_free.values()].some((v) => v.includes(a))) {
+    } else if (a && this.#heap_freed.has(a)) {
       throw new PlayError(`S-HEAP: double free of ${h8(a)} from ${where(r.mdr)}`);
     } else {
       this.heap_stats.add(a ? 'free of a block from before play (kept)' : 'free(NULL)');
@@ -2057,7 +2061,7 @@ export class PlaySession extends N.NavSession {
     if (!['down', 'up', 'long'].includes(action)) throw new ValueError(`key ${cid}: action ${show(action)} (down, up, long)`);
     if (c.status === 'not-wired') throw new PlayError(`${c.name}: not wired (${c.reason})`);
     this.begin(`${String(this.steps.length).padStart(2, '0')}-key ${cid} ${action}`);
-    const state0 = this.lab.state(), pressed0 = new Set(this.pressed);
+    const pressed0 = new Set(this.pressed);
     const shooting0 = this.camapp !== null && this.camapp.shooting;   // S-RELSEQ: the shooting service at the press
     let codes = [], decoded = [];
     const posted = [], mapped = [];
@@ -2307,7 +2311,6 @@ export class PlaySession extends N.NavSession {
     // (H-G4SET sets one code's state; a position switch in the producer's group is not modelled)
     if (c.kind === 'posswitch' && viaG4) throw new PlayError(`${c.name}: in UI_IN's group 4, which H-G4SET's producer pushes on ${MODEL}; a position there is not modelled`);
     this.begin(`${String(this.steps.length).padStart(2, '0')}-switch ${cid} ${value}`);
-    const state0 = this.lab.state();
     if (c.kind === 'modedial') { this.images[MODE_DIAL.group].set(mode_image(value)); this.mode_index = value; }
     else if (c.kind === 'posswitch') this.posswitch_image(c, value);
     else if (!viaG4) set_bit(this.images[g], b, bit, value);
@@ -2525,7 +2528,6 @@ export class PlaySession extends N.NavSession {
     const tag = `${which.toUpperCase()}${detents > 0 ? '+' : ''}${detents}`;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     const lab = this.lab;
-    const state0 = lab.state();
     const c = BY_ID.get(`${which.toLowerCase()}_dial`);
     if (c === undefined) throw new KeyError(show(`${which.toLowerCase()}_dial`));
     const [dial_id, slot] = c.dial;
@@ -2805,7 +2807,6 @@ export class PlaySession extends N.NavSession {
     if (!['down', 'move', 'up'].includes(action)) throw new ValueError(`touch: action ${show(action)} (down, move, up)`);
     this.begin(`${String(this.steps.length).padStart(2, '0')}-touch ${action} ${x},${y}`);
     const lab = this.lab;
-    const state0 = lab.state();
     const [w, h] = MODEL_INFO.panels.tft;
     x = clampInt(x, w - 1);
     y = clampInt(y, h - 1);
@@ -2852,7 +2853,6 @@ export class PlaySession extends N.NavSession {
   touch_gui_step() {
     const lab = this.lab;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-touch gesture`);
-    const state0 = lab.state();
     const g0 = this.gesture_reported, s0 = this.status_reported;
     const posted = this.touch_to_gui();
     this.gesture_reported = lab.gestures.length;
@@ -2880,7 +2880,7 @@ export class PlaySession extends N.NavSession {
       [lab, 'i2c'], [lab, 'notes'], [lab, 'steps'], [lab, 'dropped_sends'], [lab, 'gui_log'], [lab.lt, 'idle_events'],
       [lab.lt, 'settle_log'], [lab.lt, 'elapse_log'], [lab, 'uiin_codes'], [lab, 'uiin_decoded'], [lab, 'tp_reads'], [lab, 'cafwd'],
       [lab, 'b2_trace'], [lab, 'module9_reads'], [lab, 'xcpu_log'], [this, 'steps'], [lab.kernel, '_delivered'],
-      [lab, 'display_sends'], [lab.lt, 'started']];
+      [lab, 'display_sends'], [lab, 'dispq'], [lab, 'dispq_replies'], [lab.lt, 'started']];
     if (lab.nk.intc !== null) lists.push([lab.nk.intc, 'log']);
     if (!lab.write_sites.size) lists.push([lab, 'writes']);
     if (lab.value_sites.size) lists = lists.filter((x) => x[1] !== 'settings_log');
@@ -2901,6 +2901,7 @@ export class PlaySession extends N.NavSession {
         v.splice(0, cut);
         if (obj === lab && name === 'exec_history') { lab.menu_first = Math.max(0, lab.menu_first - cut); this.exec_trimmed += cut; }
         if (obj === lab && name === 'draw_log') lab.menu_draw_first = Math.max(0, lab.menu_draw_first - cut);
+        if (obj === lab && name === 'dispq') this.dispq_total += cut;
       }
     }
     if (lab.nk.intc !== null) lab.kernel._native_seen = lab.nk.intc.log.length;

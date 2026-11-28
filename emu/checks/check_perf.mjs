@@ -34,13 +34,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { FIXTURES, ISA_VECTORS, ORIGINAL, labEnv, envMachine, formatMachine, loadImage, loadBlock, loadNand, createHash, runMain, readBytes } from './lib/env.mjs';
+import { FIXTURES, ISA_VECTORS, labEnv, envMachine, formatMachine, loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { eq, fault } from './lib/eq.mjs';
 import { newRandom } from './lib/rngtape.mjs';
 import * as I from './lib/isa.mjs';
 import { Simulator, Stats, REGS } from '../src/lab/sim.mjs';
-import { HLE, callFrames, CALLER, MEMCPY, MEMSET, SAVED, SP as HSP, runtime, BASE, memset } from '../src/lab/hle.mjs';
+import { HLE, callFrames, CALLER, MEMCPY, MEMSET, SAVED, SP as HSP, runtime, BASE } from '../src/lab/hle.mjs';
 import * as IRQ from '../src/lab/irq.mjs';
 import { OUTPUT } from '../src/lab/display.mjs';
 import { RuntimeError, AssertionError, LabError } from '../src/lab/errors.mjs';

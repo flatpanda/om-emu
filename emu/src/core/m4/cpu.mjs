@@ -34,6 +34,7 @@ import { Unimplemented, BusError } from './errors.mjs';
 export { Unimplemented, BusError };
 
 const SP = 13, LR = 14, PC = 15;
+const EXC_BUF = new Int32Array(8), LDM_BUF = new Int32Array(16), VLDM_BUF = new Int32Array(32);
 
 // a synchronous fault raised while an instruction executes: exception number, the CFSR bit, a fault address
 class Fault {
@@ -384,9 +385,9 @@ export class CortexM4 {
     const frame = fpFrame ? 0x68 : 0x20, force = fpFrame ? 1 : (s.ccr >>> 9) & 1;
     // the frame's stack: SP_process for mode 13, else SP_main (the current SP in handler mode is SP_main)
     const fp = toPsp ? this.psp : this.r[SP];
-    const v = [];
+    const v = EXC_BUF;
     try {
-      for (let i = 0; i < 8; i++) v.push(this.ld32(fp + 4 * i));
+      for (let i = 0; i < 8; i++) v[i] = this.ld32(fp + 4 * i);
       if (fpFrame) {
         if (s.fpccr & 1) s.fpccr &= ~1;                   // LSPACT: the FP registers still hold the state
         else { for (let i = 0; i < 16; i++) this.s[i] = this.ld32(fp + 0x20 + 4 * i); this.fpscr = this.ld32(fp + 0x60); }
@@ -700,7 +701,7 @@ const X = {
     const base = c.r[d.rn], k = popcount(d.list);
     let a = d.add ? base : (base - 4 * k) | 0;
     c.aligned(a, 4, true);
-    const v = new Int32Array(16);
+    const v = LDM_BUF;
     for (let i = 0; i < 16; i++) if ((d.list >>> i) & 1) { v[i] = c.ld32(a); a += 4; }
     if (d.wb) c.setReg(d.rn, d.add ? base + 4 * k : base - 4 * k);
     for (let i = 0; i < 15; i++) if ((d.list >>> i) & 1) c.setReg(i, v[i]);
@@ -843,8 +844,8 @@ const X = {
     const base = c.r[d.rn];
     let a = d.add ? base : (base - 4 * d.list) | 0;
     c.aligned(a, 4, true);
-    const v = [];
-    for (let i = 0; i < d.list; i++) { v.push(c.ld32(a)); a += 4; }
+    const v = VLDM_BUF;
+    for (let i = 0; i < d.list; i++) { v[i] = c.ld32(a); a += 4; }
     if (d.wb) c.setReg(d.rn, d.add ? base + 4 * d.list : base - 4 * d.list);
     for (let i = 0; i < d.list; i++) c.s[d.rd + i] = v[i];
   },

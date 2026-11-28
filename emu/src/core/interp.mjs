@@ -172,8 +172,8 @@ function nearZone(kicked) {
 function watchArrival(pc, tbPc, tbAt) {
   if (!S.irqReq || !S.intc.admitted(pc, true)) return;
   try { cb(pc); } catch (e) { if (e instanceof MmioFetch || e instanceof Fault) return; throw e; }   // MMIO or a fetch fault: run() looks first
-  let first = tbPc, at = tbAt;
-  if (IO.n >= tbAt) { first = (IO.pc + lengthAt(IO.pc)) | 0; at = IO.n + 1; }   // the instruction after an I/O access
+  let first = tbPc;
+  if (IO.n >= tbAt) first = (IO.pc + lengthAt(IO.pc)) | 0;   // the instruction after an I/O access
   const n = tbPosition(first, pc);
   if (n === 0) refuse(`an arrival at the gate pc 0x${hex(pc)} where a TB starts, with a request pending (refusal c)`);
   if (storeHit(S.insns - n, TB_START)) refuse(`an arrival at the gate pc 0x${hex(pc)} after a CPU store into code a TB running since 0x${hex(TB_START)} may hold (precise SMC ends that TB at the store), with a request pending (refusal c)`);
@@ -236,7 +236,8 @@ export function resetInterp() {
   chunkVer[0] = 1;
   ctag.fill(-1); ckind.fill(K.FB); cch0.fill(0); cver0.fill(0); cch1.fill(-1); BP.clear(); BPH.fill(0);
   PROBE.clear(); PROBE_FN = null; P_PC = -1; P_N = -1;
-  WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; SEGS = new Set([0x17]); FORCE_FB = false;
+  WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; TB_START = 0; SEGS = new Set([0x17]); FORCE_FB = false;
+  MMIO = false; LOOKED_PC = -1; LOOKED_N = -1;
   LOCAL_PAGE = -1; localSlots.length = 0;
   cacheMisses = 0;
   setSmcHook(invalidateChunk);
@@ -290,7 +291,7 @@ const cver0 = new Uint32Array(1 << CBITS), cver1 = new Uint32Array(1 << CBITS);
 const K = { FB: 0, CLR: 1, EXTB: 2, EXTBU: 3, EXTH: 4, EXTHU: 5, ADDI_A: 6, ADDI_D: 7, MOVI_A: 8, MOVI_D: 9,
   LDSP_D: 10, LDSP_A: 11, STSP_D: 12, STSP_A: 13, INC_D: 14, INC_A: 15, INC4: 16, ASL2: 17, ST_DA: 18, LD_DA: 19,
   MOV_DD: 20, MOV_AA: 21, CMP_DD: 22, CMP_AA: 23, CMPI_D: 24, CMPI_A: 25, BCC: 26, BRA: 27, NOP: 28, LCC: 29,
-  SETLB: 30, ADD_DD: 31, LDW_AA: 32, LDBU_A: 33, LDHU_A: 34, STB_A: 35, STH_A: 36, STW_A: 37, LDA_A: 38, STA_A: 39,
+  SETLB: 30, ADD_DD: 31, LDBU_A: 33, LDHU_A: 34, STB_A: 35, STH_A: 36, LDA_A: 38, STA_A: 39,
   SUB_DD: 40, ADD_DA: 41, MOV_AD: 42, MOV_DA: 43, CMP_DA: 44, CMP_AD: 45, AND_DD: 46, OR_DD: 47, XOR_DD: 48,
   LDD_W: 49, LDD_B: 50, LDD_H: 51, STD_W: 52, STD_B: 53, STD_H: 54, LDDA: 55, STDA: 56, ADDI32_D: 57, ADDI32_A: 58,
   CMPI32_D: 59, ANDI_D: 60, ORI_D: 61, MOVI32_D: 62, MOVI32_A: 63, ADD_SP: 64, MOVI_AA: 65, MOVI8_A: 66,
@@ -342,7 +343,7 @@ function decode(pc, i) {
   else if (op <= 0x2b) { k = K.ADDI_D; x = dst; imm = s8(cb(pc + 1)); }
   else if (op <= 0x2f) { k = K.MOVI_D; x = dst; imm = s16(cv(pc + 1, 2)); }
   else if (op <= 0x3b) { k = K.LDABS; x = dst; y = op < 0x34 ? 1 : op < 0x38 ? 2 : 3; imm = cv(pc + 1, 2) & 0xffff; }
-  else if (op <= 0x3f) { k = K.MOV_AA; x = dst; y = 8 - 4; /* a[dst] = sp */ k = K.MOVI_AA; }
+  else if (op <= 0x3f) { k = K.MOVI_AA; x = dst; /* a[dst] = sp */ }
   else if (op <= 0x4f) {
     if (dst === 0) { k = K.INC_D; x = src; } else if (dst === 1) { k = K.INC_A; x = src; }
     else { k = dst === 2 ? K.STSP_D : K.STSP_A; x = src; imm = cb(pc + 1); }

@@ -5,7 +5,6 @@
 //                   S-SCENE scene gives a shorter shutter time or a smaller aperture, a darker one a longer time or a
 //                   higher ISO; the live view's exposure in auto is the plan's; the aperture never opens past F2.8
 //   node emu/test/test_expose.mjs
-import path from 'node:path';
 import zlib from 'node:zlib';
 
 const FOCAL = { wide: 0xA32D4BB0, tele: 0xA32D4BB4, now: 0xA32D4BB8 };

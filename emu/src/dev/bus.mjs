@@ -17,6 +17,7 @@ const LV = [[0x95F6C000, 0xA0000000], [0xEE087000, 0xF533A000]];
 
 const WINREG = 0x98100000, WINREG_OFF = 0x58, WINREG_RESET = 0x17161514, WINDOW = 0xB8000000, WINDOW_SIZE = 0x08000000;
 const SEGMENT = 2 ** 27, PAGE = 0x10000;
+const WIN_BUF = new Uint8Array(4);
 const hex8 = (v) => (v >>> 0).toString(16).padStart(8, '0');
 export class Bus {
   constructor(machine = null) {
@@ -79,14 +80,15 @@ export class Bus {
   windowRead(a, w, dbg) {
     const b = this.busOf(a);
     if (!(b < 2 ** 32 && this.span(b, w))) { if (!dbg) ioMark(); throw BUS; }      // unassigned: an I/O access, fault 2
-    const t = new Uint8Array(4);
-    this.read(b, t, 0, w);
-    return (t[0] | t[1] << 8 | t[2] << 16 | t[3] << 24) >>> 0;
+    WIN_BUF.fill(0);
+    this.read(b, WIN_BUF, 0, w);
+    return (WIN_BUF[0] | WIN_BUF[1] << 8 | WIN_BUF[2] << 16 | WIN_BUF[3] << 24) >>> 0;
   }
   windowWrite(a, v, w, dbg) {
     const b = this.busOf(a);
     if (dbg || !(b < 2 ** 32 && this.span(b, w))) { if (!dbg) ioMark(); throw BUS; }
-    this.write(b, new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]), 0, w);
+    WIN_BUF[0] = v & 0xff; WIN_BUF[1] = (v >>> 8) & 0xff; WIN_BUF[2] = (v >>> 16) & 0xff; WIN_BUF[3] = (v >>> 24) & 0xff;
+    this.write(b, WIN_BUF, 0, w);
   }
   // cpu_memory_rw_debug, per 4 KiB page: a read fails (E14) when any byte lies on an unbacked bus range
   windowDbgRead(a, n) {

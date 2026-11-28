@@ -57,7 +57,13 @@ args.forEach((a, i) => {
 });
 // the card's capacity in sectors (null: the default card), checked here so that a size the card model refuses stops
 // the run before any child
-const SECTORS = values['--card-size'].length ? cardSectors(values['--card-size'].at(-1)) : null;
+let SECTORS = null, SDXC = false;
+if (values['--card-size'].length) {
+  try {
+    SECTORS = cardSectors(values['--card-size'].at(-1));
+    SDXC = new SdCard({ sectors: SECTORS }).kind === 'SDXC';
+  } catch (e) { console.error(`modelcheck: --card-size: ${e.message}`); process.exit(2); }
+}
 const unknown = args.filter((a, i) => a.startsWith('--') && !valued.has(i) && a !== '--no-port' && !(a in values));
 if (unknown.length) { console.error(`modelcheck: unknown option ${unknown[0]} (--no-port, --card-size GiB, --patch FILE, --main FILE)`); process.exit(2); }
 const want = args.filter((a, i) => !a.startsWith('--') && !valued.has(i));
@@ -66,6 +72,8 @@ const OVERLAY = values['--patch'].length || values['--main'].length
   ? { patch: values['--patch'].map((f) => path.resolve(f)), main: values['--main'].length ? path.resolve(values['--main'].at(-1)) : null } : null;
 if (OVERLAY && OVERLAY.patch.length && OVERLAY.main) { console.error('modelcheck: --main and --patch exclude each other'); process.exit(2); }
 if (OVERLAY && want.length !== 1) { console.error(`modelcheck: ${OVERLAY.main ? '--main' : '--patch'} runs on one model, named (an overlay is for one model's blocks): ${want.length} given`); process.exit(2); }
+const badModel = want.find((k) => !Object.hasOwn(MODELS, k));
+if (badModel) { console.error(`modelcheck: unknown model ${badModel}`); process.exit(2); }
 const noPort = args.includes('--no-port') || OVERLAY !== null;
 const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E143' && MODELS[k].checked))
   .filter((k) => fs.existsSync(path.join(REPO, romPath(MODELS[k]))));
@@ -130,7 +138,6 @@ const EVF_PLAY = new Set(['E118', 'E120', 'E122', 'E148', 'E144', 'E139', 'E134'
 // constants for an exFAT volume, so the exFAT branch runs and divides by that size. The manual leaves a divide by 0's
 // result undefined (docs/mn10300-isa-spec.md 4.6, 8 item 1), so emu stops there (Fault 6, emu/FIDELITY-NOTES.md 3.2)
 const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'its movie parameters divide by the 4K 60p rate query\'s size 0 at 0x5032574f with an exFAT card (Fault 6; the result is undefined)'] };
-const SDXC = SECTORS !== null && new SdCard({ sectors: SECTORS }).kind === 'SDXC';
 // the bodies whose start waits for the user at a prompt S1 does not take to the shooting screen: model -> {state, the
 // prompt's GUI state; key, the key that answers it, or keys, the keys in their order; after, the GUI state's name
 // after the last; why}, steps of the path after the start, held strictly: a start that ends elsewhere fails, so the
@@ -343,5 +350,8 @@ for (const m of models) {
   if (problems.length) bad++;
   }
 }
-if (!models.length) console.log('modelcheck: no ported model with its firmware unpacked');
+if (!models.length) {
+  console.log(want.length ? `modelcheck: no unpacked firmware for ${want.join(', ')}` : 'modelcheck: no ported model with its firmware unpacked');
+  if (want.length) process.exit(1);
+}
 process.exit(bad ? 1 : 0);

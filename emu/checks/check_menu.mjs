@@ -37,7 +37,6 @@ import { disasm_of as K_disasm } from '../src/lab/kernel.mjs';
 import { PER_SCPU_TASK } from '../src/lab/scpulink.mjs';
 import { deepEqual } from '../src/util/equal.mjs';
 import { show } from '../src/util/show.mjs';
-import { pack } from '../src/util/bytes.mjs';
 
 export const NOTES_FILE = path.join(FIXTURES, 'check_menu_notes.txt');
 export const LANGS = ['en', 'ja', 'zh-CN'];
@@ -441,7 +440,7 @@ function read_notes(file = NOTES_FILE) {
 async function* pool_map(jobs, workers) {
   const n = Math.min(workers, jobs.length);
   const pending = new Map();
-  let next = 0, dead = null;
+  let next = 0;
   const results = jobs.map(() => { let resolve; const p = new Promise((r) => { resolve = r; }); return { p, resolve }; });
   const pool = [];
   const dispatch = (w) => {
@@ -453,7 +452,7 @@ async function* pool_map(jobs, workers) {
   for (let i = 0; i < n; i++) {
     const w = new Worker(new URL(import.meta.url), { env: { ...process.env, OM_STATS: '' }, workerData: { entry: 'check_menu' }, stdout: false, stderr: false });
     w.on('message', (m) => { results[m.k].resolve(m); pending.delete(w); dispatch(w); });
-    w.on('error', (e) => { dead ??= e; for (const k of [...pending.values()]) results[k].resolve({ k, crash: String(e?.stack ?? e) }); pending.delete(w); });
+    w.on('error', (e) => { for (const k of [...pending.values()]) results[k].resolve({ k, crash: String(e?.stack ?? e) }); pending.delete(w); });
     w.on('exit', (code) => { if (pending.has(w)) { const k = pending.get(w); pending.delete(w); results[k].resolve({ k, died: code }); } });
     pool.push(w);
     dispatch(w);

@@ -158,45 +158,61 @@ export class A53Isc {
     if (slot < 0) { this.dropped++; return; }    // all slots busy: no reply (D)
     const r = Uint8Array.from(d); r[0xc] = 1;
     this.slots[slot] = { op, r };
-    if (op === SOCK.getsockerr) { put32(r, 0x10, 0); return this.reply(slot); }
-    if (op === SOCK.setsockerr) return this.reply(slot);
-    if (!this.net) fail(`socket op ${op} without a back end`);
-    const fd = i32(r, 0x10);
-    let v;
-    switch (op) {
-      case SOCK.socket: v = this.net.socket(i32(r, 0x10), i32(r, 0x14), i32(r, 0x18), slot); break;
-      case SOCK.bind: v = this.net.bind(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
-      case SOCK.connect: v = this.net.connect(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
-      case SOCK.listen: v = this.net.listen(fd, i32(r, 0x14), slot); break;
-      case SOCK.accept: v = this.net.accept(fd, i32(r, 0x24), slot); break;
-      case SOCK.send: {
-        const n = i32(r, 0x18);
-        if (!this.mem) fail('send without memory');
-        v = this.net.send(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), slot);
-        break;
+    try {
+      if (op === SOCK.getsockerr) { put32(r, 0x10, 0); return this.reply(slot); }
+      if (op === SOCK.setsockerr) return this.reply(slot);
+      if (!this.net) fail(`socket op ${op} without a back end`);
+      const fd = i32(r, 0x10);
+      let v;
+      switch (op) {
+        case SOCK.socket: v = this.net.socket(i32(r, 0x10), i32(r, 0x14), i32(r, 0x18), slot); break;
+        case SOCK.bind: v = this.net.bind(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
+        case SOCK.connect: v = this.net.connect(fd, r.slice(0x14, 0x24), i32(r, 0x24), slot); break;
+        case SOCK.listen: v = this.net.listen(fd, i32(r, 0x14), slot); break;
+        case SOCK.accept: v = this.net.accept(fd, i32(r, 0x24), slot); break;
+        case SOCK.send: {
+          const n = i32(r, 0x18);
+          if (n < 0) fail(`send with negative length ${n}`);
+          if (!this.mem) fail('send without memory');
+          v = this.net.send(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), slot);
+          break;
+        }
+        case SOCK.sendto: {
+          const n = i32(r, 0x18);
+          if (n < 0) fail(`sendto with negative length ${n}`);
+          if (!this.mem) fail('sendto without memory');
+          v = this.net.sendto(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), r.slice(0x20, 0x30), i32(r, 0x30), slot);
+          break;
+        }
+        case SOCK.recv: {
+          const n = i32(r, 0x18);
+          if (n < 0) fail(`recv with negative length ${n}`);
+          if (!this.mem) fail('recv without memory');
+          v = this.net.recv(fd, n, i32(r, 0x1c), slot);
+          break;
+        }
+        case SOCK.shutdown: v = this.net.shutdown(fd, i32(r, 0x14), slot); break;
+        case SOCK.close: v = this.net.close(fd, slot); break;
+        case SOCK.getsockopt: {
+          const n = i32(r, 0x20);
+          if (n < 0) fail(`getsockopt with negative length ${n}`);
+          if (!this.mem) fail('getsockopt without memory');
+          v = this.net.getsockopt(fd, i32(r, 0x14), i32(r, 0x18), n, slot);
+          break;
+        }
+        case SOCK.setsockopt: {
+          const n = i32(r, 0x20);
+          if (n < 0) fail(`setsockopt with negative length ${n}`);
+          if (!this.mem) fail('setsockopt without memory');
+          v = this.net.setsockopt(fd, i32(r, 0x14), i32(r, 0x18), this.mem.read(u32(r, 0x1c), n), slot);
+          break;
+        }
       }
-      case SOCK.sendto: {
-        const n = i32(r, 0x18);
-        if (!this.mem) fail('sendto without memory');
-        v = this.net.sendto(fd, this.mem.read(u32(r, 0x14), n), i32(r, 0x1c), r.slice(0x20, 0x30), i32(r, 0x30), slot);
-        break;
-      }
-      case SOCK.recv: v = this.net.recv(fd, i32(r, 0x18), i32(r, 0x1c), slot); break;
-      case SOCK.shutdown: v = this.net.shutdown(fd, i32(r, 0x14), slot); break;
-      case SOCK.close: v = this.net.close(fd, slot); break;
-      case SOCK.getsockopt: {
-        if (!this.mem) fail('getsockopt without memory');
-        v = this.net.getsockopt(fd, i32(r, 0x14), i32(r, 0x18), i32(r, 0x20), slot);
-        break;
-      }
-      case SOCK.setsockopt: {
-        const n = i32(r, 0x20);
-        if (!this.mem) fail('setsockopt without memory');
-        v = this.net.setsockopt(fd, i32(r, 0x14), i32(r, 0x18), this.mem.read(u32(r, 0x1c), n), slot);
-        break;
-      }
+      if (v !== PENDING) this.finish(slot, v);
+    } catch (e) {
+      this.slots[slot] = null;
+      throw e;
     }
-    if (v !== PENDING) this.finish(slot, v);
   }
 
   // A socket op's result: an integer, accept's { fd, addr, len }, or recv/getsockopt's bytes.
@@ -205,37 +221,42 @@ export class A53Isc {
     if (!s) fail(`no socket op in flight in slot ${slot}`);
     const { op, r } = s;
     const int = (o) => { if (!Number.isInteger(v)) fail(`socket op ${op}: result ${v}`); put32(r, o, v); };
-    switch (op) {
-      case SOCK.socket: int(0x1c); break;
-      case SOCK.bind:
-      case SOCK.connect: int(0x28); break;
-      case SOCK.listen:
-      case SOCK.shutdown: int(0x18); break;
-      case SOCK.close: int(0x14); break;
-      case SOCK.send: int(0x20); break;
-      case SOCK.sendto: int(0x34); break;
-      case SOCK.setsockopt: int(0x24); break;
-      case SOCK.accept:
-        if (Number.isInteger(v)) put32(r, 0x28, v);
-        else { r.set(v.addr.subarray(0, 16), 0x14); put32(r, 0x24, v.len); put32(r, 0x28, v.fd); }
-        break;
-      case SOCK.recv:
-        if (Number.isInteger(v)) put32(r, 0x20, v);
-        else {
-          if (v.length > i32(r, 0x18)) fail(`recv returned ${v.length} of ${i32(r, 0x18)}`);
-          this.mem.write(u32(r, 0x14), v); put32(r, 0x20, v.length);
-        }
-        break;
-      case SOCK.getsockopt:
-        if (Number.isInteger(v)) put32(r, 0x24, v);
-        else {
-          if (v.length > i32(r, 0x20)) fail(`getsockopt returned ${v.length} of ${i32(r, 0x20)}`);
-          this.mem.write(u32(r, 0x1c), v); put32(r, 0x20, v.length); put32(r, 0x24, 0);
-        }
-        break;
-      default: fail(`socket op ${op} has no result`);
+    try {
+      switch (op) {
+        case SOCK.socket: int(0x1c); break;
+        case SOCK.bind:
+        case SOCK.connect: int(0x28); break;
+        case SOCK.listen:
+        case SOCK.shutdown: int(0x18); break;
+        case SOCK.close: int(0x14); break;
+        case SOCK.send: int(0x20); break;
+        case SOCK.sendto: int(0x34); break;
+        case SOCK.setsockopt: int(0x24); break;
+        case SOCK.accept:
+          if (Number.isInteger(v)) put32(r, 0x28, v);
+          else { r.set(v.addr.subarray(0, 16), 0x14); put32(r, 0x24, v.len); put32(r, 0x28, v.fd); }
+          break;
+        case SOCK.recv:
+          if (Number.isInteger(v)) put32(r, 0x20, v);
+          else {
+            if (v.length > i32(r, 0x18)) fail(`recv returned ${v.length} of ${i32(r, 0x18)}`);
+            this.mem.write(u32(r, 0x14), v); put32(r, 0x20, v.length);
+          }
+          break;
+        case SOCK.getsockopt:
+          if (Number.isInteger(v)) put32(r, 0x24, v);
+          else {
+            if (v.length > i32(r, 0x20)) fail(`getsockopt returned ${v.length} of ${i32(r, 0x20)}`);
+            this.mem.write(u32(r, 0x1c), v); put32(r, 0x20, v.length); put32(r, 0x24, 0);
+          }
+          break;
+        default: fail(`socket op ${op} has no result`);
+      }
+      this.reply(slot);
+    } catch (e) {
+      this.slots[slot] = null;
+      throw e;
     }
-    this.reply(slot);
   }
 
   reply(slot) {

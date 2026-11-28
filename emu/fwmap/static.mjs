@@ -19,7 +19,7 @@ export function objectNames(img, base) {
     for (let cpu = 0; cpu < 4; cpu++) {
       const p = u32(img, OBJECT_NAMES - base + 0x20 * type + 4 * cpu);
       if (p < base || p - base >= img.length) continue;
-      for (let o = p - base, k = 0; k < 2000; k++, o += 26) {
+      for (let o = p - base, k = 0; k < 2000 && o + 26 <= img.length; k++, o += 26) {
         let name = '';
         for (let i = 0; i < 24 && img[o + i]; i++) name += String.fromCharCode(img[o + i]);
         const index = img[o + 24] | img[o + 25] << 8;
@@ -297,7 +297,10 @@ function attribute(F, tasks) {
   {
     const entriesSorted = direct.map((i) => [off(F[i].entry), FILE_OF[i]]);
     for (const [m, [a, b]] of span) {
-      const foreign = entriesSorted.filter(([e, mm]) => e > a && e < b && mm !== m);
+      let lo = 0, hi = entriesSorted.length;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (entriesSorted[mid][0] <= a) lo = mid + 1; else hi = mid; }
+      const foreign = [];
+      for (let k = lo; k < entriesSorted.length && entriesSorted[k][0] < b; k++) if (entriesSorted[k][1] !== m) foreign.push(entriesSorted[k]);
       if (foreign.length) { spanDirty++; if (dirtySamples.length < 20) dirtySamples.push({ module: m, span: [hx(a), hx(b)], foreign: foreign.length, sample: [...new Set(foreign.map((x) => x[1]))].slice(0, 4) }); } else spanClean++;
     }
   }

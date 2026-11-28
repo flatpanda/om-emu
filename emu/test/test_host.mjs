@@ -18,7 +18,7 @@ import path from 'node:path';
 import http from 'node:http';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
-import { MessageChannel, Worker } from 'node:worker_threads';
+import { MessageChannel } from 'node:worker_threads';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const REPO = path.dirname(EMU);

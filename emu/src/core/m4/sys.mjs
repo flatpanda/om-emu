@@ -228,9 +228,11 @@ export class SystemBlock {
       return;
     }
     if (size !== 4) {                                                       // a narrow write to a word register
-      const old = this.peek32(w);
       const mask = (size === 2 ? 0xffff : 0xff) << sh;
-      v = (old & ~mask) | ((v << sh) & mask);
+      const w1 = w === 0xe000ed04 || w === 0xe000ed28 || w === 0xe000ed2c || w === 0xe000ed30 ||
+        (w >= 0xe000e100 && w < 0xe000e140) || (w >= 0xe000e180 && w < 0xe000e1c0) ||
+        (w >= 0xe000e200 && w < 0xe000e240) || (w >= 0xe000e280 && w < 0xe000e2c0);
+      v = (w1 ? 0 : this.peek32(w) & ~mask) | ((v << sh) & mask);
     }
     this.write32(w, v | 0);
   }

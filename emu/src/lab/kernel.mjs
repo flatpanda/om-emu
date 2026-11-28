@@ -4,7 +4,7 @@
 import { A, MODEL_INFO, isUnmapped, IMAGE_BASE, IMAGE_END, fact } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import * as IRQ from './irq.mjs';
-import { DATA, ISR_CALLER, ISR_SP, SAVED, FirmwareError, disasm, install_core_index, runtime, where, cat, bytes, i32le, u32le } from './hle.mjs';
+import { DATA, ISR_CALLER, ISR_SP, SAVED, FirmwareError, disasm, install_core_index, runtime, where, cat, bytes, i32le } from './hle.mjs';
 import { SP, packRegs } from './sim.mjs';
 import { ValueError, AssertionError } from './errors.mjs';
 import { show } from '../util/show.mjs';

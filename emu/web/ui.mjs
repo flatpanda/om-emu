@@ -134,7 +134,7 @@ export function createPlayerUI(host) {
   const DIALKEYS = { '[': ['main', -1], ']': ['main', 1], ',': ['sub', -1], '.': ['sub', 1] };
   const held = new Set();
   const sentDown = new Set();
-  function control(id, action, alt) {
+  function control(id, action) {
     const c = BYID[id];
     if (!c) return;
     if (c.status === 'not-wired') { note(c.name + ': not wired — ' + c.reason); return; }
@@ -160,7 +160,7 @@ export function createPlayerUI(host) {
     if (e.repeat || held.has(k)) return;
     held.add(k);
     press(id, true);
-    control(id, 'down', e.altKey);
+    control(id, 'down');
   });
   addEventListener('keyup', (e) => {
     const k = keyName(e);
@@ -169,7 +169,7 @@ export function createPlayerUI(host) {
       if (held.has(kk)) {
         held.delete(kk);
         const id = KEYMAP[kk];
-        if (id) { e.preventDefault(); press(id, false); control(id, 'up', e.altKey); }
+        if (id) { e.preventDefault(); press(id, false); control(id, 'up'); }
       }
     }
   });
@@ -237,8 +237,8 @@ export function createPlayerUI(host) {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault(); capture(b, e);
       if (heldPointers.has(e.pointerId)) return;
-      b.classList.add('down'); control(id, 'down', e.altKey);
-      heldPointers.set(e.pointerId, (ev) => { b.classList.remove('down'); control(id, 'up', ev.altKey); });
+      b.classList.add('down'); control(id, 'down');
+      heldPointers.set(e.pointerId, () => { b.classList.remove('down'); control(id, 'up'); });
     });
   }
   function releasePointer(e) { const f = heldPointers.get(e.pointerId); if (f) { heldPointers.delete(e.pointerId); f(e); } }
@@ -409,6 +409,7 @@ export function createPlayerUI(host) {
     showScene(s.scene);
     showSubject(s);
     showPorts(s);
+    showStandIns(s);
   }
   // the status's patch: the overlay's summary (src/fw/patch.mjs patchLine's wording)
   function patchText(p) {
@@ -466,12 +467,12 @@ export function createPlayerUI(host) {
       `<label><span>${esc(l.name)} m/s</span><input type="range" min="-10" max="10" step="0.1" value="${l.speed}" data-li="${i}" data-lf="speed"><output>${l.speed}</output></label>`).join('');
     $('sc-layers').querySelectorAll('input').forEach((el) => {
       const out = el.parentElement.querySelector('output');
-      const upd = (now) => {
+      const upd = () => {
         const v = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : Number(el.value);
         out.textContent = v;
         send({ type: 'scene', change: { layer: { index: Number(el.dataset.li), [el.dataset.lf]: v } } });
       };
-      el.addEventListener('change', () => upd(true));
+      el.addEventListener('change', upd);
       el.addEventListener('input', () => { out.textContent = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : el.value; });
     });
   }
@@ -692,11 +693,12 @@ export function createPlayerUI(host) {
       <tr><td>Playback of the pictures taken</td><td>0x0508 / 0x050b</td><td>S2, then PLAY; left / right, INFO; PLAY or S1 back</td><td>native GUI; S-CARD keeps the images, S-PLAYSEQ finishes the play module's requests, S-PLAYCOMP answers for the play component, S-PLAYVIEW shows the frame S-SCENE renders again from the scene kept with the image</td></tr></table>`;
     $('tab-standins').innerHTML = '<table><tr><th>Label</th><th>In use</th><th>What and why</th></tr>' +
       Object.entries(screens.stand_ins).map(([k, v]) => `<tr><td><b>${k}</b></td><td class="inuse" data-si="${k}"></td><td>${esc(v)}</td></tr>`).join('') + '</table>';
+    showStandIns(STATUS);
   }
-  setInterval(() => {
-    const used = new Set(STATUS.stand_ins || []);
+  function showStandIns(s) {
+    const used = new Set(s.stand_ins || []);
     document.querySelectorAll('[data-si]').forEach((td) => { td.textContent = used.has(td.dataset.si) ? 'yes' : ''; });
-  }, 1000);
+  }
   $('restart').onclick = () => send({ type: 'control', op: 'restart' });
   $('pause').onclick = () => send({ type: 'control', op: STATUS.idle === 'off' ? 'resume' : 'pause' });
   $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };

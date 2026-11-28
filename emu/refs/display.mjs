@@ -53,7 +53,7 @@ export function unwritten_class(names) {
 // The classes as checks/fixtures/om1-vsc-tables.c defines them (reg_class ranges, features[] values), by name.
 // src: the C file's text; names: Map offset -> name. Returns Map name -> [class, value pair or null].
 export function model_classes(names, src) {
-  const body = (table) => { const i = src.indexOf(table); if (i < 0) throw new ValueError(`${table} not in om1-vsc.c`); const rest = src.slice(i + table.length); return rest.slice(0, rest.indexOf('};')); };
+  const body = (table) => { const i = src.indexOf(table); if (i < 0) throw new ValueError(`${table} not in om1-vsc-tables.c`); const rest = src.slice(i + table.length); return rest.slice(0, rest.indexOf('};')); };
   const ranges = [...body('reg_class[] = {').matchAll(/\{ (0x[0-9A-F]+), (0x[0-9A-F]+), RC_(MODEL|STORED) \}/g)].map((m) => [parseInt(m[1], 16), parseInt(m[2], 16), m[3]]);
   const num = (t) => (t.startsWith('0x') ? parseInt(t, 16) : parseInt(t, 10));
   const fixed = new Map([...body('features[] = {').matchAll(/\{ (0x[0-9A-F]+), (0x[0-9A-F]+|\d+), (0x[0-9A-F]+|\d+) \}/g)].map((m) => [parseInt(m[1], 16), [num(m[2]), num(m[3])]]));

@@ -11,10 +11,9 @@ import * as IRQ from './irq.mjs';
 import { OsdLab, OSD_DEFAULTS } from './osd.mjs';
 import { RTOS as RTOS_NAMES } from './rtos.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
-import { packRegs, REGS } from './sim.mjs';
-import { ValueError, IndexError, AssertionError, lookup } from './errors.mjs';
+import { packRegs } from './sim.mjs';
+import { ValueError, IndexError, RuntimeError, AssertionError, lookup } from './errors.mjs';
 import { vscTables } from '../dev/vscregs.mjs';
-import { Unported } from '../core/mem.mjs';
 import { show } from '../util/show.mjs';
 import { deepEqual } from '../util/equal.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
@@ -344,7 +343,7 @@ export class VscDebug {
     this.sim = sim;
     let magic;
     try { magic = sim.u32(DEBUG); } catch (e) {
-      if (e?.name === 'RuntimeError') throw new FirmwareError(`the machine has no VSC debug window (${e.message})`);
+      if (e instanceof RuntimeError) throw new FirmwareError(`the machine has no VSC debug window (${e.message})`);
       throw e;
     }
     if (magic !== 0x4D435356) throw new FirmwareError(`VSC debug window magic ${h8(magic)}: not emu's VSC model`);

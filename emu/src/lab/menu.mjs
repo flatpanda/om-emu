@@ -324,14 +324,8 @@ export class MenuLab extends T.TextDisplayLab {
   observe(address, fn, name, pass = name.startsWith('obs-')) { this.hook(address, (hle, r) => { fn(this, r); this.passthrough(r); }, name, pass); }
   stack_args(r, n) {
     const call = this.sim.read(r.mdr - 7, 7);
-    let size;
-    if (call[0] === 0xDD) size = call[6];
-    else {
-      const short = this.sim.read(r.mdr - 5, 5);
-      if (short[0] !== 0xCD) throw new MenuError(`stack arguments at ${where(r.pc)}: not reached by CALL (mdr ${where(r.mdr)})`);
-      size = short[4];
-    }
-    return unpack(`<${n}I`, this.sim.read(r.sp + size + 4, 4 * n));
+    if (call[0] !== 0xDD && call[2] !== 0xCD) throw new MenuError(`stack arguments at ${where(r.pc)}: not reached by CALL (mdr ${where(r.mdr)})`);
+    return unpack(`<${n}I`, this.sim.read(r.sp + call[6] + 4, 4 * n));
   }
   // ---- bring-up, step 1 (inside OsdLab's init): K-native
   native_init() {
@@ -1157,7 +1151,9 @@ export class MenuLab extends T.TextDisplayLab {
   }
   state() {
     const gc = this.sim.u32(GUICALLER);
-    return gc ? (this.sim.read(gc, 1)[0] << 8 | this.sim.read(gc + 1, 1)[0]) : 0;
+    if (!gc) return 0;
+    const b = this.sim.read(gc, 2);
+    return b[0] << 8 | b[1];
   }
   state_name(s) { return `${h4(s)} ` + (this.state_names.get(s) ?? '?'); }
   message_for(index) { return u16i(this.image, EV_MAP + 8 * index + 4); }
@@ -1226,7 +1222,7 @@ export class MenuLab extends T.TextDisplayLab {
     for (const [qa, c, ra] of DROPPED_SENDS) {
       if (q === this._queue(qa) && cmd === c && site === ra) {
         // H-PWRSEND: where the power manager runs (H-PWRSTART, src/lab/power.mjs), its queue's send goes to it
-        if (this.pwr_main_tid != null && this.lt?.tid != null && this.nk.state(this.pwr_main_tid) !== 0x10) {
+        if (this.pwr_main_tid != null && this.lt?.tid != null && this.nk.state(this.pwr_main_tid) !== TTS_DMT) {
           this.kernel.events.push(['send', `queue ${q} cmd ${cmd} (H-PWRSEND, native)`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
           (this.pwr_sends ??= []).push([q, cmd, h8(site)]);
           this.passthrough(r);
@@ -1301,8 +1297,7 @@ export class MenuLab extends T.TextDisplayLab {
   _s_log(hle, r) {
     let text, a1;
     try {
-      const call = this.sim.read(r.mdr - 7, 7);
-      const size = call[0] === 0xDD ? call[6] : this.sim.read(r.mdr - 5, 5)[4];
+      const size = this.sim.read(r.mdr - 1, 1)[0];
       let fmt;
       [fmt, a1] = unpack('<II', this.sim.read(r.sp + size + 4, 8));
       text = latin1(cstrBytes(this.sim.read(fmt, 100)));

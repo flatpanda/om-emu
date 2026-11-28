@@ -20,7 +20,7 @@
 //   and no error event from a page's Worker (web/page.mjs events).
 // The drop of a .BIN is sitegate's (Chrome's Input.dispatchDragEvent; classic WebDriver has no file drop). Screenshots
 // go to emu/out/web/<browser>/. On the lab model only (src/fw/model.mjs LAB_MODEL).
-//   node emu/bin/browsergate.mjs [--browser firefox|webkit|all] [--bin FILE] [--other CODE|none] [--other-bin FILE]
+//   node emu/bin/browsergate.mjs [--browser firefox|webkit|webkit-storage|all] [--bin FILE] [--other CODE|none] [--other-bin FILE]
 //                                [--driver PATH] [--binary PATH] [--prefix /om-emu/] [--keep]
 // --bin: E143's .BIN (default $OM_BIN, else $OM_FW_DIR/<its name>); --other-bin: the other body's (default
 // $OM_FW_DIR/<its name>); missing: exit 2. --driver, --binary: the driver and browser executables (with one

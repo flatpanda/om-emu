@@ -569,7 +569,7 @@ function loadNarrow(hw1, hw2, sz) {
   }
   if ((hw2 & 0x0fc0) !== 0) return udf(4, 'UNDEFINED load register');
   if (rt === 15) { const h = rec('pld', `${hintName} (register) T1`, 4); h.unp = bad(hw2 & 15); return h; }
-  r.enc = `${name} (register) ${sg ? 'T2' : 'T2'}`; r.rm = hw2 & 15; r.sa = (hw2 >>> 4) & 3;
+  r.enc = `${name} (register) T2`; r.rm = hw2 & 15; r.sa = (hw2 >>> 4) & 3;
   r.unp = rt === 13 || bad(r.rm);
   return r;
 }
@@ -598,7 +598,7 @@ function loadWord(hw1, hw2) {
 function dpReg(hw1, hw2) {
   const op1 = (hw1 >>> 4) & 15, op2 = (hw2 >>> 4) & 15, rn = hw1 & 15, rd = (hw2 >>> 8) & 15, rm = hw2 & 15;
   if ((hw2 & 0xf000) !== 0xf000) return udf(4, 'UNDEFINED dp register');
-  if (op1 < 8 && op2 === 0 && (hw2 & 0xf0) === 0) {     // LSL / LSR / ASR / ROR (register) T2
+  if (op1 < 8 && op2 === 0) {     // LSL / LSR / ASR / ROR (register) T2
     const t = op1 >>> 1;
     const r = dp(`${SHIFT_NAMES[t]} (register) T2`, 4, ALU_MOV, rd, -1, op1 & 1);
     r.rm = rn; r.ra = rm; r.sh = t; r.sa = -1; r.unp = bad(rd) || bad(rn) || bad(rm);
@@ -696,7 +696,6 @@ function coproc(hw1, hw2) {
   if (hw1 & 0x1000) return udf(4, 'UNDEFINED coprocessor T2 space for cp10 / cp11');
   const dbl = cp === 11;
   if ((op1 & 0x20) === 0) {                           // extension register load / store, 64-bit transfers
-    if ((op1 & 0x3e) === 0x00) return udf(4, 'UNDEFINED VFP load / store');
     if ((op1 & 0x3e) === 0x04) {                      // VMOV two core registers <-> two singles / a double
       const r = rec('vmov2', dbl ? 'VMOV (two core registers and a doubleword register) T1' : 'VMOV (two core registers and two single registers) T1', 4);
       r.rd = hw2 >>> 12; r.ra = rn; r.add = (hw1 >>> 4) & 1;    // add: to core

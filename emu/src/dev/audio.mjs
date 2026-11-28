@@ -76,7 +76,7 @@ export const C_ENABLE = 0x10, C_TX_RUN = 0x20, C_RX_RUN = 0x40, TX_ENABLE = 0x04
 export const S_DONE = [0x01, 0x02], S_READY = 0x10, S_SLOT = 0x20, ARM = [0x400, 0x800], S_BITS = 0x3f;
 // the RX words a TX path never writes (the RX configuration 0x50aa9472 and its slots); +0x20 takes the ISR's write-back
 const RX_WORDS = new Set([RX_CTRL, 0x10, 0x14, 0x18, 0x1c]);
-const RX_ARM = 0x300, RX_B24 = 0x01000000;      // +0x20: the RX arms, and the bit the port enable writes without +0x00 bit 0
+const RX_B24 = 0x01000000;      // +0x20: the bit the port enable writes without +0x00 bit 0
 // the TX formats modelled: the configuration's bits (+0x04 bits 20..24, +0x30 bits 3..6) as the driver's template
 // writes them
 export const TX_FORMATS = [{ name: 's16 stereo 48 kHz', fmt04: 0x01, fmt30: 0x8, rate: 48000, channels: 2, bytes: 2 },
@@ -131,25 +131,27 @@ export class AudioPort {
     }
     if (off === TX_STATUS) {
       if (value & ~(S_BITS | ARM[0] | ARM[1])) return this.portUnknown('write', off, size, value, dbg);
-      this.txStatus = (this.txStatus & ~(value & S_BITS)) >>> 0;
+      const nextArmed = [null, null];
       for (const s of [0, 1]) {
         if (!(value & ARM[s])) continue;
         const addr = this.reg[TX_ADDR[s] >> 2] << 4 >>> 0, len = this.reg[TX_LEN[s] >> 2];
-        if (len === 0) { this.armed[s] = { addr, len: 0 }; continue; }      // an empty slot (the direct play's B)
+        if (len === 0) { nextArmed[s] = { addr, len: 0 }; continue; }      // an empty slot (the direct play's B)
         if (!this.bus.span(addr, len)) return this.portUnknown('write', off, size, value, dbg, ` (slot ${'AB'[s]} at ${hex8(addr)}, ${len} bytes: not in memory)`);
-        this.armed[s] = { addr, len };
+        nextArmed[s] = { addr, len };
       }
+      this.txStatus = (this.txStatus & ~(value & S_BITS)) >>> 0;
+      for (const s of [0, 1]) if (nextArmed[s]) this.armed[s] = nextArmed[s];
       this.update();
       return;
     }
     const old = this.reg[off >> 2];
     if (off === CTRL && (value & C_RX_RUN)) return this.portUnknown('write', off, size, value, dbg, ' (RX run: RX is not modelled)');
+    if (off === CTRL && (value & C_TX_RUN) && !(old & C_TX_RUN)) this.start(value);
     this.reg[off >> 2] = value;
     if (off === TX_CTRL && (value & TX_ENABLE) && !(old & TX_ENABLE)) {    // TX ready
       this.txStatus = (this.txStatus | S_READY) >>> 0;
       this.stats.readies += 1;
     }
-    if (off === CTRL && (value & C_TX_RUN) && !(old & C_TX_RUN)) this.start();
     if (off === CTRL && !(value & C_TX_RUN) && (old & C_TX_RUN)) this.stop();
     this.update();
   }
@@ -158,14 +160,19 @@ export class AudioPort {
     const f04 = (this.reg[TX_FMT_A >> 2] >>> 20) & 0x1f, f30 = (this.reg[TX_CTRL >> 2] >>> 3) & 0xf;
     return TX_FORMATS.find((f) => f.fmt04 === f04 && f.fmt30 === f30) ?? null;
   }
-  start() {
-    if (!(this.reg[TX_CTRL >> 2] & TX_ENABLE) || !(this.reg[CTRL >> 2] & C_ENABLE)) {
-      this.m.stderr(`om-emu: om1.audio-port UNKNOWN TX start with +0x00 ${hex8(this.reg[0])} +0x30 ${hex8(this.reg[TX_CTRL >> 2])} (port or TX not enabled) pc ${hex8(ctx.pc())}`);
+  start(ctrl = this.reg[CTRL >> 2]) {
+    if (!(this.reg[TX_CTRL >> 2] & TX_ENABLE) || !(ctrl & C_ENABLE)) {
+      this.m.stderr(`om-emu: om1.audio-port UNKNOWN TX start with +0x00 ${hex8(ctrl)} +0x30 ${hex8(this.reg[TX_CTRL >> 2])} (port or TX not enabled) pc ${hex8(ctx.pc())}`);
       throw BUS;
     }
     const f = this.txFormat();
     if (!f) {
       this.m.stderr(`om-emu: om1.audio-port UNKNOWN TX start with configuration +0x04 ${hex8(this.reg[TX_FMT_A >> 2])} +0x30 ${hex8(this.reg[TX_CTRL >> 2])}: not a format the model has pc ${hex8(ctx.pc())}`);
+      throw BUS;
+    }
+    const a0 = this.armed[0], frame = f.channels * f.bytes;
+    if (a0 && a0.len > 0 && a0.len % frame) {
+      this.m.stderr(`om-emu: om1.audio-port UNKNOWN slot A of ${a0.len} bytes: not whole ${frame}-byte frames pc ${hex8(ctx.pc())}`);
       throw BUS;
     }
     if (this.playing) this.cut(this.clock.t);

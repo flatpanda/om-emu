@@ -122,6 +122,7 @@ export const P = { stream_mode: 0xae00, stream: 0xae04, limit0: 0xae0c, limit1: 
   pf: 0x2e60, pfx: 0x2e64, pfx2: 0x2e68, pfy: 0x2e6c, pfy2: 0x2e70, pf_b: 0x2e7c, pfx_b: 0x2e80, pfx2_b: 0x2e84, pfy_b: 0x2e88, pfy2_b: 0x2e8c };
 // the codec's words: the reset, the mode select, the init's, and the decode's
 export const J = { reset: 0x000c, encode: 0x0008, on: 0x0004, init: 0x1004, mode: 0x1000, mode2: 0x100c, lim0: 0x1028, lim1: 0x102c };
+const J_OFFS = new Set(Object.values(J));
 export const J_DECODE = 0x8004, J_START = 1, J_MODE2 = 0x8002, J_LIMIT = 0xffff;
 const FORMAT_3074 = 2, PITCH_UNIT = 64, STREAM_ONE = 2, MODE_422 = 1;
 // the prefilter's mode: 0x500 with bit 0 (x) and bit 1 (y), or 0x100 with neither (0x504e23fd); its taps make 128
@@ -212,7 +213,7 @@ export class ImgPipe {
   jwrite(off, value, size, dbg) {
     value >>>= 0;
     const no = (why) => this.unknown('write', this.cfg.codec + off, size, value, dbg, why);
-    if (dbg || size !== 4 || !Object.values(J).includes(off)) return no('');
+    if (dbg || size !== 4 || !J_OFFS.has(off)) return no('');
     this.touched = true;
     if (off === J.encode && value !== 0) return no('the codec\'s encode: only the decode is modelled');
     if (off === J.mode) {
@@ -289,7 +290,7 @@ export class ImgPipe {
       if (fy) c.samples = prefilter(c.samples, c.width, c.height, fy, false);
     }
     const out = new Uint8Array(bytes * dh), cw = cb.width;
-    const lerp = (s, sw, x, fx, row0, row1, fy) => {
+    const lerp = (s, x, fx, row0, row1, fy) => {
       const xb = fx ? x + 1 : x;
       const top = s[row0 + x] * (4096 - fx) + s[row0 + xb] * fx, bottom = s[row1 + x] * (4096 - fx) + s[row1 + xb] * fx;
       return (top * (4096 - fy) + bottom * fy + (1 << 23)) / (1 << 24) | 0;
@@ -298,11 +299,11 @@ export class ImgPipe {
       const sy = y0 + y * ay, yi = sy >>> 12, fy = sy & 4095, yb = fy ? yi + 1 : yi;
       for (let x = 0; x < dw; x++) {
         const sx = x0 + x * ax, o = y * bytes + 2 * x;
-        out[o] = lerp(cy.samples, w, sx >>> 12, sx & 4095, yi * w, yb * w, fy);
+        out[o] = lerp(cy.samples, sx >>> 12, sx & 4095, yi * w, yb * w, fy);
         if (x & 1) continue;
         const sc = sx >>> 1, ci = sc >>> 12, fc = ci + 1 < cw ? sc & 4095 : 0;
-        out[o + 1] = lerp(cb.samples, cw, ci, fc, yi * cw, yb * cw, fy);
-        out[o + 3] = lerp(cr.samples, cw, ci, fc, yi * cw, yb * cw, fy);
+        out[o + 1] = lerp(cb.samples, ci, fc, yi * cw, yb * cw, fy);
+        out[o + 3] = lerp(cr.samples, ci, fc, yi * cw, yb * cw, fy);
       }
     }
     this.runs += 1;

@@ -96,7 +96,6 @@ function end(v, what) {
   if (x < 0 || x > 0x100000000) throw new BadRequest(`${what}: ${JSON.stringify(v)} is not a range end in 0..0x100000000`);
   return x;
 }
-const opt = (v, what, d) => absent(v) ? d : num(v, what);
 const optAddr = (v, what, d) => absent(v) ? d : addr(v, what);
 const optCount = (v, what, d, min = 0) => absent(v) ? d : count(v, what, min);
 const optEnd = (v, what) => absent(v) ? null : end(v, what);

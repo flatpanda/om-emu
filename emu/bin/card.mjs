@@ -155,9 +155,7 @@ async function main(argv) {
   if (argv.includes('-h') || argv.includes('--help')) { process.stdout.write(`${HELP}\n`); return 0; }
   const [cmd, ...rest] = argv;
   if (!Object.hasOwn(COMMANDS, cmd)) throw new UsageError(`unknown command ${cmd}`, `usage: ${usageAll}`);
-  // get's LOCAL '-' (stdout) is a value, not an option: it goes after '--', the last positional
-  const args = cmd === 'get' && rest.includes('-') ? [...rest.filter((x) => x !== '-'), '--', '-'] : rest;
-  const a = parseArgs(`${PROG} ${cmd}`, args, COMMANDS[cmd]);
+  const a = parseArgs(`${PROG} ${cmd}`, rest, COMMANDS[cmd]);
   if (cmd === 'new') return cmdNew(a);
   if (cmd === 'ls') return cmdLs(a);
   if (cmd === 'get') return cmdGet(a);

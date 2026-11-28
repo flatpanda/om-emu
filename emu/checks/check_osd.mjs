@@ -20,7 +20,7 @@ import { CMDBUF, DEBUG, DRV_CMDBUF, DRV_MODE, ENGINE_ISR, EXPECTED_RECORDS, GPI_
   EngineDebug, OsdLab, choose_palette } from '../src/lab/osd.mjs';
 import { DRAW_PATH_RTOS } from '../src/lab/rtos.mjs';
 import { MAX_READ, MAX_WRITE } from '../src/lab/sim.mjs';
-import { LabError, AssertionError, FirmwareError, EngineError, KeyError, ValueError, RuntimeError } from '../src/lab/errors.mjs';
+import { LabError, AssertionError, FirmwareError, EngineError, KeyError, RuntimeError } from '../src/lab/errors.mjs';
 import { eq, fault } from './lib/eq.mjs';
 import { isValueError } from './lib/errors.mjs';
 import { deepEqual } from '../src/util/equal.mjs';

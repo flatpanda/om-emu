@@ -25,7 +25,7 @@ import * as REF from '../refs/irq.mjs';
 const CODE = 0x1000, SP0 = 0x20100;
 const BREAK = [0xff];
 const M32 = 0xFFFFFFFF;
-const Z = 1, N = 2, C = 4, V = 8;
+const Z = 1, V = 8;
 const RESERVED = 0xC0F0;
 const TEST_BASE = 200;
 const TASK_CODE = 0xA2300200, TASK_STACK = 0xA2320000;

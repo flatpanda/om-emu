@@ -234,7 +234,6 @@ export class TerminalPlay extends Play {
     this.attach([this.p.stdout, this.p.stderr]);
     this.p.stdin?.on('error', () => {});
     this.trackExit();
-    this.serverRc = undefined;
   }
   // the play.mjs process inside the terminal (rcwrap writes its pid first)
   async serverPid(timeout = 10) {

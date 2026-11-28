@@ -87,9 +87,6 @@ export class HLE {
     this.log = [];
     this.heap = HEAP;
     this.frames = new Map();
-    this.builtins = [];
-    this.builtins_seen = 0;
-    this.drained = 0;
     this.stubObserver = null;          // capture's on_stub patch (tracer)
     // the debugger's exec probes (src/debug/debugger.mjs probes): (pc, name, regs) at a hook that answers in place of
     // the firmware (not a pass-through observer, whose single step meets the machine's probe), or null
@@ -289,9 +286,7 @@ export class HLE {
           if (isHM && ends === null) this._loopCache = { ver: synced, done, stops, folded };
         }
       }
-      this.drained = 0;
       let result = this.sim.run(stops, false, null, folded, true);
-      used += this.drained;
       const pc = result.pc;
       if (pc === done && !result.fault) {
         if (result.sp !== sp || Object.entries(SAVED).some(([k, v]) => result[k] !== (regs?.[k] ?? v) >>> 0)) {

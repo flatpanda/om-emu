@@ -14,7 +14,7 @@ import { show } from '../src/util/show.mjs';
 const E_OK = 0, E_RSATR = -11, E_PAR = -17, E_ID = -18, E_CTX = -25, E_ILUSE = -28, E_NOEXS = -42, E_QOVR = -43, E_TMOUT = -50;
 const TA_TPRI = 1, TA_WMUL = 2, TA_CLR = 4, TA_INHERIT = 2;
 const TWF_ANDW = 0, TWF_ORW = 1;
-const TMO_POL = 0, TMO_FEVR = -1;
+const TMO_POL = 0;
 const TASK_CODE = 0xA2300200, TASK_STACK = 0xA2320000, ISR_CODE = 0xA2300400, ISR_RESULT = 0xA2300600, TEST_IRQ = 200;
 const PRINTS = { 0x50002F6D: 'printf_x', 0x50002F46: 'printf_d', 0x50002EE6: 'puts', 0x50002DD8: 'puts2' };
 export const SESSIONS = ['kernel-1', 'kernel-5b', 'kernel-5c', 'kernel-6', 'kernel-7', 'kernel-7b'];

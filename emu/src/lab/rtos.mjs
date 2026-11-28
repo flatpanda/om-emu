@@ -89,8 +89,7 @@ export class Kernel {
     hle.finish(saved, { d0: 0 });
   }
   _errlog(hle, r) {
-    const call = hle.sim.read(r.mdr - 7, 7);
-    const size = call[0] === 0xDD ? call[6] : hle.sim.read(r.mdr - 5, 5)[4];
+    const size = hle.sim.read(r.mdr - 1, 1)[0];
     const args = unpack('<6I', hle.sim.read(r.sp + size + 4, 24));
     this.errors.push([r.d0, r.d1, args, where(r.mdr)]);
     this.events.push(['errlog', `0x${fx(r.d0, 8)}`, args.map((a) => `0x${h(a)}`).join(' '), where(r.mdr)]);

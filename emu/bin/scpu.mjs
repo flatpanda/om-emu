@@ -7,7 +7,7 @@
 // modelled (named on stderr) or a prompt did not come. IMAGE defaults to the model's SCPU block (OM_EMU_MODEL, E143 by
 // default; src/fw/models.mjs scpu_lle, the block the lab loads with OM_EMU_SCPU=native). --tier picks the core's
 // execution tier (src/core/m4/cpu.mjs: cached, the default, or reference; the wall time printed last compares them).
-//   node emu/bin/scpu.mjs [IMAGE] [--line TEXT]... [--settle S] [--wait S] [--drive PIN=LEVEL]... [--after S]
+//   node emu/bin/scpu.mjs [IMAGE] [--line TEXT]... [--boot S] [--settle S] [--wait S] [--drive PIN=LEVEL]... [--after S]
 //                         [--tier cached|reference]
 import fs from 'node:fs';
 import path from 'node:path';

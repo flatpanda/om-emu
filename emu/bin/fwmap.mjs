@@ -63,7 +63,7 @@ try {
   process.exit(2);
 }
 process.env.OM_EMU_MODEL = args.model;        // before anything reaches src/fw/model.mjs
-const { MODEL_INFO, IMAGE_BASE } = await import('../src/fw/model.mjs');
+const { IMAGE_BASE } = await import('../src/fw/model.mjs');
 const { ORIGINAL, readBytes, checkImage, sha256 } = await import('../checks/lib/env.mjs');
 const { staticMap } = await import('../fwmap/static.mjs');
 const { runWorkload, union, pack, unpack } = await import('../fwmap/cover.mjs');

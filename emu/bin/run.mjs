@@ -35,7 +35,7 @@ import { coverageEnv } from '../checks/lib/coverage.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { romPath, resPath } from '../src/fw/models.mjs';
-import { Session, dump, logical, inventory, fmtOf, FORMAT4, STAGE2_SCENARIOS, STAGE3_SCENARIOS } from '../src/trace/tracer.mjs';
+import { Session, dump, logical, inventory, STAGE2_SCENARIOS, STAGE3_SCENARIOS } from '../src/trace/tracer.mjs';
 import * as K from '../scenarios/kernel.mjs';
 import { R, S, PC } from '../src/core/cpu.mjs';
 
@@ -63,7 +63,6 @@ const BLOCK = path.join(REPO, resPath(MODEL_INFO));
 export function loadImage() { return expandImage(checkImage(new Uint8Array(fs.readFileSync(IMAGE)), IMAGE)); }   // the run-time image (src/fw/expand.mjs)
 export function loadBlock() { return checkBlock(new Uint8Array(fs.readFileSync(BLOCK)), BLOCK); }
 export { loadNand };              // the NAND the play bring-up's resource tables are read from (src/lab/resnand.mjs)
-const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
 // Run scenario names; returns { sessions: [Session], rc, stdout }. calls: the directory of the inputs (default
 // emu/scenarios/calls): the replayed scenarios read <calls>/<scenario>.calls.json (scenarios/session_replay.mjs), osd

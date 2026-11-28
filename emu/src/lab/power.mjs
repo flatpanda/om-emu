@@ -174,7 +174,10 @@ export function laterInits(session, tid) {
     try {
       lab.step(`H-PWRLATER the power manager's later init ${h8(init)}`, () => lab.call(init, null, null, null, 2000000));
       session.settle('H-PWRLATER');
-    } catch (e) { throw new PowerError(`H-PWRLATER: ${h8(init)}: ${e.message.split('\n')[0].replace(/^H-PWRLATER: /, '')}`); }
+    } catch (e) {
+      if (e instanceof FirmwareError) throw new PowerError(`H-PWRLATER: ${h8(init)}: ${e.message.split('\n')[0].replace(/^H-PWRLATER: /, '')}`);
+      throw e;
+    }
     const errlog = lab.kernel.errors.slice(e0).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c, , , w]) => `${h8(c)} from ${w}`);
     out.push({ init: h8(init), frames: dev.frames.slice(f0), errlog, state: lab.nk.state(tid) });
     if (lab.nk.state(tid) !== 0x4 || errlog.length) throw new PowerError(`H-PWRLATER: after ${h8(init)}: PWR_MAIN (task ${tid}) state 0x${lab.nk.state(tid).toString(16)}, errlog ${JSON.stringify(errlog)}: not waiting with no errlog`);

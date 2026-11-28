@@ -35,7 +35,7 @@ import { insnLength } from '../src/core/cpu.mjs';
 
 export const { Skip, reference, osd_cols, bt601, REG_MODEL, REG_STORED, FEATURES, PANEL } = REF;
 const { CMD_ADVANCE, CMD_CLEAR, CMD_COMPOSE, CMD_RUN_TO_FRAME, DEBUG, DEVICE, DOORBELL, EVF_TIMER_HANDLE, HW_TIMER_SLOTS,
-  HW_TIMER_TABLE, TICK_CALLBACK, TIMER_DELETE, TIMER_SLOTS, IMG_BASE, IMG_FIT, IMG_FORMAT, IMG_STRIDE, OUTPUT, PLANES, STUB,
+  HW_TIMER_TABLE, TICK_CALLBACK, TIMER_DELETE, TIMER_SLOTS, IMG_BASE, IMG_FORMAT, IMG_STRIDE, PLANES, STUB,
   VSC, VSC_CHANNEL, ASPECTS, DisplayLab, demo_gui, format_vsc_error, test_card, ycc_to_rgb } = D;
 export { test_card, ASPECTS };
 
@@ -81,7 +81,7 @@ function class_partition(lab) {
   const model = model_classes(lab.vsc.names);
   const bad = new Map();
   for (const n of names) if (!eq(JSON.stringify(here.get(n)), JSON.stringify(model.get(n)))) bad.set(n, [here.get(n), model.get(n)]);
-  check(!bad.size, () => `om1-vsc.c classes differ from check_display (here, model): ${show(bad)}`);
+  check(!bad.size, () => `om1-vsc-tables.c classes differ from check_display (here, model): ${show(bad)}`);
   const counts = new Map();
   for (const [c] of here.values()) counts.set(c, (counts.get(c) ?? 0) + 1);
   return counts;
@@ -250,7 +250,7 @@ const SWITCH_INDEX_OFFSET = REF.SWITCH_INDEX_OFFSET, TIMER_ERRLOG = 0x19001807;
 export function observe(lab, address, fn) {
   lab.hook(address, (hle, r) => { fn(r); lab.sim.run([], true); }, `obs 0x${hx(address).padStart(8, '0')}`);
 }
-const level_table = REF.level_table, switch_planc = REF.switch_planc;
+const switch_planc = REF.switch_planc;
 
 // One fresh session: start, OPEN device, palettes, GUI, update, IMG attach, composite; then optionally the switch.
 // Returns [lab, record].

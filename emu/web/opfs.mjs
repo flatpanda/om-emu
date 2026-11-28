@@ -42,14 +42,14 @@ async function dir(create) {
   const top = await root();
   try { return await top.getDirectoryHandle(DIR); } catch (e) { if (e?.name !== 'NotFoundError') throw e; }
   for (const name of LEGACY) {
-    let old;
+    let old, m;
     try {
       old = await top.getDirectoryHandle(name);
-      const m = JSON.parse(new TextDecoder().decode(await get(old, FILES.manifest)));
+      m = JSON.parse(new TextDecoder().decode(await get(old, FILES.manifest)));
       checkFirmware(m.rom?.sha256, m.res?.sha256);
     } catch { continue; }                            // none there, or not this model's
     const d = await top.getDirectoryHandle(DIR, { create: true });
-    for (const f of [FILES.rom, FILES.res, FILES.manifest]) await put(d, f, await get(old, f));       // the manifest last
+    for (const f of [FILES.rom, FILES.res, ...(m.nand ? [FILES.nand] : []), FILES.manifest]) await put(d, f, await get(old, f));       // the manifest last
     await top.removeEntry(name, { recursive: true });
     return d;
   }

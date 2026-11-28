@@ -55,7 +55,7 @@ function tokenize(b) {
 function windowHash(t, o, K, loose = false) {
   const tk = loose ? t.ltok : t.tok;
   let h = 0x9e3779b9;
-  for (let k = 0; k < K; k++) { if (o >= t.n) return null; h = Math.imul(h ^ tk[o], 0x01000193) ^ (h >>> 15); o += t.len[o]; }
+  for (let k = 0; k < K; k++) { if (o >= t.n || o + t.len[o] > t.n) return null; h = Math.imul(h ^ tk[o], 0x01000193) ^ (h >>> 15); o += t.len[o]; }
   return h >>> 0;
 }
 const s16 = (b, o) => (b[o] | b[o + 1] << 8) << 16 >> 16, u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
